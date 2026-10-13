@@ -629,9 +629,9 @@ const layerTelemetry = Layer.unwrap(
     const environment = yield* DesktopEnvironment.DesktopEnvironment;
     const endpoints = yield* resolveOtlpEndpoints;
     const resource = {
-      serviceName: "t3code-desktop",
+      serviceName: "mybot-desktop",
       attributes: {
-        "service.namespace": "t3code",
+        "service.namespace": "mybot",
         "service.runtime": "desktop",
         "service.mode": environment.isDevelopment ? "development" : "packaged",
       },
