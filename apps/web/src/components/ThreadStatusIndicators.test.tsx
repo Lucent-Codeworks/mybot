@@ -80,8 +80,6 @@ describe("linked pull request snapshots", () => {
     });
   });
   it.each([
-    ["https://git.cafe/owner/repo/pulls/42", "gitcafe"],
-    ["https://staging.git.cafe/owner/repo/pulls/42", "gitcafe"],
     ["https://codeberg.org/owner/repo/pulls/42", "forgejo"],
     ["https://gitlab.example.com/acme/web/-/merge_requests/42", "gitlab"],
     ["https://github.com/owner/repo/pull/42", "github"],

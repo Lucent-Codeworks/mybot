@@ -1318,7 +1318,7 @@ export const ServerSettings = Schema.Struct({
     Schema.withDecodingDefault(Effect.succeed({})),
   ),
   observability: ObservabilitySettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
-  /** Keyed by source control host kind, such as `gitcafe`; see `SourceControlHostSettings`. */
+  /** Keyed by source control host kind, such as `bitbucket`; see `SourceControlHostSettings`. */
   sourceControlHosts: Schema.Record(Schema.String, SourceControlHostSettings).pipe(
     Schema.withDecodingDefault(Effect.succeed({})),
   ),

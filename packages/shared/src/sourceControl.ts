@@ -2,14 +2,7 @@ import { SourceControlProviderKind } from "@t3tools/contracts";
 import type { RepositoryIdentity, SourceControlProviderInfo } from "@t3tools/contracts";
 
 export interface ChangeRequestPresentation {
-  readonly icon:
-    | "github"
-    | "gitlab"
-    | "forgejo"
-    | "azure-devops"
-    | "bitbucket"
-    | "gitcafe"
-    | "change-request";
+  readonly icon: "github" | "gitlab" | "forgejo" | "azure-devops" | "bitbucket" | "change-request";
   readonly providerName: string;
   readonly shortName: string;
   readonly longName: string;
@@ -78,17 +71,6 @@ const BITBUCKET_CHANGE_REQUEST_PRESENTATION: ChangeRequestPresentation = {
   urlExample: "https://bitbucket.org/workspace/repo/pull-requests/42",
 };
 
-const GITCAFE_CHANGE_REQUEST_PRESENTATION: ChangeRequestPresentation = {
-  icon: "gitcafe",
-  providerName: "GitCafe",
-  shortName: "PR",
-  longName: "pull request",
-  pluralLongName: "pull requests",
-  providerLongName: "GitCafe pull request",
-  checkoutCommandExample: "cafe pr checkout 123",
-  urlExample: "https://git.cafe/owner/repo/pulls/42",
-};
-
 const GENERIC_CHANGE_REQUEST_PRESENTATION: ChangeRequestPresentation = {
   icon: "change-request",
   providerName: "source control",
@@ -114,8 +96,6 @@ export function resolveChangeRequestPresentation(
       return AZURE_DEVOPS_CHANGE_REQUEST_PRESENTATION;
     case "bitbucket":
       return BITBUCKET_CHANGE_REQUEST_PRESENTATION;
-    case "gitcafe":
-      return GITCAFE_CHANGE_REQUEST_PRESENTATION;
     default:
       return GENERIC_CHANGE_REQUEST_PRESENTATION;
   }
@@ -203,11 +183,6 @@ function isAzureDevOpsHost(host: string): boolean {
   );
 }
 
-/** GitCafe has no self-hosted installs: production and staging are the only hosts. */
-function isGitCafeHost(host: string): boolean {
-  return host === "git.cafe" || host === "staging.git.cafe";
-}
-
 function isBitbucketHost(host: string): boolean {
   return host === "bitbucket.org" || hasDnsLabel(host, "bitbucket");
 }
@@ -220,14 +195,6 @@ export function detectSourceControlProviderFromRemoteUrl(
     return null;
   }
   const hostname = parseHostName(host);
-
-  if (isGitCafeHost(hostname)) {
-    return {
-      kind: SourceControlProviderKind.make("gitcafe"),
-      name: "GitCafe",
-      baseUrl: toBaseUrl(hostname),
-    };
-  }
 
   if (
     hostname === "codeberg.org" ||

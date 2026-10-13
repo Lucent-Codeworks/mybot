@@ -1,6 +1,6 @@
 # Source control
 
-T3 Code integrates with GitHub, GitLab, Forgejo, Gitea, Bitbucket, Azure DevOps, and GitCafe to clone
+T3 Code integrates with GitHub, GitLab, Forgejo, Gitea, Bitbucket, and Azure DevOps to clone
 and publish repositories, create pull requests, and review changes.
 
 ## Review turn changes
@@ -95,24 +95,6 @@ Install [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/), add the DevOp
 az extension add --name azure-devops
 az login
 ```
-
-### GitCafe
-
-Install the GitCafe CLI and sign in:
-
-```bash
-bun install -g @gitcafe/cli
-cafe auth login --host https://git.cafe/api
-```
-
-Alternatively, open **Settings → Source Control**, expand **GitCafe**, and enter a token. It is
-kept in the server's secret store, applies right away, and is used before `CAFE_TOKEN` and the
-`cafe` login. Or set `CAFE_TOKEN` in the server's environment and restart it. Both tokens are only
-sent to `git.cafe`; `CAFE_TOKEN` follows `CAFE_HOST` if you set it. Repositories on
-`staging.git.cafe` need their own login with `--host https://staging.git.cafe/api`.
-
-Line comments, reviewer requests, and labels are not available for GitCafe pull requests yet.
-Merging a stack lands it through GitCafe, and updating a branch restacks the layers above it.
 
 ## Start, clone, or publish a project
 

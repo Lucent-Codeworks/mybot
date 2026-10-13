@@ -1464,7 +1464,6 @@ it.layer(NodeServices.layer)("server settings", (it) => {
           sourceControlHosts: {
             github: { tokens: { "github.com": "github-secret" } },
             bitbucket: { email: "me@example.test", accessToken: "bitbucket-secret" },
-            gitcafe: { token: "gitcafe-secret" },
           },
           usageLimitSources: {
             [UsageLimitSourceId.make("hub")]: {
@@ -1480,7 +1479,6 @@ it.layer(NodeServices.layer)("server settings", (it) => {
           "env-secret",
           "github-secret",
           "bitbucket-secret",
-          "gitcafe-secret",
           "quota-secret",
         ];
         const client = ServerSettingsModule.redactServerSettingsForClient(saved);
@@ -1543,7 +1541,6 @@ it.layer(NodeServices.layer)("server settings", (it) => {
             field: "accessToken",
             serverHost: null,
           }),
-          sourceControlHostSecretName({ kind: "gitcafe", field: "token", serverHost: null }),
           "usage-limit-source-aHVi",
         ];
         for (const name of secretNames) {
@@ -1554,7 +1551,6 @@ it.layer(NodeServices.layer)("server settings", (it) => {
           sourceControlHosts: {
             github: { tokens: {} },
             bitbucket: { accessToken: "" },
-            gitcafe: { token: "" },
           },
           usageLimitSources: { [UsageLimitSourceId.make("hub")]: null },
         });
