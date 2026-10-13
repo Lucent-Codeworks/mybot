@@ -36,8 +36,9 @@ per platform.
 
 - **macOS** needs `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_API_KEY`, `APPLE_API_KEY_ID`,
   `APPLE_API_ISSUER`, plus the `APPLE_TEAM_ID` variable and `MACOS_PROVISIONING_PROFILE`.
-  Unsigned Mac builds must be opened with right-click → Open, and **do not auto-update**: macOS
-  only installs updates for signed apps.
+  macOS reports an unsigned download as "damaged". Run
+  `xattr -dr com.apple.quarantine /Applications/MyBot.app` once after installing. Unsigned Mac
+  builds also **do not auto-update**: macOS only installs updates for signed apps.
 - **Windows** uses Azure Trusted Signing (`AZURE_*` secrets). Unsigned builds install and update,
   with a SmartScreen warning on first install.
 - **Linux** is never signed.

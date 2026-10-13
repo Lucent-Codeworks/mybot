@@ -86,46 +86,11 @@ it("groups checks needing attention before running and completed checks without 
 describe("pull request checkout commands", () => {
   it.each([
     ["github", "feature", null, "gh pr checkout 42"],
-    ["gitlab", "feature", null, "glab mr checkout 42"],
-    ["forgejo", "feature", null, null],
-    ["azure-devops", "feature", null, "az repos pr checkout --id 42"],
-    [
-      "bitbucket",
-      "feature/checkout",
-      "maria/t3code",
-      "git clone --single-branch --branch feature/checkout https://bitbucket.org/maria/t3code.git t3code-pr-42",
-    ],
     ["unknown", "feature", null, null],
   ] as const)("builds the %s command", (provider, branch, repository, expected) => {
     expect(
       pullRequestCheckoutCommand(SourceControlProviderKind.make(provider), 42, branch, repository),
     ).toBe(expected);
-  });
-  it("fetches Forgejo pull refs from the actual repository, including a mounted host and port", () => {
-    expect(
-      pullRequestCheckoutCommand(
-        SourceControlProviderKind.make("forgejo"),
-        42,
-        "feature",
-        null,
-        "https://forgejo.local:3000/git/maria/repo",
-      ),
-    ).toBe(
-      "git fetch 'https://forgejo.local:3000/git/maria/repo' refs/pull/42/head && git checkout -B pulls/42 FETCH_HEAD",
-    );
-  });
-  it("quotes shell metacharacters in Forgejo repository URLs", () => {
-    expect(
-      pullRequestCheckoutCommand(
-        SourceControlProviderKind.make("forgejo"),
-        42,
-        "feature",
-        null,
-        "https://forgejo.local/maria/repo'$(echo nope)",
-      ),
-    ).toBe(
-      "git fetch 'https://forgejo.local/maria/repo'\\''$(echo nope)' refs/pull/42/head && git checkout -B pulls/42 FETCH_HEAD",
-    );
   });
 
   const reference = (host?: string): PullRequestRef => ({
@@ -148,9 +113,7 @@ describe("pull request checkout commands", () => {
     expect(loadingPullRequestCheckoutCommand(reference("github.com"), undefined)).toBe(
       "gh pr checkout 42",
     );
-    expect(loadingPullRequestCheckoutCommand(reference("gitlab.com"), null)).toBe(
-      "glab mr checkout 42",
-    );
+    expect(loadingPullRequestCheckoutCommand(reference("gitlab.com"), null)).toBeNull();
   });
 
   it("uses a matching enterprise identity and rejects an explicit host mismatch", () => {
@@ -1867,21 +1830,6 @@ describe("cached pull request detail", () => {
     ).toBe(explicit);
   });
 
-  it("leaves server-resolved Azure SSH references unchanged", () => {
-    expect(
-      resolvePullRequestReferenceHost(reference, {
-        canonicalKey: "ssh.dev.azure.com/v3/org/project/web",
-        locator: {
-          source: "git-remote",
-          remoteName: "origin",
-          remoteUrl: "git@ssh.dev.azure.com:v3/org/project/web",
-        },
-        provider: SourceControlProviderKind.make("azure-devops"),
-      }),
-    ).toBe(reference);
-    expect(resolvePullRequestReferenceHost(reference, undefined)).toBe(reference);
-  });
-
   it("hydrates legacy hostless snapshots only for the matching host", () => {
     const storage = makeStorage();
     writePullRequestDetailSnapshot(storage, "env-1", reference, detail());
@@ -1896,30 +1844,7 @@ describe("cached pull request detail", () => {
     ).toBeNull();
   });
 
-  it("keeps Forgejo ports isolated when recovering legacy snapshots", () => {
-    const storage = makeStorage();
-    const cached = detail({
-      provider: SourceControlProviderKind.make("forgejo"),
-      url: "https://forge.example:8443/acme/web/pulls/7",
-    });
-    writePullRequestDetailSnapshot(storage, "env-1", reference, cached);
-    const resolved = { ...reference, host: "forge.example:8443" };
-    expect(readPullRequestDetailSnapshot(storage, "env-1", resolved)?.title).toBe(cached.title);
-    expect(
-      readPullRequestDetailSnapshot(storage, "env-1", {
-        ...reference,
-        host: "forge.example:9443",
-      }),
-    ).toBeNull();
-    expect(
-      readPullRequestDetailSnapshot(storage, "env-1", {
-        ...reference,
-        host: "forge.example",
-      }),
-    ).toBeNull();
-  });
-
-  it.each(["github", "gitlab"] as const)(
+  it.each(["github"] as const)(
     "retains portless %s snapshot identities for custom web ports",
     (providerName) => {
       const provider = SourceControlProviderKind.make(providerName);

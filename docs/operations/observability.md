@@ -6,7 +6,8 @@ T3 Code has one server-side observability model:
 
 - pretty logs go to stdout for humans
 - completed spans go to a local NDJSON trace file
-- traces, metrics, and logs can also be exported over OTLP to a real backend like Grafana LGTM
+- traces, metrics, and logs are exported over OTLP, by default to the SigNoz collector at
+  `https://otel.eldritchlogic.com`
 
 The local trace file is the persisted source of truth for normal local launches. Those launches do not
 write a separate server log file, but SSH-managed launches also persist the remote process's
@@ -130,7 +131,8 @@ There are two useful modes:
 - local-only: stdout + local `server.trace.ndjson`
 - full local observability: stdout + local trace file + OTLP export to Grafana/Tempo/Prometheus
 
-The local trace file is always on. OTLP export is opt-in.
+The local trace file is always on. OTLP export goes to the default collector unless an endpoint is
+configured or the [kill switch](#the-kill-switch) is set.
 
 ### Option 1: Local Traces Only
 
@@ -177,9 +179,9 @@ For endpoint settings and startup precedence, see the
 In a worktree, use `vp run dev` instead of `npx t3` to keep state isolated.
 
 ```bash
-export T3CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces
-export T3CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics
-export T3CODE_OTLP_LOGS_URL=http://localhost:4318/v1/logs
+export LUCENT_OTLP_TRACES_URL=http://localhost:4318/v1/traces
+export LUCENT_OTLP_METRICS_URL=http://localhost:4318/v1/metrics
+export LUCENT_OTLP_LOGS_URL=http://localhost:4318/v1/logs
 export OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=development
 ```
 
@@ -212,23 +214,23 @@ node --run dev:desktop
 
 Packaged desktop app:
 
-Launch the actual app executable from the same shell so the desktop app and embedded backend inherit `T3CODE_OTLP_*`.
+Launch the actual app executable from the same shell so the desktop app and embedded backend inherit `LUCENT_OTLP_*`.
 
 macOS app bundle example:
 
 ```bash
-T3CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces \
-T3CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics \
-T3CODE_OTLP_LOGS_URL=http://localhost:4318/v1/logs \
+LUCENT_OTLP_TRACES_URL=http://localhost:4318/v1/traces \
+LUCENT_OTLP_METRICS_URL=http://localhost:4318/v1/metrics \
+LUCENT_OTLP_LOGS_URL=http://localhost:4318/v1/logs \
 "/Applications/T3 Code.app/Contents/MacOS/T3 Code"
 ```
 
 Direct binary example:
 
 ```bash
-T3CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces \
-T3CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics \
-T3CODE_OTLP_LOGS_URL=http://localhost:4318/v1/logs \
+LUCENT_OTLP_TRACES_URL=http://localhost:4318/v1/traces \
+LUCENT_OTLP_METRICS_URL=http://localhost:4318/v1/metrics \
+LUCENT_OTLP_LOGS_URL=http://localhost:4318/v1/logs \
 ./path/to/your/desktop-app-binary
 ```
 
@@ -447,7 +449,7 @@ Use traces when the question is:
 
 Usually one of these is true:
 
-- `T3CODE_OTLP_TRACES_URL` was not set
+- `LUCENT_OTLP_TRACES_URL` was not set
 - the app was launched from a different environment than the one where you exported the vars
 - the app was not fully restarted after changing env
 - Grafana is looking at the wrong time range or service name
@@ -569,7 +571,7 @@ It provides:
 - Effect trace-level and timing refs
 
 The desktop main process is a second producer, assembled in
-`apps/desktop/src/app/DesktopObservability.ts`. It reads the same `T3CODE_OTLP_*` names and the same
+`apps/desktop/src/app/DesktopObservability.ts`. It reads the same `LUCENT_OTLP_*` names and the same
 Settings entries as the backend it supervises, and covers work the backend cannot see: app startup,
 window and menu handling, backend supervision, and updates. It reports as service
 `t3code-desktop`, so a collector shows it alongside the backend rather than mixed into it. It
@@ -589,23 +591,23 @@ Local trace file:
 
 OTLP export:
 
-- `T3CODE_OTLP_TRACES_URL`: OTLP trace endpoint
-- `T3CODE_OTLP_METRICS_URL`: OTLP metric endpoint
-- `T3CODE_OTLP_LOGS_URL`: OTLP log endpoint
-- `T3CODE_OTLP_EXPORT_INTERVAL_MS`: export interval, default `10000`
-- `T3CODE_OTLP_HEADERS`: extra headers for all three exporters, same format as
+- `LUCENT_OTLP_TRACES_URL`: OTLP trace endpoint
+- `LUCENT_OTLP_METRICS_URL`: OTLP metric endpoint
+- `LUCENT_OTLP_LOGS_URL`: OTLP log endpoint
+- `LUCENT_OTLP_EXPORT_INTERVAL_MS`: export interval, default `10000`
+- `LUCENT_OTLP_HEADERS`: extra headers for all three exporters, same format as
   `OTEL_EXPORTER_OTLP_HEADERS`: comma-separated `key=value` pairs with percent-encoded values.
-- `T3CODE_OTLP_PROTOCOL`: `http/json` (default) or `http/protobuf`
+- `LUCENT_OTLP_PROTOCOL`: `http/json` (default) or `http/protobuf`
 
 The server and the desktop app also read the standard
 `OTEL_EXPORTER_OTLP_{TRACES,METRICS,LOGS}_ENDPOINT` and generic `OTEL_EXPORTER_OTLP_ENDPOINT` (with
 `/v1/traces`, `/v1/metrics`, or `/v1/logs` appended), for a collector expecting those instead. A
-non-blank `T3CODE_OTLP_*_URL` wins over either, and a per-signal endpoint wins over the generic one
+non-blank `LUCENT_OTLP_*_URL` wins over either, and a per-signal endpoint wins over the generic one
 for its signal. A blank value counts as unset. A signal with an OTEL endpoint takes its headers from
 `OTEL_EXPORTER_OTLP_HEADERS` and its protocol from `OTEL_EXPORTER_OTLP_PROTOCOL` (default
 `http/protobuf`, read case-insensitively), and a per-signal
 `OTEL_EXPORTER_OTLP_{TRACES,METRICS,LOGS}_HEADERS` or `_PROTOCOL` wins over the generic one for its
-signal. `T3CODE_OTLP_HEADERS` and `T3CODE_OTLP_PROTOCOL` never apply to it. An endpoint that is not
+signal. `LUCENT_OTLP_HEADERS` and `LUCENT_OTLP_PROTOCOL` never apply to it. An endpoint that is not
 an `http` or `https` URL, a protocol other than `http/protobuf` or `http/json` such as `grpc`, or
 headers that are not `key=value` pairs with percent-encoded values turn that signal's export off
 with a startup warning, rather than sending it to the Settings endpoint.
@@ -615,8 +617,11 @@ process, both in `service.namespace` `t3code`. `OTEL_SERVICE_NAME` and a `servic
 `service.namespace` in `OTEL_RESOURCE_ATTRIBUTES` are ignored. Tell installations apart with other
 resource attributes, such as `OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=development`.
 
-If the OTLP URLs are unset, local tracing still works, metrics stay in-process only, and logs stay
-on stdout only.
+When no variable, bootstrap envelope, or Settings entry names an endpoint for a signal, it exports
+to the default collector at `https://otel.eldritchlogic.com/v1/<signal>`, using `LUCENT_OTLP_HEADERS`
+and `LUCENT_OTLP_PROTOCOL`. The origin is `DEFAULT_OTLP_COLLECTOR_ORIGIN` in
+`packages/shared/src/otelEnvironment.ts`. Use the kill switch or `OTEL_<SIGNAL>_EXPORTER=none` to
+stop exporting.
 
 ### The Kill Switch
 
@@ -631,7 +636,7 @@ OpenTelemetry specification and only `true` disables export, so `OTEL_SDK_DISABL
 Values are case-insensitive and trimmed. An unrecognized value is ignored with a startup warning.
 
 `OTEL_TRACES_EXPORTER`, `OTEL_METRICS_EXPORTER`, or `OTEL_LOGS_EXPORTER` set to `none` turns off
-just that signal, overriding an OTEL endpoint and the Settings endpoint. A `T3CODE_OTLP_*_URL` still
+just that signal, overriding an OTEL endpoint and the Settings endpoint. A `LUCENT_OTLP_*_URL` still
 wins for its signal. `otlp` is the default, and any other exporter name, such as `console` or
 `prometheus`, is ignored with a startup warning.
 

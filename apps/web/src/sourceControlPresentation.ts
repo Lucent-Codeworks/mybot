@@ -5,13 +5,7 @@ import type {
   ChangeRequestTerminology,
   SourceControlClientDefinition,
 } from "@t3tools/client-runtime/source-control-clients";
-import {
-  AzureDevOpsIcon,
-  BitbucketIcon,
-  ForgejoIcon,
-  GitHubIcon,
-  GitLabIcon,
-} from "./components/Icons";
+import { GitHubIcon } from "./components/Icons";
 import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
 
 export type { ChangeRequestTerminology } from "@t3tools/client-runtime/source-control-clients";
@@ -21,10 +15,6 @@ type SourceControlIcon = ElementType<{ className?: string }>;
 /** Web art for each definition `icon` key; a key without art draws the change request glyph. */
 const SOURCE_CONTROL_ICONS: Partial<Record<string, SourceControlIcon>> = {
   github: GitHubIcon,
-  gitlab: GitLabIcon,
-  forgejo: ForgejoIcon,
-  bitbucket: BitbucketIcon,
-  "azure-devops": AzureDevOpsIcon,
 };
 
 export function sourceControlIcon(definition: SourceControlClientDefinition): SourceControlIcon {

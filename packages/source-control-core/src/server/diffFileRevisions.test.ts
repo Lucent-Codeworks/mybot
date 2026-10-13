@@ -72,24 +72,6 @@ describe("parseDiffFileRevisions", () => {
     assert.deepStrictEqual([...revisions], [["new.ts", "2222222"]]);
   });
 
-  it("leaves out a file Bitbucket excluded, which it gives no index line for", () => {
-    const revisions = parseDiffFileRevisions(
-      patchOf(
-        "diff --git a/package.json b/package.json",
-        "index 7f2aa0ab6..b4a2a7c9a 100644",
-        "--- a/package.json",
-        "+++ b/package.json",
-        "@@ -1 +1 @@",
-        '-  "x": "1"',
-        '+  "x": "2"',
-        "diff --git a/yarn.lock b/yarn.lock",
-        'File excluded by pattern "yarn.lock"',
-      ),
-    );
-
-    assert.deepStrictEqual([...revisions], [["package.json", "b4a2a7c9a"]]);
-  });
-
   it("stops reading headers at the first hunk, so content cannot pose as one", () => {
     const revisions = parseDiffFileRevisions(
       patchOf(
@@ -117,14 +99,6 @@ describe("parseDiffFileRevisions", () => {
     );
 
     assert.deepStrictEqual([...revisions], [["one b/two.ts", "fffffff"]]);
-  });
-
-  it("leaves out an added file that Bitbucket sent no index line for", () => {
-    const revisions = parseDiffFileRevisions(
-      patchOf("diff --git a/added.ts b/added.ts", "new file mode 100644", "--- /dev/null"),
-    );
-
-    assert.strictEqual(revisions.size, 0);
   });
 
   it("reads nothing out of an empty patch", () => {

@@ -147,7 +147,7 @@ await Effect.runPromise(
         ProcessRunner.layer,
         SourceControlProviderRegistry.layer.pipe(
           Layer.provide(SourceControlBuiltInDrivers.layer),
-          // Default settings: no saved Bitbucket token, gh's own GitHub account choice.
+          // Default settings: gh's own GitHub account choice.
           Layer.provide(ServerSettings.layerTest()),
           Layer.provide(VcsDriverRegistry.layer.pipe(Layer.provide(VcsProjectConfig.layer))),
           Layer.provide(GitVcsDriver.layer),

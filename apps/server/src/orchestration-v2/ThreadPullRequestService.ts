@@ -1,7 +1,4 @@
-import {
-  canonicalRepositoryKey,
-  sourceControlRepositorySelector,
-} from "@t3tools/shared/sourceControl";
+import { sourceControlRepositorySelector } from "@t3tools/shared/sourceControl";
 import {
   CommandId,
   type OrchestrationProjectShell,
@@ -57,8 +54,7 @@ function pullRequestMatchesProject(
   return (
     pullRequest.repositoryKey !== null &&
     project.repositoryIdentity != null &&
-    canonicalRepositoryKey(pullRequest.repositoryKey) ===
-      canonicalRepositoryKey(project.repositoryIdentity.canonicalKey)
+    pullRequest.repositoryKey === project.repositoryIdentity.canonicalKey
   );
 }
 

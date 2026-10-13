@@ -65,9 +65,9 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
     traceBatchWindowMs: 1_000,
     traceMaxBytes: 10 * 1024 * 1024,
     traceMaxFiles: 10,
-    otlpTracesUrl: undefined,
-    otlpMetricsUrl: undefined,
-    otlpLogsUrl: undefined,
+    otlpTracesUrl: OtelEnvironment.defaultSignalUrl("traces"),
+    otlpMetricsUrl: OtelEnvironment.defaultSignalUrl("metrics"),
+    otlpLogsUrl: OtelEnvironment.defaultSignalUrl("logs"),
     otlpTracesExport: DEFAULT_SIGNAL_EXPORT,
     otlpMetricsExport: DEFAULT_SIGNAL_EXPORT,
     otlpLogsExport: DEFAULT_SIGNAL_EXPORT,
@@ -948,7 +948,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
                 env: {
-                  T3CODE_OTLP_HEADERS: "authorization=Basic%20abc%3D%3D,x-tenant=t3",
+                  LUCENT_OTLP_HEADERS: "authorization=Basic%20abc%3D%3D,x-tenant=t3",
                 },
               }),
             ),
@@ -991,8 +991,8 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
                 env: {
-                  T3CODE_OTLP_HEADERS: "authorization=Bearer abc==, x-tenant=t3",
-                  T3CODE_OTLP_TRACES_URL: "http://collector.internal:4318",
+                  LUCENT_OTLP_HEADERS: "authorization=Bearer abc==, x-tenant=t3",
+                  LUCENT_OTLP_TRACES_URL: "http://collector.internal:4318",
                 },
               }),
             ),
@@ -1034,7 +1034,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         Effect.provide(
           Layer.mergeAll(
             ConfigProvider.layer(
-              ConfigProvider.fromEnv({ env: { T3CODE_OTLP_PROTOCOL: "http/protobuf" } }),
+              ConfigProvider.fromEnv({ env: { LUCENT_OTLP_PROTOCOL: "http/protobuf" } }),
             ),
             NetService.layer,
           ),
@@ -1075,7 +1075,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
           Layer.mergeAll(
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
-                env: { T3CODE_OTLP_LOGS_URL: "http://collector.internal:4318/v1/logs" },
+                env: { LUCENT_OTLP_LOGS_URL: "http://collector.internal:4318/v1/logs" },
               }),
             ),
             NetService.layer,
@@ -1103,7 +1103,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
   });
 
   it.effect(
-    "resolves each signal's endpoint through T3CODE_OTLP_*_URL, an OTEL endpoint, the bootstrap envelope, and persisted Settings, in that order",
+    "resolves each signal's endpoint through LUCENT_OTLP_*_URL, an OTEL endpoint, the bootstrap envelope, and persisted Settings, in that order",
     () =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
@@ -1140,8 +1140,8 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
               ConfigProvider.layer(
                 ConfigProvider.fromEnv({
                   env: {
-                    T3CODE_OTLP_TRACES_URL: "http://t3:4318/v1/traces",
-                    T3CODE_OTLP_HEADERS: "x-key=secret",
+                    LUCENT_OTLP_TRACES_URL: "http://t3:4318/v1/traces",
+                    LUCENT_OTLP_HEADERS: "x-key=secret",
                     OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://otel-traces:4318/custom",
                     OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: "http://otel-metrics:4318/custom",
                     OTEL_EXPORTER_OTLP_HEADERS: "x-key=otel",
@@ -1153,11 +1153,11 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
           ),
         );
 
-        // T3CODE_OTLP_TRACES_URL wins over the OTEL variable for the same
+        // LUCENT_OTLP_TRACES_URL wins over the OTEL variable for the same
         // signal, and keeps T3 Code's own headers since T3 Code still owns it.
         expect(resolved.otlpTracesUrl).toBe("http://t3:4318/v1/traces");
         expect(resolved.otlpTracesExport.headers).toEqual({ "x-key": "secret" });
-        // Metrics named no T3CODE_OTLP_METRICS_URL, so the OTEL endpoint wins
+        // Metrics named no LUCENT_OTLP_METRICS_URL, so the OTEL endpoint wins
         // over the bootstrap envelope and brings the OTEL headers and protocol.
         expect(resolved.otlpMetricsUrl).toBe("http://otel-metrics:4318/custom");
         expect(resolved.otlpMetricsExport).toEqual({
@@ -1207,7 +1207,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
               ConfigProvider.layer(
                 ConfigProvider.fromEnv({
                   env: {
-                    T3CODE_OTLP_TRACES_URL: "http://t3:4318/v1/traces",
+                    LUCENT_OTLP_TRACES_URL: "http://t3:4318/v1/traces",
                     OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel:4318",
                     OTEL_EXPORTER_OTLP_HEADERS: "x-key=%zz",
                   },
@@ -1218,7 +1218,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
           ),
         );
 
-        // T3CODE_OTLP_TRACES_URL still wins outright.
+        // LUCENT_OTLP_TRACES_URL still wins outright.
         expect(resolved.otlpTracesUrl).toBe("http://t3:4318/v1/traces");
         // The OTEL endpoint claimed metrics and logs, so neither the bootstrap
         // envelope nor Settings receives them with T3 Code's headers.

@@ -38,7 +38,7 @@ import { isTerminalRunStatus } from "./ThreadManagementService.ts";
 
 const SLOW_SYNC_INTERVAL_MS = 15 * 60 * 1_000;
 /** Shell commands that can merge or close a pull request without a merge notification. */
-const PULL_REQUEST_CLOSE_COMMAND = /\b(?:gh\s+pr|glab\s+mr)\s+(?:merge|close)\b/u;
+const PULL_REQUEST_CLOSE_COMMAND = /\bgh\s+pr\s+(?:merge|close)\b/u;
 
 const isPullRequestProviderError = Schema.is(PullRequestProviderError);
 

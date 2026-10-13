@@ -19,24 +19,6 @@ const input = {
 };
 
 describe("thread pull request capability negotiation", () => {
-  it.each([true, false])(
-    "preserves Forgejo ports in a multi-link mutation: linked=%s",
-    (linked) => {
-      const mutation = planThreadPullRequestMutation({
-        ...input,
-        linked,
-        capabilities: { threadPullRequests: true },
-        reference: {
-          host: "forge.example",
-          repository: "team/repo",
-          number: 7,
-          url: "http://forge.example:3000/team/repo/pulls/7",
-        },
-      });
-      expect(mutation).toMatchObject({ input: { host: "forge.example:3000", number: 7 } });
-    },
-  );
-
   it.each([undefined, {}, { threadPullRequests: false, threadPullRequestLinking: false }])(
     "does not dispatch when linking is unadvertised: %j",
     (capabilities) => {
@@ -68,36 +50,6 @@ describe("thread pull request capability negotiation", () => {
     ).toEqual({
       type: "thread.meta.update",
       input: { threadId: input.threadId, linkedPullRequest: null },
-    });
-  });
-  it("uses the checkout's Azure selector only for legacy metadata commands", () => {
-    const azure = {
-      ...input,
-      reference: {
-        host: "dev.azure.com",
-        repository: "org/project/_git/web",
-        number: 42,
-        url: "https://dev.azure.com/org/project/_git/web/pullrequest/42",
-      },
-      legacyRepository: "web",
-    };
-    expect(
-      planThreadPullRequestMutation({
-        ...azure,
-        capabilities: { threadPullRequestLinking: true },
-      }),
-    ).toMatchObject({
-      type: "thread.meta.update",
-      input: { linkedPullRequest: { repository: "web", number: 42 } },
-    });
-    expect(
-      planThreadPullRequestMutation({
-        ...azure,
-        capabilities: { threadPullRequests: true },
-      }),
-    ).toMatchObject({
-      type: "thread.pull-request.link",
-      input: { repository: "org/project/_git/web", number: 42 },
     });
   });
 

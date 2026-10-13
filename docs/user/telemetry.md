@@ -15,6 +15,10 @@ Linux, so export it there and restart the app. On Windows, set it as a user envi
 
 ## Export diagnostics to your own receiver
 
+By default, the server and desktop app export traces, metrics, and logs to
+`https://otel.eldritchlogic.com`. To stop, set `OTEL_SDK_DISABLED=true` in the server's environment
+before starting it.
+
 To send traces, metrics, or logs to an OpenTelemetry receiver, open
 **Settings > General > Diagnostics**, select an environment, and enter each signal's OTLP HTTP
 endpoint under **OpenTelemetry export** (for example `http://localhost:4318/v1/traces`). Save, then
@@ -24,8 +28,8 @@ saved endpoints are checked when the section opens. Checks send authentication h
 the signal's currently running endpoint and do not follow redirects. To check a new endpoint
 that requires authentication, save it and restart the server first.
 
-`T3CODE_OTLP_*_URL` and standard `OTEL_EXPORTER_OTLP_*` environment variables override the saved
-settings. For endpoints saved here or set with `T3CODE_OTLP_*_URL`, set `T3CODE_OTLP_HEADERS` for
-receivers that need authentication and `T3CODE_OTLP_PROTOCOL=http/protobuf` for receivers that do
+`LUCENT_OTLP_*_URL` and standard `OTEL_EXPORTER_OTLP_*` environment variables override the saved
+settings. For endpoints saved here or set with `LUCENT_OTLP_*_URL`, set `LUCENT_OTLP_HEADERS` for
+receivers that need authentication and `LUCENT_OTLP_PROTOCOL=http/protobuf` for receivers that do
 not accept JSON. An endpoint set with `OTEL_EXPORTER_OTLP_*` takes its headers and protocol from
 `OTEL_EXPORTER_OTLP_HEADERS` and `OTEL_EXPORTER_OTLP_PROTOCOL` instead.

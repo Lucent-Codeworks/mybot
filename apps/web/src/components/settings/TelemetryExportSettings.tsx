@@ -1,5 +1,6 @@
 import { useAtomValue } from "@effect/atom-react";
 import type { OtlpEndpointCheckResult, OtlpSignal } from "@t3tools/contracts";
+import { defaultSignalUrl } from "@t3tools/shared/otelEnvironment";
 import { useEffect, useEffectEvent, useState } from "react";
 
 import { serverEnvironment } from "../../state/server";
@@ -27,7 +28,7 @@ type EndpointCheck = { readonly url: string; readonly result: OtlpEndpointCheckR
 const isHttpUrl = (url: string) => /^https?:\/\/./i.test(url);
 
 function endpointStatus(url: string, check: EndpointCheck | undefined) {
-  if (url === "") return { label: "Off", dot: "bg-muted-foreground/40" };
+  if (url === "") return { label: "Default", dot: "bg-muted-foreground/40" };
   if (check?.url !== url) return { label: "Not checked", dot: "bg-muted-foreground/40" };
   const { result } = check;
   if (result === null) return { label: "Checking…", dot: "bg-warning" };
@@ -147,8 +148,8 @@ function TelemetryExportForm() {
         }}
       >
         <p className="text-xs text-muted-foreground">
-          Send traces, metrics, and logs to an OTLP HTTP receiver. Restart the server to apply.
-          Environment variables override these settings.
+          Send traces, metrics, and logs to an OTLP HTTP receiver. Empty endpoints use the default
+          collector. Restart the server to apply. Environment variables override these settings.
         </p>
         {!canEdit && (
           <p className="text-xs text-muted-foreground">
@@ -174,8 +175,8 @@ function TelemetryExportForm() {
                   size="sm"
                   type="url"
                   pattern="[Hh][Tt][Tt][Pp][Ss]?://.*"
-                  title="Enter an HTTP or HTTPS endpoint, or leave empty to disable export."
-                  placeholder={`http://localhost:4318/v1/${signal}`}
+                  title="Enter an HTTP or HTTPS endpoint, or leave empty to use the default collector."
+                  placeholder={defaultSignalUrl(signal)}
                   value={values[key]}
                   disabled={saving || !canEdit}
                   onChange={(event) => {

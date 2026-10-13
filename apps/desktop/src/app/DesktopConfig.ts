@@ -45,14 +45,14 @@ export const DesktopConfig = Config.all({
   commitHashOverride: trimmedString("T3CODE_COMMIT_HASH"),
   desktopLanHostOverride: trimmedString("T3CODE_DESKTOP_LAN_HOST"),
   desktopHttpsEndpointUrls: commaSeparatedStrings("T3CODE_DESKTOP_HTTPS_ENDPOINTS"),
-  otlpTracesUrl: trimmedString("T3CODE_OTLP_TRACES_URL"),
-  otlpMetricsUrl: trimmedString("T3CODE_OTLP_METRICS_URL"),
-  otlpLogsUrl: trimmedString("T3CODE_OTLP_LOGS_URL"),
-  otlpExportIntervalMs: Config.Int("T3CODE_OTLP_EXPORT_INTERVAL_MS").pipe(
+  otlpTracesUrl: trimmedString("LUCENT_OTLP_TRACES_URL"),
+  otlpMetricsUrl: trimmedString("LUCENT_OTLP_METRICS_URL"),
+  otlpLogsUrl: trimmedString("LUCENT_OTLP_LOGS_URL"),
+  otlpExportIntervalMs: Config.Int("LUCENT_OTLP_EXPORT_INTERVAL_MS").pipe(
     Config.withDefault(10_000),
   ),
-  otlpHeaders: Config.schema(OtlpHeadersFromString, "T3CODE_OTLP_HEADERS").pipe(Config.option),
-  otlpProtocol: Config.schema(OtlpProtocol, "T3CODE_OTLP_PROTOCOL").pipe(
+  otlpHeaders: Config.schema(OtlpHeadersFromString, "LUCENT_OTLP_HEADERS").pipe(Config.option),
+  otlpProtocol: Config.schema(OtlpProtocol, "LUCENT_OTLP_PROTOCOL").pipe(
     Config.withDefault("http/json"),
   ),
   appImagePath: trimmedString("APPIMAGE"),

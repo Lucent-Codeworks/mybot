@@ -26,19 +26,6 @@ describe("presentThreadPr", () => {
     });
   });
 
-  it("uses merge-request terminology for GitLab", () => {
-    expect(
-      presentThreadPr(pullRequest, {
-        kind: SourceControlProviderKind.make("gitlab"),
-        name: "GitLab",
-        baseUrl: "https://gitlab.com",
-      }),
-    ).toMatchObject({
-      label: "3774",
-      accessibilityLabel: "#3774 merge request merged",
-    });
-  });
-
   it("uses gray for draft pull requests", () => {
     expect(
       presentThreadPr({ ...pullRequest, state: "open", isDraft: true }, undefined),

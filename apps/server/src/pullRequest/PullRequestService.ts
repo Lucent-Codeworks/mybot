@@ -1,8 +1,4 @@
-import {
-  canonicalRepositoryKey,
-  isSshRemoteUrl,
-  sourceControlRepositorySelector,
-} from "@t3tools/shared/sourceControl";
+import { isSshRemoteUrl, sourceControlRepositorySelector } from "@t3tools/shared/sourceControl";
 import { normalizeGitRemoteUrl } from "@t3tools/shared/git";
 import * as Cache from "effect/Cache";
 import * as Cause from "effect/Cause";
@@ -733,8 +729,7 @@ export const make = Effect.gen(function* () {
       if (filter.projectId !== undefined && project.id !== filter.projectId) continue;
       const identity = project.repositoryIdentity;
       if (
-        (identity?.provider !== "unknown" &&
-          !(identity?.provider === "forgejo" && isSshRemoteUrl(identity.locator.remoteUrl))) ||
+        identity?.provider !== "unknown" ||
         sourceControlRepositorySelector(project.repositoryIdentity) === null
       )
         continue;
@@ -745,8 +740,6 @@ export const make = Effect.gen(function* () {
         filter.host !== undefined &&
         host !== "unknown" &&
         host !== filter.host.toLowerCase() &&
-        pullRequestHostOf(identity, SourceControlProviderKind.make("forgejo")) !==
-          filter.host.toLowerCase() &&
         !isSshRemoteUrl(identity.locator.remoteUrl)
       ) {
         continue;
@@ -770,10 +763,7 @@ export const make = Effect.gen(function* () {
               sourceControlProviders.resolveHandle({
                 cwd: project.workspaceRoot,
                 context: {
-                  provider:
-                    provider.kind === "forgejo"
-                      ? { ...provider, kind: SourceControlProviderKind.make("unknown") }
-                      : provider,
+                  provider,
                   remoteName,
                   remoteUrl,
                   ...(filter.host !== undefined && isSshRemoteUrl(remoteUrl)
@@ -851,18 +841,12 @@ export const make = Effect.gen(function* () {
           // the page from repeating every change request per local checkout. The host is part
           // of the key, so the same `owner/repo` on two hosts stays two repositories.
           let refinedProvider: SourceControlProviderInfo | null | undefined;
-          if (
-            kind === "unknown" ||
-            (kind === "forgejo" && isSshRemoteUrl(identity.locator.remoteUrl))
-          ) {
+          if (kind === "unknown") {
             const provider = detectSourceControlProviderFromRemoteUrl(identity.locator.remoteUrl);
             refinedProvider = provider === null ? null : refinedProviders.get(provider.baseUrl);
             kind = refinedProvider?.kind ?? kind;
           }
-          const host =
-            refinedProvider?.kind === "forgejo"
-              ? new URL(refinedProvider.baseUrl).host.toLowerCase()
-              : pullRequestHostOf(identity, kind);
+          const host = pullRequestHostOf(identity, kind);
           if (filter.host !== undefined && host !== filter.host.toLowerCase()) {
             continue;
           }
@@ -892,8 +876,7 @@ export const make = Effect.gen(function* () {
             repository,
             host,
             remote: repositoryKey ?? normalizeGitRemoteUrl(`https://${host}/${repository}`),
-            repositoryKey:
-              repositoryKey === null ? null : canonicalRepositoryKey(repositoryKey.toLowerCase()),
+            repositoryKey: repositoryKey === null ? null : repositoryKey.toLowerCase(),
           });
         }
         return { supported, unimplemented, viewerRoots };
@@ -932,12 +915,8 @@ export const make = Effect.gen(function* () {
             }),
           );
         }
-        const repositoryKey = canonicalRepositoryKey(`${host}/${repository}`.toLowerCase());
-        // Azure SSH and legacy clone hosts differ from the browser URL's host. Compare
-        // the complete repository identity before narrowing those checkouts by host.
-        return listWorkspaceProjects(
-          repositoryKey.startsWith("dev.azure.com/") ? {} : { host },
-        ).pipe(
+        const repositoryKey = `${host}/${repository}`.toLowerCase();
+        return listWorkspaceProjects({ host }).pipe(
           Effect.flatMap(({ supported }) => {
             const onHost = supported.filter((candidate) => candidate.host === host);
             const route =
@@ -953,12 +932,12 @@ export const make = Effect.gen(function* () {
               onHost.find((candidate) => candidate.repositoryKey === null);
             if (route === undefined) {
               return Effect.gen(function* () {
-                // These providers target the repository explicitly and authenticate by host;
-                // a linked PR in a non-repository project still needs its snapshot refreshed.
-                // GitLab still selects its host from the checkout or CLI configuration.
-                const provider = ["github.com", "bitbucket.org", "codeberg.org"].includes(host)
-                  ? detectSourceControlProviderFromRemoteUrl(`https://${host}/${repository}.git`)
-                  : null;
+                // GitHub targets the repository explicitly and authenticates by host; a linked
+                // PR in a non-repository project still needs its snapshot refreshed.
+                const provider =
+                  host === "github.com"
+                    ? detectSourceControlProviderFromRemoteUrl(`https://${host}/${repository}.git`)
+                    : null;
                 const api = provider === null ? null : registry.get(provider.kind);
                 if (api !== null) {
                   const selected = yield* projects.getShell(ref.projectId).pipe(

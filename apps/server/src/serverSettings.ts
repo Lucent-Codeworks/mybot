@@ -327,28 +327,22 @@ const LegacyProviderSettingsJson = fromLenientJson(
   Schema.Struct({
     providers: Schema.optionalKey(Schema.Record(Schema.String, Schema.Unknown)),
     // Retired for `sourceControlHosts`; read only by `migrateLegacySourceControlSettings`.
-    bitbucket: Schema.optionalKey(Schema.Record(Schema.String, Schema.Unknown)),
     github: Schema.optionalKey(Schema.Record(Schema.String, Schema.Unknown)),
   }),
 );
 const decodeLegacyProviderSettingsJsonExit = Schema.decodeUnknownExit(LegacyProviderSettingsJson);
 
-/** The secret store names the retired `bitbucket` and `github` keys kept their tokens under. */
-const LEGACY_BITBUCKET_SECRET_NAMES: Readonly<Record<string, string>> = {
-  accessToken: "bitbucket-access-token",
-  apiToken: "bitbucket-api-token",
-};
+/** The secret store name the retired `github` key kept each host's token under. */
 const legacyGitHubTokenSecretName = (host: string) =>
   `github-token-${Buffer.from(host.trim().toLowerCase(), "utf8").toString("base64url")}`;
 
 /**
- * Folds the retired `bitbucket` and `github` keys into `sourceControlHosts`, unless the new key
+ * Folds the retired `github` key into `sourceControlHosts`, unless the new key
  * already holds that host. Returns the secret store entries to copy to their new names.
  */
 function migrateLegacySourceControlSettings(
   settings: ServerSettings,
   legacy: {
-    readonly bitbucket?: Readonly<Record<string, unknown>> | undefined;
     readonly github?: Readonly<Record<string, unknown>> | undefined;
   },
 ): {
@@ -357,16 +351,6 @@ function migrateLegacySourceControlSettings(
 } {
   const sourceControlHosts = { ...settings.sourceControlHosts };
   const secretMoves: Array<{ readonly from: string; readonly to: string }> = [];
-  if (legacy.bitbucket !== undefined && sourceControlHosts.bitbucket === undefined) {
-    sourceControlHosts.bitbucket = legacy.bitbucket;
-    for (const [field, from] of Object.entries(LEGACY_BITBUCKET_SECRET_NAMES)) {
-      if (legacy.bitbucket[field] !== SECRET_REDACTED) continue;
-      secretMoves.push({
-        from,
-        to: sourceControlHostSecretName({ kind: "bitbucket", field, serverHost: null }),
-      });
-    }
-  }
   if (legacy.github !== undefined && sourceControlHosts.github === undefined) {
     sourceControlHosts.github = legacy.github;
     for (const [serverHost, value] of readSecretFieldValues(legacy.github.tokens)) {
@@ -731,7 +715,6 @@ const make = Effect.gen(function* () {
       if (legacySettings._tag === "Success") {
         legacyProviders = legacySettings.value.providers;
         legacySourceControl = {
-          bitbucket: legacySettings.value.bitbucket,
           github: legacySettings.value.github,
         };
       }
@@ -830,9 +813,7 @@ const make = Effect.gen(function* () {
         ),
     ).pipe(Effect.map((copied) => copied.every(Boolean)));
     const hasLegacySourceControl =
-      settingsFileTrusted &&
-      legacySecretsCopied &&
-      (legacySourceControl.bitbucket !== undefined || legacySourceControl.github !== undefined);
+      settingsFileTrusted && legacySecretsCopied && legacySourceControl.github !== undefined;
     const sourceControlMigration = hasLegacySourceControl
       ? migrateLegacySourceControlSettings(folded, legacySourceControl)
       : { settings: folded, secretMoves: [] };
@@ -840,7 +821,7 @@ const make = Effect.gen(function* () {
     const migrated = settingsFileTrusted
       ? yield* moveInlineSettingsSecrets(sourceControlMigration.settings)
       : folded;
-    // A file still carrying the retired `providers`, `bitbucket`, or `github` keys is rewritten
+    // A file still carrying the retired `providers` or `github` keys is rewritten
     // once so the migrated values persist and the old keys disappear.
     if (
       migrated !== loaded ||

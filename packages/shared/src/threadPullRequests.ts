@@ -8,7 +8,7 @@ import type {
 
 import { pullRequestHostOf } from "@t3tools/contracts";
 import { parseChangeRequestUrl } from "./changeRequestUrl.ts";
-import { canonicalRepositoryKey, sourceControlRepositorySelector } from "./sourceControl.ts";
+import { sourceControlRepositorySelector } from "./sourceControl.ts";
 
 type ThreadPullRequestKeySource = ThreadPullRequestKey & {
   readonly authority?: string;
@@ -25,9 +25,7 @@ export function normalizeThreadPullRequestKey(
     (parsed?.repository === key.repository.trim().toLowerCase() && parsed.number === key.number
       ? parsed.authority
       : undefined);
-  const canonical = canonicalRepositoryKey(
-    `${(authority ?? key.host).trim().toLowerCase()}/${key.repository.trim().toLowerCase()}`,
-  );
+  const canonical = `${(authority ?? key.host).trim().toLowerCase()}/${key.repository.trim().toLowerCase()}`;
   const separator = canonical.indexOf("/");
   return {
     host: canonical.slice(0, separator),
@@ -36,15 +34,14 @@ export function normalizeThreadPullRequestKey(
   };
 }
 
-/** Legacy Azure selectors omit the organization and project; recover those from the PR URL. */
+/** The key of a legacy linked pull request, which recorded no host of its own. */
 export function legacyThreadPullRequestKey(
   linked: Pick<ThreadLinkedPullRequest, "repository" | "number" | "url">,
   fallbackHost?: string,
 ): ThreadPullRequestKey {
   const parsed = parseChangeRequestUrl(linked.url);
   if (parsed !== null && parsed.number === linked.number) {
-    const canonical = canonicalRepositoryKey(`${parsed.host}/${parsed.repository}`);
-    if (parsed.authority !== undefined || canonical.startsWith("dev.azure.com/")) {
+    if (parsed.authority !== undefined) {
       return normalizeThreadPullRequestKey(parsed);
     }
   }
@@ -162,16 +159,8 @@ export function legacyLinkedPullRequestOf(
   if (typeof host !== "string") return null;
   const repository = sourceControlRepositorySelector(identity);
   if (repository === null) return null;
-  const azureKey =
-    identity.provider === "azure-devops"
-      ? canonicalRepositoryKey(identity.canonicalKey.toLowerCase())
-      : null;
   const link = resolveThreadCurrentPullRequestLink(
     links.filter((link) => {
-      if (azureKey !== null) {
-        const key = legacyThreadPullRequestKey(link, link.host);
-        return canonicalRepositoryKey(`${key.host}/${key.repository}`) === azureKey;
-      }
       const parsed = parseChangeRequestUrl(link.url);
       if (parsed?.authority !== undefined) {
         try {
@@ -195,7 +184,7 @@ export function legacyLinkedPullRequestOf(
   if (link === null) return null;
   return {
     projectId,
-    repository: azureKey === null ? link.repository : repository,
+    repository: link.repository,
     number: link.number,
     url: link.url,
   };

@@ -40,10 +40,10 @@ describe("ThreadWorktreeIndicator", () => {
 
 describe("linked pull request snapshots", () => {
   const link: ThreadPullRequestLink = {
-    host: "gitlab.example.com",
+    host: "github.com",
     repository: "acme/web",
     number: 42,
-    url: "https://gitlab.example.com/acme/web/-/merge_requests/42",
+    url: "https://github.com/acme/web/pull/42",
     source: "manual",
     linkedAt: "2026-01-01T00:00:00Z",
     stack: null,
@@ -76,27 +76,26 @@ describe("linked pull request snapshots", () => {
         baseRef: "main",
         updatedAt: "2026-01-02T00:00:00Z",
       },
-      sourceControlProvider: { kind: "gitlab", name: "gitlab", baseUrl: "" },
+      sourceControlProvider: { kind: "github", name: "github", baseUrl: "" },
     });
   });
-  it.each([
-    ["https://codeberg.org/owner/repo/pulls/42", "forgejo"],
-    ["https://gitlab.example.com/acme/web/-/merge_requests/42", "gitlab"],
-    ["https://github.com/owner/repo/pull/42", "github"],
-  ])("classifies %s as %s", (url, kind) => {
-    const result = linkedPullRequestSnapshotStatus({
-      ...link,
-      url,
-      snapshot: {
-        state: "open",
-        title: "Change",
-        headBranch: "feature",
-        baseBranch: "main",
-        isDraft: false,
-        updatedAt: null,
-        syncedAt: "2026-01-03T00:00:00Z",
-      },
-    });
-    expect(result?.sourceControlProvider.kind).toBe(kind);
-  });
+  it.each([["https://github.com/owner/repo/pull/42", "github"]])(
+    "classifies %s as %s",
+    (url, kind) => {
+      const result = linkedPullRequestSnapshotStatus({
+        ...link,
+        url,
+        snapshot: {
+          state: "open",
+          title: "Change",
+          headBranch: "feature",
+          baseBranch: "main",
+          isDraft: false,
+          updatedAt: null,
+          syncedAt: "2026-01-03T00:00:00Z",
+        },
+      });
+      expect(result?.sourceControlProvider.kind).toBe(kind);
+    },
+  );
 });

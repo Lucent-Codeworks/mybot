@@ -1,5 +1,4 @@
 import type { RepositoryIdentity, ThreadLinkedPullRequest } from "@t3tools/contracts";
-import { canonicalRepositoryKey } from "./sourceControl.ts";
 
 /**
  * A change request named the way a thread link names one: the host below which the repository
@@ -13,7 +12,7 @@ export interface ChangeRequestLink {
   readonly host: string;
   readonly repository: string;
   readonly number: number;
-  /** Forgejo's HTTP host and port, separate from the portless repository identity. */
+  /** The web host and port, when they differ from the portless repository identity. */
   readonly authority?: string;
 }
 
@@ -28,14 +27,11 @@ function isHostOf(hostname: string, apex: string, label?: string): boolean {
  * anything else — an issue, a commit, a repository root, a host this cannot tell apart from an
  * ordinary link. A doubtful match is worse than no match, so nothing here guesses.
  *
- * Each host is recognised by the path shape it alone uses, guarded by a hostname it could
- * plausibly be served from, since self-hosted installs are named whatever their admin chose:
- * GitLab's `/-/` marker is unique enough to trust on any hostname, while `/pull/` is generic
- * enough that it is only believed from a GitHub-ish host.
+ * `/pull/` is generic enough that it is only believed from a GitHub-ish host, since GitHub
+ * Enterprise installs are named whatever their admin chose.
  *
  * Nothing here tries to tell a lookalike hostname from a real one — `github.com.evil.test` and
- * the rest are an open set, and blocking spellings of it costs real hosts (`gitlab.com.br` is a
- * registrable domain). What a claim is worth is decided where it is used.
+ * the rest are an open set. What a claim is worth is decided where it is used.
  */
 export function parseChangeRequestUrl(targetUrl: string): ChangeRequestLink | null {
   let url: URL;
@@ -52,27 +48,6 @@ export function parseChangeRequestUrl(targetUrl: string): ChangeRequestLink | nu
   if (isHostOf(host, "github.com", "github")) {
     const match = /^\/([^/]+\/[^/]+)\/pull\/(\d+)(?:\/|$)/u.exec(url.pathname);
     if (match) return claim(host, match);
-  }
-  // Forgejo and Gitea use /pulls/ on arbitrary self-hosted domains.
-  const forgejo = /^\/([^/]+(?:\/[^/]+)+)\/pulls\/(\d+)(?:\/|$)/u.exec(url.pathname);
-  if (forgejo) {
-    const link = claim(host, forgejo);
-    return link === null ? null : { ...link, authority: url.host.toLowerCase() };
-  }
-  // GitLab, self-hosted included: /{group}/[{subgroup}/...]{repo}/-/merge_requests/{n}. The `/-/`
-  // separator is GitLab's own, so the hostname is not asked about.
-  const gitlab = /^\/([^/]+(?:\/[^/]+)+)\/-\/merge_requests\/(\d+)(?:\/|$)/u.exec(url.pathname);
-  if (gitlab) return claim(host, gitlab);
-  // Bitbucket Cloud: /{workspace}/{repo}/pull-requests/{n}
-  if (isHostOf(host, "bitbucket.org", "bitbucket")) {
-    const match = /^\/([^/]+\/[^/]+)\/pull-requests\/(\d+)(?:\/|$)/u.exec(url.pathname);
-    return claim(host, match);
-  }
-  // Azure DevOps, both the current host and the per-organisation one it replaced. `_git` is part
-  // of the repository path there, as it is in the remote URL the identity is read from.
-  if (isHostOf(host, "dev.azure.com") || host.endsWith(".visualstudio.com")) {
-    const match = /^\/((?:[^/]+\/)*_git\/[^/]+)\/pullrequest\/(\d+)(?:\/|$)/u.exec(url.pathname);
-    return claim(host, match);
   }
   return null;
 }
@@ -91,35 +66,8 @@ export function changeRequestUrlFor(
   host: string,
   repository: string,
   number: number,
-  remoteUrl?: string,
 ): string | null {
-  switch (kind) {
-    case "github":
-      return `https://${host}/${repository}/pull/${number}`;
-    case "forgejo": {
-      try {
-        const remote = new URL(remoteUrl ?? "");
-        if (
-          (remote.protocol === "http:" || remote.protocol === "https:") &&
-          (remote.hostname.toLowerCase() === host.toLowerCase() ||
-            remote.host.toLowerCase() === host.toLowerCase())
-        ) {
-          return `${remote.origin}/${repository}/pulls/${number}`;
-        }
-      } catch {
-        // SSH remotes do not specify the server's web origin.
-      }
-      return `https://${host}/${repository}/pulls/${number}`;
-    }
-    case "gitlab":
-      return `https://${host}/${repository}/-/merge_requests/${number}`;
-    case "bitbucket":
-      return `https://${host}/${repository}/pull-requests/${number}`;
-    case "azure-devops":
-      return `https://${canonicalRepositoryKey(`${host}/${repository}`.toLowerCase())}/pullrequest/${number}`;
-    default:
-      return null;
-  }
+  return kind === "github" ? `https://${host}/${repository}/pull/${number}` : null;
 }
 
 /** Builds a GitHub URL that remains available when the pull request API cannot be read. */
@@ -208,11 +156,7 @@ export function changeRequestRepositoryUrl(targetUrl: string): string | null {
   const changeRequest = parseChangeRequestUrl(targetUrl);
   if (changeRequest === null) return null;
   const url = new URL(targetUrl);
-  const repositoryPath =
-    /^(.*?)\/-\/merge_requests\/\d+(?:\/|$)/iu.exec(url.pathname)?.[1] ??
-    /^(.*?)(?:\/pulls?\/\d+|\/-\/merge_requests\/\d+|\/pull-requests\/\d+|\/pullrequest\/\d+)(?:\/|$)/iu.exec(
-      url.pathname,
-    )?.[1];
+  const repositoryPath = /^(.*?)\/pull\/\d+(?:\/|$)/iu.exec(url.pathname)?.[1];
   if (!repositoryPath) return null;
   url.pathname = repositoryPath;
   url.search = "";
@@ -224,7 +168,7 @@ export function siblingPullRequestUrl(url: string, number: number): string | nul
   const reference = parseChangeRequestUrl(url);
   if (reference === null || !Number.isSafeInteger(number) || number < 1) return null;
   const sibling = new URL(url);
-  const route = /^\/(-\/merge_requests|pulls?|pull-requests|pullrequest)\/\d+(?:\/|$)/u.exec(
+  const route = /^\/(pull)\/\d+(?:\/|$)/u.exec(
     sibling.pathname.slice(reference.repository.length + 1),
   )?.[1];
   if (route === undefined) return null;

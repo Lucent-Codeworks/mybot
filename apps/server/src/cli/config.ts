@@ -101,26 +101,26 @@ const EnvServerConfig = Config.all({
   traceMaxBytes: Config.Int("T3CODE_TRACE_MAX_BYTES").pipe(Config.withDefault(10 * 1024 * 1024)),
   traceMaxFiles: traceMaxFilesConfig,
   traceBatchWindowMs: Config.Int("T3CODE_TRACE_BATCH_WINDOW_MS").pipe(Config.withDefault(1_000)),
-  otlpTracesUrl: Config.String("T3CODE_OTLP_TRACES_URL").pipe(
+  otlpTracesUrl: Config.String("LUCENT_OTLP_TRACES_URL").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  otlpMetricsUrl: Config.String("T3CODE_OTLP_METRICS_URL").pipe(
+  otlpMetricsUrl: Config.String("LUCENT_OTLP_METRICS_URL").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  otlpLogsUrl: Config.String("T3CODE_OTLP_LOGS_URL").pipe(
+  otlpLogsUrl: Config.String("LUCENT_OTLP_LOGS_URL").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  otlpExportIntervalMs: Config.Int("T3CODE_OTLP_EXPORT_INTERVAL_MS").pipe(
+  otlpExportIntervalMs: Config.Int("LUCENT_OTLP_EXPORT_INTERVAL_MS").pipe(
     Config.withDefault(10_000),
   ),
-  otlpHeaders: Config.schema(OtlpHeadersFromString, "T3CODE_OTLP_HEADERS").pipe(
+  otlpHeaders: Config.schema(OtlpHeadersFromString, "LUCENT_OTLP_HEADERS").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  otlpProtocol: Config.schema(OtlpProtocol, "T3CODE_OTLP_PROTOCOL").pipe(
+  otlpProtocol: Config.schema(OtlpProtocol, "LUCENT_OTLP_PROTOCOL").pipe(
     Config.withDefault("http/json"),
   ),
   mode: Config.schema(ServerConfig.RuntimeMode, "T3CODE_MODE").pipe(
@@ -424,6 +424,7 @@ export const resolveServerConfig = (
       { url: env.otlpTracesUrl, export: signalExport },
       bootstrap?.otlpTracesUrl,
       persistedObservabilitySettings.otlpTracesUrl,
+      OtelEnvironment.defaultSignalUrl("traces"),
     );
     const metrics = OtelEnvironment.resolveSignalEndpoint(
       otel,
@@ -431,6 +432,7 @@ export const resolveServerConfig = (
       { url: env.otlpMetricsUrl, export: signalExport },
       bootstrap?.otlpMetricsUrl,
       persistedObservabilitySettings.otlpMetricsUrl,
+      OtelEnvironment.defaultSignalUrl("metrics"),
     );
     const logs = OtelEnvironment.resolveSignalEndpoint(
       otel,
@@ -438,6 +440,7 @@ export const resolveServerConfig = (
       { url: env.otlpLogsUrl, export: signalExport },
       bootstrap?.otlpLogsUrl,
       persistedObservabilitySettings.otlpLogsUrl,
+      OtelEnvironment.defaultSignalUrl("logs"),
     );
 
     const config: ServerConfig.ServerConfig["Service"] = {

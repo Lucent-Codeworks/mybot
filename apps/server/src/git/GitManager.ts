@@ -56,7 +56,6 @@ import {
   sanitizeFeatureBranchName,
 } from "@t3tools/shared/git";
 import {
-  canonicalRepositoryKey,
   getChangeRequestTerminologyForKind,
   isSshRemoteUrl,
   type ChangeRequestTerminology,
@@ -270,10 +269,7 @@ interface BranchHeadContext {
 export function pullRequestRepositoryKey(value: string): string | null {
   try {
     const url = new URL(value);
-    const match =
-      /^(.*)(?:\/pull\/|\/-\/merge_requests\/|\/pull-requests\/|\/pullrequest\/)\d+(?:\/.*)?$/iu.exec(
-        url.pathname,
-      );
+    const match = /^(.*)\/pull\/\d+(?:\/.*)?$/iu.exec(url.pathname);
     if (match?.[1] === undefined) return null;
     url.pathname = match[1];
     url.search = "";
@@ -345,7 +341,7 @@ function parseRepositoryOwnerLogin(nameWithOwner: string | null): string | null 
   if (trimmed.length === 0) {
     return null;
   }
-  // GitLab reports the top-level group as owner. The full path distinguishes subgroups.
+  // The owner is the first path segment.
   const [ownerLogin] = trimmed.split("/");
   const normalizedOwnerLogin = ownerLogin?.trim() ?? "";
   return normalizedOwnerLogin.length > 0 ? normalizedOwnerLogin : null;
@@ -980,10 +976,9 @@ export const make = Effect.gen(function* () {
             branch: localBranch,
           })
           .pipe(
-            // Azure DevOps, GitLab and Bitbucket publish no `refs/pull/<n>/head`. A head in the
-            // same repository is a branch on the primary remote, so it is fetched by name instead,
-            // but only when that remote is the pull request's own repository: Azure finds a pull
-            // request by number anywhere in the organization. Only while it is open, too: the
+            // When `refs/pull/<n>/head` cannot be fetched, a head in the same repository is a
+            // branch on the primary remote, so it is fetched by name instead, but only when that
+            // remote is the pull request's own repository. Only while it is open, too: the
             // branch of a closed one may have moved on past the head it was closed with.
             Effect.catch((cause) =>
               pullRequest.isCrossRepository === true || pullRequest.state !== "open"
@@ -998,8 +993,7 @@ export const make = Effect.gen(function* () {
                     if (
                       remoteUrl === null ||
                       pullRequestKey === null ||
-                      canonicalRepositoryKey(pullRequestKey) !==
-                        canonicalRepositoryKey(normalizeGitRemoteUrl(remoteUrl))
+                      pullRequestKey !== normalizeGitRemoteUrl(remoteUrl)
                     ) {
                       return yield* cause;
                     }

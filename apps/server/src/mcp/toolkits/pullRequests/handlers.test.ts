@@ -378,56 +378,22 @@ describe("pull request toolkit handlers", () => {
     Effect.gen(function* () {
       const harness = yield* makeHarness({
         project: makeProject({
-          canonicalKey: "gitlab.com/group/sub/project",
+          canonicalKey: "github.acme.test/team/project",
           locator: {
             source: "git-remote",
             remoteName: "origin",
-            remoteUrl: "git@gitlab.com:group/sub/project.git",
+            remoteUrl: "git@github.acme.test:team/project.git",
           },
-          provider: "gitlab",
-          displayName: "group/sub/project",
+          provider: "github",
+          displayName: "team/project",
         }),
       });
       const result = yield* harness.call("link_pull_request", {
-        repository: "group/sub/project",
+        repository: "team/project",
         number: 42,
       });
-      expect(result.url).toBe("https://gitlab.com/group/sub/project/-/merge_requests/42");
-      expect(result.host).toBe("gitlab.com");
-    }),
-  );
-
-  it.effect("links a numeric Forgejo reference with its remote's web origin and mount path", () =>
-    Effect.gen(function* () {
-      const harness = yield* makeHarness({
-        project: makeProject({
-          canonicalKey: "forge.example/git/owner/repo",
-          locator: {
-            source: "git-remote",
-            remoteName: "origin",
-            remoteUrl: "http://forge.example:3000/git/owner/repo.git",
-          },
-          provider: "forgejo",
-          displayName: "git/owner/repo",
-        }),
-      });
-      const result = yield* harness.call("link_pull_request", {
-        repository: "git/owner/repo",
-        number: 42,
-      });
-      expect(result).toEqual({
-        host: "forge.example:3000",
-        repository: "git/owner/repo",
-        number: 42,
-        url: "http://forge.example:3000/git/owner/repo/pulls/42",
-        alreadyLinked: false,
-      });
-      const other = yield* harness.call("link_pull_request", {
-        host: "other.example",
-        repository: "owner/repo",
-        number: 42,
-      });
-      expect(other.url).toBe("https://other.example/owner/repo/pull/42");
+      expect(result.url).toBe("https://github.acme.test/team/project/pull/42");
+      expect(result.host).toBe("github.acme.test");
     }),
   );
 
@@ -491,18 +457,6 @@ describe("pull request toolkit handlers", () => {
       ]);
     }),
   );
-
-  it("reports an older Forgejo link's HTTP port when listing thread links", () => {
-    const result = listThreadPullRequests(
-      makeThread([
-        makeLink(42, {
-          host: "forge.example",
-          url: "http://forge.example:3000/t3tools/t3code/pulls/42",
-        }),
-      ]),
-    );
-    expect(result.pullRequests[0]?.host).toBe("forge.example:3000");
-  });
 
   it.effect("fails cleanly when the token's thread no longer exists", () =>
     Effect.gen(function* () {
@@ -691,34 +645,6 @@ describe("pull request guide tools", () => {
         pullRequests: [{ repository: "t3tools/t3code", number: 4 }],
       });
       expect(result.guides.map((guide) => guide.outcome)).toEqual(["running"]);
-    }),
-  );
-
-  it.effect("finds an Azure DevOps checkout for a pull request named by its full path", () =>
-    Effect.gen(function* () {
-      const azure = {
-        ...makeProject({
-          canonicalKey: "dev.azure.com/org/project/_git/web",
-          locator: {
-            source: "git-remote",
-            remoteName: "origin",
-            remoteUrl: "https://dev.azure.com/org/project/_git/web",
-          },
-          provider: "azure-devops",
-          displayName: "org/project/_git/web",
-          owner: "org",
-          name: "web",
-        }),
-        id: ProjectId.make("project-azure"),
-      };
-      const harness = yield* makeHarness({ projects: [makeProject(), azure] });
-      const result = yield* harness.call("write_pull_request_guides", {
-        pullRequests: [{ host: "dev.azure.com", repository: "org/project/_git/web", number: 9 }],
-      });
-      expect(result.guides.map((guide) => guide.outcome)).toEqual(["started"]);
-      expect((yield* Ref.get(harness.guideRequests)).map((ref) => ref.projectId)).toEqual([
-        "project-azure",
-      ]);
     }),
   );
 

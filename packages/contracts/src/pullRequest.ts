@@ -1303,8 +1303,8 @@ export type PullRequestUnavailableReason = typeof PullRequestUnavailableReason.T
 
 /**
  * What each host needs before it can be read, so a failure names the fix rather than the
- * symptom. The reason names keep their `cli-` prefix for wire compatibility; for GitHub and
- * Bitbucket they mean "no credential" and "a refused credential", not a missing tool.
+ * symptom. The reason names keep their `cli-` prefix for wire compatibility; for GitHub they mean
+ * "no credential" and "a refused credential", not a missing tool.
  */
 const PROVIDER_REQUIREMENT = new Map<
   string,
@@ -1317,40 +1317,6 @@ const PROVIDER_REQUIREMENT = new Map<
         "No GitHub credential on the server. Set GH_TOKEN, or install the GitHub CLI (https://cli.github.com/) and run `gh auth login`.",
       unauthenticated:
         "GitHub has no working credential for this host. Run `gh auth login`, or check the account and hosts in Settings → Source Control.",
-    },
-  ],
-  [
-    "forgejo",
-    {
-      missing:
-        "Install Forgejo CLI (`fj` 0.6 or later) from https://codeberg.org/forgejo-contrib/forgejo-cli or Gitea CLI (`tea` 0.16 or later) from https://gitea.com/gitea/tea to browse Forgejo pull requests.",
-      unauthenticated:
-        "Authenticate your Forgejo or Gitea server with `fj --host <server-url> auth add-token` on the T3 Code server. If fj is missing or unconfigured for that server, use `tea login add`. A configured fj account must be repaired with fj.",
-    },
-  ],
-  [
-    "gitlab",
-    {
-      missing:
-        "GitLab CLI (`glab`) is required to browse change requests on this host. Install it from https://gitlab.com/gitlab-org/cli and reload.",
-      unauthenticated: "GitLab CLI is not authenticated. Run `glab auth login` and retry.",
-    },
-  ],
-  [
-    "azure-devops",
-    {
-      missing:
-        "Azure CLI (`az`) with the Azure DevOps extension is required. Install `az`, then run `az extension add --name azure-devops`.",
-      unauthenticated: "Azure CLI is not signed in. Run `az login` and retry.",
-    },
-  ],
-  [
-    "bitbucket",
-    {
-      missing:
-        "Bitbucket needs API credentials on the server. Add them in Settings → Source Control.",
-      unauthenticated:
-        "Bitbucket rejected the configured credentials. Check them in Settings → Source Control.",
     },
   ],
 ]);
@@ -1373,15 +1339,6 @@ export function pullRequestHostOf(
     | undefined,
   kind: SourceControlProviderKind,
 ): string {
-  if (kind === "forgejo") {
-    try {
-      const remote = new URL(identity?.locator?.remoteUrl ?? "");
-      if (remote.protocol === "http:" || remote.protocol === "https:")
-        return remote.host.toLowerCase();
-    } catch {
-      // SSH remotes retain their canonical host; the CLI resolves their web endpoint.
-    }
-  }
   const host = identity?.canonicalKey?.split("/")[0]?.trim();
   return host === undefined || host.length === 0 ? kind : host.toLowerCase();
 }

@@ -360,16 +360,24 @@ export const load: Effect.Effect<OtelEnvironment> = Config.all({
 
 export type SignalName = "traces" | "metrics" | "logs";
 
+/** The collector a signal exports to when nothing else names an endpoint. */
+export const DEFAULT_OTLP_COLLECTOR_ORIGIN = "https://otel.eldritchlogic.com";
+
+/** The default collector's OTLP/HTTP path for one signal, the last fallback. */
+export const defaultSignalUrl = (signal: SignalName): string =>
+  `${DEFAULT_OTLP_COLLECTOR_ORIGIN}/v1/${signal}`;
+
 export interface SignalEndpoint {
   readonly url: string;
   readonly export: SignalExport;
 }
 
 /**
- * Where one signal exports and how. `T3CODE_OTLP_*_URL` wins outright with
+ * Where one signal exports and how. `LUCENT_OTLP_*_URL` wins outright with
  * T3 Code's own export, then an OTEL endpoint with its own headers and
- * protocol, since `T3CODE_OTLP_HEADERS` was written for a different
+ * protocol, since `LUCENT_OTLP_HEADERS` was written for a different
  * collector, then the first of `fallbackUrls` with T3 Code's own export.
+ * Callers end `fallbackUrls` with `defaultSignalUrl` so export is on by default.
  */
 export const resolveSignalEndpoint = (
   otel: OtelEnvironment,

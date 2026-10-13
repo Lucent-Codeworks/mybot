@@ -62,28 +62,6 @@ function link(
 }
 
 describe("threadPullRequestKeysEqual", () => {
-  it("recovers Forgejo ports from old stored URLs and keeps separate servers distinct", () => {
-    const old = link(1, {
-      host: "forge.example",
-      repository: "team/repo",
-      url: "http://forge.example:3000/team/repo/pulls/1",
-    });
-    expect(threadPullRequestKeysEqual(old, { ...old, host: "forge.example:3000" })).toBe(true);
-    expect(
-      threadPullRequestKeysEqual(old, {
-        host: "forge.example:3000",
-        repository: "team/repo",
-        number: 1,
-      }),
-    ).toBe(true);
-    expect(
-      threadPullRequestKeysEqual(old, {
-        ...old,
-        url: "http://forge.example:4000/team/repo/pulls/1",
-      }),
-    ).toBe(false);
-  });
-
   it("ignores host and repository case", () => {
     expect(
       threadPullRequestKeysEqual(
@@ -192,52 +170,6 @@ describe("legacyLinkedPullRequestOf", () => {
       legacyLinkedPullRequestOf([link(7, foreign), link(8)], "project-1" as never, identity)
         ?.number,
     ).toBe(8);
-  });
-  it.each([
-    "dev.azure.com/org-a/project/_git/web",
-    "ssh.dev.azure.com/v3/org-a/project/web",
-    "org-a.visualstudio.com/DefaultCollection/project/_git/web",
-  ])("projects Azure links through the legacy selector for %s", (canonicalKey) => {
-    const azureIdentity = {
-      ...identity,
-      provider: "azure-devops",
-      canonicalKey,
-      displayName: canonicalKey.slice(canonicalKey.indexOf("/") + 1),
-      name: "web",
-    };
-    const own = link(7, {
-      host: "dev.azure.com",
-      repository: "org-a/project/_git/web",
-      url: "https://dev.azure.com/org-a/project/_git/web/pullrequest/7",
-    });
-    const foreign = link(7, {
-      host: "dev.azure.com",
-      repository: "web",
-      url: "https://dev.azure.com/org-b/project/_git/web/pullrequest/7",
-      linkedAt: "2026-01-02T00:00:00.000Z",
-    });
-    for (const repository of ["web", "org-a/project/_git/web"]) {
-      expect(
-        legacyLinkedPullRequestOf(
-          [{ ...own, repository }, foreign],
-          "project-1" as never,
-          azureIdentity,
-        ),
-      ).toEqual({ projectId: "project-1", repository: "web", number: 7, url: own.url });
-    }
-    expect(legacyLinkedPullRequestOf([foreign], "project-1" as never, azureIdentity)).toBeNull();
-    expect(legacyThreadPullRequestKey({ ...own, repository: "web" })).toEqual({
-      host: "dev.azure.com",
-      repository: "org-a/project/_git/web",
-      number: 7,
-    });
-    expect(
-      threadPullRequestKeysEqual(own, {
-        host: "org-a.visualstudio.com",
-        repository: "DefaultCollection/project/_git/web",
-        number: 7,
-      }),
-    ).toBe(true);
   });
   it("does not guess when the project identity is unavailable", () => {
     expect(legacyLinkedPullRequestOf([link(7)], "project-1" as never, null)).toBeNull();

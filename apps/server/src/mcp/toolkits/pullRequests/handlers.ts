@@ -104,7 +104,6 @@ const resolveTarget = Effect.fn("PullRequestsToolkit.resolveTarget")(function* (
       host,
       repository,
       input.number,
-      project?.repositoryIdentity?.locator.remoteUrl,
     ) ?? `https://${host}/${repository}/pull/${input.number}`;
   return {
     ...normalizeThreadPullRequestKey({ host, repository, number: input.number, url }),
@@ -169,7 +168,7 @@ function projectForPullRequest(
   preferred: OrchestrationProjectShell | undefined,
 ): OrchestrationProjectShell | undefined {
   // The same rule the guide service uses: a pull request reads through a project whose checkout
-  // names it with the same host-level key, which also maps Azure DevOps' org/project/_git/repo.
+  // names it with the same host-level key.
   const matches = (project: OrchestrationProjectShell) => {
     const own = pullRequestSyncKey(
       { projectId: project.id, host: target.host, repository: target.repository, number: 1 },
