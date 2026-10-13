@@ -212,7 +212,8 @@ export function buildNewThreadLink(input: {
   return url.toString();
 }
 
-const APP_SCHEME = /^t3code(?:-[a-z]+)?:$/;
+// MyBot desktop registers mybot://; mobile still uses t3code://.
+const APP_SCHEME = /^(?:mybot|t3code)(?:-[a-z]+)?:$/;
 const THREAD_PATH = /^\/([^/]+)\/([^/]+)\/?$/;
 
 /**

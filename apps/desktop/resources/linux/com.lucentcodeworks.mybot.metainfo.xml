@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.lucentcodeworks.mybot</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>MyBot</name>
+  <summary>Desktop GUI for coding agents</summary>
+  <developer id="com.lucentcodeworks">
+    <name>Lucent Codeworks</name>
+  </developer>
+  <description>
+    <p>
+      MyBot is a desktop app for coding agents. Work with your existing agent
+      subscriptions, review code changes, and run commands in your projects.
+    </p>
+  </description>
+  <launchable type="desktop-id">mybot.desktop</launchable>
+  <icon type="stock">mybot</icon>
+  <provides>
+    <binary>mybot</binary>
+  </provides>
+  <categories>
+    <category>Development</category>
+  </categories>
+  <url type="homepage">https://github.com/Lucent-Codeworks/mybot</url>
+  <url type="bugtracker">https://github.com/Lucent-Codeworks/mybot/issues</url>
+  <url type="vcs-browser">https://github.com/Lucent-Codeworks/mybot</url>
+</component>
