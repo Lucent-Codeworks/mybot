@@ -1,6 +1,8 @@
 import {
   BotTelegramError,
   type BotTelegramStatus,
+  type ChatAttachment,
+  PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
   CommandId,
   MessageId,
   type OrchestrationV2Run,
@@ -14,13 +16,16 @@ import {
 } from "@t3tools/contracts";
 import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
 import * as Context from "effect/Context";
+import * as Clock from "effect/Clock";
 import * as Crypto from "effect/Crypto";
 import * as DateTime from "effect/DateTime";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import * as FiberMap from "effect/FiberMap";
+import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
+import * as Path from "effect/Path";
 import * as Schedule from "effect/Schedule";
 import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
@@ -28,10 +33,14 @@ import * as Stream from "effect/Stream";
 import * as SynchronizedRef from "effect/SynchronizedRef";
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http";
 
+import { createPendingAttachmentId } from "../attachmentStore.ts";
+import { storeAttachmentUpload } from "../assets/AttachmentUpload.ts";
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
+import * as ServerConfig from "../config.ts";
 import * as Orchestrator from "../orchestration-v2/Orchestrator.ts";
 import * as ThreadLaunchService from "../orchestration-v2/ThreadLaunchService.ts";
 import * as ThreadManagementService from "../orchestration-v2/ThreadManagementService.ts";
+import * as ThreadMessageIntake from "../orchestration-v2/ThreadMessageIntake.ts";
 import * as ProjectService from "../project/ProjectService.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import {
@@ -75,6 +84,13 @@ const TelegramUpdate = Schema.Struct({
       chat: Schema.Struct({ id: Schema.Number, type: Schema.String }),
       from: Schema.optional(TelegramUser),
       text: Schema.optional(Schema.String),
+      caption: Schema.optional(Schema.String),
+      /** One photo in several sizes, smallest first. */
+      photo: Schema.optional(
+        Schema.Array(
+          Schema.Struct({ file_id: Schema.String, file_size: Schema.optional(Schema.Number) }),
+        ),
+      ),
     }),
   ),
 });
@@ -115,6 +131,14 @@ const make = Effect.gen(function* () {
   const projects = yield* ProjectService.ProjectService;
   const serverSettings = yield* ServerSettings.ServerSettingsService;
   const orchestrator = yield* Orchestrator.OrchestratorV2;
+  // Storing and claiming a photo uses the same file services as an app upload.
+  const intakeServices = yield* Effect.context<
+    | FileSystem.FileSystem
+    | Path.Path
+    | Crypto.Crypto
+    | ServerConfig.ServerConfig
+    | ThreadManagementService.ThreadManagementService
+  >();
   const listeners = yield* FiberMap.make<ProjectId>();
   /** Each connected bot's state, persisted after every change. */
   const states = new Map<ProjectId, SynchronizedRef.SynchronizedRef<BotState>>();
@@ -225,6 +249,58 @@ const make = Effect.gen(function* () {
       }),
     });
 
+  /** Downloads a chat photo's largest usable size and stores it as a pending image upload. */
+  const downloadPhoto = Effect.fn("TelegramChannel.downloadPhoto")(function* (
+    token: string,
+    sizes: ReadonlyArray<{ readonly file_id: string; readonly file_size?: number | undefined }>,
+  ) {
+    const best = sizes
+      .filter((size) => (size.file_size ?? 0) <= PROVIDER_SEND_TURN_MAX_IMAGE_BYTES)
+      .at(-1);
+    if (best === undefined)
+      return yield* new BotTelegramError({ message: "That photo is too large." });
+    const file = yield* call(
+      token,
+      "getFile",
+      { file_id: best.file_id },
+      Schema.Struct({ file_path: Schema.String }),
+    );
+    const bytes = yield* http
+      .execute(HttpClientRequest.get(`https://api.telegram.org/file/bot${token}/${file.file_path}`))
+      .pipe(
+        Effect.provideService(HttpClient.TracerDisabledWhen, () => true),
+        Effect.flatMap(HttpClientResponse.filterStatusOk),
+        Effect.flatMap((response) => response.arrayBuffer),
+        Effect.map((buffer) => new Uint8Array(buffer)),
+        Effect.timeout("60 seconds"),
+        Effect.mapError(fail("Could not download the photo.")),
+      );
+    if (bytes.byteLength > PROVIDER_SEND_TURN_MAX_IMAGE_BYTES)
+      return yield* new BotTelegramError({ message: "That photo is too large." });
+    const attachmentId = createPendingAttachmentId();
+    const stored = yield* storeAttachmentUpload(
+      {
+        version: 1,
+        kind: "attachment-upload",
+        type: "image",
+        attachmentId,
+        name: "telegram-photo.jpg",
+        mimeType: "image/jpeg",
+        sizeBytes: bytes.byteLength,
+        expiresAt: (yield* Clock.currentTimeMillis) + 10 * 60_000,
+      },
+      bytes,
+    ).pipe(Effect.provide(intakeServices));
+    if (!stored.ok) return yield* new BotTelegramError({ message: "Could not save the photo." });
+    return {
+      type: "image" as const,
+      id: attachmentId,
+      name: "telegram-photo.jpg",
+      mimeType: "image/jpeg",
+      sizeBytes: bytes.byteLength,
+    } satisfies ChatAttachment;
+  });
+
   /** Starts the chat's conversation thread and remembers it. */
   const startChatThread = Effect.fn("TelegramChannel.startChatThread")(function* (
     projectId: ProjectId,
@@ -268,22 +344,24 @@ const make = Effect.gen(function* () {
     chatId: number,
     updateId: number,
     text: string,
+    attachments: ReadonlyArray<ChatAttachment>,
   ) {
     const key = `telegram:${projectId}:${updateId}`;
     const sendTo = (threadId: ThreadId, attempt: string) =>
-      threadManagement
-        .sendToThread({
-          projectId,
-          commandId: CommandId.make(`${key}${attempt}`),
-          threadId,
-          messageId: MessageId.make(`${key}${attempt}`),
-          text,
-          attachments: [],
-          mode: "queue",
-          createdBy: "user",
-          creationSource: "server",
-        })
-        .pipe(Effect.map((sent) => ({ threadId, runId: sent.run.id })));
+      ThreadMessageIntake.sendToThread({
+        projectId,
+        commandId: CommandId.make(`${key}${attempt}`),
+        threadId,
+        messageId: MessageId.make(`${key}${attempt}`),
+        text,
+        attachments,
+        mode: "queue",
+        createdBy: "user",
+        creationSource: "server",
+      }).pipe(
+        Effect.map((sent) => ({ threadId, runId: sent.run.id })),
+        Effect.provide(intakeServices),
+      );
     const known = (yield* currentState(projectId)).threads[String(chatId)];
     if (known !== undefined) {
       const sent = yield* sendTo(ThreadId.make(known), "").pipe(Effect.option);
@@ -540,15 +618,22 @@ const make = Effect.gen(function* () {
     update: TelegramUpdate,
   ) {
     const message = update.message;
-    if (!message?.text || !message.from || message.chat.type !== "private") return;
+    const text = message?.text ?? message?.caption ?? "";
+    const photo = message?.photo ?? [];
+    if (!message?.from || message.chat.type !== "private" || (!text && photo.length === 0)) return;
     const chatId = message.chat.id;
     const state = yield* currentState(projectId);
-    const action = classifyTelegramMessage({
+    const classified = classifyTelegramMessage({
       ownerUserId: state.ownerUserId,
       pairingCode: state.pairingCode,
       fromUserId: message.from.id,
-      text: message.text,
+      text,
     });
+    // A photo from the owner is a message to deliver, captioned or not.
+    const action =
+      photo.length > 0 && (classified.type === "ignore" || classified.type === "deliver")
+        ? { type: "deliver" as const, text: text.trim() }
+        : classified;
     switch (action.type) {
       case "ignore":
         return;
@@ -577,10 +662,22 @@ const make = Effect.gen(function* () {
         });
         return yield* send(state.token, chatId, "Started a new conversation.");
       case "deliver": {
-        if (yield* answerPending(projectId, chatId, state.token, update.update_id, action.text))
+        if (
+          photo.length === 0 &&
+          (yield* answerPending(projectId, chatId, state.token, update.update_id, action.text))
+        )
           return;
         const text = yield* deliveryLock(projectId)
-          .withPermit(deliver(projectId, chatId, update.update_id, action.text))
+          .withPermit(
+            (photo.length === 0
+              ? Effect.succeed([])
+              : downloadPhoto(state.token, photo).pipe(Effect.map((image) => [image]))
+            ).pipe(
+              Effect.flatMap((attachments) =>
+                deliver(projectId, chatId, update.update_id, action.text, attachments),
+              ),
+            ),
+          )
           .pipe(
             Effect.flatMap(({ threadId, runId }) =>
               followRun(projectId, chatId, state.token, threadId, runId),

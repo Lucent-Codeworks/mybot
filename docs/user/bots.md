@@ -84,6 +84,9 @@ continues one conversation, which you can also open in MyBot; send `/new` to
 start a fresh one. MyBot must be running for the bot to answer, and replies
 arrive when the bot finishes. Choose **Disconnect** to stop.
 
+You can send photos too, with or without a caption, such as a receipt for an
+expenses bot. Other files are not supported yet.
+
 When one of the bot's routines finishes, its result arrives in the chat too, so
 a morning briefing reaches your phone.
 
