@@ -87,6 +87,7 @@ describe("buildBotInstructions", () => {
     expect(block).toContain("show the user exactly what you will do as a draft");
     expect(block).toContain("take control of the tab, finish the step, release control");
     expect(block).toContain("Never ask for passwords or one-time codes in chat.");
+    expect(block).toContain("call preview_teach_start with the goal");
     expect(block).toContain("/mybot/skills/<short-name>/SKILL.md");
   });
 

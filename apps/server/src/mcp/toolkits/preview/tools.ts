@@ -12,6 +12,9 @@ import {
   PreviewAutomationPressInput,
   PreviewAutomationRecordingArtifact,
   PreviewAutomationRecordingStatus,
+  PreviewAutomationTeachResult,
+  PreviewAutomationTeachStartInput,
+  PreviewAutomationTeachStatus,
   PreviewAutomationResizeInput,
   PreviewAutomationResizeResult,
   PreviewAutomationScrollInput,
@@ -312,6 +315,28 @@ const PreviewRecordingStopTool = safeBrowserTool(
   }).annotate(Tool.Title, "Stop browser recording"),
 );
 
+const PreviewTeachStartTool = safeBrowserTool(
+  Tool.make("preview_teach_start", {
+    description:
+      "Start learning a task the user demonstrates in your browser tab. Open the starting page first. Then tell the user to take control of the tab, do the task once, release control, and reply; end your turn. Only what the user does while in control is recorded; secrets are recorded without their values.",
+    parameters: PreviewAutomationTeachStartInput,
+    success: Schema.Struct({ ...PreviewAutomationTeachStatus.fields, ...presentationFields }),
+    failure: PreviewToolFailure,
+    dependencies,
+  }).annotate(Tool.Title, "Start learning a task"),
+);
+
+const PreviewTeachStopTool = safeBrowserTool(
+  Tool.make("preview_teach_stop", {
+    description:
+      "End the lesson started with preview_teach_start and get the steps the user took, oldest first. Turn them into a skill: generalize the specific values into inputs, keep the order, and note the steps the user must do themselves.",
+    parameters: PreviewAutomationTabTargetInput,
+    success: Schema.Struct({ ...PreviewAutomationTeachResult.fields, ...presentationFields }),
+    failure: PreviewToolFailure,
+    dependencies,
+  }).annotate(Tool.Title, "Finish learning a task"),
+);
+
 export const PreviewToolkit = Toolkit.make(
   PreviewDialogTool,
   PreviewStatusTool,
@@ -332,6 +357,8 @@ export const PreviewToolkit = Toolkit.make(
   PreviewWaitForTool,
   PreviewRecordingStartTool,
   PreviewRecordingStopTool,
+  PreviewTeachStartTool,
+  PreviewTeachStopTool,
 );
 
 export const PreviewStandardToolkit = Toolkit.make(
@@ -353,6 +380,8 @@ export const PreviewStandardToolkit = Toolkit.make(
   PreviewWaitForTool,
   PreviewRecordingStartTool,
   PreviewRecordingStopTool,
+  PreviewTeachStartTool,
+  PreviewTeachStopTool,
 );
 
 export const PreviewSnapshotToolkit = Toolkit.make(PreviewSnapshotTool);

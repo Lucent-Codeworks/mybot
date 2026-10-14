@@ -65,6 +65,17 @@ short notes on finished work. It is told never to store passwords or tokens.
 You can read and edit the memory in the bot's settings. Remove anything that is
 wrong or out of date; the bot uses what is there from its next conversation.
 
+## Teach a bot a task
+
+Show a bot how to do something in a website once, and it saves the steps as a
+skill. Ask it, for example, "let me show you how to file an expense". The bot
+opens the starting page in its browser tab and asks you to take over. Choose
+**Take control**, do the task once, choose **Release control**, and reply.
+
+Only what you do while in control is recorded. Passwords and one-time codes are
+recorded as steps you do yourself, without their values. Afterwards the bot
+writes a skill it can repeat, with the details you entered turned into inputs.
+
 ## Skills
 
 Ask a bot to save something it just did as a skill, and it writes the steps to

@@ -27,6 +27,9 @@ import {
   type PreviewAutomationRequest,
   type PreviewAutomationResizeInput,
   type PreviewAutomationScrollInput,
+  type PreviewAutomationTeachResult,
+  type PreviewAutomationTeachStartInput,
+  type PreviewAutomationTeachStatus,
   type PreviewAutomationSelectInput,
   type PreviewAutomationSetColorSchemeInput,
   type PreviewAutomationStatus,
@@ -80,6 +83,12 @@ import * as ServerBrowserPage from "./ServerBrowserPage.ts";
 import * as PreviewBrowser from "./PreviewBrowser.ts";
 import * as PreviewBrowserHost from "./PreviewBrowserHost.ts";
 import { presentAsChrome, ServerBrowserContexts } from "./ServerBrowserContexts.ts";
+import {
+  addTeachStep,
+  formatTeachStep,
+  TEACH_BINDING,
+  TEACH_RECORDER_SCRIPT,
+} from "./ServerBrowserTeach.ts";
 import { BrowserControlInterrupted, SessionControl } from "./SessionControl.ts";
 
 const SERVER_HOST_CLIENT_ID = SERVER_BROWSER_AUTOMATION_CLIENT_ID;
@@ -345,6 +354,10 @@ interface ServerTab {
   captureLock: Promise<void>;
   /** Scaled captures rendering now; screencasts stay stopped meanwhile. */
   capturing: number;
+  /** A task the user is demonstrating, while a bot learns it. */
+  teaching: { readonly goal: string; readonly steps: Array<string> } | null;
+  /** Whether this tab already reports the user's navigations to a lesson. */
+  teachNavigationWatched: boolean;
 }
 
 interface ServerDownload {
@@ -809,6 +822,8 @@ const make = Effect.gen(function* () {
       abortedNavigation: null,
       captureLock: Promise.resolve(),
       capturing: 0,
+      teaching: null,
+      teachNavigationWatched: false,
     };
     if (!desktop) {
       await page.setViewportSize(fixedViewportSize(tab.setting) ?? UNATTACHED_FILL_VIEWPORT);
@@ -1126,6 +1141,33 @@ const make = Effect.gen(function* () {
         ? Option.none()
         : Option.some({ path: download.path, fileName: download.fileName });
     });
+
+  /** Contexts whose pages can report a lesson's steps. */
+  const teachContexts = new WeakSet<BrowserContext>();
+  /** Steps count only while the user drives the tab, never the agent. */
+  const userDrives = (tab: ServerTab) => tab.teaching !== null && tab.control.controller !== null;
+  const startTeaching = async (tab: ServerTab, goal: string) => {
+    const context = tab.page.context();
+    if (!teachContexts.has(context)) {
+      teachContexts.add(context);
+      await context.exposeBinding(TEACH_BINDING, (source, raw) => {
+        const owner = [...tabs.values()].find((candidate) => candidate.page === source.page);
+        const step = formatTeachStep(raw);
+        if (owner?.teaching && userDrives(owner) && step) addTeachStep(owner.teaching.steps, step);
+      });
+      await context.addInitScript(TEACH_RECORDER_SCRIPT);
+    }
+    if (!tab.teachNavigationWatched) {
+      tab.teachNavigationWatched = true;
+      tab.page.on("framenavigated", (frame) => {
+        if (frame !== tab.page.mainFrame() || !tab.teaching || !userDrives(tab)) return;
+        addTeachStep(tab.teaching.steps, `Went to ${frame.url().slice(0, 300)}`);
+      });
+    }
+    // The init script covers later documents; this one is already loaded.
+    await tab.page.evaluate(TEACH_RECORDER_SCRIPT).catch(constVoid);
+    tab.teaching = { goal, steps: [] };
+  };
 
   const preparedContexts = new WeakSet<BrowserContext>();
   const prepareContext = async (context: BrowserContext) => {
@@ -1692,6 +1734,27 @@ const make = Effect.gen(function* () {
 
   const runOperation = async (request: PreviewAutomationRequest): Promise<unknown> => {
     const input = request.input;
+    // Starting or ending a lesson never touches the page, so it works while
+    // the user is in control.
+    if (request.operation === "teachStart" || request.operation === "teachStop") {
+      const tab = await requireTab(request);
+      if (request.operation === "teachStart") {
+        await startTeaching(tab, (input as PreviewAutomationTeachStartInput).goal);
+        return { tabId: tab.tabId, teaching: true } satisfies PreviewAutomationTeachStatus;
+      }
+      const lesson = tab.teaching;
+      tab.teaching = null;
+      if (lesson === null)
+        throw new ServerBrowserPage.ServerBrowserOperationError(
+          "PreviewAutomationExecutionError",
+          "No lesson is running in this tab. Call preview_teach_start first.",
+        );
+      return {
+        tabId: tab.tabId,
+        goal: lesson.goal,
+        steps: lesson.steps,
+      } satisfies PreviewAutomationTeachResult;
+    }
     switch (request.operation) {
       case "status":
         return statusWithTitle(

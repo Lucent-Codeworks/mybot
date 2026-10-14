@@ -201,6 +201,16 @@ const T3_MCP_TOOLS: Readonly<Record<string, T3McpToolDefinition>> = {
     "browser",
     "browser",
   ),
+  preview_teach_start: tool(
+    ["Start", "Starting", "Started", "learning a task"],
+    "browser",
+    "browser",
+  ),
+  preview_teach_stop: tool(
+    ["Finish", "Finishing", "Finished", "learning a task"],
+    "browser",
+    "browser",
+  ),
   device_list: tool(["List", "Listing", "Listed", "simulators and emulators"], "device", "device"),
   device_open: tool(
     ["Open", "Opening", "Opened", "a device in the Device panel"],

@@ -49,6 +49,9 @@ export function buildBotInstructions(bot: BotInstructions): string {
       "To hand off, call t3_thread_launch with that projectId and the full task in message; it runs as that bot, with its own instructions, memory, and model. Follow it with t3_thread_wait and t3_thread_read, then report back. Tell the user when you hand work off.",
     );
   }
+  lines.push(
+    "When the user wants to show you how to do something in a website, open its starting page in your browser tab, call preview_teach_start with the goal, and ask them to take control of the tab, do the task once, release control, and reply; then end your turn. When they reply, call preview_teach_stop and save the steps as a skill, with the specific values turned into inputs and the steps only the user can do marked as such.",
+  );
   const instructions = bot.instructions.trim();
   if (instructions) lines.push("Follow these standing instructions from the user:", instructions);
   return `<bot_profile>\n${lines.join("\n")}\n</bot_profile>`;

@@ -56,6 +56,8 @@ export const PREVIEW_AUTOMATION_SERVER_OPERATIONS = [
   "hover",
   "select",
   "drag",
+  "teachStart",
+  "teachStop",
 ] as const;
 export const PreviewAutomationOperation = Schema.Literals(PREVIEW_AUTOMATION_SERVER_OPERATIONS);
 export type PreviewAutomationOperation = typeof PreviewAutomationOperation.Type;
@@ -750,6 +752,28 @@ export const PreviewAutomationRecordingStatus = Schema.Struct({
 export type PreviewAutomationRecordingStatus = typeof PreviewAutomationRecordingStatus.Type;
 
 export const PREVIEW_RECORDING_STOP_TIMEOUT_MS = 120_000;
+
+export const PreviewAutomationTeachStartInput = Schema.Struct({
+  ...PreviewAutomationTabTargetFields,
+  goal: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(500)).annotate({
+    description: "What the user is about to show, in a sentence, such as 'file an expense report'.",
+  }),
+});
+export type PreviewAutomationTeachStartInput = typeof PreviewAutomationTeachStartInput.Type;
+
+export const PreviewAutomationTeachStatus = Schema.Struct({
+  tabId: PreviewTabId,
+  teaching: Schema.Boolean,
+});
+export type PreviewAutomationTeachStatus = typeof PreviewAutomationTeachStatus.Type;
+
+/** What the user did while they controlled the tab, oldest first. */
+export const PreviewAutomationTeachResult = Schema.Struct({
+  tabId: PreviewTabId,
+  goal: Schema.String,
+  steps: Schema.Array(Schema.String),
+});
+export type PreviewAutomationTeachResult = typeof PreviewAutomationTeachResult.Type;
 
 export const PreviewAutomationRecordingArtifact = Schema.Struct({
   id: Schema.String,

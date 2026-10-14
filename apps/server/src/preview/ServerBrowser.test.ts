@@ -9,6 +9,7 @@ import {
   ThreadId,
   type PreviewAutomationSnapshot,
   type PreviewAutomationStatus,
+  type PreviewAutomationTeachResult,
 } from "@t3tools/contracts";
 import * as Clock from "effect/Clock";
 import * as Effect from "effect/Effect";
@@ -1479,6 +1480,45 @@ it.live("a session's own tab stays its default while other sessions' tabs are li
           expect.objectContaining({ tabId: other.tabId, owner: "agent", ownedByCaller: false }),
         ]),
       );
+    }),
+  ).pipe(Effect.provide(layer)),
+);
+
+it.live("a lesson records only what the user does while they control the tab", () =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      const { browser, broker, tabId } = yield* ready;
+      yield* broker.invoke({
+        scope,
+        tabId,
+        operation: "teachStart",
+        input: { goal: "file an expense" },
+      });
+      const page = contexts[0]!.page;
+      const report = (target: string) => clipboardBinding!({ page }, { kind: "click", target });
+      report('button "Before"');
+      const viewer = yield* browser.attachViewer(viewerInput(tabId, true));
+      yield* viewer.input({ type: "takeControl" });
+      report('button "New expense"');
+      page.emit("framenavigated", page);
+      yield* viewer.input({ type: "releaseControl" });
+      report('button "After"');
+      const lesson = yield* broker.invoke<PreviewAutomationTeachResult>({
+        scope,
+        tabId,
+        operation: "teachStop",
+        input: {},
+      });
+      expect(lesson.goal).toBe("file an expense");
+      expect(lesson.steps).toEqual([
+        'Clicked button "New expense"',
+        expect.stringMatching(/^Went to /),
+      ]);
+      // A lesson ends once; stopping again says so.
+      const again = yield* broker
+        .invoke<PreviewAutomationTeachResult>({ scope, tabId, operation: "teachStop", input: {} })
+        .pipe(Effect.flip);
+      expect(again).toMatchObject({ reason: expect.stringContaining("No lesson is running") });
     }),
   ).pipe(Effect.provide(layer)),
 );
