@@ -1484,6 +1484,26 @@ it.live("a session's own tab stays its default while other sessions' tabs are li
 );
 
 it.live(
+  "a bot's tab runs headless in its profile even while a desktop window could render it",
+  () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const broker = yield* Broker.PreviewAutomationBroker;
+        yield* ServerBrowser.ServerBrowser;
+        yield* Effect.yieldNow;
+        desktopRendersNext = true;
+        yield* broker.invoke<PreviewAutomationStatus>({
+          scope,
+          operation: "open",
+          input: { reuseExistingTab: false, show: false },
+        });
+        expect(desktopConnections).toHaveLength(0);
+        expect(contextRequests.at(-1)).toEqual({ profileId: "default", isolated: false });
+      }),
+    ).pipe(Effect.provide(layer)),
+);
+
+it.live(
   "preview_open picks a reported profile by id or name and defaults to the reported one",
   () =>
     Effect.scoped(
@@ -1539,11 +1559,12 @@ it.live(
     ).pipe(Effect.provide(layer)),
 );
 
-it.live("an agent tab keeps throwaway storage when no client reported profiles", () =>
+it.live("an agent tab keeps the persistent default profile when no client reported profiles", () =>
   Effect.scoped(
     Effect.gen(function* () {
       yield* ready;
-      expect(contextRequests).toEqual([{ profileId: "default", isolated: true }]);
+      // After a restart with the window closed, bots keep their logins.
+      expect(contextRequests).toEqual([{ profileId: "default", isolated: false }]);
     }),
   ).pipe(Effect.provide(layer)),
 );

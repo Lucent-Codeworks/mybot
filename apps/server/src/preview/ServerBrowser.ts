@@ -745,16 +745,19 @@ const make = Effect.gen(function* () {
   const createTab = async (snapshot: PreviewSessionSnapshot): Promise<ServerTab> => {
     const adopted = adoptedPages.get(tabKey(snapshot.threadId, snapshot.tabId));
     adoptedPages.delete(tabKey(snapshot.threadId, snapshot.tabId));
+    // Bots browse in the server's own persistent profiles, never in a desktop
+    // window's storage: their logins then survive restarts, are shared by every
+    // bot, and still work while the window is closed. Viewers see them streamed.
     const desktop =
-      adopted === undefined && (await desktopRenders(snapshot))
+      adopted === undefined &&
+      snapshot.automationOwner === undefined &&
+      (await desktopRenders(snapshot))
         ? await connectDesktop(snapshot)
         : null;
-    // An agent tab without a profile (no client reported one) keeps throwaway storage.
     const isolatedContext =
       adopted === undefined &&
       desktop === null &&
-      ((snapshot.automationOwner !== undefined && snapshot.profileId === undefined) ||
-        snapshot.profileId === INCOGNITO_BROWSER_PROFILE_ID);
+      snapshot.profileId === INCOGNITO_BROWSER_PROFILE_ID;
     const context =
       adopted?.page.context() ??
       desktop?.page.context() ??
@@ -1297,7 +1300,10 @@ const make = Effect.gen(function* () {
 
   /** Matches an id, then a case-insensitive name. Omitted means the reported default. */
   const resolveOpenProfile = (requested: string | undefined): string | undefined => {
-    if (requested === undefined) return reportedProfiles?.defaultProfileId;
+    // Without a client's report (say, after a restart with the window closed),
+    // the persistent default profile keeps the bots' logins.
+    if (requested === undefined)
+      return reportedProfiles?.defaultProfileId ?? DEFAULT_BROWSER_PROFILE_ID;
     const profiles = reportedProfiles?.profiles ?? BUILT_IN_BROWSER_PROFILES;
     const wanted = requested.toLowerCase();
     const match =
