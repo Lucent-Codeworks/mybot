@@ -1,13 +1,16 @@
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Option from "effect/Option";
 import * as Ref from "effect/Ref";
 import * as Schema from "effect/Schema";
 import * as Scope from "effect/Scope";
 
 import type * as Electron from "electron";
 
+import * as DesktopAssets from "./DesktopAssets.ts";
 import * as DesktopEnvironment from "./DesktopEnvironment.ts";
+import { showBackgroundTray } from "./DesktopTray.ts";
 import { makeComponentLogger } from "./DesktopObservability.ts";
 import * as DesktopShutdown from "./DesktopShutdown.ts";
 import * as ElectronApp from "../electron/ElectronApp.ts";
@@ -38,10 +41,11 @@ export type DesktopLifecycleRuntimeServices =
 
 type DesktopLifecycleRegistrationServices =
   | DesktopLifecycleRuntimeServices
+  | DesktopAssets.DesktopAssets
   | ElectronWindow.ElectronWindow;
 
 /**
- * @effect-expect-leaking DesktopEnvironment | DesktopShutdown | DesktopState | DesktopWindow | ElectronApp | ElectronTheme | ElectronWindow
+ * @effect-expect-leaking DesktopAssets | DesktopEnvironment | DesktopShutdown | DesktopState | DesktopWindow | ElectronApp | ElectronTheme | ElectronWindow
  */
 export class DesktopLifecycle extends Context.Service<
   DesktopLifecycle,
@@ -246,9 +250,26 @@ export const make = DesktopLifecycle.of({
         Effect.gen(function* () {
           const app = yield* ElectronApp.ElectronApp;
           const state = yield* DesktopState.DesktopState;
-          if (environment.platform !== "darwin" && !(yield* Ref.get(state.quitting))) {
-            yield* app.quit;
-          }
+          if (environment.platform === "darwin" || (yield* Ref.get(state.quitting))) return;
+          // The app hosts the user's bots, so it keeps running in the tray
+          // until the user quits there. Without an icon there would be no way
+          // back, so it quits as before.
+          const { ico, png } = yield* (yield* DesktopAssets.DesktopAssets).iconPaths;
+          const icon = environment.platform === "win32" ? Option.orElse(ico, () => png) : png;
+          if (Option.isNone(icon)) return yield* app.quit;
+          showBackgroundTray({
+            iconPath: icon.value,
+            displayName: environment.displayName,
+            onOpen: () =>
+              void runEffect(
+                desktopWindow.revealOrCreateMain.pipe(
+                  Effect.catchCause((cause) =>
+                    logLifecycleError("failed to reopen the window from the tray", { cause }),
+                  ),
+                ),
+              ),
+            onQuit: () => void runEffect(app.quit),
+          });
         }).pipe(Effect.withSpan("desktop.lifecycle.windowAllClosed")),
       );
     });

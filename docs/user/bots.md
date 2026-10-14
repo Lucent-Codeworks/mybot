@@ -38,6 +38,16 @@ MyBot's shared `skills` folder. Every bot checks that folder before starting a
 task and follows a skill that fits. A skill is a folder with a `SKILL.md`, so
 you can also write or edit one by hand.
 
+## Routines
+
+Ask a bot to do something on a schedule, such as "every weekday at 9, check my
+bookmarks", and it sets up a routine. Each run posts into the conversation that
+created it. Manage routines in **Settings → Scheduled Tasks**.
+
+Routines run on the computer that hosts MyBot. On Windows and Linux, closing the
+MyBot window keeps it running in the system tray so routines keep working;
+choose **Quit MyBot** from the tray icon to stop it.
+
 ## Change or remove a bot
 
 Hover a bot and choose the gear icon, or open its project settings. You can

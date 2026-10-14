@@ -2,6 +2,7 @@ import { assert, describe, it } from "@effect/vitest";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Option from "effect/Option";
 import * as Ref from "effect/Ref";
 
 import type * as Electron from "electron";
@@ -9,6 +10,7 @@ import type * as Electron from "electron";
 import * as ElectronApp from "../electron/ElectronApp.ts";
 import * as ElectronTheme from "../electron/ElectronTheme.ts";
 import * as ElectronWindow from "../electron/ElectronWindow.ts";
+import * as DesktopAssets from "./DesktopAssets.ts";
 import * as DesktopEnvironment from "./DesktopEnvironment.ts";
 import * as DesktopLifecycle from "./DesktopLifecycle.ts";
 import * as DesktopShutdown from "./DesktopShutdown.ts";
@@ -101,7 +103,40 @@ function layerDesktopWindow(
   });
 }
 
+/** No tray icon, so closing the last window quits as it did before the tray. */
+const layerNoIcons = Layer.succeed(DesktopAssets.DesktopAssets, {
+  iconPaths: Effect.succeed({ ico: Option.none(), icns: Option.none(), png: Option.none() }),
+  resolveResourcePath: () => Effect.succeed(Option.none()),
+});
+
 describe("DesktopLifecycle", () => {
+  it.effect("quits when the last window closes and there is no tray icon", () => {
+    const appListeners = new Map<string, (...args: readonly unknown[]) => void>();
+    const quit = Deferred.makeUnsafe<void>();
+    const layer = DesktopLifecycle.layer.pipe(
+      Layer.provideMerge(layerElectronApp(appListeners, Deferred.succeed(quit, undefined))),
+      Layer.provideMerge(layerElectronTheme),
+      Layer.provideMerge(layerElectronWindow()),
+      Layer.provideMerge(layerDesktopWindow()),
+      Layer.provideMerge(
+        Layer.succeed(DesktopEnvironment.DesktopEnvironment, {
+          platform: "linux",
+          isDevelopment: false,
+        } as DesktopEnvironment.DesktopEnvironment["Service"]),
+      ),
+      Layer.provideMerge(DesktopShutdown.layer),
+      Layer.provideMerge(DesktopState.layer),
+      Layer.provideMerge(layerNoIcons),
+    );
+    return Effect.scoped(
+      Effect.gen(function* () {
+        yield* (yield* DesktopLifecycle.DesktopLifecycle).register;
+        appListeners.get("window-all-closed")?.();
+        yield* Deferred.await(quit);
+      }),
+    ).pipe(Effect.provide(layer));
+  });
+
   it.effect.each(["darwin", "win32", "linux"] satisfies ReadonlyArray<NodeJS.Platform>)(
     "lets the updater's quit event proceed on %s",
     (platform) => {
@@ -126,6 +161,7 @@ describe("DesktopLifecycle", () => {
         Layer.provideMerge(layerEnvironment),
         Layer.provideMerge(DesktopShutdown.layer),
         Layer.provideMerge(DesktopState.layer),
+        Layer.provideMerge(layerNoIcons),
       );
 
       return Effect.scoped(
@@ -198,6 +234,7 @@ describe("DesktopLifecycle", () => {
         Layer.provideMerge(layerEnvironment),
         Layer.provideMerge(layerDesktopShutdown),
         Layer.provideMerge(DesktopState.layer),
+        Layer.provideMerge(layerNoIcons),
       );
 
       yield* Effect.scoped(
@@ -239,6 +276,7 @@ describe("DesktopLifecycle", () => {
         Layer.provideMerge(layerEnvironment),
         Layer.provideMerge(DesktopShutdown.layer),
         Layer.provideMerge(DesktopState.layer),
+        Layer.provideMerge(layerNoIcons),
       );
 
       yield* Effect.scoped(
