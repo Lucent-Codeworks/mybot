@@ -1,6 +1,13 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
-import { ProjectId, ProviderInstanceId, RunId, ThreadId } from "@t3tools/contracts";
+import {
+  ProjectId,
+  ProviderInstanceId,
+  RunId,
+  RuntimeRequestId,
+  ThreadId,
+} from "@t3tools/contracts";
+import * as Deferred from "effect/Deferred";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -102,6 +109,7 @@ const layerFakeThreads = (threads: FakeThreads) =>
           run: { status: "completed" },
           timedOut: false,
         } as ThreadManagementService.ThreadManagementWaitResult),
+      waitForPendingRequest: () => Effect.never,
       getThreadRecords: () =>
         Effect.succeed({
           messages: [
@@ -176,6 +184,115 @@ it.effect("pairs the owner, refuses strangers, and relays conversations", () =>
               layerFakeTelegram(fake),
               layerMemorySecrets,
               layerFakeThreads(threads),
+              NodeServices.layer,
+            ),
+          ),
+        ),
+      ),
+    );
+  }).pipe(Effect.scoped),
+);
+
+it.effect("forwards an approval to the chat and sends the owner's answer back", () =>
+  Effect.gen(function* () {
+    const fake: FakeTelegram = {
+      updates: yield* Queue.unbounded<ReadonlyArray<unknown>>(),
+      sent: yield* Queue.unbounded<string>(),
+    };
+    const requestId = RuntimeRequestId.make("request-1");
+    const answered = yield* Deferred.make<unknown>();
+    const layerThreads = Layer.mergeAll(
+      Layer.mock(ThreadLaunchService.ThreadLaunchService)({
+        launch: () =>
+          Effect.succeed({
+            threadId: ThreadId.make("thread-1"),
+          } as ThreadLaunchService.ThreadLaunchResult),
+      }),
+      Layer.mock(ThreadManagementService.ThreadManagementService)({
+        sendToThread: () =>
+          Effect.succeed({
+            run: { id: RunId.make("run-1") },
+          } as ThreadManagementService.ThreadManagementSendResult),
+        // The run stops on one approval and ends once it is answered.
+        waitForPendingRequest: (input) =>
+          input.ignore.has(requestId)
+            ? Effect.never
+            : Effect.succeed(Option.some({ id: requestId, status: "pending" } as never)),
+        waitForThread: (input) =>
+          Deferred.await(answered).pipe(
+            Effect.as({
+              threadId: input.threadId,
+              run: { status: "completed" },
+              timedOut: false,
+            } as ThreadManagementService.ThreadManagementWaitResult),
+          ),
+        dispatch: (command) =>
+          Deferred.succeed(answered, command).pipe(Effect.as({ sequence: 1 } as never)),
+        getThreadRecords: (_threadId, fields) =>
+          Effect.succeed(
+            (fields as ReadonlyArray<string>).includes("turnItems")
+              ? {
+                  turnItems: [
+                    {
+                      type: "approval_request",
+                      requestId,
+                      title: "Send email to Dana",
+                      prompt: "Subject: Friday",
+                    },
+                  ],
+                }
+              : {
+                  messages: [
+                    {
+                      text: "Sent.",
+                      streaming: false,
+                      createdAt: DateTime.makeUnsafe("2026-10-14T00:00:00.000Z"),
+                    },
+                  ],
+                },
+          ) as never,
+      }),
+      Layer.mock(ProjectService.ProjectService)({
+        getById: () => Effect.succeed(Option.some({ id: projectId } as never)),
+      }),
+      ServerSettings.layerTest({
+        projectSettingsOverrides: {
+          [projectId]: {
+            defaultModelSelection: { instanceId: ProviderInstanceId.make("codex"), model: "gpt-5" },
+          },
+        },
+      }),
+    );
+    yield* Effect.gen(function* () {
+      const telegram = yield* TelegramChannel.TelegramChannel;
+      const code = (yield* telegram.connect(projectId, "123:token")).pairingCode ?? "";
+      yield* Queue.offer(fake.updates, message(OWNER, `/start ${code}`, 1));
+      yield* Queue.take(fake.sent);
+
+      yield* Queue.offer(fake.updates, message(OWNER, "Email Dana about Friday", 2));
+      const prompt = yield* Queue.take(fake.sent);
+      assert.include(prompt, "needs your approval");
+      assert.include(prompt, "Send email to Dana");
+
+      yield* Queue.offer(fake.updates, message(OWNER, "maybe", 3));
+      assert.include(yield* Queue.take(fake.sent), "Reply yes, always, or no");
+
+      yield* Queue.offer(fake.updates, message(OWNER, "yes", 4));
+      assert.equal(yield* Queue.take(fake.sent), "Got it.");
+      assert.deepInclude(yield* Deferred.await(answered), {
+        type: "runtime-request.respond",
+        requestId,
+        decision: "accept",
+      });
+      assert.equal(yield* Queue.take(fake.sent), "Sent.");
+    }).pipe(
+      Effect.provide(
+        TelegramChannel.layer.pipe(
+          Layer.provide(
+            Layer.mergeAll(
+              layerFakeTelegram(fake),
+              layerMemorySecrets,
+              layerThreads,
               NodeServices.layer,
             ),
           ),

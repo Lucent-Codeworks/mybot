@@ -701,6 +701,61 @@ it.effect("waitForThread reads the run again only when the run updates", () =>
   }),
 );
 
+it.effect("waitForPendingRequest hears about a new request, not one it was told to ignore", () =>
+  Effect.gen(function* () {
+    const projectId = ProjectId.make("project:thread-management:pending");
+    const threadId = ThreadId.make("thread:thread-management:pending");
+    const subscribed = yield* Deferred.make<void>();
+    const events = yield* Queue.unbounded<OrchestrationV2StoredEvent>();
+    let requests = [{ id: "request-old", status: "pending" }];
+    const layerTest = ThreadManagementService.layer.pipe(
+      Layer.provide(Layer.mock(ProviderSessionManager.ProviderSessionManagerV2)({})),
+      Layer.provide(
+        Layer.mock(Orchestrator.OrchestratorV2)({
+          getThreadEventSequence: () => Effect.succeed(0),
+          streamStoredEventsFrom: (input) =>
+            input?.eventType === "runtime-request.updated"
+              ? Stream.fromEffect(Deferred.succeed(subscribed, undefined)).pipe(
+                  Stream.drain,
+                  Stream.concat(Stream.fromQueue(events)),
+                )
+              : Stream.never,
+          getThreadRecords: () =>
+            Effect.sync(
+              () =>
+                ({
+                  thread: { id: threadId, projectId, deletedAt: null },
+                  runtimeRequests: requests,
+                }) as unknown as OrchestrationV2ThreadProjection,
+            ),
+        }),
+      ),
+      Layer.provide(ServerSettings.layerTest()),
+      Layer.provide(layerReceiptsTest),
+    );
+    const service = yield* ThreadManagementService.ThreadManagementService.pipe(
+      Effect.provide(layerTest),
+    );
+    const fiber = yield* service
+      .waitForPendingRequest({
+        projectId,
+        threadId,
+        ignore: new Set(["request-old"]),
+        timeoutMs: 60 * 60 * 1_000,
+      })
+      .pipe(Effect.forkChild);
+    yield* Deferred.await(subscribed);
+    requests = [...requests, { id: "request-new", status: "pending" }];
+    yield* Queue.offer(events, {
+      sequence: 1,
+      event: { threadId, type: "runtime-request.updated" },
+    } as unknown as OrchestrationV2StoredEvent);
+    const result = yield* Fiber.join(fiber);
+
+    expect(Option.getOrNull(result)).toMatchObject({ id: "request-new" });
+  }),
+);
+
 it.effect.each([
   "running",
   "missing",

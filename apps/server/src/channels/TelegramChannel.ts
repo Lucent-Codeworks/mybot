@@ -3,7 +3,12 @@ import {
   type BotTelegramStatus,
   CommandId,
   MessageId,
+  type OrchestrationV2RuntimeRequest,
   type ProjectId,
+  type ProviderApprovalDecision,
+  type ProviderUserInputAnswers,
+  type RunId,
+  type RuntimeRequestId,
   ThreadId,
 } from "@t3tools/contracts";
 import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
@@ -25,7 +30,15 @@ import * as ThreadLaunchService from "../orchestration-v2/ThreadLaunchService.ts
 import * as ThreadManagementService from "../orchestration-v2/ThreadManagementService.ts";
 import * as ProjectService from "../project/ProjectService.ts";
 import * as ServerSettings from "../serverSettings.ts";
-import { classifyTelegramMessage, splitTelegramText } from "./telegramLogic.ts";
+import {
+  classifyTelegramMessage,
+  formatApprovalPrompt,
+  formatQuestion,
+  parseApprovalReply,
+  parseQuestionReply,
+  splitTelegramText,
+  type TelegramQuestion,
+} from "./telegramLogic.ts";
 
 /** Long-poll window Telegram holds a getUpdates request open for, in seconds. */
 const POLL_SECONDS = 50;
@@ -243,15 +256,81 @@ const make = Effect.gen(function* () {
     return { threadId: ThreadId.make(threadId), runId: sent.run.id };
   });
 
-  /** Waits for the run and returns its last assistant message. */
-  const reply = Effect.fn("TelegramChannel.reply")(function* (
+  /** The approval or question a chat's next message answers. */
+  type PendingAnswer =
+    | {
+        readonly kind: "approval";
+        readonly threadId: ThreadId;
+        readonly requestId: RuntimeRequestId;
+      }
+    | {
+        readonly kind: "question";
+        readonly threadId: ThreadId;
+        readonly requestId: RuntimeRequestId;
+        readonly questionId: string;
+        readonly question: TelegramQuestion;
+      };
+  const pendingAnswers = new Map<string, PendingAnswer>();
+  const chatKey = (projectId: ProjectId, chatId: number) => `${projectId}:${chatId}`;
+
+  const typing = (token: string, chatId: number) =>
+    call(token, "sendChatAction", { chat_id: chatId, action: "typing" }, Schema.Unknown).pipe(
+      Effect.ignore,
+      Effect.repeat(Schedule.spaced("4 seconds")),
+      Effect.andThen(Effect.never),
+    );
+
+  /** Tells the chat about a request the run stopped on and remembers what answers it. */
+  const askInChat = Effect.fn("TelegramChannel.askInChat")(function* (
     projectId: ProjectId,
+    chatId: number,
+    token: string,
     threadId: ThreadId,
-    runId: Parameters<typeof threadManagement.waitForThread>[0]["runId"] & {},
+    request: OrchestrationV2RuntimeRequest,
   ) {
-    const waited = yield* threadManagement
-      .waitForThread({ projectId, threadId, runId, timeoutMs: REPLY_TIMEOUT_MS })
-      .pipe(Effect.mapError(fail("Could not follow the conversation.")));
+    const records = yield* threadManagement
+      .getThreadRecords(threadId, ["turnItems"], {
+        turnItemTypes: ["approval_request", "user_input_request"],
+      })
+      .pipe(Effect.mapError(fail("Could not read what the bot is asking.")));
+    const item = records.turnItems.find(
+      (candidate) =>
+        (candidate.type === "approval_request" || candidate.type === "user_input_request") &&
+        candidate.requestId === request.id,
+    );
+    const key = chatKey(projectId, chatId);
+    if (item?.type === "approval_request") {
+      pendingAnswers.set(key, { kind: "approval", threadId, requestId: request.id });
+      return yield* send(
+        token,
+        chatId,
+        formatApprovalPrompt({ title: item.title, prompt: item.prompt }),
+      );
+    }
+    const question = item?.type === "user_input_request" ? item.questions : [];
+    if (question.length === 1) {
+      pendingAnswers.set(key, {
+        kind: "question",
+        threadId,
+        requestId: request.id,
+        questionId: question[0]!.id,
+        question: question[0]!,
+      });
+      return yield* send(token, chatId, formatQuestion(question[0]!));
+    }
+    return yield* send(
+      token,
+      chatId,
+      "The bot is waiting on you. Open the conversation in MyBot to answer.",
+    );
+  });
+
+  /** The reply to send once a run has ended. */
+  const finalReply = Effect.fn("TelegramChannel.finalReply")(function* (
+    threadId: ThreadId,
+    runId: RunId,
+    waited: ThreadManagementService.ThreadManagementWaitResult,
+  ) {
     if (waited.timedOut) return "Still working on it. Check MyBot for the result.";
     const records = yield* threadManagement
       .getThreadRecords(threadId, ["messages"], {
@@ -267,6 +346,94 @@ const make = Effect.gen(function* () {
     return waited.run?.status === "completed"
       ? "Done."
       : `The run ended as ${waited.run?.status ?? "unknown"}. Check MyBot for details.`;
+  });
+
+  /**
+   * Follows a run to its end and returns its reply. Each approval or question
+   * it stops on goes to the chat; typing shows only while the bot is working,
+   * not while it waits on the user.
+   */
+  const followRun = Effect.fn("TelegramChannel.followRun")(function* (
+    projectId: ProjectId,
+    chatId: number,
+    token: string,
+    threadId: ThreadId,
+    runId: RunId,
+  ) {
+    const asked = new Set<string>();
+    const key = chatKey(projectId, chatId);
+    while (true) {
+      const ended = threadManagement
+        .waitForThread({ projectId, threadId, runId, timeoutMs: REPLY_TIMEOUT_MS })
+        .pipe(Effect.map((waited) => ({ type: "ended" as const, waited })));
+      const stopped = threadManagement
+        .waitForPendingRequest({ projectId, threadId, ignore: asked, timeoutMs: REPLY_TIMEOUT_MS })
+        .pipe(
+          Effect.flatMap(
+            Option.match({
+              onNone: () => Effect.never,
+              onSome: (request) => Effect.succeed({ type: "request" as const, request }),
+            }),
+          ),
+        );
+      const outcome = yield* Effect.raceFirst(ended, stopped).pipe(
+        pendingAnswers.has(key) ? (effect) => effect : Effect.raceFirst(typing(token, chatId)),
+        Effect.mapError(fail("Could not follow the conversation.")),
+      );
+      if (outcome.type === "request") {
+        asked.add(outcome.request.id);
+        yield* askInChat(projectId, chatId, token, threadId, outcome.request);
+        continue;
+      }
+      if (pendingAnswers.get(key)?.threadId === threadId) pendingAnswers.delete(key);
+      return yield* finalReply(threadId, runId, outcome.waited);
+    }
+  });
+
+  /** Answers the request the chat is waiting on; false when the message is not an answer to send. */
+  const answerPending = Effect.fn("TelegramChannel.answerPending")(function* (
+    projectId: ProjectId,
+    chatId: number,
+    token: string,
+    updateId: number,
+    text: string,
+  ) {
+    const key = chatKey(projectId, chatId);
+    const pending = pendingAnswers.get(key);
+    if (pending === undefined) return false;
+    const response: Option.Option<{
+      readonly decision?: ProviderApprovalDecision;
+      readonly answers?: ProviderUserInputAnswers;
+    }> =
+      pending.kind === "approval"
+        ? Option.map(Option.fromNullOr(parseApprovalReply(text)), (decision) => ({ decision }))
+        : Option.map(Option.fromNullOr(parseQuestionReply(pending.question, text)), (answer) => ({
+            answers: { [pending.questionId]: answer },
+          }));
+    if (Option.isNone(response)) {
+      yield* send(
+        token,
+        chatId,
+        pending.kind === "approval"
+          ? "Reply yes, always, or no."
+          : "That doesn't answer the question. Reply with one of the numbers.",
+      );
+      return true;
+    }
+    pendingAnswers.delete(key);
+    // Acknowledge first: once answered, the run can finish and reply at once.
+    yield* send(token, chatId, "Got it.");
+    const sent = yield* threadManagement
+      .dispatch({
+        type: "runtime-request.respond",
+        commandId: CommandId.make(`telegram:${projectId}:${updateId}`),
+        threadId: pending.threadId,
+        requestId: pending.requestId,
+        ...response.value,
+      })
+      .pipe(Effect.result);
+    // Answered in MyBot meanwhile: the message is an ordinary one after all.
+    return sent._tag === "Success";
   });
 
   const handleUpdate = Effect.fn("TelegramChannel.handleUpdate")(function* (
@@ -304,21 +471,19 @@ const make = Effect.gen(function* () {
           "Hi! Message me any time; /new starts a fresh conversation.",
         );
       case "new-conversation":
+        pendingAnswers.delete(chatKey(projectId, chatId));
         yield* updateState(projectId, (current) => {
           const { [String(chatId)]: _dropped, ...threads } = current.threads;
           return { ...current, threads };
         });
         return yield* send(state.token, chatId, "Started a new conversation.");
       case "deliver": {
-        const typing = call(
-          state.token,
-          "sendChatAction",
-          { chat_id: chatId, action: "typing" },
-          Schema.Unknown,
-        ).pipe(Effect.ignore, Effect.repeat(Schedule.spaced("4 seconds")));
+        if (yield* answerPending(projectId, chatId, state.token, update.update_id, action.text))
+          return;
         const text = yield* deliver(projectId, chatId, update.update_id, action.text).pipe(
-          Effect.flatMap(({ threadId, runId }) => reply(projectId, threadId, runId)),
-          Effect.raceFirst(typing.pipe(Effect.andThen(Effect.never))),
+          Effect.flatMap(({ threadId, runId }) =>
+            followRun(projectId, chatId, state.token, threadId, runId),
+          ),
           Effect.catch((error) => Effect.succeed(error.message)),
         );
         return yield* send(state.token, chatId, text);
