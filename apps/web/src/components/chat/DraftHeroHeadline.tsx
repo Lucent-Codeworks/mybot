@@ -165,6 +165,8 @@ export function DraftHeroHeadline({
   const scratchWorkspaceRoot = scratchWorkspaceRootFor(scratchTargetEnvironmentId);
   const isScratchDraft =
     activeProject !== null && isScratchProject(activeProject, scratchWorkspaceRoot);
+  // A bot is a teammate, not a codebase, so its drafts ask what it can do.
+  const isBotDraft = activeProject?.bot != null;
 
   // {value, label} items let Base UI drive the combobox selection while the
   // popup search filters the same collection. "Add project" is an action, not
@@ -358,7 +360,9 @@ export function DraftHeroHeadline({
   const headingLabel = isScratchDraft
     ? "What should we work on?"
     : hasResolvedProject
-      ? `What should we build in ${activeProjectDisplayName}?`
+      ? isBotDraft
+        ? `What can ${activeProjectDisplayName} do for you?`
+        : `What should we build in ${activeProjectDisplayName}?`
       : canChooseProject
         ? `${activeProjectDisplayName ?? "Choose a project"} to start`
         : "Add a project to start";
@@ -399,7 +403,11 @@ export function DraftHeroHeadline({
         {isScratchDraft ? (
           <>What should we work on?</>
         ) : hasResolvedProject ? (
-          <>What should we build in {projectSelector}?</>
+          isBotDraft ? (
+            <>What can {projectSelector} do for you?</>
+          ) : (
+            <>What should we build in {projectSelector}?</>
+          )
         ) : canChooseProject ? (
           <>{projectSelector} to start</>
         ) : (
