@@ -1,5 +1,6 @@
 import { expect, it } from "@effect/vitest";
 import {
+  type ProjectCreateNewInput,
   EnvironmentId,
   ProjectId,
   ProviderInstanceId,
@@ -202,6 +203,7 @@ it.effect("starts a project from just a title when workspaceRoot is omitted", ()
       deletedAt: null,
     } as OrchestrationV2ThreadShell;
     const named: Array<string> = [];
+    const namedInputs: Array<ProjectCreateNewInput> = [];
     const registered: Array<string> = [];
     const createdProject = {
       id: createdProjectId,
@@ -249,6 +251,7 @@ it.effect("starts a project from just a title when workspaceRoot is omitted", ()
         createNamedProject: (input) =>
           Effect.sync(() => {
             named.push(input.name);
+            namedInputs.push(input);
             return {
               projectId: createdProjectId,
               workspaceRoot: createdProject.workspaceRoot,
@@ -284,14 +287,17 @@ it.effect("starts a project from just a title when workspaceRoot is omitted", ()
     expect(registered).toEqual(["/work/existing"]);
 
     // Fields this mode cannot apply are rejected, not dropped.
-    for (const extra of [
-      { scripts: [] },
-      { defaultModelSelection: { instanceId: providerInstanceId, model: "gpt-5" } },
-    ]) {
+    for (const extra of [{ scripts: [] }, { createWorkspaceRootIfMissing: true }]) {
       const rejected = yield* handle({ title: "Configured", ...extra });
       expect(rejected.at(-1)?.result).toMatchObject({ code: "invalid_request" });
     }
     expect(named).toEqual(["Pinball Stats"]);
+
+    // A bot is a named project with a profile and a model.
+    const bot = { role: "Daily tech scout", instructions: "Check bookmarks." };
+    const defaultModelSelection = { instanceId: providerInstanceId, model: "gpt-5" };
+    yield* handle({ title: "Scout", bot, defaultModelSelection });
+    expect(namedInputs.at(-1)).toEqual({ name: "Scout", bot, defaultModelSelection });
   }),
 );
 

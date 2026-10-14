@@ -96,6 +96,7 @@ import { resolveAttachmentPath, resolveAttachmentPathById } from "../../attachme
 import { getCodexServiceTierOptionValue } from "../../codexModelOptions.ts";
 import { ServerConfig } from "../../config.ts";
 import { expandHomePath } from "@t3tools/provider-core/server/pathExpansion";
+import { buildBotInstructions } from "@t3tools/provider-core/server/runtimeInstructions";
 import {
   buildCodexAdditionalContext,
   buildCodexDeveloperInstructions,
@@ -726,6 +727,7 @@ export function buildCodexTurnStartParams(input: {
   readonly omitServiceTier?: boolean;
   /** What the thread's MCP Apps want the agent to know (`ui/update-model-context`). */
   readonly appContext?: ProviderAdapter.ProviderAdapterV2TurnInput["appContext"];
+  readonly bot?: ProviderAdapter.ProviderAdapterV2TurnInput["bot"];
 }) {
   return Effect.gen(function* () {
     const runtimeModeDefaults = codexRuntimeModeTurnDefaults(input.runtimePolicy.runtimeMode);
@@ -770,10 +772,18 @@ export function buildCodexTurnStartParams(input: {
             },
           )
         : undefined;
+    // The user wrote the bot's profile, so it is application context, sent
+    // whether or not MyBot's tools are attached.
+    const botContext =
+      input.bot === undefined
+        ? {}
+        : { mybot_bot: { kind: "application" as const, value: buildBotInstructions(input.bot) } };
     const additionalContext =
-      t3Context === undefined && Object.keys(appContext).length === 0
+      t3Context === undefined &&
+      Object.keys(botContext).length === 0 &&
+      Object.keys(appContext).length === 0
         ? undefined
-        : { ...t3Context, ...appContext };
+        : { ...t3Context, ...botContext, ...appContext };
     const collaborationMode: CodexSchema.ClientRequest__CollaborationMode | undefined =
       input.runtimePolicy.interactionMode !== "plan" && developerInstructions === undefined
         ? undefined
@@ -6208,6 +6218,7 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
               deviceToolsAvailable: mcpSession?.capabilities?.has("device") ?? false,
               omitServiceTier: adapterOptions.resolveRuntime !== undefined,
               ...(turnInput.appContext === undefined ? {} : { appContext: turnInput.appContext }),
+              ...(turnInput.bot === undefined ? {} : { bot: turnInput.bot }),
             });
             yield* Ref.update(pendingRootTurns, (current) => {
               const updated = new Map(current);

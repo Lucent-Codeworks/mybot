@@ -1,4 +1,5 @@
 import {
+  type BotProfile,
   type CommandId,
   type EventId,
   MAX_SCRIPT_ID_LENGTH,
@@ -21,6 +22,7 @@ export interface ProjectCreateCommand {
   readonly projectId: ProjectId;
   readonly title: string;
   readonly workspaceRoot: string;
+  readonly bot?: BotProfile | null;
   readonly scripts?: ReadonlyArray<ProjectScript>;
 }
 
@@ -33,6 +35,7 @@ export interface ProjectMetaUpdateCommand {
   readonly defaultModelSelection?: ModelSelection | null;
   readonly faviconPath?: string | null;
   readonly projectIcon?: ProjectIconOverride | null;
+  readonly bot?: BotProfile | null;
   readonly scripts?: ReadonlyArray<ProjectScript>;
 }
 
@@ -170,6 +173,7 @@ export function planProjectCommand(input: {
           defaultModelSelection: null,
           faviconPath: null,
           projectIcon: null,
+          bot: command.bot ?? null,
           scripts: command.scripts ?? [],
           createdAt: occurredAt,
           updatedAt: occurredAt,
@@ -215,6 +219,7 @@ export function planProjectCommand(input: {
             : { defaultModelSelection: command.defaultModelSelection }),
           ...(command.faviconPath === undefined ? {} : { faviconPath: command.faviconPath }),
           ...(command.projectIcon === undefined ? {} : { projectIcon: command.projectIcon }),
+          ...(command.bot === undefined ? {} : { bot: command.bot }),
           ...(command.scripts === undefined ? {} : { scripts: command.scripts }),
           updatedAt: occurredAt,
         },

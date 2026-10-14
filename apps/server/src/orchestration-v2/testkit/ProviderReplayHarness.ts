@@ -359,6 +359,7 @@ export function layerWithRegistry<Error>(
     Layer.provide(
       Layer.mergeAll(
         McpAppModelContext.layerEmpty,
+        layerStores,
         layerCheckpointServiceProvided,
         layerEventSinkProvided,
         IdAllocator.layer,

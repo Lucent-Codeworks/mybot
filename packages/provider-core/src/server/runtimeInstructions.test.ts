@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { buildRuntimeInstructions } from "./runtimeInstructions.ts";
+import { buildBotInstructions, buildRuntimeInstructions } from "./runtimeInstructions.ts";
 
 describe("buildRuntimeInstructions", () => {
   it("keeps known model and effort metadata on one line", () => {
@@ -25,5 +25,38 @@ describe("buildRuntimeInstructions", () => {
     const instructions = buildRuntimeInstructions({ harness: "Cursor", model });
     expect(instructions).toContain("through the Cursor harness.");
     expect(instructions).not.toContain("reasoning effort");
+  });
+});
+
+describe("buildBotInstructions", () => {
+  it("names the bot and its role and carries the user's instructions verbatim", () => {
+    const block = buildBotInstructions({
+      name: "Scout",
+      role: " Daily\ntech scout ",
+      instructions: "  Check bookmarks.\n\nNever post without approval.  ",
+    });
+    expect(block).toBe(
+      [
+        "<bot_profile>",
+        "You are Scout, Daily tech scout: a persistent teammate the user works with across many threads.",
+        "Follow these standing instructions from the user:",
+        "Check bookmarks.\n\nNever post without approval.",
+        "</bot_profile>",
+      ].join("\n"),
+    );
+  });
+
+  it("leaves out an empty role and empty instructions", () => {
+    const block = buildBotInstructions({ name: "Scout", role: "", instructions: " " });
+    expect(block).toContain("You are Scout: a persistent teammate");
+    expect(block).not.toContain("standing instructions");
+  });
+
+  it("follows the runtime block only for a bot's turns", () => {
+    const bot = { name: "Scout", role: "", instructions: "" };
+    expect(buildRuntimeInstructions({ harness: "Codex" })).not.toContain("<bot_profile>");
+    expect(buildRuntimeInstructions({ harness: "Codex", bot })).toMatch(
+      /<\/runtime_info>\n\n<bot_profile>/,
+    );
   });
 });

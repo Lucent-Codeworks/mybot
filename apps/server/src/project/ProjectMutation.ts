@@ -22,6 +22,7 @@ export const projectMutationOperation = Effect.fn("projectMutationOperation")(fu
         ...(mutation.defaultModelSelection === undefined
           ? {}
           : { defaultModelSelection: mutation.defaultModelSelection }),
+        ...(mutation.bot === undefined ? {} : { bot: mutation.bot }),
         ...(mutation.scripts === undefined ? {} : { scripts: mutation.scripts }),
       });
 
@@ -36,6 +37,7 @@ export const projectMutationOperation = Effect.fn("projectMutationOperation")(fu
           : { defaultModelSelection: mutation.defaultModelSelection }),
         ...(mutation.projectIcon === undefined ? {} : { projectIcon: mutation.projectIcon }),
         ...(mutation.faviconPath === undefined ? {} : { faviconPath: mutation.faviconPath }),
+        ...(mutation.bot === undefined ? {} : { bot: mutation.bot }),
         ...(mutation.scripts === undefined ? {} : { scripts: mutation.scripts }),
       });
 

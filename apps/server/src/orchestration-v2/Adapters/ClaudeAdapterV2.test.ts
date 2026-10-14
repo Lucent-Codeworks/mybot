@@ -220,6 +220,19 @@ describe("ClaudeAdapterV2 runtime query policy", () => {
     assert.include(options.settings, { showThinkingSummaries: true });
   });
 
+  it("appends a bot's profile to the system prompt", () => {
+    const options = ClaudeAdapterV2.makeClaudeQueryOptions({
+      modelSelection: CLAUDE_TEST_MODEL_SELECTION,
+      nativeThreadId: "bot-thread",
+      resume: false,
+      cwd: "/workspace",
+      bot: { name: "Scout", role: "Daily tech scout", instructions: "Check bookmarks." },
+    });
+    const systemPrompt = options.systemPrompt as { readonly append?: string };
+    assert.include(systemPrompt.append ?? "", "<bot_profile>");
+    assert.include(systemPrompt.append ?? "", "Check bookmarks.");
+  });
+
   it("preserves an explicit omitted thinking display", () => {
     const options = ClaudeAdapterV2.makeClaudeQueryOptions({
       modelSelection: CLAUDE_TEST_MODEL_SELECTION,

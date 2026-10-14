@@ -31,6 +31,7 @@ import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as Fiber from "effect/Fiber";
 import * as Layer from "effect/Layer";
+import * as Option from "effect/Option";
 import * as Ref from "effect/Ref";
 import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
@@ -42,6 +43,7 @@ import * as EventSink from "./EventSink.ts";
 import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
 import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
 import * as ProviderEventIngestor from "./ProviderEventIngestor.ts";
+import * as ProjectStore from "./ProjectStore.ts";
 import type { ProjectionStoreV2Error } from "./ProjectionStore.ts";
 import {
   makeProviderFailure,
@@ -566,6 +568,7 @@ export const layer: Layer.Layer<
   | ProviderEventIngestor.ProviderEventIngestorV2
   | ServerSettings.ServerSettingsService
   | McpAppModelContext.McpAppModelContext
+  | ProjectStore.ProjectStoreV2
 > = Layer.effect(
   RunExecutionServiceV2,
   Effect.gen(function* () {
@@ -574,6 +577,7 @@ export const layer: Layer.Layer<
     const providerEventIngestor = yield* ProviderEventIngestor.ProviderEventIngestorV2;
     const serverSettings = yield* ServerSettings.ServerSettingsService;
     const mcpAppModelContext = yield* McpAppModelContext.McpAppModelContext;
+    const projectStore = yield* ProjectStore.ProjectStoreV2;
 
     const writeFinalRunEvents = (input: {
       readonly run: OrchestrationV2Run;
@@ -1376,6 +1380,20 @@ export const layer: Layer.Layer<
             key: `mcp_app_${entry.itemId.replace(/[^\w.-]/g, "_")}`,
             text: entry.text,
           }));
+          // A thread in a bot's project carries the bot's profile on every
+          // turn. Like the apps' notes, a failed read costs the turn the
+          // profile, not the turn itself.
+          const project = yield* projectStore.getShell(input.appThread.projectId).pipe(
+            Effect.catch((cause) =>
+              Effect.logWarning("Failed to read the thread's project for its bot profile.", {
+                cause,
+              }).pipe(Effect.as(Option.none())),
+            ),
+          );
+          const bot = Option.match(project, {
+            onNone: () => undefined,
+            onSome: ({ title, bot }) => (bot ? { name: title, ...bot } : undefined),
+          });
           const turnInput = {
             appThread: input.appThread,
             threadId: input.run.threadId,
@@ -1397,6 +1415,7 @@ export const layer: Layer.Layer<
             modelSelection: input.modelSelection,
             runtimePolicy: input.runtimePolicy,
             ...(appContext.length === 0 ? {} : { appContext }),
+            ...(bot === undefined ? {} : { bot }),
           };
           const compact =
             input.message.attachments.length === 0 &&

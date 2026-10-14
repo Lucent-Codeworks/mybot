@@ -489,6 +489,26 @@ describe("CodexAdapterV2 runtime policy", () => {
     }),
   );
 
+  it.effect("sends a bot's profile as application context, with or without MyBot's tools", () =>
+    Effect.gen(function* () {
+      const policy = { runtimeMode: "full-access", interactionMode: "default", cwd: null } as const;
+      const modelSelection = { instanceId: ProviderInstanceId.make("codex"), model: "gpt-5.4" };
+      const bot = { name: "Scout", role: "Daily tech scout", instructions: "Check bookmarks." };
+      for (const hasT3Mcp of [false, true]) {
+        const params = yield* CodexAdapterV2.buildCodexTurnStartParams({
+          nativeThreadId: "native-bot",
+          codexInput: [{ type: "text", text: "anything new?" }],
+          runtimePolicy: policy,
+          modelSelection,
+          hasT3Mcp,
+          bot,
+        });
+        assert.equal(params.additionalContext?.["mybot_bot"]?.kind, "application");
+        assert.include(params.additionalContext?.["mybot_bot"]?.value ?? "", "Check bookmarks.");
+      }
+    }),
+  );
+
   it.effect("adds default-mode developer instructions when the T3 MCP server is attached", () =>
     Effect.gen(function* () {
       const params = yield* CodexAdapterV2.buildCodexTurnStartParams({

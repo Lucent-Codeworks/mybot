@@ -27,6 +27,7 @@ const row = (overrides: Partial<ProjectRow> = {}): ProjectRow => ({
   defaultModelSelection: null,
   faviconPath: null,
   projectIcon: null,
+  bot: null,
   scripts: [],
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
@@ -88,6 +89,25 @@ describe("planProjectCommand", () => {
     assert.equal(event.type, "project.created");
     assert.equal(event.occurredAt, "2026-01-01T00:00:00.000Z");
     assert.deepInclude(event.payload, { scripts: [], defaultModelSelection: null });
+  });
+
+  it("creates bots with their profile, and an update can edit or clear it", () => {
+    const bot = { role: "Inbox triage", instructions: "Never send email without approval." };
+    const created = Result.getOrThrow(
+      plan({
+        type: "project.create",
+        commandId: CommandId.make("cmd-create"),
+        projectId,
+        title: "Inbox Bot",
+        workspaceRoot: "/tmp/inbox-bot",
+        bot,
+      }),
+    );
+    assert.deepInclude(created.payload, { bot });
+    const edited = { ...bot, role: "Inbox and calendar" };
+    assert.deepEqual(payloadOf(update({ bot: edited })).bot, edited);
+    assert.isNull(payloadOf(update({ bot: null })).bot);
+    assert.isFalse("bot" in payloadOf(update({ title: "Renamed" })));
   });
 
   it("only treats metadata updates as explicit model defaults", () => {

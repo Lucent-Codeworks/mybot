@@ -8,7 +8,7 @@
  *
  * @module ManagedProjectFolders
  */
-import { CommandId, ProjectId } from "@t3tools/contracts";
+import { CommandId, ProjectId, type ProjectCreateNewInput } from "@t3tools/contracts";
 import { newProjectFolderName } from "@t3tools/shared/path";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
@@ -90,8 +90,9 @@ export class ManagedProjectFolders extends Context.Service<
      * (adding `-2`, `-3`, ... when taken), writes a README and an icon, then
      * creates the project. The folder is removed when the create fails or is
      * cancelled before the project exists, never once another project owns it.
+     * With `bot`, the project is a bot, and `defaultModelSelection` becomes its model.
      */
-    readonly createNamedProject: (input: { readonly name: string }) => Effect.Effect<
+    readonly createNamedProject: (input: ProjectCreateNewInput) => Effect.Effect<
       {
         readonly projectId: ProjectId;
         readonly workspaceRoot: string;
@@ -319,6 +320,7 @@ const make = Effect.gen(function* () {
         projectId: ProjectId.make(id),
         title: input.name,
         workspaceRoot,
+        ...(input.bot === undefined ? {} : { bot: input.bot }),
       })
       .pipe(
         // A rejected create leaves the folder unused, so remove it. An
@@ -336,6 +338,16 @@ const make = Effect.gen(function* () {
         ),
         Effect.mapError((cause) => new NamedProjectCreateError({ workspaceRoot, cause })),
       );
+    // Creation never records a model choice, so a chosen one is a follow-up update.
+    if (input.defaultModelSelection !== undefined) {
+      yield* projects
+        .update({
+          commandId: CommandId.make(`named-project:${id}:model`),
+          projectId: project.id,
+          defaultModelSelection: input.defaultModelSelection,
+        })
+        .pipe(Effect.mapError((cause) => new NamedProjectCreateError({ workspaceRoot, cause })));
+    }
     return { projectId: project.id, workspaceRoot };
   });
 

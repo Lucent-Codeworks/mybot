@@ -71,6 +71,7 @@ import { parsePiCompactCommand, type PiCompactCommand } from "./commands.ts";
 import { mergeProviderInstanceEnvironment } from "@t3tools/provider-core/server/instanceEnvironment";
 import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
 import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+import { buildBotInstructions } from "@t3tools/provider-core/server/runtimeInstructions";
 import * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
 import {
   ProviderAdapterDriverCreateError,
@@ -2619,9 +2620,15 @@ export const makePiAdapterV2 = Effect.fn("makePiAdapterV2")(function* (
             const compactCommand = continuation
               ? null
               : parsePiCompactCommand(turnInput.message.text);
+            // Pi's system prompt is fixed by its extension, so a bot's profile
+            // rides on the prompt, after the text so slash commands still expand.
+            const promptText =
+              turnInput.bot === undefined || turnInput.message.text.trimStart().startsWith("/")
+                ? turnInput.message.text
+                : `${turnInput.message.text}\n\n${buildBotInstructions(turnInput.bot)}`;
             const payload =
               !continuation && compactCommand === null
-                ? yield* resolvePromptPayload(turnInput.message.text, turnInput.message.attachments)
+                ? yield* resolvePromptPayload(promptText, turnInput.message.attachments)
                 : null;
             const startedAt = yield* DateTime.now;
             const syntheticNativeTurnId = `${state.providerThread.id}:attempt:${turnInput.attemptId}`;
