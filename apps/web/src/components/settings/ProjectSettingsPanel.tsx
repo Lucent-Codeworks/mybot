@@ -273,6 +273,28 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
     [updateAllMembers],
   );
 
+  // Clearing the profile discards the job and instructions, so ask first.
+  const updateBot = useCallback(
+    async (bot: BotProfile | null) => {
+      if (bot === null && representative.bot) {
+        const api = readLocalApi();
+        if (!api) return;
+        const confirmed = await settlePromise(() =>
+          api.dialogs.confirm(
+            [
+              `Make "${group.displayName}" a plain project?`,
+              "Its job and instructions are deleted. Its threads stay.",
+            ].join("\n"),
+            { variant: "destructive" },
+          ),
+        );
+        if (confirmed._tag === "Failure" || !confirmed.value) return;
+      }
+      await updateAllMembers({ bot }, "Failed to update bot");
+    },
+    [group.displayName, representative.bot, updateAllMembers],
+  );
+
   const removeMembers = useCallback(
     async (members: ReadonlyArray<SidebarProjectGroupMember>) => {
       if (checkProjectAccess(members, "Failed to remove project")) return;
@@ -443,7 +465,7 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
         <BotProfileSettings
           bot={representative.bot ?? null}
           disabled={!canEditGroup}
-          onChange={(bot) => void updateAllMembers({ bot }, "Failed to update bot")}
+          onChange={(bot) => void updateBot(bot)}
         />
         <ProjectDefaultsSettings category="project" />
         <ProjectActionsSettings />
