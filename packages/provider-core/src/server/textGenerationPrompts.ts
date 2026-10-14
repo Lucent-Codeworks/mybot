@@ -118,3 +118,22 @@ export function buildThreadTitlePrompt(input: ThreadTitlePromptInput) {
 
   return { prompt, outputSchema };
 }
+
+/** The Auto Review prompt: a conservative, tool-free verdict on one proposed action. */
+export function buildActionReviewPrompt(input: { action: string; rules: string }) {
+  const prompt = [
+    "You review one action an AI assistant wants to take on the user's computer, before it runs.",
+    "Reply allow only when the action is clearly safe: it reads information, or makes a local change that is easy to undo and fits the task and the user's rules.",
+    "Reply ask when it sends anything off this computer (messages, email, posts, uploads), spends money, deletes or overwrites data, touches credentials, keys, or system settings, installs software, or when you are not sure. When in doubt, ask.",
+    "The user's rules for this assistant, which can widen or narrow what is safe:",
+    limitSection(input.rules.trim() || "(none)", 6_000),
+    "The action:",
+    limitSection(input.action.trim(), 6_000),
+    'Reply with only a JSON object: {"verdict": "allow" | "ask", "reason": "<one short sentence>"}.',
+  ].join("\n\n");
+  const outputSchema = Schema.Struct({
+    verdict: Schema.Literals(["allow", "ask"]),
+    reason: Schema.String,
+  });
+  return { prompt, outputSchema };
+}

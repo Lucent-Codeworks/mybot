@@ -1,6 +1,7 @@
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import type { ProviderInstanceId } from "@t3tools/contracts";
 import {
   type ProviderTextGeneration,
   TextGenerationError,
@@ -24,19 +25,31 @@ export class TextGeneration extends Context.Service<TextGeneration, ProviderText
 /** @public Service construction is part of the canonical Effect module API. */
 export const make = Effect.gen(function* () {
   const registry = yield* ProviderInstanceRegistry.ProviderInstanceRegistry;
+  const route = <A>(
+    operation: keyof ProviderTextGeneration,
+    instanceId: ProviderInstanceId,
+    use: (generation: ProviderTextGeneration) => Effect.Effect<A, TextGenerationError>,
+  ) =>
+    registry.getInstance(instanceId).pipe(
+      Effect.flatMap((instance) =>
+        instance
+          ? use(instance.textGeneration)
+          : Effect.fail(
+              new TextGenerationError({
+                operation,
+                detail: `No provider instance registered for id '${instanceId}'.`,
+              }),
+            ),
+      ),
+    );
   return TextGeneration.of({
     generateThreadTitle: (input) =>
-      registry.getInstance(input.modelSelection.instanceId).pipe(
-        Effect.flatMap((instance) =>
-          instance
-            ? instance.textGeneration.generateThreadTitle(input)
-            : Effect.fail(
-                new TextGenerationError({
-                  operation: "generateThreadTitle",
-                  detail: `No provider instance registered for id '${input.modelSelection.instanceId}'.`,
-                }),
-              ),
-        ),
+      route("generateThreadTitle", input.modelSelection.instanceId, (generation) =>
+        generation.generateThreadTitle(input),
+      ),
+    reviewAction: (input) =>
+      route("reviewAction", input.modelSelection.instanceId, (generation) =>
+        generation.reviewAction(input),
       ),
   });
 });

@@ -11,7 +11,7 @@ import * as TextGenerationOperations from "@t3tools/provider-core/server/textGen
 import * as OpenCodeRuntime from "./OpenCodeRuntime.ts";
 import * as OpenCodeServerOwner from "./OpenCodeServerOwner.ts";
 
-const OpenCodeTextGenerationOperation = Schema.Literals(["generateThreadTitle"]);
+const OpenCodeTextGenerationOperation = Schema.Literals(["generateThreadTitle", "reviewAction"]);
 
 const openCodeTextGenerationErrorContext = {
   operation: OpenCodeTextGenerationOperation,

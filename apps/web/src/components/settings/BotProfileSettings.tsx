@@ -19,8 +19,10 @@ import { useAtomCommand } from "~/state/use-atom-command";
 import { useProjectFileQuery } from "../files/projectFilesQueryState";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { Switch } from "../ui/switch";
 import { Textarea } from "../ui/textarea";
 import { SettingsRow, SettingsSection } from "./settingsLayout";
+import { useUpdateScopedSettings } from "./useScopedSettings";
 
 /**
  * A project's bot profile. A plain project can become a bot, and a bot can
@@ -99,6 +101,7 @@ export function BotProfileSettings(props: {
           />
         </div>
       </SettingsRow>
+      <BotAutoReviewRow bot={bot} disabled={disabled} onChange={onChange} />
       <BotMemoryRow environmentId={props.environmentId} folder={props.folder} disabled={disabled} />
       <BotTelegramRow environmentId={props.environmentId} projectId={props.projectId} />
       <SettingsRow
@@ -277,6 +280,35 @@ function BotTelegramRow(props: { environmentId: EnvironmentId; projectId: Projec
             Disconnect
           </Button>
         </div>
+      }
+    />
+  );
+}
+
+/**
+ * Auto Review needs approval requests to review, so turning it on also makes
+ * the bot's new threads ask before acting.
+ */
+function BotAutoReviewRow(props: {
+  bot: BotProfile;
+  disabled: boolean;
+  onChange: (bot: BotProfile) => void;
+}) {
+  const updateSettings = useUpdateScopedSettings();
+  return (
+    <SettingsRow
+      title="Auto Review"
+      description="A reviewer model approves this bot's clearly safe actions on its own and asks you about the rest. Turning it on makes the bot's new conversations ask before acting."
+      control={
+        <Switch
+          aria-label="Auto Review"
+          disabled={props.disabled}
+          checked={props.bot.autoReview === true}
+          onCheckedChange={(autoReview) => {
+            props.onChange({ ...props.bot, autoReview });
+            if (autoReview) updateSettings({ defaultRuntimeMode: "approval-required" });
+          }}
+        />
       }
     />
   );

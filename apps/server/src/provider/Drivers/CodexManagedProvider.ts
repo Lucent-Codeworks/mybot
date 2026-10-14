@@ -263,6 +263,7 @@ export const makeManagedCodexProvider = Effect.fn("makeManagedCodexProvider")(fu
   const textGeneration: ProviderInstance["textGeneration"] = {
     generateThreadTitle: (value) =>
       protect("generateThreadTitle", nativeGeneration.generateThreadTitle(value)),
+    reviewAction: (value) => protect("reviewAction", nativeGeneration.reviewAction(value)),
   };
   return {
     instanceId,

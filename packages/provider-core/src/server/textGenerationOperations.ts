@@ -12,7 +12,7 @@ import type { ChatAttachment, ModelSelection } from "@t3tools/contracts";
 import { extractJsonObject } from "@t3tools/shared/schemaJson";
 
 import { type ProviderTextGeneration, TextGenerationError } from "./textGeneration.ts";
-import { buildThreadTitlePrompt } from "./textGenerationPrompts.ts";
+import { buildActionReviewPrompt, buildThreadTitlePrompt } from "./textGenerationPrompts.ts";
 import { sanitizeThreadTitle } from "./textGenerationUtils.ts";
 
 export type Operation = keyof ProviderTextGeneration;
@@ -78,5 +78,16 @@ export function fromRunner(name: string, run: Runner): ProviderTextGeneration {
     };
   });
 
-  return { generateThreadTitle } satisfies ProviderTextGeneration;
+  const reviewAction: ProviderTextGeneration["reviewAction"] = Effect.fn(`${name}.reviewAction`)(
+    function* (input) {
+      return yield* run({
+        operation: "reviewAction",
+        cwd: input.cwd,
+        modelSelection: input.modelSelection,
+        ...buildActionReviewPrompt({ action: input.action, rules: input.rules }),
+      });
+    },
+  );
+
+  return { generateThreadTitle, reviewAction } satisfies ProviderTextGeneration;
 }
