@@ -11,6 +11,7 @@ import {
 import { discardComposerDraft } from "../lib/discardComposerDraft";
 import { requestCustomSnooze } from "./CustomSnoozeDialog";
 import { requestNewBot } from "./NewBotDialog";
+import { resolveBotActivity } from "./sidebar/botActivity";
 import { botGroups, SidebarBots } from "./sidebar/SidebarBots";
 import { useAtomValue } from "@effect/atom-react";
 import { replaceComposerContextReferences } from "@t3tools/shared/composerContextReferences";
@@ -2463,6 +2464,7 @@ export default function Sidebar() {
     [projectScopeFilter, projectScopeItems, projectScopeMenuState.query],
   );
   const bots = useMemo(() => botGroups(projectGroups), [projectGroups]);
+  const botActivity = useMemo(() => resolveBotActivity(bots, threads), [bots, threads]);
   const handleNewBotChat = useCallback(
     (bot: SidebarProjectSnapshot) => {
       const projectRef = bot.memberProjectRefs[0];
@@ -4943,6 +4945,7 @@ export default function Sidebar() {
             {isSearchingThreads ? null : (
               <SidebarBots
                 bots={bots}
+                activity={botActivity}
                 scopedProjectKey={projectScopeKey}
                 onToggleScope={(bot) =>
                   setProjectScopeKey(projectScopeKey === bot.projectKey ? null : bot.projectKey)
