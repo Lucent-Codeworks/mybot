@@ -24,6 +24,14 @@ an email, posting, paying, or deleting data, a bot shows you a draft and waits
 for your go-ahead. Write lasting rules into the instructions, including when a
 bot may act without asking. Put one-off requests in the conversation.
 
+## Bots working together
+
+Each bot knows your other bots and their jobs. When a request fits another
+bot's job better, it hands the task over: the work runs as a new conversation
+with that bot, using its instructions, memory, and model, and the first bot
+reports back with the result. You can also ask for it directly, for example
+"ask Inbox to sort today's mail".
+
 ## Memory
 
 Each bot keeps a `MEMORY.md` file in its folder. It reads the file at the start

@@ -784,7 +784,14 @@ it.effect("passes the thread's MCP app context to the provider under a safe key"
   ),
 );
 
-it.effect("gives turns in a bot's thread the bot's profile", () =>
+const scout = {
+  id: ProjectId.make("project:bot"),
+  title: "Scout",
+  workspaceRoot: "/bots/scout",
+  bot: { role: "Daily tech scout", instructions: "Summarize my bookmarks." },
+} as OrchestrationProjectShell;
+
+it.effect("gives turns in a bot's thread the bot's profile and its teammates", () =>
   Effect.gen(function* () {
     const runExecution = yield* RunExecutionService.RunExecutionServiceV2;
     const started = yield* Deferred.make<ProviderAdapter.ProviderAdapterV2TurnInput>();
@@ -842,6 +849,7 @@ it.effect("gives turns in a bot's thread the bot's profile", () =>
       instructions: "Summarize my bookmarks.",
       folder: "/bots/scout",
       skillsFolder: "/mybot/skills",
+      teammates: [{ name: "Inbox", role: "Inbox triage", projectId: "project:inbox" }],
     });
   }).pipe(
     Effect.provide(
@@ -851,14 +859,17 @@ it.effect("gives turns in a bot's thread the bot's profile", () =>
             McpAppModelContext.layerEmpty,
             layerConfig,
             Layer.mock(ProjectStore.ProjectStoreV2)({
-              getShell: () =>
-                Effect.succeed(
-                  Option.some({
-                    title: "Scout",
-                    workspaceRoot: "/bots/scout",
-                    bot: { role: "Daily tech scout", instructions: "Summarize my bookmarks." },
-                  } as OrchestrationProjectShell),
-                ),
+              getShell: () => Effect.succeed(Option.some(scout)),
+              listShells: () =>
+                Effect.succeed([
+                  scout,
+                  { id: ProjectId.make("project:plain"), title: "Plain", bot: null },
+                  {
+                    id: ProjectId.make("project:inbox"),
+                    title: "Inbox",
+                    bot: { role: "Inbox triage", instructions: "" },
+                  },
+                ] as ReadonlyArray<OrchestrationProjectShell>),
             }),
             Layer.mock(CheckpointService.CheckpointServiceV2)({}),
             Layer.mock(EventSink.EventSinkV2)({}),

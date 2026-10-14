@@ -304,6 +304,8 @@ it.effect("starts a project from just a title when workspaceRoot is omitted", ()
 const clientLaunchHarness = (input: {
   readonly runtimeModeCeiling: "approval-required" | "auto-accept-edits" | "auto" | "full-access";
   readonly launched: Array<ThreadLaunch.ThreadLaunchInput>;
+  /** Makes the target project a bot whose configured model is this one. */
+  readonly botModel?: { readonly instanceId: ProviderInstanceId; readonly model: string };
 }) => {
   const projectId = ProjectId.make("project:client-target");
   // "claudeAgent" is the real default instance id for the Claude driver
@@ -314,7 +316,11 @@ const clientLaunchHarness = (input: {
     model: "claude-opus",
   };
   const layerDependencies = Layer.mergeAll(
-    ServerSettings.layerTest(),
+    ServerSettings.layerTest(
+      input.botModel === undefined
+        ? {}
+        : { projectSettingsOverrides: { [projectId]: { defaultModelSelection: input.botModel } } },
+    ),
     NodeCrypto.layer,
     Layer.succeed(McpInvocationContext.McpInvocationContext, {
       environmentId: EnvironmentId.make("environment"),
@@ -354,6 +360,8 @@ const clientLaunchHarness = (input: {
                 id,
                 workspaceRoot: "/projects/client-target",
                 defaultModelSelection: modelSelection,
+                bot:
+                  input.botModel === undefined ? null : { role: "Inbox triage", instructions: "" },
               } as unknown as ProjectRecord)
             : Option.none(),
         ),
@@ -398,5 +406,26 @@ it.effect("a client launches at its ceiling with the project's default model", (
     const untargeted = yield* handle({ title: "Fix" });
     expect(untargeted.at(-1)?.result).toMatchObject({ code: "target_required" });
     expect(launched).toHaveLength(1);
+  }),
+);
+
+it.effect("a handoff to another bot starts on that bot's model", () =>
+  Effect.gen(function* () {
+    const launched: Array<ThreadLaunch.ThreadLaunchInput> = [];
+    const botModel = { instanceId: ProviderInstanceId.make("codex"), model: "gpt-5" };
+    const { projectId, dependencies } = clientLaunchHarness({
+      runtimeModeCeiling: "full-access",
+      launched,
+      botModel,
+    });
+    const toolkit = yield* ProjectToolkit.pipe(
+      Effect.provide(
+        McpToolAccess.HandlersLayer.layer(ProjectHandlers.layer).pipe(Layer.provide(dependencies)),
+      ),
+    );
+    const result = yield* toolkit
+      .handle("t3_thread_launch", { title: "Triage", projectId, message: "Sort my inbox" })
+      .pipe(Stream.unwrap, Stream.runCollect, Effect.provide(dependencies));
+    expect(result.at(-1)?.result).toMatchObject({ projectId, modelSelection: botModel });
   }),
 );

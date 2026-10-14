@@ -1393,11 +1393,28 @@ export const layer: Layer.Layer<
               }).pipe(Effect.as(Option.none())),
             ),
           );
-          const bot = Option.match(project, {
-            onNone: () => undefined,
-            onSome: ({ title, workspaceRoot, bot }) =>
-              bot ? { name: title, folder: workspaceRoot, skillsFolder, ...bot } : undefined,
-          });
+          const botProject = Option.getOrUndefined(project);
+          const bot = botProject?.bot
+            ? {
+                name: botProject.title,
+                folder: botProject.workspaceRoot,
+                skillsFolder,
+                ...botProject.bot,
+                teammates: (yield* projectStore
+                  .listShells()
+                  .pipe(
+                    Effect.catch((cause) =>
+                      Effect.logWarning("Failed to list the user's other bots.", { cause }).pipe(
+                        Effect.as([]),
+                      ),
+                    ),
+                  )).flatMap((shell) =>
+                  shell.bot && shell.id !== botProject.id
+                    ? [{ name: shell.title, role: shell.bot.role, projectId: shell.id }]
+                    : [],
+                ),
+              }
+            : undefined;
           const turnInput = {
             appThread: input.appThread,
             threadId: input.run.threadId,

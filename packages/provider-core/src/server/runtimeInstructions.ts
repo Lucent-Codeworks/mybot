@@ -7,6 +7,12 @@ export interface BotInstructions {
   readonly folder: string;
   /** The skills folder every bot shares. */
   readonly skillsFolder: string;
+  /** The user's other bots, which this bot can hand work to. */
+  readonly teammates?: ReadonlyArray<{
+    readonly name: string;
+    readonly role: string;
+    readonly projectId: string;
+  }>;
 }
 
 /** The file in a bot's folder that holds what it remembers across conversations. */
@@ -30,6 +36,16 @@ export function buildBotInstructions(bot: BotInstructions): string {
   lines.push(
     "When the user wants something done regularly or whenever something happens, set it up as a routine with the schedule_task tool if you have it, and tell the user the schedule you set.",
   );
+  if (bot.teammates && bot.teammates.length > 0) {
+    lines.push(
+      "The user's other bots, which you can hand work to when it fits their job better than yours:",
+      ...bot.teammates.map(
+        (teammate) =>
+          `- ${toSingleLine(teammate.name)}${teammate.role ? ` (${toSingleLine(teammate.role)})` : ""}: projectId ${teammate.projectId}`,
+      ),
+      "To hand off, call t3_thread_launch with that projectId and the full task in message; it runs as that bot, with its own instructions, memory, and model. Follow it with t3_thread_wait and t3_thread_read, then report back. Tell the user when you hand work off.",
+    );
+  }
   const instructions = bot.instructions.trim();
   if (instructions) lines.push("Follow these standing instructions from the user:", instructions);
   return `<bot_profile>\n${lines.join("\n")}\n</bot_profile>`;
