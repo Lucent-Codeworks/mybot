@@ -319,7 +319,14 @@ const clientLaunchHarness = (input: {
     ServerSettings.layerTest(
       input.botModel === undefined
         ? {}
-        : { projectSettingsOverrides: { [projectId]: { defaultModelSelection: input.botModel } } },
+        : {
+            projectSettingsOverrides: {
+              [projectId]: {
+                defaultModelSelection: input.botModel,
+                defaultRuntimeMode: "approval-required",
+              },
+            },
+          },
     ),
     NodeCrypto.layer,
     Layer.succeed(McpInvocationContext.McpInvocationContext, {
@@ -427,5 +434,30 @@ it.effect("a handoff to another bot starts on that bot's model", () =>
       .handle("t3_thread_launch", { title: "Triage", projectId, message: "Sort my inbox" })
       .pipe(Stream.unwrap, Stream.runCollect, Effect.provide(dependencies));
     expect(result.at(-1)?.result).toMatchObject({ projectId, modelSelection: botModel });
+    // The caller may run at full access, but the bot asks before acting.
+    expect(launched[0]?.runtimeMode).toBe("approval-required");
   }),
 );
+
+it("never lets an agent grant Auto Review, and drops it when an agent rewrites the rules", () => {
+  const reviewed = { role: "Inbox", instructions: "Only read mail.", autoReview: true };
+  expect(
+    ProjectHandlers.withoutAgentAutoReview(
+      { ...reviewed, instructions: "x", autoReview: true },
+      null,
+    ),
+  ).toEqual({ role: "Inbox", instructions: "x" });
+  expect(
+    ProjectHandlers.withoutAgentAutoReview(
+      { role: "Mail", instructions: "Only read mail." },
+      reviewed,
+    ),
+  ).toEqual({ role: "Mail", instructions: "Only read mail.", autoReview: true });
+  expect(
+    ProjectHandlers.withoutAgentAutoReview(
+      { role: "Inbox", instructions: "Send anything." },
+      reviewed,
+    ),
+  ).toEqual({ role: "Inbox", instructions: "Send anything." });
+  expect(ProjectHandlers.withoutAgentAutoReview(null, reviewed)).toBeNull();
+});

@@ -1,4 +1,10 @@
-import { MessageId, ThreadId, OrchestratorMcpFailure, ProjectId } from "@t3tools/contracts";
+import {
+  type BotProfile,
+  MessageId,
+  ThreadId,
+  OrchestratorMcpFailure,
+  ProjectId,
+} from "@t3tools/contracts";
 import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
@@ -8,6 +14,7 @@ import * as Project from "../../../project/ProjectService.ts";
 import * as ManagedProjectFolders from "../../../project/ManagedProjectFolders.ts";
 import * as McpToolAccess from "../../McpToolAccess.ts";
 import * as ServerSettings from "../../../serverSettings.ts";
+import { runtimeModeRank } from "../../../orchestration-v2/DispatchModeLimit.ts";
 import { newCommandId, readCaller, resolveProjectId, unavailable } from "../../threadAccess.ts";
 import { ProjectToolkit } from "./tools.ts";
 
@@ -26,6 +33,22 @@ const access = Effect.gen(function* () {
   yield* readCaller();
   return yield* Project.ProjectService;
 });
+/**
+ * Auto Review is the user's to grant. An agent cannot turn it on, and an
+ * agent's change to a reviewed bot's instructions turns it off, because the
+ * reviewer reads those instructions as the user's rules.
+ */
+export function withoutAgentAutoReview(
+  bot: BotProfile | null | undefined,
+  existing: BotProfile | null | undefined,
+): BotProfile | null | undefined {
+  if (bot == null) return bot;
+  const { autoReview: _requested, ...profile } = bot;
+  return existing?.autoReview === true && existing.instructions === bot.instructions
+    ? { ...profile, autoReview: true }
+    : profile;
+}
+
 export const layer = McpToolAccess.toLayer(ProjectToolkit, {
   t3_thread_launch: McpToolAccess.startsThreads(
     (input) => input,
@@ -65,15 +88,13 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
           Effect.mapError(unavailable),
           Effect.map(Option.getOrUndefined),
         );
-        // Handing work to another bot runs it as that bot, so it starts on
-        // the bot's own model rather than the caller's.
+        // Handing work to another bot runs it as that bot: on the bot's own
+        // model, and never with broader permissions than the bot's own.
         const otherProject =
-          input.modelSelection === undefined &&
-          input.scratch !== true &&
-          projectId !== caller?.projectId
+          input.scratch !== true && projectId !== caller?.projectId
             ? yield* readProject
             : undefined;
-        const botModel = otherProject?.bot
+        const botSettings = otherProject?.bot
           ? resolveProjectSettings(
               yield* ServerSettings.ServerSettingsService.pipe(
                 Effect.flatMap((settings) => settings.getSettings),
@@ -81,11 +102,16 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
               ),
               otherProject.id,
               otherProject,
-            ).settings.defaultModelSelection
+            ).settings
           : null;
+        const launchRuntimeMode =
+          botSettings !== null &&
+          runtimeModeRank[botSettings.defaultRuntimeMode] < runtimeModeRank[runtimeMode]
+            ? botSettings.defaultRuntimeMode
+            : runtimeMode;
         const modelSelection =
           input.modelSelection ??
-          botModel ??
+          botSettings?.defaultModelSelection ??
           caller?.modelSelection ??
           (otherProject ?? (yield* readProject))?.defaultModelSelection ??
           undefined;
@@ -101,7 +127,7 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
           projectId,
           title: input.title,
           modelSelection,
-          runtimeMode,
+          runtimeMode: launchRuntimeMode,
           interactionMode,
           ...(input.message === undefined && attachments.length === 0
             ? {}
@@ -180,7 +206,7 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
         const created = yield* folders
           .createNamedProject({
             name: input.title,
-            ...(input.bot ? { bot: input.bot } : {}),
+            ...(input.bot ? { bot: withoutAgentAutoReview(input.bot, null)! } : {}),
             ...(input.defaultModelSelection
               ? { defaultModelSelection: input.defaultModelSelection }
               : {}),
@@ -203,15 +229,31 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
       }
       const commandId = yield* newCommandId();
       return yield* projects
-        .create({ ...input, workspaceRoot, commandId, projectId: ProjectId.make(commandId) })
+        .create({
+          ...input,
+          ...(input.bot === undefined ? {} : { bot: withoutAgentAutoReview(input.bot, null) }),
+          workspaceRoot,
+          commandId,
+          projectId: ProjectId.make(commandId),
+        })
         .pipe(Effect.mapError(projectFailure));
     }),
   ),
   t3_project_update: McpToolAccess.writesEnvironment((input) =>
     Effect.gen(function* () {
       const projects = yield* Project.ProjectService;
+      const existing =
+        input.bot === undefined
+          ? undefined
+          : Option.getOrUndefined(
+              yield* projects.getById(input.projectId).pipe(Effect.mapError(unavailable)),
+            )?.bot;
       return yield* projects
-        .update({ ...input, commandId: yield* newCommandId() })
+        .update({
+          ...input,
+          ...(input.bot === undefined ? {} : { bot: withoutAgentAutoReview(input.bot, existing) }),
+          commandId: yield* newCommandId(),
+        })
         .pipe(Effect.mapError(projectFailure));
     }),
   ),

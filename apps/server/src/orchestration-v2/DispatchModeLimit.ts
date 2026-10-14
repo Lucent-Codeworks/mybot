@@ -32,7 +32,8 @@ export const DispatchModeLimit = Context.Reference<DispatchModeLimitValue | unde
   { defaultValue: () => undefined },
 );
 
-const runtimeModeRank: Record<RuntimeMode, number> = {
+/** Runtime modes from the most to the least restrictive. */
+export const runtimeModeRank: Record<RuntimeMode, number> = {
   "approval-required": 0,
   "auto-accept-edits": 1,
   auto: 2,

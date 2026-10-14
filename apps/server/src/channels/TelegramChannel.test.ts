@@ -238,28 +238,31 @@ it.effect("forwards an approval to the chat and sends the owner's answer back", 
         dispatch: (command) =>
           Deferred.succeed(answered, command).pipe(Effect.as({ sequence: 1 } as never)),
         getThreadRecords: (_threadId, fields) =>
-          Effect.succeed(
-            (fields as ReadonlyArray<string>).includes("turnItems")
-              ? {
-                  turnItems: [
-                    {
-                      type: "approval_request",
-                      requestId,
-                      title: "Send email to Dana",
-                      prompt: "Subject: Friday",
-                    },
-                  ],
-                }
-              : {
-                  messages: [
-                    {
-                      text: "Sent.",
-                      streaming: false,
-                      createdAt: DateTime.makeUnsafe("2026-10-14T00:00:00.000Z"),
-                    },
-                  ],
-                },
-          ) as never,
+          Effect.gen(function* () {
+            const status = (yield* Deferred.isDone(answered)) ? "resolved" : "pending";
+            return (fields as ReadonlyArray<string>).includes("runtimeRequests")
+              ? { runtimeRequests: [{ id: requestId, status }] }
+              : (fields as ReadonlyArray<string>).includes("turnItems")
+                ? {
+                    turnItems: [
+                      {
+                        type: "approval_request",
+                        requestId,
+                        title: "Send email to Dana",
+                        prompt: "Subject: Friday",
+                      },
+                    ],
+                  }
+                : {
+                    messages: [
+                      {
+                        text: "Sent.",
+                        streaming: false,
+                        createdAt: DateTime.makeUnsafe("2026-10-14T00:00:00.000Z"),
+                      },
+                    ],
+                  };
+          }) as never,
       }),
       Layer.mock(ProjectService.ProjectService)({
         getById: () => Effect.succeed(Option.some({ id: projectId } as never)),
