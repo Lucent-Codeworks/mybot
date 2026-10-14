@@ -11,7 +11,7 @@ import {
 } from "@t3tools/client-runtime/state/runtime";
 import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environment";
 import { AsyncResult } from "effect/reactivity";
-import { type EnvironmentId, type ProjectIconOverride } from "@t3tools/contracts";
+import { type BotProfile, type EnvironmentId, type ProjectIconOverride } from "@t3tools/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import * as Cause from "effect/Cause";
 import { InfoIcon, Trash2Icon } from "lucide-react";
@@ -43,6 +43,7 @@ import {
   ProjectFaviconPickerDialog,
 } from "./ProjectFaviconPickerDialog";
 import { ProjectActionsSettings } from "./ProjectActionsSettings";
+import { BotProfileSettings } from "./BotProfileSettings";
 import { ProjectDefaultsSettings } from "./ProjectDefaultsSettings";
 import { projectGroupTitleNeedsUpdate } from "./ProjectSettingsPanel.logic";
 import { useSettingsProjectGroups } from "./useSettingsProjectGroups";
@@ -186,6 +187,7 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
         title: string;
         faviconPath: string | null;
         projectIcon: ProjectIconOverride | null;
+        bot: BotProfile | null;
       }>,
       failureTitle: string,
     ): Promise<AtomCommandResult<void, unknown>> => {
@@ -438,6 +440,11 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
             }
           />
         </SettingsSection>
+        <BotProfileSettings
+          bot={representative.bot ?? null}
+          disabled={!canEditGroup}
+          onChange={(bot) => void updateAllMembers({ bot }, "Failed to update bot")}
+        />
         <ProjectDefaultsSettings category="project" />
         <ProjectActionsSettings />
         <SettingsSection title="Danger">

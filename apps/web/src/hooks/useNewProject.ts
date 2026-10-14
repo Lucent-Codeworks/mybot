@@ -3,7 +3,7 @@ import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
 } from "@t3tools/client-runtime/state/runtime";
-import type { EnvironmentId } from "@t3tools/contracts";
+import type { BotProfile, EnvironmentId, ModelSelection } from "@t3tools/contracts";
 import { useCallback } from "react";
 
 import { stackedThreadToast, toastManager } from "~/components/ui/toast";
@@ -21,7 +21,8 @@ function errorMessage(error: unknown): string {
 /**
  * Starts a project from just a name. The server makes a folder under its
  * `newProjectsRoot` with a README and an icon; this then
- * opens a new thread draft in it.
+ * opens a new thread draft in it. With `bot`, the project is a bot and
+ * `defaultModelSelection` is the model its threads start with.
  *
  * Resolves to whether the project was created.
  */
@@ -33,17 +34,26 @@ export function useNewProject() {
     async (input: {
       readonly environmentId: EnvironmentId;
       readonly name: string;
+      readonly bot?: BotProfile;
+      readonly defaultModelSelection?: ModelSelection;
     }): Promise<boolean> => {
+      const kind = input.bot === undefined ? "project" : "bot";
       const result = await createNew({
         environmentId: input.environmentId,
-        input: { name: input.name },
+        input: {
+          name: input.name,
+          ...(input.bot === undefined ? {} : { bot: input.bot }),
+          ...(input.defaultModelSelection === undefined
+            ? {}
+            : { defaultModelSelection: input.defaultModelSelection }),
+        },
       });
       if (result._tag === "Failure") {
         if (!isAtomCommandInterrupted(result)) {
           toastManager.add(
             stackedThreadToast({
               type: "error",
-              title: "Could not create the project",
+              title: `Could not create the ${kind}`,
               description: errorMessage(squashAtomCommandFailure(result)),
             }),
           );
@@ -68,7 +78,7 @@ export function useNewProject() {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Failed to open project",
+            title: `Failed to open ${kind}`,
             description: `${errorMessage(error)} It will appear in the sidebar once this client catches up.`,
           }),
         );
@@ -79,7 +89,7 @@ export function useNewProject() {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Failed to open project",
+            title: `Failed to open ${kind}`,
             description: errorMessage(error),
           }),
         );

@@ -1,0 +1,82 @@
+import { PlusIcon, SettingsIcon, SquarePenIcon } from "lucide-react";
+import { memo, useState, type MouseEvent as ReactMouseEvent } from "react";
+
+import type { SidebarProjectSnapshot } from "../../sidebarProjectGrouping";
+import { ProjectFavicon } from "../ProjectFavicon";
+import { Button } from "../ui/button";
+import { CollapsibleSectionHeader } from "../ui/collapsible-section-header";
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "../ui/sidebar";
+
+/** The project groups that are bots, in sidebar order. */
+export function botGroups(
+  groups: ReadonlyArray<SidebarProjectSnapshot>,
+): ReadonlyArray<SidebarProjectSnapshot> {
+  return groups.filter((group) => group.memberProjects.some((member) => member.bot != null));
+}
+
+/**
+ * Bots above the thread list. Selecting one scopes the threads to its
+ * conversations; selecting it again shows every thread.
+ */
+export const SidebarBots = memo(function SidebarBots(props: {
+  bots: ReadonlyArray<SidebarProjectSnapshot>;
+  scopedProjectKey: string | null;
+  onToggleScope: (bot: SidebarProjectSnapshot) => void;
+  onNewChat: (bot: SidebarProjectSnapshot) => void;
+  onSettings: (event: ReactMouseEvent<HTMLElement>, bot: SidebarProjectSnapshot) => void;
+  onNewBot: () => void;
+}) {
+  const [expanded, setExpanded] = useState(true);
+  return (
+    <div className="mt-1">
+      <CollapsibleSectionHeader expanded={expanded} onClick={() => setExpanded((open) => !open)}>
+        Bots
+      </CollapsibleSectionHeader>
+      {expanded ? (
+        <SidebarMenu>
+          {props.bots.map((bot) => {
+            const role = bot.memberProjects.find((member) => member.bot)?.bot?.role ?? "";
+            return (
+              <SidebarMenuItem key={bot.projectKey} className="group/bot relative">
+                <SidebarMenuButton
+                  isActive={props.scopedProjectKey === bot.projectKey}
+                  title={role || bot.displayName}
+                  onClick={() => props.onToggleScope(bot)}
+                >
+                  <ProjectFavicon project={bot} className="size-4" />
+                  <span>{bot.displayName}</span>
+                </SidebarMenuButton>
+                <div className="absolute inset-y-0 right-1 hidden items-center gap-0.5 group-focus-within/bot:flex group-hover/bot:flex">
+                  <Button
+                    size="icon-xs"
+                    variant="ghost-muted"
+                    aria-label={`New chat with ${bot.displayName}`}
+                    title={`New chat with ${bot.displayName}`}
+                    onClick={() => props.onNewChat(bot)}
+                  >
+                    <SquarePenIcon />
+                  </Button>
+                  <Button
+                    size="icon-xs"
+                    variant="ghost-muted"
+                    aria-label={`Settings for ${bot.displayName}`}
+                    title={`Settings for ${bot.displayName}`}
+                    onClick={(event) => props.onSettings(event, bot)}
+                  >
+                    <SettingsIcon />
+                  </Button>
+                </div>
+              </SidebarMenuItem>
+            );
+          })}
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={props.onNewBot}>
+              <PlusIcon />
+              <span>New bot</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      ) : null}
+    </div>
+  );
+});

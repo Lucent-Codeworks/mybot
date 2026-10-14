@@ -14,6 +14,7 @@ import {
   type OrchestrationV2CreationSource,
   type PlanId,
   type ProjectId,
+  type BotProfile,
   type ProjectIconOverride,
   type ProjectScript,
   type ProviderApprovalDecision,
@@ -54,6 +55,7 @@ export interface UpdateProjectInput extends CommandMetadata {
   readonly defaultModelSelection?: ModelSelection | null;
   readonly projectIcon?: ProjectIconOverride | null;
   readonly faviconPath?: string | null;
+  readonly bot?: BotProfile | null;
   readonly scripts?: ReadonlyArray<ProjectScript>;
 }
 
@@ -353,6 +355,7 @@ export const updateProject = Effect.fn("EnvironmentCommands.updateProject")(func
       : { defaultModelSelection: input.defaultModelSelection }),
     ...(input.projectIcon === undefined ? {} : { projectIcon: input.projectIcon }),
     ...(input.faviconPath === undefined ? {} : { faviconPath: input.faviconPath }),
+    ...(input.bot === undefined ? {} : { bot: input.bot }),
     ...(input.scripts === undefined ? {} : { scripts: input.scripts }),
   });
 });
