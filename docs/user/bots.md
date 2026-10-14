@@ -19,8 +19,10 @@ Select a bot in the sidebar to see only its conversations. Select it again to
 see every thread. Hover a bot and choose the pen icon to start a new
 conversation with it.
 
-Write lasting rules into the instructions, such as "Ask before sending
-anything". Put one-off requests in the conversation.
+Before anything that leaves your computer or cannot be undone, such as sending
+an email, posting, paying, or deleting data, a bot shows you a draft and waits
+for your go-ahead. Write lasting rules into the instructions, including when a
+bot may act without asking. Put one-off requests in the conversation.
 
 ## Memory
 

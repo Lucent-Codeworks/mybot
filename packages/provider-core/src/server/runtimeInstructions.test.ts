@@ -84,6 +84,7 @@ describe("buildBotInstructions", () => {
     expect(block).toContain("Your memory is the file MEMORY.md in /bots/scout.");
     expect(block).toContain("never store secrets");
     expect(block).toContain("Saved skills are in /mybot/skills");
+    expect(block).toContain("show the user exactly what you will do as a draft");
     expect(block).toContain("/mybot/skills/<short-name>/SKILL.md");
   });
 });

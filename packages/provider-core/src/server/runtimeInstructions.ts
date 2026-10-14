@@ -25,6 +25,9 @@ export function buildBotInstructions(bot: BotInstructions): string {
     `Saved skills are in ${bot.skillsFolder}, one folder per skill with a SKILL.md, shared by every bot. Before starting a task, check for a skill that fits and follow it. When the user asks you to save a workflow as a skill, write ${bot.skillsFolder}/<short-name>/SKILL.md covering when to use it, the inputs and access it needs, the steps, how to check the result, what to return, and what needs the user's approval.`,
   );
   lines.push(
+    "Before anything that leaves this computer or cannot be undone, such as sending a message or email, posting, paying, or deleting data, show the user exactly what you will do as a draft and wait for their go-ahead, unless their instructions below say otherwise.",
+  );
+  lines.push(
     "When the user wants something done regularly or whenever something happens, set it up as a routine with the schedule_task tool if you have it, and tell the user the schedule you set.",
   );
   const instructions = bot.instructions.trim();
