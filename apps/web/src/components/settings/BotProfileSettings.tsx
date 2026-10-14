@@ -2,7 +2,8 @@ import { useAtomRefresh, useAtomValue } from "@effect/atom-react";
 import type { BotProfile, EnvironmentId, ProjectId } from "@t3tools/contracts";
 import * as Option from "effect/Option";
 import { AsyncResult } from "effect/reactivity";
-import { BotIcon, BotOffIcon, SendIcon } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { BotIcon, BotOffIcon, CalendarClockIcon, SendIcon } from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -37,6 +38,7 @@ export function BotProfileSettings(props: {
   onChange: (bot: BotProfile | null) => void;
 }) {
   const { bot, disabled, onChange } = props;
+  const navigate = useNavigate();
   if (bot === null) {
     return (
       <SettingsSection title="Bot">
@@ -102,6 +104,25 @@ export function BotProfileSettings(props: {
         </div>
       </SettingsRow>
       <BotAutoReviewRow bot={bot} disabled={disabled} onChange={onChange} />
+      <SettingsRow
+        title="Routines"
+        description="Work this bot does on a schedule or when a webhook fires. Ask the bot to set one up, or manage them here."
+        control={
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              void navigate({
+                to: "/settings/scheduled-tasks",
+                search: { environmentId: props.environmentId },
+              })
+            }
+          >
+            <CalendarClockIcon />
+            Manage routines
+          </Button>
+        }
+      />
       <BotMemoryRow environmentId={props.environmentId} folder={props.folder} disabled={disabled} />
       <BotTelegramRow environmentId={props.environmentId} projectId={props.projectId} />
       <SettingsRow
