@@ -19,6 +19,7 @@ import * as HttpClient from "effect/http/HttpClient";
 import * as HttpClientResponse from "effect/http/HttpClientResponse";
 
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
+import * as ServerConfig from "../config.ts";
 import * as Orchestrator from "../orchestration-v2/Orchestrator.ts";
 import * as ThreadLaunchService from "../orchestration-v2/ThreadLaunchService.ts";
 import * as ThreadManagementService from "../orchestration-v2/ThreadManagementService.ts";
@@ -48,6 +49,14 @@ const layerFakeTelegram = (fake: FakeTelegram) =>
     HttpClient.HttpClient,
     HttpClient.make((request) =>
       Effect.gen(function* () {
+        if (request.url.includes("/file/bot")) {
+          return HttpClientResponse.fromWeb(
+            request,
+            new Response(new Uint8Array([0xff, 0xd8, 0xff]), {
+              headers: { "content-type": "image/jpeg" },
+            }),
+          );
+        }
         const method = request.url.split("/").at(-1);
         const body =
           request.body._tag === "Uint8Array"
@@ -56,11 +65,13 @@ const layerFakeTelegram = (fake: FakeTelegram) =>
         const result =
           method === "getMe"
             ? { id: 1, username: "scout_bot" }
-            : method === "getUpdates"
-              ? yield* Queue.take(fake.updates)
-              : method === "sendMessage"
-                ? yield* Queue.offer(fake.sent, body.text ?? "").pipe(Effect.as(true))
-                : true;
+            : method === "getFile"
+              ? { file_path: "photos/receipt.jpg" }
+              : method === "getUpdates"
+                ? yield* Queue.take(fake.updates)
+                : method === "sendMessage"
+                  ? yield* Queue.offer(fake.sent, body.text ?? "").pipe(Effect.as(true))
+                  : true;
         return HttpClientResponse.fromWeb(
           request,
           new Response(JSON.stringify({ ok: true, result }), {
@@ -82,6 +93,10 @@ const layerMemorySecrets = Layer.sync(ServerSecretStore.ServerSecretStore, () =>
   });
 });
 
+const layerConfig = ServerConfig.layerTest(process.cwd(), { prefix: "mybot-telegram-" }).pipe(
+  Layer.provide(NodeServices.layer),
+);
+
 /** No run events, for tests that do not follow routines. */
 const layerNoRunEvents = Layer.mock(Orchestrator.OrchestratorV2)({
   streamDomainEvents: Stream.never,
@@ -89,7 +104,11 @@ const layerNoRunEvents = Layer.mock(Orchestrator.OrchestratorV2)({
 
 interface FakeThreads {
   readonly launched: Array<string>;
-  readonly delivered: Array<{ readonly threadId: string; readonly text: string }>;
+  readonly delivered: Array<{
+    readonly threadId: string;
+    readonly text: string;
+    readonly attachments: ReadonlyArray<string>;
+  }>;
 }
 
 const layerFakeThreads = (threads: FakeThreads) =>
@@ -106,10 +125,15 @@ const layerFakeThreads = (threads: FakeThreads) =>
     Layer.mock(ThreadManagementService.ThreadManagementService)({
       sendToThread: (input) =>
         Effect.sync(() => {
-          threads.delivered.push({ threadId: input.threadId, text: input.text });
+          threads.delivered.push({
+            threadId: input.threadId,
+            text: input.text,
+            attachments: input.attachments.map((attachment) => attachment.type),
+          });
           return {
             run: { id: RunId.make(`run-${threads.delivered.length}`) },
-          } as ThreadManagementService.ThreadManagementSendResult;
+            message: { attachments: input.attachments },
+          } as unknown as ThreadManagementService.ThreadManagementSendResult;
         }),
       waitForThread: (input) =>
         Effect.succeed({
@@ -182,6 +206,27 @@ it.effect("pairs the owner, refuses strangers, and relays conversations", () =>
       assert.equal(yield* Queue.take(fake.sent), "Reply to Fresh start");
       assert.equal(threads.delivered.at(-1)?.threadId, "thread-2");
 
+      // A captioned photo reaches the bot as an image with the caption as text.
+      yield* Queue.offer(fake.updates, [
+        {
+          update_id: 8,
+          message: {
+            chat: { id: OWNER, type: "private" },
+            from: { id: OWNER },
+            caption: "Expense this",
+            photo: [
+              { file_id: "small", file_size: 100 },
+              { file_id: "large", file_size: 3 },
+            ],
+          },
+        },
+      ]);
+      assert.equal(yield* Queue.take(fake.sent), "Reply to Expense this");
+      assert.deepInclude(threads.delivered.at(-1), {
+        text: "Expense this",
+        attachments: ["image"],
+      });
+
       const disconnected = yield* telegram.disconnect(projectId);
       assert.isFalse(disconnected.connected);
     }).pipe(
@@ -194,6 +239,7 @@ it.effect("pairs the owner, refuses strangers, and relays conversations", () =>
               layerFakeThreads(threads),
               layerNoRunEvents,
               NodeServices.layer,
+              layerConfig,
             ),
           ),
         ),
@@ -221,7 +267,8 @@ it.effect("forwards an approval to the chat and sends the owner's answer back", 
         sendToThread: () =>
           Effect.succeed({
             run: { id: RunId.make("run-1") },
-          } as ThreadManagementService.ThreadManagementSendResult),
+            message: { attachments: [] },
+          } as unknown as ThreadManagementService.ThreadManagementSendResult),
         // The run stops on one approval and ends once it is answered.
         waitForPendingRequest: (input) =>
           input.ignore.has(requestId)
@@ -307,6 +354,7 @@ it.effect("forwards an approval to the chat and sends the owner's answer back", 
               layerThreads,
               layerNoRunEvents,
               NodeServices.layer,
+              layerConfig,
             ),
           ),
         ),
@@ -383,6 +431,7 @@ it.effect("sends a finished routine's result to the paired owner", () =>
               layerMemorySecrets,
               layerThreads,
               NodeServices.layer,
+              layerConfig,
             ),
           ),
         ),
