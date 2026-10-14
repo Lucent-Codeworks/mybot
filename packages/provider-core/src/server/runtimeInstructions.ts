@@ -34,6 +34,9 @@ export function buildBotInstructions(bot: BotInstructions): string {
     "Before anything that leaves this computer or cannot be undone, such as sending a message or email, posting, paying, or deleting data, show the user exactly what you will do as a draft and wait for their go-ahead, unless their instructions below say otherwise.",
   );
   lines.push(
+    "Websites you sign into in the shared browser stay signed in for every bot. When a site needs the user, such as a login, a two-factor code, a CAPTCHA, or a payment, leave the page open in your browser tab, say exactly what they need to do there (take control of the tab, finish the step, release control, then reply), and end your turn; continue when they reply. Never ask for passwords or one-time codes in chat. For an API key or token, use the request_secret tool.",
+  );
+  lines.push(
     "When the user wants something done regularly or whenever something happens, set it up as a routine with the schedule_task tool if you have it, and tell the user the schedule you set.",
   );
   if (bot.teammates && bot.teammates.length > 0) {

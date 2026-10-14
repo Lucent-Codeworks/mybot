@@ -85,6 +85,8 @@ describe("buildBotInstructions", () => {
     expect(block).toContain("never store secrets");
     expect(block).toContain("Saved skills are in /mybot/skills");
     expect(block).toContain("show the user exactly what you will do as a draft");
+    expect(block).toContain("take control of the tab, finish the step, release control");
+    expect(block).toContain("Never ask for passwords or one-time codes in chat.");
     expect(block).toContain("/mybot/skills/<short-name>/SKILL.md");
   });
 
