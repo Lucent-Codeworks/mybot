@@ -148,21 +148,22 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
     Effect.gen(function* () {
       const projects = yield* Project.ProjectService;
       if (workspaceRoot === undefined) {
-        // Project creation records no model default (only an update does), so
-        // reject what this mode would otherwise drop silently.
-        if (
-          input.scripts !== undefined ||
-          input.createWorkspaceRootIfMissing !== undefined ||
-          input.defaultModelSelection !== undefined
-        )
+        // Reject what this mode would otherwise drop silently.
+        if (input.scripts !== undefined || input.createWorkspaceRootIfMissing !== undefined)
           return yield* new OrchestratorMcpFailure({
             code: "invalid_request",
             message:
-              "A project started from its title takes only a title; set scripts or defaultModelSelection afterwards with t3_project_update.",
+              "A project started from its title takes only a title, bot, and defaultModelSelection; set scripts afterwards with t3_project_update.",
           });
         const folders = yield* ManagedProjectFolders.ManagedProjectFolders;
         const created = yield* folders
-          .createNamedProject({ name: input.title })
+          .createNamedProject({
+            name: input.title,
+            ...(input.bot ? { bot: input.bot } : {}),
+            ...(input.defaultModelSelection
+              ? { defaultModelSelection: input.defaultModelSelection }
+              : {}),
+          })
           .pipe(
             Effect.mapError(
               (error) =>

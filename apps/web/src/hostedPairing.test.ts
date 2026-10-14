@@ -32,7 +32,7 @@ describe("hostedPairing", () => {
         host: "https://backend.example.com:3773",
         token: "pairing-token",
         label: "Workstation",
-      }),
+      }) ?? "",
     );
 
     expect(url.origin).toBe("https://preview.t3.codes");
@@ -49,13 +49,23 @@ describe("hostedPairing", () => {
     const url = new URL(
       buildHostedChannelSelectionUrl({
         channel: "nightly",
-      }),
+      }) ?? "",
     );
 
     expect(url.origin).toBe("https://app.t3.codes");
     expect(url.pathname).toBe("/__t3code/channel");
     expect(url.searchParams.get("channel")).toBe("nightly");
     expect(url.searchParams.has("next")).toBe(false);
+  });
+
+  it("builds no hosted links and is never the hosted app without a hosted app URL", () => {
+    vi.stubEnv("VITE_HOSTED_APP_URL", "");
+    vi.stubEnv("VITE_HTTP_URL", "");
+    vi.stubEnv("VITE_WS_URL", "");
+
+    expect(buildHostedPairingUrl({ host: "https://backend.example.com", token: "t" })).toBeNull();
+    expect(buildHostedChannelSelectionUrl({ channel: "nightly" })).toBeNull();
+    expect(isHostedStaticApp(new URL("https://app.t3.codes/"))).toBe(false);
   });
 
   it("ignores incomplete hosted pairing requests", () => {

@@ -52,6 +52,7 @@ import {
   SquarePenIcon,
   SunIcon,
   TextSearchIcon,
+  BotIcon,
 } from "lucide-react";
 import { requestThreadFindOpen } from "./chat/threadFindActionBus";
 import {
@@ -96,6 +97,7 @@ import { readEnvironmentScope, useEnvironmentScope } from "~/state/session";
 import { useAtomCommand } from "../state/use-atom-command";
 import { useAtomQueryRunner } from "../state/use-atom-query-runner";
 import { useScratchProject } from "../hooks/useScratchProject";
+import { requestNewBot } from "./NewBotDialog";
 import { useNewProject } from "../hooks/useNewProject";
 import { isScratchProject } from "@t3tools/client-runtime/state/projects";
 import { useEnvironments, usePrimaryEnvironmentId } from "../state/environments";
@@ -1683,6 +1685,17 @@ function OpenCommandPaletteDialog(props: {
       },
     });
   }
+
+  actionItems.push({
+    kind: "action",
+    value: "action:new-bot",
+    searchTerms: ["new bot", "create bot", "teammate", "assistant"],
+    title: "New bot",
+    icon: <BotIcon className={ITEM_ICON_CLASS} />,
+    run: async () => {
+      requestNewBot();
+    },
+  });
 
   actionItems.push({
     kind: "action",

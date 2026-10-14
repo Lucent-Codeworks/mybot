@@ -181,6 +181,7 @@ function makeHarness(options: HarnessOptions = {}) {
               defaultModelSelection: project.defaultModelSelection,
               faviconPath: null,
               projectIcon: null,
+              bot: null,
               scripts: project.scripts,
               createdAt: project.createdAt,
               updatedAt: project.updatedAt,

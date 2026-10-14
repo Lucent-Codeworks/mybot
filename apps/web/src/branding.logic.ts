@@ -4,7 +4,9 @@ export function formatAppDisplayName(input: {
   readonly baseName: string;
   readonly stageLabel: string;
 }): string {
-  if (input.stageLabel.trim().toLowerCase() === "latest") {
+  // Stable builds show the bare name, matching the desktop app.
+  const stage = input.stageLabel.trim().toLowerCase();
+  if (stage === "latest" || stage === "alpha") {
     return input.baseName;
   }
 

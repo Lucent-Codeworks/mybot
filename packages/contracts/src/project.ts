@@ -156,6 +156,17 @@ export const ReceivedProjectIcon = ForwardCompatibleUnion(projectIconMembers, "k
   ),
 );
 
+/**
+ * A project with a profile is a bot: a named teammate with a job and standing
+ * instructions that every provider turn in its threads receives. The bot's
+ * name, avatar, and model are the project's title, icon, and default model.
+ */
+export const BotProfile = Schema.Struct({
+  role: TrimmedString.check(Schema.isMaxLength(120)),
+  instructions: Schema.String.check(Schema.isMaxLength(20_000)),
+});
+export type BotProfile = typeof BotProfile.Type;
+
 export const Project = Schema.Struct({
   id: ProjectId,
   title: TrimmedNonEmptyString,
@@ -163,6 +174,7 @@ export const Project = Schema.Struct({
   faviconPath: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   projectIcon: Schema.optional(Schema.NullOr(ReceivedProjectIcon)),
   defaultModelSelection: Schema.NullOr(ModelSelection),
+  bot: Schema.optional(Schema.NullOr(BotProfile)),
   scripts: Schema.Array(ProjectScript),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
@@ -191,6 +203,7 @@ export const ProjectCreatePayload = Schema.Struct({
   workspaceRoot: TrimmedNonEmptyString,
   createWorkspaceRootIfMissing: Schema.optional(Schema.Boolean),
   defaultModelSelection: Schema.optional(Schema.NullOr(ModelSelection)),
+  bot: Schema.optional(Schema.NullOr(BotProfile)),
   scripts: Schema.optional(Schema.Array(ProjectScript)),
 });
 export type ProjectCreatePayload = typeof ProjectCreatePayload.Type;
@@ -201,6 +214,7 @@ export const ProjectUpdatePayload = Schema.Struct({
   defaultModelSelection: Schema.optional(Schema.NullOr(ModelSelection)),
   projectIcon: Schema.optional(Schema.NullOr(ProjectIconOverride)),
   faviconPath: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
+  bot: Schema.optional(Schema.NullOr(BotProfile)),
   scripts: Schema.optional(Schema.Array(ProjectScript)),
 });
 export type ProjectUpdatePayload = typeof ProjectUpdatePayload.Type;
@@ -515,6 +529,9 @@ export type ProjectEnsureScratchResult = typeof ProjectEnsureScratchResult.Type;
 /** A project started from just a name, in a new folder the server makes. */
 export const ProjectCreateNewInput = Schema.Struct({
   name: TrimmedNonEmptyString.check(Schema.isMaxLength(200)),
+  /** Set to create a bot instead of a plain project. */
+  bot: Schema.optional(BotProfile),
+  defaultModelSelection: Schema.optional(ModelSelection),
 });
 export type ProjectCreateNewInput = typeof ProjectCreateNewInput.Type;
 

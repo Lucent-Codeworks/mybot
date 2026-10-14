@@ -1,5 +1,5 @@
 /**
- * ManagedProjectFolders - the project folders T3 Code makes for the user under
+ * ManagedProjectFolders - the project folders MyBot makes for the user under
  * its data dir, rather than ones the user picks:
  *
  * - `<baseDir>/scratch`: the Scratch project ("No project");
@@ -8,7 +8,7 @@
  *
  * @module ManagedProjectFolders
  */
-import { CommandId, ProjectId } from "@t3tools/contracts";
+import { CommandId, ProjectId, type ProjectCreateNewInput } from "@t3tools/contracts";
 import { newProjectFolderName } from "@t3tools/shared/path";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
@@ -21,7 +21,10 @@ import * as Path from "effect/Path";
 import * as PlatformError from "effect/PlatformError";
 import * as Schema from "effect/Schema";
 
+import { BOT_MEMORY_FILE_NAME } from "@t3tools/provider-core/server/runtimeInstructions";
+
 import * as ServerConfig from "../config.ts";
+import * as ServerSettings from "../serverSettings.ts";
 import * as ProjectService from "./ProjectService.ts";
 
 export class ScratchFolderError extends Schema.TaggedError<ScratchFolderError>()(
@@ -90,8 +93,10 @@ export class ManagedProjectFolders extends Context.Service<
      * (adding `-2`, `-3`, ... when taken), writes a README and an icon, then
      * creates the project. The folder is removed when the create fails or is
      * cancelled before the project exists, never once another project owns it.
+     * With `bot`, the project is a bot. `defaultModelSelection` becomes the
+     * project's model override, the model its new threads start with.
      */
-    readonly createNamedProject: (input: { readonly name: string }) => Effect.Effect<
+    readonly createNamedProject: (input: ProjectCreateNewInput) => Effect.Effect<
       {
         readonly projectId: ProjectId;
         readonly workspaceRoot: string;
@@ -163,7 +168,7 @@ function namedProjectReadme(name: string): string {
     "",
     `# ${name}`,
     "",
-    "Created in [T3 Code](https://t3.codes).",
+    "Created in [MyBot](https://t3.codes).",
     "",
   ].join("\n");
 }
@@ -173,6 +178,7 @@ const make = Effect.gen(function* () {
   const fileSystem = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const projects = yield* ProjectService.ProjectService;
+  const serverSettings = yield* ServerSettings.ServerSettingsService;
   const crypto = yield* Crypto.Crypto;
 
   /**
@@ -289,8 +295,12 @@ const make = Effect.gen(function* () {
   const scaffoldFolder = Effect.fn("ManagedProjectFolders.scaffoldFolder")(function* (
     cwd: string,
     name: string,
+    isBot: boolean,
   ) {
     yield* fileSystem.writeFileString(path.join(cwd, "README.md"), namedProjectReadme(name));
+    // The bot keeps this file itself; starting it here lets the user see it from day one.
+    if (isBot)
+      yield* fileSystem.writeFileString(path.join(cwd, BOT_MEMORY_FILE_NAME), "# Memory\n");
     yield* fileSystem.makeDirectory(path.join(cwd, "assets"));
     yield* fileSystem.writeFileString(
       path.join(cwd, "assets", "icon.svg"),
@@ -306,7 +316,7 @@ const make = Effect.gen(function* () {
     // Until the create is dispatched nothing else can use the folder, so any
     // exit but success removes it, an interrupt included.
     const [, id] = yield* Effect.all([
-      scaffoldFolder(workspaceRoot, input.name).pipe(
+      scaffoldFolder(workspaceRoot, input.name, input.bot !== undefined).pipe(
         Effect.mapError((cause) => new NamedProjectFolderError({ folder: workspaceRoot, cause })),
       ),
       crypto.randomUUIDv4.pipe(
@@ -319,6 +329,7 @@ const make = Effect.gen(function* () {
         projectId: ProjectId.make(id),
         title: input.name,
         workspaceRoot,
+        ...(input.bot === undefined ? {} : { bot: input.bot }),
       })
       .pipe(
         // A rejected create leaves the folder unused, so remove it. An
@@ -336,6 +347,15 @@ const make = Effect.gen(function* () {
         ),
         Effect.mapError((cause) => new NamedProjectCreateError({ workspaceRoot, cause })),
       );
+    if (input.defaultModelSelection !== undefined) {
+      yield* serverSettings
+        .updateSettings({
+          projectSettingsOverrides: {
+            [project.id]: { defaultModelSelection: input.defaultModelSelection },
+          },
+        })
+        .pipe(Effect.mapError((cause) => new NamedProjectCreateError({ workspaceRoot, cause })));
+    }
     return { projectId: project.id, workspaceRoot };
   });
 

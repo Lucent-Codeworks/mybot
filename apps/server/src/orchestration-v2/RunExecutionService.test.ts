@@ -7,6 +7,7 @@ import {
   EventId,
   MessageId,
   NodeId,
+  type OrchestrationProjectShell,
   type OrchestrationV2AppThread,
   type OrchestrationV2CheckpointScope,
   type OrchestrationV2DomainEvent,
@@ -16,6 +17,7 @@ import {
   type OrchestrationV2RunAttempt,
   type OrchestrationV2Subagent,
   type OrchestrationV2TurnItem,
+  ProjectId,
   ProviderDriverKind,
   ProviderInstanceId,
   ProviderSessionId,
@@ -47,14 +49,30 @@ import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter"
 import * as ProjectionStore from "./ProjectionStore.ts";
 import * as ProviderEventIngestor from "./ProviderEventIngestor.ts";
 import * as McpAppModelContext from "../mcpApps/McpAppModelContext.ts";
+import * as ServerConfig from "../config.ts";
+import * as ProjectStore from "./ProjectStore.ts";
 import * as RunExecutionService from "./RunExecutionService.ts";
 
 const driver = ProviderDriverKind.make("codex");
+
+// Only the skills folder is read, and only for a bot's turns.
+const layerConfig = Layer.succeed(ServerConfig.ServerConfig, {
+  skillsDir: "/mybot/skills",
+} as ServerConfig.ServerConfig["Service"]);
+
+/** Runs whose thread has no project row, so turns carry no bot profile. */
+const layerNoProject = Layer.mergeAll(
+  layerConfig,
+  Layer.mock(ProjectStore.ProjectStoreV2)({
+    getShell: () => Effect.succeed(Option.none()),
+  }),
+);
 
 const layerRunExecutionTest = RunExecutionService.layer.pipe(
   Layer.provide(
     Layer.mergeAll(
       McpAppModelContext.layerEmpty,
+      layerNoProject,
       Layer.mock(CheckpointService.CheckpointServiceV2)({}),
       Layer.mock(EventSink.EventSinkV2)({}),
       IdAllocator.layer,
@@ -751,6 +769,97 @@ it.effect("passes the thread's MCP app context to the provider under a safe key"
                   },
                 ]),
             }),
+            layerNoProject,
+            Layer.mock(CheckpointService.CheckpointServiceV2)({}),
+            Layer.mock(EventSink.EventSinkV2)({}),
+            IdAllocator.layer,
+            Layer.mock(ProviderEventIngestor.ProviderEventIngestorV2)({
+              ingestNormalized: () => Effect.succeed([]),
+            }),
+            ServerSettings.layerTest(),
+          ),
+        ),
+      ),
+    ),
+  ),
+);
+
+it.effect("gives turns in a bot's thread the bot's profile", () =>
+  Effect.gen(function* () {
+    const runExecution = yield* RunExecutionService.RunExecutionServiceV2;
+    const started = yield* Deferred.make<ProviderAdapter.ProviderAdapterV2TurnInput>();
+    const threadId = ThreadId.make("thread:run-execution-bot");
+    const providerInstanceId = ProviderInstanceId.make("codex");
+    const attemptId = RunAttemptId.make("attempt:run-execution-bot");
+    const session = {
+      events: Stream.never,
+      startTurn: (input: ProviderAdapter.ProviderAdapterV2TurnInput) =>
+        Deferred.succeed(started, input),
+    } as unknown as ProviderAdapter.ProviderAdapterV2SessionRuntime;
+
+    yield* runExecution.startRootRun({
+      commandId: CommandId.make("command:run-execution-bot"),
+      appThread: {
+        id: threadId,
+        projectId: ProjectId.make("project:bot"),
+      } as OrchestrationV2AppThread,
+      providerSessionId: ProviderSessionId.make("session:run-execution-bot"),
+      session,
+      run: {
+        id: RunId.make("run:run-execution-bot"),
+        threadId,
+        ordinal: 1,
+        providerInstanceId,
+      } as OrchestrationV2Run,
+      rootNode: {
+        id: NodeId.make("node:run-execution-bot"),
+      } as OrchestrationV2ExecutionNode,
+      checkpointScope: {
+        id: CheckpointScopeId.make("checkpoint-scope:run-execution-bot"),
+      } as OrchestrationV2CheckpointScope,
+      providerThread: {
+        id: ProviderThreadId.make("provider-thread:run-execution-bot"),
+        driver,
+      } as OrchestrationV2ProviderThread,
+      attempt: { id: attemptId, providerTurnId: null } as OrchestrationV2RunAttempt,
+      attemptId,
+      providerTurnOrdinal: 1,
+      message: {
+        messageId: MessageId.make("message:run-execution-bot"),
+        text: "What is on my list?",
+        attachments: [],
+        createdBy: "user",
+        creationSource: "web",
+      },
+      modelSelection: { instanceId: providerInstanceId, model: "gpt-5.4" },
+      runtimePolicy: { runtimeMode: "full-access", interactionMode: "default", cwd: process.cwd() },
+    });
+
+    const input = yield* Deferred.await(started);
+    assert.deepEqual(input.bot, {
+      name: "Scout",
+      role: "Daily tech scout",
+      instructions: "Summarize my bookmarks.",
+      folder: "/bots/scout",
+      skillsFolder: "/mybot/skills",
+    });
+  }).pipe(
+    Effect.provide(
+      RunExecutionService.layer.pipe(
+        Layer.provide(
+          Layer.mergeAll(
+            McpAppModelContext.layerEmpty,
+            layerConfig,
+            Layer.mock(ProjectStore.ProjectStoreV2)({
+              getShell: () =>
+                Effect.succeed(
+                  Option.some({
+                    title: "Scout",
+                    workspaceRoot: "/bots/scout",
+                    bot: { role: "Daily tech scout", instructions: "Summarize my bookmarks." },
+                  } as OrchestrationProjectShell),
+                ),
+            }),
             Layer.mock(CheckpointService.CheckpointServiceV2)({}),
             Layer.mock(EventSink.EventSinkV2)({}),
             IdAllocator.layer,
@@ -778,6 +887,7 @@ it.effect("fails the run when its ownership check cannot be read before calling 
       Layer.provide(
         Layer.mergeAll(
           McpAppModelContext.layerEmpty,
+          layerNoProject,
           Layer.mock(CheckpointService.CheckpointServiceV2)({}),
           Layer.mock(EventSink.EventSinkV2)({
             writeIfRunCurrent: (input) =>
@@ -1050,6 +1160,7 @@ it.effect.each(["failure", "interruption", "stale-attempt", "start-guard"] as co
         Layer.provide(
           Layer.mergeAll(
             McpAppModelContext.layerEmpty,
+            layerNoProject,
             Layer.mock(CheckpointService.CheckpointServiceV2)({}),
             Layer.mock(EventSink.EventSinkV2)({
               writeIfRunCurrent: (input) =>
@@ -1211,6 +1322,7 @@ it.effect("ingests new member threads of an owned child after the root turn term
       Layer.provide(
         Layer.mergeAll(
           McpAppModelContext.layerEmpty,
+          layerNoProject,
           Layer.mock(CheckpointService.CheckpointServiceV2)({}),
           Layer.mock(EventSink.EventSinkV2)({
             write: () => Effect.succeed([]),
@@ -1440,6 +1552,7 @@ it.effect("ends a nested native subagent and its thread when the root run is int
       Layer.provide(
         Layer.mergeAll(
           McpAppModelContext.layerEmpty,
+          layerNoProject,
           Layer.mock(CheckpointService.CheckpointServiceV2)({}),
           Layer.mock(EventSink.EventSinkV2)({
             write: () => Effect.succeed([]),
@@ -1795,6 +1908,7 @@ it.effect(
         Layer.provide(
           Layer.mergeAll(
             McpAppModelContext.layerEmpty,
+            layerNoProject,
             Layer.mock(CheckpointService.CheckpointServiceV2)({}),
             Layer.mock(EventSink.EventSinkV2)({
               write: () => Effect.succeed([]),
@@ -2011,6 +2125,7 @@ it.effect("drops late root provider-thread writes from a superseded attempt", ()
       Layer.provide(
         Layer.mergeAll(
           McpAppModelContext.layerEmpty,
+          layerNoProject,
           Layer.mock(CheckpointService.CheckpointServiceV2)({}),
           Layer.mock(EventSink.EventSinkV2)({
             write: () => Effect.succeed([]),
@@ -2216,6 +2331,7 @@ it.effect(
         Layer.provide(
           Layer.mergeAll(
             McpAppModelContext.layerEmpty,
+            layerNoProject,
             Layer.mock(CheckpointService.CheckpointServiceV2)({}),
             Layer.mock(EventSink.EventSinkV2)({
               write: () => Effect.succeed([]),
@@ -2386,6 +2502,7 @@ it.effect(
         Layer.provide(
           Layer.mergeAll(
             McpAppModelContext.layerEmpty,
+            layerNoProject,
             Layer.mock(CheckpointService.CheckpointServiceV2)({}),
             Layer.mock(EventSink.EventSinkV2)({
               write: () => Effect.succeed([]),
@@ -2554,6 +2671,7 @@ it.effect(
         Layer.provide(
           Layer.mergeAll(
             McpAppModelContext.layerEmpty,
+            layerNoProject,
             Layer.mock(CheckpointService.CheckpointServiceV2)({}),
             Layer.mock(EventSink.EventSinkV2)({
               write: () => Effect.succeed([]),
@@ -2993,6 +3111,7 @@ it.effect(
         Layer.provide(
           Layer.mergeAll(
             McpAppModelContext.layerEmpty,
+            layerNoProject,
             Layer.mock(CheckpointService.CheckpointServiceV2)({}),
             Layer.mock(EventSink.EventSinkV2)({
               write: () => Effect.succeed([]),
@@ -3700,6 +3819,7 @@ function captureRootRunTermination(input: {
       Layer.provide(
         Layer.mergeAll(
           McpAppModelContext.layerEmpty,
+          layerNoProject,
           Layer.mock(CheckpointService.CheckpointServiceV2)({}),
           Layer.mock(EventSink.EventSinkV2)({
             write: (payload) =>
@@ -4174,6 +4294,7 @@ function runBackgroundItemScenario(
       Layer.provide(
         Layer.mergeAll(
           McpAppModelContext.layerEmpty,
+          layerNoProject,
           Layer.mock(CheckpointService.CheckpointServiceV2)({}),
           Layer.mock(EventSink.EventSinkV2)({
             write: () => Effect.succeed([]),

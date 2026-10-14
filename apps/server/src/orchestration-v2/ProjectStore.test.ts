@@ -51,5 +51,48 @@ it.layer(ProjectStore.layer.pipe(Layer.provideMerge(SqlitePersistence.layerMemor
         );
       }),
     );
+
+    it.effect("stores a bot profile and clears it when the project stops being a bot", () =>
+      Effect.gen(function* () {
+        const projects = yield* ProjectStore.ProjectStoreV2;
+        const projectId = ProjectId.make("project-bot");
+        const bot = { role: "Inbox triage", instructions: "Ask before sending anything." };
+        const base = {
+          aggregateKind: "project" as const,
+          aggregateId: projectId,
+          occurredAt: "2026-03-24T00:00:00.000Z",
+          commandId: null,
+          causationEventId: null,
+          correlationId: null,
+          metadata: {},
+        };
+        yield* projects.apply({
+          ...base,
+          sequence: 1,
+          eventId: EventId.make("event-bot-created"),
+          type: "project.created",
+          payload: {
+            projectId,
+            title: "Inbox Bot",
+            workspaceRoot: "/tmp/project-bot",
+            defaultModelSelection: null,
+            bot,
+            scripts: [],
+            createdAt: "2026-03-24T00:00:00.000Z",
+            updatedAt: "2026-03-24T00:00:00.000Z",
+          },
+        });
+        assert.deepStrictEqual(Option.getOrNull(yield* projects.getShell(projectId))?.bot, bot);
+
+        yield* projects.apply({
+          ...base,
+          sequence: 2,
+          eventId: EventId.make("event-bot-cleared"),
+          type: "project.meta-updated",
+          payload: { projectId, bot: null, updatedAt: "2026-03-24T00:01:00.000Z" },
+        });
+        assert.isNull(Option.getOrNull(yield* projects.getShell(projectId))?.bot);
+      }),
+    );
   },
 );

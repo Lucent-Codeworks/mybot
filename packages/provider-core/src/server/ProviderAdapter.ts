@@ -38,6 +38,7 @@ import * as Schema from "effect/Schema";
 import type * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import type * as Stream from "effect/Stream";
+import type { BotInstructions } from "./runtimeInstructions.ts";
 
 import type {
   ProviderSelectionTransitionInput,
@@ -423,6 +424,8 @@ export interface ProviderAdapterV2TurnInput {
    * application context; others never receive any.
    */
   readonly appContext?: ReadonlyArray<{ readonly key: string; readonly text: string }>;
+  /** Set when the thread's project is a bot; adapters add its profile to the turn's instructions. */
+  readonly bot?: BotInstructions;
 }
 
 export interface ProviderAdapterV2SteerInput {

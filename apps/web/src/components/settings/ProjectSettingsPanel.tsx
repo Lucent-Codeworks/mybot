@@ -11,7 +11,7 @@ import {
 } from "@t3tools/client-runtime/state/runtime";
 import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environment";
 import { AsyncResult } from "effect/reactivity";
-import { type EnvironmentId, type ProjectIconOverride } from "@t3tools/contracts";
+import { type BotProfile, type EnvironmentId, type ProjectIconOverride } from "@t3tools/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import * as Cause from "effect/Cause";
 import { InfoIcon, Trash2Icon } from "lucide-react";
@@ -43,6 +43,7 @@ import {
   ProjectFaviconPickerDialog,
 } from "./ProjectFaviconPickerDialog";
 import { ProjectActionsSettings } from "./ProjectActionsSettings";
+import { BotProfileSettings } from "./BotProfileSettings";
 import { ProjectDefaultsSettings } from "./ProjectDefaultsSettings";
 import { projectGroupTitleNeedsUpdate } from "./ProjectSettingsPanel.logic";
 import { useSettingsProjectGroups } from "./useSettingsProjectGroups";
@@ -186,6 +187,7 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
         title: string;
         faviconPath: string | null;
         projectIcon: ProjectIconOverride | null;
+        bot: BotProfile | null;
       }>,
       failureTitle: string,
     ): Promise<AtomCommandResult<void, unknown>> => {
@@ -269,6 +271,28 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
       }
     },
     [updateAllMembers],
+  );
+
+  // Clearing the profile discards the job and instructions, so ask first.
+  const updateBot = useCallback(
+    async (bot: BotProfile | null) => {
+      if (bot === null && representative.bot) {
+        const api = readLocalApi();
+        if (!api) return;
+        const confirmed = await settlePromise(() =>
+          api.dialogs.confirm(
+            [
+              `Make "${group.displayName}" a plain project?`,
+              "Its job and instructions are deleted. Its threads stay.",
+            ].join("\n"),
+            { variant: "destructive" },
+          ),
+        );
+        if (confirmed._tag === "Failure" || !confirmed.value) return;
+      }
+      await updateAllMembers({ bot }, "Failed to update bot");
+    },
+    [group.displayName, representative.bot, updateAllMembers],
   );
 
   const removeMembers = useCallback(
@@ -438,6 +462,13 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
             }
           />
         </SettingsSection>
+        <BotProfileSettings
+          bot={representative.bot ?? null}
+          environmentId={representative.environmentId}
+          folder={representative.workspaceRoot}
+          disabled={!canEditGroup}
+          onChange={(bot) => void updateBot(bot)}
+        />
         <ProjectDefaultsSettings category="project" />
         <ProjectActionsSettings />
         <SettingsSection title="Danger">

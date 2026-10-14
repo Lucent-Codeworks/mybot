@@ -33,7 +33,7 @@ function WorkspaceRootTitle(props: {
   return (
     <View style={{ width: props.maxWidth, minHeight: 32, justifyContent: "center" }}>
       <WorkspaceConnectionTitle
-        brand={<CompactBrandTitle accessibilityLabel="T3 Code, Threads" />}
+        brand={<CompactBrandTitle accessibilityLabel="MyBot, Threads" />}
         maxWidth={props.maxWidth}
         onPress={props.onOpenEnvironments}
       />
@@ -101,7 +101,7 @@ function WorkspaceRootContent() {
           />
         ) : (
           <AndroidScreenHeader
-            title="T3 Code"
+            title="MyBot"
             titleContent={renderHeaderTitle()}
             actions={[
               {

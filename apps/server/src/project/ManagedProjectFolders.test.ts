@@ -1,6 +1,6 @@
 import { assert, it } from "@effect/vitest";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { CommandId, ProjectId } from "@t3tools/contracts";
+import { CommandId, ProjectId, ProviderInstanceId } from "@t3tools/contracts";
 import * as Crypto from "effect/Crypto";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
@@ -15,6 +15,7 @@ import * as ServerConfig from "../config.ts";
 import * as RuntimeLayer from "../orchestration-v2/runtimeLayer.ts";
 import * as SqlitePersistence from "../persistence/Sqlite.ts";
 import * as ServerSettings from "../serverSettings.ts";
+import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
 import * as WorkspacePaths from "../workspace/WorkspacePaths.ts";
 import * as ProjectEnrichmentService from "./ProjectEnrichmentService.ts";
 import * as ProjectFaviconResolver from "./ProjectFaviconResolver.ts";
@@ -72,6 +73,7 @@ const withScratch = <A, E>(
     E,
     | ManagedProjectFolders.ManagedProjectFolders
     | ProjectService.ProjectService
+    | ServerSettings.ServerSettingsService
     | NodeServices.NodeServices
     | Scope.Scope
   >,
@@ -165,6 +167,40 @@ it.effect("starts a named project with a README and an icon, and suffixes a take
       );
       assert.include(icon, ">PS</text>");
       assert.isFalse(yield* fileSystem.exists(path.join(first.workspaceRoot, ".git")));
+    }),
+  ),
+);
+
+it.effect("starts a bot with its profile and chosen model", () =>
+  withScratch(() =>
+    Effect.gen(function* () {
+      const folders = yield* ManagedProjectFolders.ManagedProjectFolders;
+      const projects = yield* ProjectService.ProjectService;
+      const bot = { role: "Daily tech scout", instructions: "Summarize my bookmarks." };
+      const defaultModelSelection = {
+        instanceId: ProviderInstanceId.make("claudeAgent"),
+        model: "claude-opus-5-5",
+      };
+
+      const created = yield* folders.createNamedProject({
+        name: "Scout",
+        bot,
+        defaultModelSelection,
+      });
+
+      const project = Option.getOrThrow(yield* projects.getById(created.projectId));
+      assert.deepStrictEqual(project.bot, bot);
+      const fileSystem = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      assert.equal(
+        yield* fileSystem.readFileString(path.join(created.workspaceRoot, "MEMORY.md")),
+        "# Memory\n",
+      );
+      const settings = yield* (yield* ServerSettings.ServerSettingsService).getSettings;
+      assert.deepStrictEqual(
+        resolveProjectSettings(settings, created.projectId, project).settings.defaultModelSelection,
+        defaultModelSelection,
+      );
     }),
   ),
 );
