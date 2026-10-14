@@ -35,6 +35,7 @@ describe("buildBotInstructions", () => {
       role: " Daily\ntech scout ",
       instructions: "  Check bookmarks.\n\nNever post without approval.  ",
       folder: "/bots/scout",
+      skillsFolder: "/mybot/skills",
     });
     const lines = block.split("\n");
     expect(lines[0]).toBe("<bot_profile>");
@@ -52,13 +53,20 @@ describe("buildBotInstructions", () => {
       role: "",
       instructions: " ",
       folder: "/bots/scout",
+      skillsFolder: "/mybot/skills",
     });
     expect(block).toContain("You are Scout: a persistent teammate");
     expect(block).not.toContain("standing instructions");
   });
 
   it("follows the runtime block only for a bot's turns", () => {
-    const bot = { name: "Scout", role: "", instructions: "", folder: "/bots/scout" };
+    const bot = {
+      name: "Scout",
+      role: "",
+      instructions: "",
+      folder: "/bots/scout",
+      skillsFolder: "/mybot/skills",
+    };
     expect(buildRuntimeInstructions({ harness: "Codex" })).not.toContain("<bot_profile>");
     expect(buildRuntimeInstructions({ harness: "Codex", bot })).toMatch(
       /<\/runtime_info>\n\n<bot_profile>/,
@@ -71,8 +79,11 @@ describe("buildBotInstructions", () => {
       role: "",
       instructions: "",
       folder: "/bots/scout",
+      skillsFolder: "/mybot/skills",
     });
     expect(block).toContain("Your memory is the file MEMORY.md in /bots/scout.");
     expect(block).toContain("never store secrets");
+    expect(block).toContain("Saved skills are in /mybot/skills");
+    expect(block).toContain("/mybot/skills/<short-name>/SKILL.md");
   });
 });

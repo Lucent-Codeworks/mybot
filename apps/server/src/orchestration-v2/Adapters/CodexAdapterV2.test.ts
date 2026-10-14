@@ -498,6 +498,7 @@ describe("CodexAdapterV2 runtime policy", () => {
         role: "Daily tech scout",
         instructions: "Check bookmarks.",
         folder: "/bots/scout",
+        skillsFolder: "/mybot/skills",
       };
       for (const hasT3Mcp of [false, true]) {
         const params = yield* CodexAdapterV2.buildCodexTurnStartParams({

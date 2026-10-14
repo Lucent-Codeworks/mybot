@@ -49,15 +49,24 @@ import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter"
 import * as ProjectionStore from "./ProjectionStore.ts";
 import * as ProviderEventIngestor from "./ProviderEventIngestor.ts";
 import * as McpAppModelContext from "../mcpApps/McpAppModelContext.ts";
+import * as ServerConfig from "../config.ts";
 import * as ProjectStore from "./ProjectStore.ts";
 import * as RunExecutionService from "./RunExecutionService.ts";
 
 const driver = ProviderDriverKind.make("codex");
 
+// Only the skills folder is read, and only for a bot's turns.
+const layerConfig = Layer.succeed(ServerConfig.ServerConfig, {
+  skillsDir: "/mybot/skills",
+} as ServerConfig.ServerConfig["Service"]);
+
 /** Runs whose thread has no project row, so turns carry no bot profile. */
-const layerNoProject = Layer.mock(ProjectStore.ProjectStoreV2)({
-  getShell: () => Effect.succeed(Option.none()),
-});
+const layerNoProject = Layer.mergeAll(
+  layerConfig,
+  Layer.mock(ProjectStore.ProjectStoreV2)({
+    getShell: () => Effect.succeed(Option.none()),
+  }),
+);
 
 const layerRunExecutionTest = RunExecutionService.layer.pipe(
   Layer.provide(
@@ -832,6 +841,7 @@ it.effect("gives turns in a bot's thread the bot's profile", () =>
       role: "Daily tech scout",
       instructions: "Summarize my bookmarks.",
       folder: "/bots/scout",
+      skillsFolder: "/mybot/skills",
     });
   }).pipe(
     Effect.provide(
@@ -839,6 +849,7 @@ it.effect("gives turns in a bot's thread the bot's profile", () =>
         Layer.provide(
           Layer.mergeAll(
             McpAppModelContext.layerEmpty,
+            layerConfig,
             Layer.mock(ProjectStore.ProjectStoreV2)({
               getShell: () =>
                 Effect.succeed(

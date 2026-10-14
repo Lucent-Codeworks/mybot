@@ -231,6 +231,7 @@ describe("ClaudeAdapterV2 runtime query policy", () => {
         role: "Daily tech scout",
         instructions: "Check bookmarks.",
         folder: "/bots/scout",
+        skillsFolder: "/mybot/skills",
       },
     });
     const systemPrompt = options.systemPrompt as { readonly append?: string };

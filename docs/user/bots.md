@@ -31,6 +31,13 @@ short notes on finished work. It is told never to store passwords or tokens.
 You can read and edit the memory in the bot's settings. Remove anything that is
 wrong or out of date; the bot uses what is there from its next conversation.
 
+## Skills
+
+Ask a bot to save something it just did as a skill, and it writes the steps to
+MyBot's shared `skills` folder. Every bot checks that folder before starting a
+task and follows a skill that fits. A skill is a folder with a `SKILL.md`, so
+you can also write or edit one by hand.
+
 ## Change or remove a bot
 
 Hover a bot and choose the gear icon, or open its project settings. You can

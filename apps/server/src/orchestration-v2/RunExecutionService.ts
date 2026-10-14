@@ -38,6 +38,7 @@ import * as Stream from "effect/Stream";
 
 import * as McpSessionRegistry from "../mcp/McpSessionRegistry.ts";
 import * as McpAppModelContext from "../mcpApps/McpAppModelContext.ts";
+import * as ServerConfig from "../config.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import * as EventSink from "./EventSink.ts";
 import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
@@ -569,6 +570,7 @@ export const layer: Layer.Layer<
   | ServerSettings.ServerSettingsService
   | McpAppModelContext.McpAppModelContext
   | ProjectStore.ProjectStoreV2
+  | ServerConfig.ServerConfig
 > = Layer.effect(
   RunExecutionServiceV2,
   Effect.gen(function* () {
@@ -578,6 +580,7 @@ export const layer: Layer.Layer<
     const serverSettings = yield* ServerSettings.ServerSettingsService;
     const mcpAppModelContext = yield* McpAppModelContext.McpAppModelContext;
     const projectStore = yield* ProjectStore.ProjectStoreV2;
+    const skillsFolder = (yield* ServerConfig.ServerConfig).skillsDir;
 
     const writeFinalRunEvents = (input: {
       readonly run: OrchestrationV2Run;
@@ -1393,7 +1396,7 @@ export const layer: Layer.Layer<
           const bot = Option.match(project, {
             onNone: () => undefined,
             onSome: ({ title, workspaceRoot, bot }) =>
-              bot ? { name: title, folder: workspaceRoot, ...bot } : undefined,
+              bot ? { name: title, folder: workspaceRoot, skillsFolder, ...bot } : undefined,
           });
           const turnInput = {
             appThread: input.appThread,
