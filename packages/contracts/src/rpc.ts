@@ -263,6 +263,13 @@ import {
   ScheduledTaskUpsertInput,
   ScheduledTaskMutationResult,
 } from "./scheduledTask.ts";
+import {
+  BotTelegramConnectInput,
+  BotTelegramDisconnectInput,
+  BotTelegramError,
+  BotTelegramStatus,
+  BotTelegramStatusInput,
+} from "./botChannels.ts";
 import { SecretRequestAnswerInput, SecretRequestError } from "./secretRequest.ts";
 import { Project, ProjectMutation, ProjectMutationError } from "./project.ts";
 
@@ -387,6 +394,11 @@ export const WS_METHODS = {
   serverGetBackgroundPolicy: "server.getBackgroundPolicy",
   serverGetUsageSummary: "server.getUsageSummary",
   serverRefreshUsageRates: "server.refreshUsageRates",
+
+  // Bot channels
+  botsTelegramStatus: "bots.telegram.status",
+  botsTelegramConnect: "bots.telegram.connect",
+  botsTelegramDisconnect: "bots.telegram.disconnect",
 
   // Scheduled tasks
   scheduledTasksList: "scheduledTasks.list",
@@ -1229,6 +1241,24 @@ const WsScheduledTasksListRpc = Rpc.make(WS_METHODS.scheduledTasksList, {
   error: Schema.Union([ScheduledTaskError, EnvironmentAuthorizationError]),
 });
 
+const WsBotsTelegramStatusRpc = Rpc.make(WS_METHODS.botsTelegramStatus, {
+  payload: BotTelegramStatusInput,
+  success: BotTelegramStatus,
+  error: Schema.Union([BotTelegramError, EnvironmentAuthorizationError]),
+});
+
+const WsBotsTelegramConnectRpc = Rpc.make(WS_METHODS.botsTelegramConnect, {
+  payload: BotTelegramConnectInput,
+  success: BotTelegramStatus,
+  error: Schema.Union([BotTelegramError, EnvironmentAuthorizationError]),
+});
+
+const WsBotsTelegramDisconnectRpc = Rpc.make(WS_METHODS.botsTelegramDisconnect, {
+  payload: BotTelegramDisconnectInput,
+  success: BotTelegramStatus,
+  error: Schema.Union([BotTelegramError, EnvironmentAuthorizationError]),
+});
+
 /** Streams the full scheduled-task list: one snapshot on subscribe, then a fresh list after every change. */
 const WsScheduledTasksSubscribeRpc = Rpc.make(WS_METHODS.scheduledTasksSubscribe, {
   payload: ScheduledTaskListInput,
@@ -1374,6 +1404,9 @@ export const WsRpcGroup = RpcGroup.make(
   WsServerGetUsageSummaryRpc,
   WsServerRefreshUsageRatesRpc,
   WsServerSignalProcessRpc,
+  WsBotsTelegramStatusRpc,
+  WsBotsTelegramConnectRpc,
+  WsBotsTelegramDisconnectRpc,
   WsScheduledTasksListRpc,
   WsScheduledTasksSubscribeRpc,
   WsScheduledTasksUpsertRpc,

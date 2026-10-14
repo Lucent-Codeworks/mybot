@@ -1,5 +1,11 @@
-import type { BotProfile, EnvironmentId } from "@t3tools/contracts";
-import { BotIcon, BotOffIcon } from "lucide-react";
+import { useAtomRefresh, useAtomValue } from "@effect/atom-react";
+import type { BotProfile, EnvironmentId, ProjectId } from "@t3tools/contracts";
+import * as Option from "effect/Option";
+import { AsyncResult } from "effect/reactivity";
+import { BotIcon, BotOffIcon, SendIcon } from "lucide-react";
+import { useState } from "react";
+
+import { serverEnvironment } from "~/state/server";
 
 import { projectEnvironment } from "~/state/projects";
 import { useAtomCommand } from "~/state/use-atom-command";
@@ -16,6 +22,7 @@ import { SettingsRow, SettingsSection } from "./settingsLayout";
 export function BotProfileSettings(props: {
   bot: BotProfile | null;
   environmentId: EnvironmentId;
+  projectId: ProjectId;
   folder: string;
   disabled: boolean;
   onChange: (bot: BotProfile | null) => void;
@@ -86,6 +93,7 @@ export function BotProfileSettings(props: {
         </div>
       </SettingsRow>
       <BotMemoryRow environmentId={props.environmentId} folder={props.folder} disabled={disabled} />
+      <BotTelegramRow environmentId={props.environmentId} projectId={props.projectId} />
       <SettingsRow
         title="Stop being a bot"
         description="Keeps the project and its threads, without the job and instructions."
@@ -139,5 +147,110 @@ function BotMemoryRow(props: { environmentId: EnvironmentId; folder: string; dis
         />
       </div>
     </SettingsRow>
+  );
+}
+
+/** Connects the bot to a Telegram bot so the user can message it from their phone. */
+function BotTelegramRow(props: { environmentId: EnvironmentId; projectId: ProjectId }) {
+  const statusAtom = serverEnvironment.botTelegramStatus({
+    environmentId: props.environmentId,
+    input: { projectId: props.projectId },
+  });
+  const result = useAtomValue(statusAtom);
+  const refresh = useAtomRefresh(statusAtom);
+  const status = Option.getOrNull(AsyncResult.value(result));
+  const canOperate = useAtomValue(
+    serverEnvironment.connectBotTelegram.permissionAtom(props.environmentId),
+  );
+  const connect = useAtomCommand(serverEnvironment.connectBotTelegram, {
+    label: "bot telegram connect",
+  });
+  const disconnect = useAtomCommand(serverEnvironment.disconnectBotTelegram, {
+    label: "bot telegram disconnect",
+  });
+  const [token, setToken] = useState("");
+  const [busy, setBusy] = useState(false);
+  const run = async (action: () => Promise<unknown>) => {
+    setBusy(true);
+    await action();
+    setBusy(false);
+    refresh();
+  };
+
+  if (status === null || !status.connected) {
+    return (
+      <SettingsRow
+        title="Telegram"
+        description="Message this bot from Telegram. Create a bot with @BotFather, then paste the token it gives you."
+        control={
+          <form
+            className="flex items-center gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const value = token.trim();
+              if (!value) return;
+              void run(async () => {
+                const connected = await connect({
+                  environmentId: props.environmentId,
+                  input: { projectId: props.projectId, token: value },
+                });
+                if (connected._tag === "Success") setToken("");
+              });
+            }}
+          >
+            <Input
+              size="sm"
+              type="password"
+              className="w-full sm:w-56"
+              aria-label="Telegram bot token"
+              placeholder="Bot token"
+              autoComplete="off"
+              disabled={!canOperate || busy}
+              value={token}
+              onChange={(event) => setToken(event.target.value)}
+            />
+            <Button size="sm" variant="outline" type="submit" disabled={!canOperate || busy}>
+              <SendIcon />
+              Connect
+            </Button>
+          </form>
+        }
+      />
+    );
+  }
+  const handle = status.username ? `@${status.username}` : "your Telegram bot";
+  return (
+    <SettingsRow
+      title="Telegram"
+      description={
+        status.paired
+          ? `Connected to ${handle}. Only your Telegram account can message it; /new starts a fresh conversation.`
+          : `Send /start ${status.pairingCode ?? ""} to ${handle} in Telegram to pair your account.`
+      }
+      control={
+        <div className="flex items-center gap-2">
+          {status.paired ? null : (
+            <Button size="sm" variant="outline" onClick={refresh}>
+              Check again
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!canOperate || busy}
+            onClick={() =>
+              void run(() =>
+                disconnect({
+                  environmentId: props.environmentId,
+                  input: { projectId: props.projectId },
+                }),
+              )
+            }
+          >
+            Disconnect
+          </Button>
+        </div>
+      }
+    />
   );
 }

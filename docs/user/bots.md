@@ -58,6 +58,19 @@ Routines run on the computer that hosts MyBot. On Windows and Linux, closing the
 MyBot window keeps it running in the system tray so routines keep working;
 choose **Quit MyBot** from the tray icon to stop it.
 
+## Message a bot from Telegram
+
+Each bot can have its own Telegram bot, so you can reach it from your phone.
+
+1. In Telegram, message @BotFather, send `/newbot`, and copy the token it gives you.
+2. In MyBot, open the bot's settings, paste the token under **Telegram**, and choose **Connect**.
+3. Send `/start` followed by the pairing code MyBot shows to your new Telegram bot.
+
+After pairing, only your Telegram account can talk to the bot. Each Telegram chat
+continues one conversation, which you can also open in MyBot; send `/new` to
+start a fresh one. MyBot must be running for the bot to answer, and replies
+arrive when the bot finishes. Choose **Disconnect** to stop.
+
 ## Change or remove a bot
 
 Hover a bot and choose the gear icon, or open its project settings. You can
