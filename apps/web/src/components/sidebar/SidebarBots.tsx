@@ -1,7 +1,9 @@
 import { PlusIcon, SettingsIcon, SquarePenIcon } from "lucide-react";
 import { memo, useState, type MouseEvent as ReactMouseEvent } from "react";
 
+import { cn } from "../../lib/utils";
 import type { SidebarProjectSnapshot } from "../../sidebarProjectGrouping";
+import type { BotActivity } from "./botActivity";
 import { ProjectFavicon } from "../ProjectFavicon";
 import { Button } from "../ui/button";
 import { CollapsibleSectionHeader } from "../ui/collapsible-section-header";
@@ -20,6 +22,7 @@ export function botGroups(
  */
 export const SidebarBots = memo(function SidebarBots(props: {
   bots: ReadonlyArray<SidebarProjectSnapshot>;
+  activity: ReadonlyMap<string, BotActivity>;
   scopedProjectKey: string | null;
   onToggleScope: (bot: SidebarProjectSnapshot) => void;
   onNewChat: (bot: SidebarProjectSnapshot) => void;
@@ -36,6 +39,7 @@ export const SidebarBots = memo(function SidebarBots(props: {
         <SidebarMenu>
           {props.bots.map((bot) => {
             const role = bot.memberProjects.find((member) => member.bot)?.bot?.role ?? "";
+            const activity = props.activity.get(bot.projectKey);
             return (
               <SidebarMenuItem key={bot.projectKey} className="group/bot relative">
                 <SidebarMenuButton
@@ -44,7 +48,17 @@ export const SidebarBots = memo(function SidebarBots(props: {
                   onClick={() => props.onToggleScope(bot)}
                 >
                   <ProjectFavicon project={bot} className="size-4" />
-                  <span>{bot.displayName}</span>
+                  <span className="min-w-0 flex-1">{bot.displayName}</span>
+                  {activity ? (
+                    <span
+                      role="img"
+                      aria-label={activity === "needs-you" ? "Waiting for you" : "Working"}
+                      className={cn(
+                        "size-2 shrink-0 rounded-full",
+                        activity === "needs-you" ? "bg-warning" : "bg-info",
+                      )}
+                    />
+                  ) : null}
                 </SidebarMenuButton>
                 <div className="absolute inset-y-0 right-1 hidden items-center gap-0.5 group-focus-within/bot:flex group-hover/bot:flex">
                   <Button

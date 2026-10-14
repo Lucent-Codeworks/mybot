@@ -8,6 +8,8 @@ import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
+import * as Schedule from "effect/Schedule";
+import * as Semaphore from "effect/Semaphore";
 import * as Stream from "effect/Stream";
 
 import * as ServerSettings from "../serverSettings.ts";
@@ -48,6 +50,8 @@ export const layer = Layer.effectDiscard(
     const textGeneration = yield* TextGeneration.TextGeneration;
     const serverSettings = yield* ServerSettings.ServerSettingsService;
     const seen = new Set<string>();
+    // Each review starts a model process; parallel subagents must not start dozens at once.
+    const reviewers = yield* Semaphore.make(2);
 
     const review = Effect.fn("AutoReview.review")(function* (
       threadId: ThreadId,
@@ -95,15 +99,17 @@ export const layer = Layer.effectDiscard(
       Stream.filter(isReviewableRequest),
       Stream.runForEach((event) => {
         if (seen.has(event.payload.id)) return Effect.void;
+        if (seen.size > 10_000) seen.clear();
         seen.add(event.payload.id);
-        return review(event.threadId, event.payload).pipe(
+        return reviewers.withPermit(review(event.threadId, event.payload)).pipe(
           // A failed review leaves the request for the user, as if it said ask.
           Effect.catchCause((cause) => Effect.logWarning("Auto Review failed.", { cause })),
           Effect.forkDetach,
           Effect.asVoid,
         );
       }),
-      Effect.catchCause((cause) => Effect.logWarning("Auto Review stopped.", { cause })),
+      Effect.tapCause((cause) => Effect.logWarning("Auto Review paused.", { cause })),
+      Effect.retry(Schedule.spaced("5 seconds")),
       Effect.forkScoped,
     );
   }),

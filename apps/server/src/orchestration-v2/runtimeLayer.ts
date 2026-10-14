@@ -284,6 +284,7 @@ const layerScheduledTaskProvided = ScheduledTaskService.layer.pipe(
 const layerTelegramChannelProvided = TelegramChannel.layer.pipe(
   Layer.provide(
     Layer.mergeAll(
+      layerOrchestratorProvided,
       layerThreadLaunchProvided,
       layerThreadManagementProvided,
       layerProjectService,

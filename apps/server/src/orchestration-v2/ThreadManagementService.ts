@@ -846,7 +846,12 @@ const make = Effect.gen(function* () {
         Effect.map((records) =>
           Option.fromUndefinedOr(
             records.runtimeRequests.find(
-              (request) => request.status === "pending" && !input.ignore.has(request.id),
+              (request) =>
+                request.status === "pending" &&
+                // Tool calls and auth refreshes are answered by the app, not the user.
+                request.kind !== "dynamic_tool_call" &&
+                request.kind !== "auth_refresh" &&
+                !input.ignore.has(request.id),
             ),
           ),
         ),

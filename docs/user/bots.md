@@ -84,6 +84,9 @@ continues one conversation, which you can also open in MyBot; send `/new` to
 start a fresh one. MyBot must be running for the bot to answer, and replies
 arrive when the bot finishes. Choose **Disconnect** to stop.
 
+When one of the bot's routines finishes, its result arrives in the chat too, so
+a morning briefing reaches your phone.
+
 When the bot needs your approval or asks you a question, it sends it to the
 chat. Reply `yes`, `always`, or `no` to an approval, or a number (or your own
 words) to a question. Questions with several parts still have to be answered

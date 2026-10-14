@@ -3,6 +3,7 @@ import {
   type BotTelegramStatus,
   CommandId,
   MessageId,
+  type OrchestrationV2Run,
   type OrchestrationV2RuntimeRequest,
   type ProjectId,
   type ProviderApprovalDecision,
@@ -22,10 +23,13 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Schedule from "effect/Schedule";
 import * as Schema from "effect/Schema";
+import * as Semaphore from "effect/Semaphore";
+import * as Stream from "effect/Stream";
 import * as SynchronizedRef from "effect/SynchronizedRef";
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http";
 
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
+import * as Orchestrator from "../orchestration-v2/Orchestrator.ts";
 import * as ThreadLaunchService from "../orchestration-v2/ThreadLaunchService.ts";
 import * as ThreadManagementService from "../orchestration-v2/ThreadManagementService.ts";
 import * as ProjectService from "../project/ProjectService.ts";
@@ -44,6 +48,10 @@ import {
 const POLL_SECONDS = 50;
 /** How long a reply may take before the chat is told the bot is still working. */
 const REPLY_TIMEOUT_MS = 30 * 60_000;
+/** While the bot waits on the user, the chat waits too; their answer may come much later. */
+const WAITING_ON_USER_TIMEOUT_MS = 7 * 24 * 60 * 60_000;
+/** With Auto Review on, how long a request gets to be approved before the chat is asked. */
+const AUTO_REVIEW_GRACE = "45 seconds";
 const REGISTRY_SECRET = "telegram-bots";
 
 const BotState = Schema.Struct({
@@ -106,6 +114,7 @@ const make = Effect.gen(function* () {
   const threadManagement = yield* ThreadManagementService.ThreadManagementService;
   const projects = yield* ProjectService.ProjectService;
   const serverSettings = yield* ServerSettings.ServerSettingsService;
+  const orchestrator = yield* Orchestrator.OrchestratorV2;
   const listeners = yield* FiberMap.make<ProjectId>();
   /** Each connected bot's state, persisted after every change. */
   const states = new Map<ProjectId, SynchronizedRef.SynchronizedRef<BotState>>();
@@ -125,6 +134,8 @@ const make = Effect.gen(function* () {
         ),
       )
       .pipe(
+        // The token is part of the URL, which client spans record in full.
+        Effect.provideService(HttpClient.TracerDisabledWhen, () => true),
         Effect.flatMap(HttpClientResponse.schemaBodyJson(telegramResponse(result))),
         Effect.timeout(`${POLL_SECONDS + 15} seconds`),
         Effect.mapError(fail(`Telegram ${method} failed.`)),
@@ -185,6 +196,24 @@ const make = Effect.gen(function* () {
     }).pipe(Effect.ignore);
   };
 
+  /** A connected bot's current state; fails once the bot is disconnected. */
+  const currentState = (projectId: ProjectId) => {
+    const ref = states.get(projectId);
+    return ref === undefined
+      ? Effect.fail(new BotTelegramError({ message: "This bot is no longer connected." }))
+      : SynchronizedRef.get(ref);
+  };
+  /** One delivery at a time per bot, so a chat's messages keep their order and share a thread. */
+  const deliveryLocks = new Map<ProjectId, Semaphore.Semaphore>();
+  const deliveryLock = (projectId: ProjectId) => {
+    let lock = deliveryLocks.get(projectId);
+    if (lock === undefined) {
+      lock = Semaphore.makeUnsafe(1);
+      deliveryLocks.set(projectId, lock);
+    }
+    return lock;
+  };
+
   const toStatus = (state: Option.Option<BotState>): BotTelegramStatus =>
     Option.match(state, {
       onNone: () => ({ connected: false, username: null, paired: false, pairingCode: null }),
@@ -196,14 +225,12 @@ const make = Effect.gen(function* () {
       }),
     });
 
-  /** Sends the owner's message into the chat's thread and returns the run to wait on. */
-  const deliver = Effect.fn("TelegramChannel.deliver")(function* (
+  /** Starts the chat's conversation thread and remembers it. */
+  const startChatThread = Effect.fn("TelegramChannel.startChatThread")(function* (
     projectId: ProjectId,
     chatId: number,
-    updateId: number,
-    text: string,
+    key: string,
   ) {
-    const state = yield* SynchronizedRef.get(states.get(projectId)!);
     const project = yield* projects
       .getById(projectId)
       .pipe(Effect.map(Option.getOrUndefined), Effect.mapError(fail("Could not read the bot.")));
@@ -213,48 +240,72 @@ const make = Effect.gen(function* () {
       Effect.mapError(fail("Could not read settings.")),
     );
     const resolved = resolveProjectSettings(settings, projectId, project).settings;
-    const key = `telegram:${projectId}:${updateId}`;
-    let threadId = state.threads[String(chatId)];
-    if (threadId === undefined) {
-      if (resolved.defaultModelSelection === null) {
-        return yield* new BotTelegramError({
-          message: "Pick a model for this bot in MyBot first.",
-        });
-      }
-      const launched = yield* threadLaunch
-        .launch({
-          commandId: CommandId.make(`${key}:thread`),
-          projectId,
-          title: "Telegram",
-          modelSelection: resolved.defaultModelSelection,
-          runtimeMode: resolved.defaultRuntimeMode,
-          interactionMode: "default",
-          createdBy: "user",
-          creationSource: "server",
-        })
-        .pipe(Effect.mapError(fail("Could not start a conversation.")));
-      threadId = launched.threadId;
-      const startedThreadId = threadId;
-      yield* updateState(projectId, (current) => ({
-        ...current,
-        threads: { ...current.threads, [String(chatId)]: startedThreadId },
-      }));
+    if (resolved.defaultModelSelection === null) {
+      return yield* new BotTelegramError({ message: "Pick a model for this bot in MyBot first." });
     }
-    const sent = yield* threadManagement
-      .sendToThread({
+    const launched = yield* threadLaunch
+      .launch({
+        commandId: CommandId.make(`${key}:thread`),
         projectId,
-        commandId: CommandId.make(key),
-        threadId: ThreadId.make(threadId),
-        messageId: MessageId.make(key),
-        text,
-        attachments: [],
-        mode: "queue",
+        title: "Telegram",
+        modelSelection: resolved.defaultModelSelection,
+        runtimeMode: resolved.defaultRuntimeMode,
+        interactionMode: "default",
         createdBy: "user",
         creationSource: "server",
       })
-      .pipe(Effect.mapError(fail("Could not send the message.")));
-    return { threadId: ThreadId.make(threadId), runId: sent.run.id };
+      .pipe(Effect.mapError(fail("Could not start a conversation.")));
+    yield* updateState(projectId, (current) => ({
+      ...current,
+      threads: { ...current.threads, [String(chatId)]: launched.threadId },
+    }));
+    return launched.threadId;
   });
+
+  /** Sends the owner's message into the chat's thread and returns the run to wait on. */
+  const deliver = Effect.fn("TelegramChannel.deliver")(function* (
+    projectId: ProjectId,
+    chatId: number,
+    updateId: number,
+    text: string,
+  ) {
+    const key = `telegram:${projectId}:${updateId}`;
+    const sendTo = (threadId: ThreadId, attempt: string) =>
+      threadManagement
+        .sendToThread({
+          projectId,
+          commandId: CommandId.make(`${key}${attempt}`),
+          threadId,
+          messageId: MessageId.make(`${key}${attempt}`),
+          text,
+          attachments: [],
+          mode: "queue",
+          createdBy: "user",
+          creationSource: "server",
+        })
+        .pipe(Effect.map((sent) => ({ threadId, runId: sent.run.id })));
+    const known = (yield* currentState(projectId)).threads[String(chatId)];
+    if (known !== undefined) {
+      const sent = yield* sendTo(ThreadId.make(known), "").pipe(Effect.option);
+      if (Option.isSome(sent)) return sent.value;
+      // The chat's thread was deleted or archived in MyBot: start a new one.
+    }
+    const threadId = yield* startChatThread(projectId, chatId, key);
+    return yield* sendTo(threadId, ":new").pipe(
+      Effect.mapError(fail("Could not send the message.")),
+    );
+  });
+
+  /** Whether a request is still waiting for an answer. */
+  const isPending = (threadId: ThreadId, requestId: string) =>
+    threadManagement.getThreadRecords(threadId, ["runtimeRequests"]).pipe(
+      Effect.map((records) =>
+        records.runtimeRequests.some(
+          (request) => request.id === requestId && request.status === "pending",
+        ),
+      ),
+      Effect.orElseSucceed(() => false),
+    );
 
   /** The approval or question a chat's next message answers. */
   type PendingAnswer =
@@ -351,7 +402,8 @@ const make = Effect.gen(function* () {
   /**
    * Follows a run to its end and returns its reply. Each approval or question
    * it stops on goes to the chat; typing shows only while the bot is working,
-   * not while it waits on the user.
+   * not while it waits on the user. With Auto Review on, a request first gets
+   * time to be approved without the user.
    */
   const followRun = Effect.fn("TelegramChannel.followRun")(function* (
     projectId: ProjectId,
@@ -360,14 +412,20 @@ const make = Effect.gen(function* () {
     threadId: ThreadId,
     runId: RunId,
   ) {
+    const autoReview = yield* projects.getById(projectId).pipe(
+      Effect.map((project) => Option.getOrUndefined(project)?.bot?.autoReview === true),
+      Effect.orElseSucceed(() => false),
+    );
     const asked = new Set<string>();
     const key = chatKey(projectId, chatId);
     while (true) {
+      const waitingOnUser = pendingAnswers.get(key)?.threadId === threadId;
+      const timeoutMs = waitingOnUser ? WAITING_ON_USER_TIMEOUT_MS : REPLY_TIMEOUT_MS;
       const ended = threadManagement
-        .waitForThread({ projectId, threadId, runId, timeoutMs: REPLY_TIMEOUT_MS })
+        .waitForThread({ projectId, threadId, runId, timeoutMs })
         .pipe(Effect.map((waited) => ({ type: "ended" as const, waited })));
       const stopped = threadManagement
-        .waitForPendingRequest({ projectId, threadId, ignore: asked, timeoutMs: REPLY_TIMEOUT_MS })
+        .waitForPendingRequest({ projectId, threadId, ignore: asked, timeoutMs })
         .pipe(
           Effect.flatMap(
             Option.match({
@@ -377,15 +435,29 @@ const make = Effect.gen(function* () {
           ),
         );
       const outcome = yield* Effect.raceFirst(ended, stopped).pipe(
-        pendingAnswers.has(key) ? (effect) => effect : Effect.raceFirst(typing(token, chatId)),
+        waitingOnUser ? (effect) => effect : Effect.raceFirst(typing(token, chatId)),
         Effect.mapError(fail("Could not follow the conversation.")),
       );
       if (outcome.type === "request") {
         asked.add(outcome.request.id);
+        if (autoReview) {
+          const graced = yield* Effect.raceFirst(
+            ended,
+            Effect.sleep(AUTO_REVIEW_GRACE).pipe(Effect.as({ type: "grace" as const })),
+          ).pipe(
+            Effect.raceFirst(typing(token, chatId)),
+            Effect.mapError(fail("Could not follow the conversation.")),
+          );
+          if (graced.type === "ended") return yield* finalReply(threadId, runId, graced.waited);
+          if (!(yield* isPending(threadId, outcome.request.id))) continue;
+        }
         yield* askInChat(projectId, chatId, token, threadId, outcome.request);
         continue;
       }
-      if (pendingAnswers.get(key)?.threadId === threadId) pendingAnswers.delete(key);
+      // A timeout leaves an unanswered request in place so a late answer still lands.
+      if (!outcome.waited.timedOut && pendingAnswers.get(key)?.threadId === threadId) {
+        pendingAnswers.delete(key);
+      }
       return yield* finalReply(threadId, runId, outcome.waited);
     }
   });
@@ -401,6 +473,11 @@ const make = Effect.gen(function* () {
     const key = chatKey(projectId, chatId);
     const pending = pendingAnswers.get(key);
     if (pending === undefined) return false;
+    // Answered in MyBot or by Auto Review meanwhile: this is an ordinary message.
+    if (!(yield* isPending(pending.threadId, pending.requestId))) {
+      pendingAnswers.delete(key);
+      return false;
+    }
     const response: Option.Option<{
       readonly decision?: ProviderApprovalDecision;
       readonly answers?: ProviderUserInputAnswers;
@@ -436,6 +513,28 @@ const make = Effect.gen(function* () {
     return sent._tag === "Success";
   });
 
+  /** Sends a finished routine run's result to its bot's paired chat. */
+  const forwardRoutineResult = Effect.fn("TelegramChannel.forwardRoutineResult")(function* (
+    run: OrchestrationV2Run,
+  ) {
+    const thread = yield* threadManagement.getThreadShell(run.threadId);
+    const ref = thread === null ? undefined : states.get(thread.projectId);
+    if (thread === null || ref === undefined) return;
+    const state = yield* SynchronizedRef.get(ref);
+    if (state.ownerUserId === null) return;
+    const records = yield* threadManagement.getThreadRecords(run.threadId, ["messages"], {
+      messageIds: [run.userMessageId],
+    });
+    if (!records.messages.some((message) => message.scheduledTaskId !== undefined)) return;
+    const text = yield* finalReply(run.threadId, run.id, {
+      threadId: run.threadId,
+      run,
+      timedOut: false,
+    });
+    // A private chat's id is its user's id.
+    yield* send(state.token, state.ownerUserId, `${thread.title}\n\n${text}`);
+  });
+
   const handleUpdate = Effect.fn("TelegramChannel.handleUpdate")(function* (
     projectId: ProjectId,
     update: TelegramUpdate,
@@ -443,7 +542,7 @@ const make = Effect.gen(function* () {
     const message = update.message;
     if (!message?.text || !message.from || message.chat.type !== "private") return;
     const chatId = message.chat.id;
-    const state = yield* SynchronizedRef.get(states.get(projectId)!);
+    const state = yield* currentState(projectId);
     const action = classifyTelegramMessage({
       ownerUserId: state.ownerUserId,
       pairingCode: state.pairingCode,
@@ -480,12 +579,14 @@ const make = Effect.gen(function* () {
       case "deliver": {
         if (yield* answerPending(projectId, chatId, state.token, update.update_id, action.text))
           return;
-        const text = yield* deliver(projectId, chatId, update.update_id, action.text).pipe(
-          Effect.flatMap(({ threadId, runId }) =>
-            followRun(projectId, chatId, state.token, threadId, runId),
-          ),
-          Effect.catch((error) => Effect.succeed(error.message)),
-        );
+        const text = yield* deliveryLock(projectId)
+          .withPermit(deliver(projectId, chatId, update.update_id, action.text))
+          .pipe(
+            Effect.flatMap(({ threadId, runId }) =>
+              followRun(projectId, chatId, state.token, threadId, runId),
+            ),
+            Effect.catch((error) => Effect.succeed(error.message)),
+          );
         return yield* send(state.token, chatId, text);
       }
     }
@@ -506,9 +607,10 @@ const make = Effect.gen(function* () {
       for (const update of updates) {
         // Advance first: a message is handled at most once, even across restarts.
         yield* updateState(projectId, (current) => ({ ...current, offset: update.update_id + 1 }));
+        // A child of the listener, so disconnecting stops it too.
         yield* handleUpdate(projectId, update).pipe(
           Effect.catchCause((cause) => Effect.logWarning("Telegram message failed.", { cause })),
-          Effect.forkDetach,
+          Effect.forkChild,
         );
       }
     }).pipe(
@@ -528,6 +630,30 @@ const make = Effect.gen(function* () {
       states.set(projectId, yield* SynchronizedRef.make(state));
       yield* FiberMap.run(listeners, projectId, listen(projectId));
     });
+
+  const forwarded = new Set<string>();
+  yield* orchestrator.streamDomainEvents.pipe(
+    Stream.filter(
+      (event) =>
+        event.type === "run.updated" &&
+        (event.payload.status === "completed" || event.payload.status === "failed"),
+    ),
+    Stream.runForEach((event) => {
+      if (event.type !== "run.updated" || forwarded.has(event.payload.id)) return Effect.void;
+      if (forwarded.size > 10_000) forwarded.clear();
+      forwarded.add(event.payload.id);
+      return forwardRoutineResult(event.payload).pipe(
+        Effect.catchCause((cause) =>
+          Effect.logWarning("Telegram routine result failed.", { cause }),
+        ),
+        Effect.forkDetach,
+        Effect.asVoid,
+      );
+    }),
+    Effect.tapCause((cause) => Effect.logWarning("Telegram routine results paused.", { cause })),
+    Effect.retry(Schedule.spaced("5 seconds")),
+    Effect.forkScoped,
+  );
 
   for (const id of yield* readRegistry.pipe(Effect.orElseSucceed(() => []))) {
     const projectId = id as ProjectId;
