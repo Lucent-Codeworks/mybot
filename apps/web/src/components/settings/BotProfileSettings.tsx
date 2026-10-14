@@ -5,7 +5,14 @@ import { AsyncResult } from "effect/reactivity";
 import { BotIcon, BotOffIcon, SendIcon } from "lucide-react";
 import { useState } from "react";
 
+import {
+  type AtomCommandResult,
+  isAtomCommandInterrupted,
+  squashAtomCommandFailure,
+} from "@t3tools/client-runtime/state/runtime";
+
 import { serverEnvironment } from "~/state/server";
+import { toastManager } from "../ui/toast";
 
 import { projectEnvironment } from "~/state/projects";
 import { useAtomCommand } from "~/state/use-atom-command";
@@ -113,9 +120,7 @@ const MEMORY_FILE = "MEMORY.md";
 /** The bot's memory file, which the bot keeps itself and the user can correct. */
 function BotMemoryRow(props: { environmentId: EnvironmentId; folder: string; disabled: boolean }) {
   const memory = useProjectFileQuery(props.environmentId, props.folder, MEMORY_FILE);
-  const writeFile = useAtomCommand(projectEnvironment.writeFile, {
-    label: "bot memory write",
-  });
+  const writeFile = useAtomCommand(projectEnvironment.writeFile, { reportFailure: false });
   const contents = memory.data?.contents ?? "";
   // A read the server rejected, usually a missing file, starts empty; saving creates it.
   const readable = memory.data !== null || memory.readError !== null;
@@ -142,7 +147,17 @@ function BotMemoryRow(props: { environmentId: EnvironmentId; folder: string; dis
             void writeFile({
               environmentId: props.environmentId,
               input: { cwd: props.folder, relativePath: MEMORY_FILE, contents: next },
-            }).then(memory.refresh);
+            }).then((result) => {
+              memory.refresh();
+              if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
+                const error = squashAtomCommandFailure(result);
+                toastManager.add({
+                  type: "error",
+                  title: "Could not save the bot's memory",
+                  description: error instanceof Error ? error.message : "An error occurred.",
+                });
+              }
+            });
           }}
         />
       </div>
@@ -162,19 +177,30 @@ function BotTelegramRow(props: { environmentId: EnvironmentId; projectId: Projec
   const canOperate = useAtomValue(
     serverEnvironment.connectBotTelegram.permissionAtom(props.environmentId),
   );
-  const connect = useAtomCommand(serverEnvironment.connectBotTelegram, {
-    label: "bot telegram connect",
-  });
+  const connect = useAtomCommand(serverEnvironment.connectBotTelegram, { reportFailure: false });
   const disconnect = useAtomCommand(serverEnvironment.disconnectBotTelegram, {
-    label: "bot telegram disconnect",
+    reportFailure: false,
   });
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
-  const run = async (action: () => Promise<unknown>) => {
+  const run = async (
+    title: string,
+    action: () => Promise<AtomCommandResult<unknown, unknown>>,
+  ): Promise<boolean> => {
     setBusy(true);
-    await action();
+    const result = await action();
     setBusy(false);
     refresh();
+    if (result._tag === "Success") return true;
+    if (!isAtomCommandInterrupted(result)) {
+      const error = squashAtomCommandFailure(result);
+      toastManager.add({
+        type: "error",
+        title,
+        description: error instanceof Error ? error.message : "An error occurred.",
+      });
+    }
+    return false;
   };
 
   if (status === null || !status.connected) {
@@ -189,12 +215,13 @@ function BotTelegramRow(props: { environmentId: EnvironmentId; projectId: Projec
               event.preventDefault();
               const value = token.trim();
               if (!value) return;
-              void run(async () => {
-                const connected = await connect({
+              void run("Could not connect Telegram", () =>
+                connect({
                   environmentId: props.environmentId,
                   input: { projectId: props.projectId, token: value },
-                });
-                if (connected._tag === "Success") setToken("");
+                }),
+              ).then((connected) => {
+                if (connected) setToken("");
               });
             }}
           >
@@ -239,7 +266,7 @@ function BotTelegramRow(props: { environmentId: EnvironmentId; projectId: Projec
             variant="outline"
             disabled={!canOperate || busy}
             onClick={() =>
-              void run(() =>
+              void run("Could not disconnect Telegram", () =>
                 disconnect({
                   environmentId: props.environmentId,
                   input: { projectId: props.projectId },
