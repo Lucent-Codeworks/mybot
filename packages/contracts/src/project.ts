@@ -164,6 +164,8 @@ export const ReceivedProjectIcon = ForwardCompatibleUnion(projectIconMembers, "k
 export const BotProfile = Schema.Struct({
   role: TrimmedString.check(Schema.isMaxLength(120)),
   instructions: Schema.String.check(Schema.isMaxLength(20_000)),
+  /** A reviewer model approves the bot's clearly safe actions and leaves the rest for the user. */
+  autoReview: Schema.optional(Schema.Boolean),
 });
 export type BotProfile = typeof BotProfile.Type;
 

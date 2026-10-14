@@ -17,6 +17,7 @@ const makeStubTextGeneration = (
 ): TextGeneration.TextGeneration["Service"] =>
   TextGeneration.TextGeneration.of({
     generateThreadTitle: () => Effect.die("generateThreadTitle stub not configured for this test"),
+    reviewAction: () => Effect.die("reviewAction stub not configured for this test"),
     ...overrides,
   });
 

@@ -21,6 +21,7 @@ import {
   type OrchestrationV2ConversationMessage,
   type OrchestrationV2CreationSource,
   type OrchestrationV2Run,
+  type OrchestrationV2RuntimeRequest,
   type OrchestrationV2ThreadShellSnapshot,
   type OrchestrationV2ThreadProjection,
   type OrchestrationV2ThreadShell,
@@ -145,6 +146,14 @@ export interface ThreadManagementWaitInput {
   readonly projectId: ProjectId;
   readonly threadId: ThreadId;
   readonly runId?: RunId;
+  readonly timeoutMs: number;
+}
+
+export interface ThreadManagementPendingRequestWaitInput {
+  readonly projectId: ProjectId;
+  readonly threadId: ThreadId;
+  /** Requests the caller already handled, so it only hears about new ones. */
+  readonly ignore: ReadonlySet<string>;
   readonly timeoutMs: number;
 }
 
@@ -395,6 +404,14 @@ export interface ThreadManagementServiceShape {
   readonly waitForThread: (
     input: ThreadManagementWaitInput,
   ) => Effect.Effect<ThreadManagementWaitResult, ThreadManagementError>;
+  /**
+   * Waits for the thread to have a pending approval or question that is not
+   * in `ignore`, or for the timeout (none). Like waitForThread, it follows
+   * the thread's events instead of polling.
+   */
+  readonly waitForPendingRequest: (
+    input: ThreadManagementPendingRequestWaitInput,
+  ) => Effect.Effect<Option.Option<OrchestrationV2RuntimeRequest>, ThreadManagementError>;
   /**
    * Waits for `runId` to end, then settles the thread if the run completed.
    * Settling stops the provider session, so an agent that settles its own
@@ -817,6 +834,48 @@ const make = Effect.gen(function* () {
       return { dispatch: dispatched, projection, message, run, turnItem, delivery };
     });
 
+  const waitForPendingRequest: ThreadManagementServiceShape["waitForPendingRequest"] = (input) =>
+    Effect.gen(function* () {
+      const loadError = (cause: unknown) =>
+        new ThreadManagementProjectionLoadError({
+          projectId: input.projectId,
+          threadId: input.threadId,
+          cause,
+        });
+      const firstPending = getProjectThreadRecords(input, ["runtimeRequests"]).pipe(
+        Effect.map((records) =>
+          Option.fromUndefinedOr(
+            records.runtimeRequests.find(
+              (request) => request.status === "pending" && !input.ignore.has(request.id),
+            ),
+          ),
+        ),
+      );
+      // Taken before the first read, so a request between that read and the
+      // subscription below still replays.
+      const afterSequence = yield* orchestrator
+        .getThreadEventSequence(input.threadId)
+        .pipe(Effect.mapError(loadError));
+      const current = yield* firstPending;
+      if (Option.isSome(current)) return current;
+      return Option.flatten(
+        yield* orchestrator
+          .streamStoredEventsFrom({
+            threadId: input.threadId,
+            afterSequence,
+            eventType: "runtime-request.updated",
+          })
+          .pipe(
+            Stream.mapError(loadError),
+            Stream.mapEffect(() => firstPending),
+            Stream.filter(Option.isSome),
+            Stream.map((request) => request.value),
+            Stream.runHead,
+            Effect.timeoutOption(Duration.millis(Math.max(1, input.timeoutMs))),
+          ),
+      );
+    });
+
   const waitForThread: ThreadManagementServiceShape["waitForThread"] = (input) =>
     Effect.gen(function* () {
       const loadError = (cause: unknown) =>
@@ -1148,6 +1207,7 @@ const make = Effect.gen(function* () {
     isProviderInstanceEnabledForProject,
     hasReceipt,
     waitForThread,
+    waitForPendingRequest,
     settleAfterRun,
     settleThread,
     interruptThread,

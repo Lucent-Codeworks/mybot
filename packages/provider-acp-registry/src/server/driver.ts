@@ -80,6 +80,13 @@ const makeUnsupportedTextGeneration = (): ProviderTextGeneration => ({
         detail: "ACP Registry instances do not provide application text generation.",
       }),
     ),
+  reviewAction: () =>
+    Effect.fail(
+      new TextGenerationError({
+        operation: "reviewAction",
+        detail: "ACP Registry instances do not provide application text generation.",
+      }),
+    ),
 });
 
 function modelsFromDiscovery(

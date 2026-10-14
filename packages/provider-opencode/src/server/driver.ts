@@ -155,6 +155,11 @@ function selectOpenCodeRuntimeTextGeneration(
         v1: v1.generateThreadTitle(input),
         v2: v2.generateThreadTitle(input),
       }),
+    reviewAction: (input) =>
+      byOpenCodeRuntime(probe.get, {
+        v1: v1.reviewAction(input),
+        v2: v2.reviewAction(input),
+      }),
   };
 }
 

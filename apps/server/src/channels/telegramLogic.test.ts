@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { classifyTelegramMessage, splitTelegramText } from "./telegramLogic.ts";
+import {
+  classifyTelegramMessage,
+  formatQuestion,
+  parseApprovalReply,
+  parseQuestionReply,
+  splitTelegramText,
+} from "./telegramLogic.ts";
 
 describe("classifyTelegramMessage", () => {
   const unpaired = { ownerUserId: null, pairingCode: "K7Q2XD", fromUserId: 42 };
@@ -50,5 +56,36 @@ describe("splitTelegramText", () => {
     expect(chunks.join(" ").replaceAll(/\s+/g, " ")).toBe(
       [paragraph, paragraph, paragraph].join(" "),
     );
+  });
+});
+
+describe("approvals and questions in a chat", () => {
+  it("reads yes, always, and no, and nothing else", () => {
+    expect(parseApprovalReply(" Yes ")).toBe("accept");
+    expect(parseApprovalReply("always")).toBe("acceptForSession");
+    expect(parseApprovalReply("no")).toBe("decline");
+    expect(parseApprovalReply("maybe later")).toBeNull();
+  });
+
+  const pick = {
+    question: "Which calendar?",
+    options: [{ label: "Work", value: "work" }, { label: "Personal" }],
+  };
+
+  it("numbers the options and maps a number to the option's value", () => {
+    expect(formatQuestion(pick)).toContain("1. Work\n2. Personal");
+    expect(parseQuestionReply(pick, "1")).toBe("work");
+    expect(parseQuestionReply(pick, "2")).toBe("Personal");
+    expect(parseQuestionReply(pick, "3")).toBeNull();
+    expect(parseQuestionReply(pick, "1, 2")).toBeNull();
+  });
+
+  it("takes custom answers unless the question forbids them, and several picks when allowed", () => {
+    expect(parseQuestionReply(pick, "The shared one")).toBe("The shared one");
+    expect(parseQuestionReply({ ...pick, allowCustomAnswer: false }, "The shared one")).toBeNull();
+    expect(parseQuestionReply({ ...pick, multiSelect: true }, "2, 1, 2")).toEqual([
+      "Personal",
+      "work",
+    ]);
   });
 });

@@ -24,6 +24,19 @@ an email, posting, paying, or deleting data, a bot shows you a draft and waits
 for your go-ahead. Write lasting rules into the instructions, including when a
 bot may act without asking. Put one-off requests in the conversation.
 
+## Auto Review
+
+Turn on **Auto Review** in a bot's settings and the bot asks before acting, but
+a reviewer model answers most of those requests for you. It approves actions
+that are clearly safe, such as reading files or making small local changes
+that fit the bot's instructions. Anything that sends data off your computer,
+spends money, deletes or overwrites data, or touches credentials still comes
+to you, in MyBot or on Telegram. The reviewer never refuses on your behalf.
+
+The reviewer uses the model set for text generation, or the bot's own model.
+Write limits into the bot's instructions, like "never touch the production
+database", and the reviewer applies them too.
+
 ## Bots working together
 
 Each bot knows your other bots and their jobs. When a request fits another
@@ -70,6 +83,11 @@ After pairing, only your Telegram account can talk to the bot. Each Telegram cha
 continues one conversation, which you can also open in MyBot; send `/new` to
 start a fresh one. MyBot must be running for the bot to answer, and replies
 arrive when the bot finishes. Choose **Disconnect** to stop.
+
+When the bot needs your approval or asks you a question, it sends it to the
+chat. Reply `yes`, `always`, or `no` to an approval, or a number (or your own
+words) to a question. Questions with several parts still have to be answered
+in MyBot.
 
 ## Change or remove a bot
 

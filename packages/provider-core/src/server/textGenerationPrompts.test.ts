@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
+import * as Schema from "effect/Schema";
 
-import { buildThreadTitlePrompt } from "./textGenerationPrompts.ts";
+import { buildActionReviewPrompt, buildThreadTitlePrompt } from "./textGenerationPrompts.ts";
 import {
   normalizeCliError,
   sanitizeThreadTitle,
@@ -187,5 +188,21 @@ describe("normalizeCliError", () => {
 
     expect(result.detail).toBe("Failed to generate a commit message");
     expect(result.message).not.toContain("secret-token");
+  });
+});
+
+describe("buildActionReviewPrompt", () => {
+  it("asks for a conservative verdict on the action under the user's rules", () => {
+    const { prompt, outputSchema } = buildActionReviewPrompt({
+      action: "Kind: command\ngit push --force",
+      rules: "Never push to main.",
+    });
+    expect(prompt).toContain("When in doubt, ask.");
+    expect(prompt).toContain("Never push to main.");
+    expect(prompt).toContain("git push --force");
+    expect(
+      Schema.decodeUnknownSync(outputSchema)({ verdict: "ask", reason: "Rewrites history." }),
+    ).toEqual({ verdict: "ask", reason: "Rewrites history." });
+    expect(() => Schema.decodeUnknownSync(outputSchema)({ verdict: "deny", reason: "" })).toThrow();
   });
 });

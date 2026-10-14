@@ -16,7 +16,10 @@ import * as Schema from "effect/Schema";
 import { createMuseSdkHost, createMuseSdkHostEffect, type MuseSdkHost } from "./sdk.ts";
 import { museModelCapabilities, resolveMuseReasoningEffort } from "./modelCatalog.ts";
 import type { ProviderTextGeneration } from "@t3tools/provider-core/server/textGeneration";
-import { buildThreadTitlePrompt } from "@t3tools/provider-core/server/textGenerationPrompts";
+import {
+  buildActionReviewPrompt,
+  buildThreadTitlePrompt,
+} from "@t3tools/provider-core/server/textGenerationPrompts";
 import {
   sanitizeThreadTitle,
   toJsonSchemaObject,
@@ -297,5 +300,14 @@ export const makeMuseTextGeneration = Effect.fn("makeMuseTextGeneration")(functi
     });
     return { title: sanitizeThreadTitle(generated.title) };
   });
-  return { generateThreadTitle } satisfies ProviderTextGeneration;
+  const reviewAction: ProviderTextGeneration["reviewAction"] = Effect.fn(
+    "MuseTextGeneration.reviewAction",
+  )(function* (input) {
+    return yield* runMuseJson({
+      operation: "reviewAction",
+      ...buildActionReviewPrompt(input),
+      modelSelection: input.modelSelection,
+    });
+  });
+  return { generateThreadTitle, reviewAction } satisfies ProviderTextGeneration;
 });
