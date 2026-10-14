@@ -62,7 +62,7 @@ export function NewThreadLinkView({ link }: { readonly link: NewThreadLink }) {
       replace: true,
     }).catch(() => null);
     if (opened === null) {
-      setState({ status: "failed", message: "T3 Code could not open a new thread." });
+      setState({ status: "failed", message: "MyBot could not open a new thread." });
       return;
     }
     setState({ status: "opened" });

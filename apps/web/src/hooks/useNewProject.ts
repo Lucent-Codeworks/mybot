@@ -52,7 +52,7 @@ export function useNewProject() {
       }
 
       const { projectId, workspaceRoot } = result.value;
-      // The folder sits in T3 Code's data directory, so always say where.
+      // The folder sits in MyBot's data directory, so always say where.
       toastManager.add(
         stackedThreadToast({
           type: "success",

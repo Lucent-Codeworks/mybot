@@ -971,7 +971,7 @@ export const DESKTOP_FILE_EXCLUSIONS = [
   "!**/node_modules/@cursor/sdk-*/**/*",
   "!apps/desktop/prod-resources/cursor-sdk",
   "!apps/desktop/prod-resources/cursor-sdk/**/*",
-  // T3 Code always passes the user's installed Claude executable to the SDK,
+  // MyBot always passes the user's installed Claude executable to the SDK,
   // so the SDK's optional platform packages (each a ~200MB bundled executable)
   // are dead weight. The trailing dash keeps the SDK's own JS package.
   "!**/node_modules/@anthropic-ai/claude-agent-sdk-*/**/*",
@@ -2843,7 +2843,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
           name: "MyBot",
           schemes: ["mybot", "mybot-dev"],
         },
-        // Lets people choose T3 Code as their default web browser, which opens
+        // Lets people choose MyBot as their default web browser, which opens
         // each link in a new thread's browser panel.
         {
           name: "Web site URL",
@@ -4157,7 +4157,7 @@ const buildDesktopArtifactCli = Command.make("build-desktop-artifact", {
     Flag.optional,
   ),
 }).pipe(
-  Command.withDescription("Build a desktop artifact for T3 Code."),
+  Command.withDescription("Build a desktop artifact for MyBot."),
   Command.withHandler((input) => Effect.flatMap(resolveBuildOptions(input), buildDesktopArtifact)),
 );
 

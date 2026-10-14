@@ -1,7 +1,7 @@
 import { DEFAULT_HOSTED_APP_URL } from "./connectAuth.ts";
 
 /**
- * Prompt links open T3 Code from outside it with a prompt ready to send. They never send it:
+ * Prompt links open MyBot from outside it with a prompt ready to send. They never send it:
  * a link from a stranger fills a draft, and the user reads it and presses Send. A link also
  * cannot pick a runtime mode. That stays the user's own default.
  *
@@ -79,7 +79,7 @@ function readPrompt(params: URLSearchParams): PromptLinkResult<LinkedPrompt | nu
   if (raw.length > PROMPT_LINK_MAX_PROMPT_LENGTH) {
     return {
       ok: false,
-      error: `This prompt is longer than ${PROMPT_LINK_MAX_PROMPT_LENGTH.toLocaleString("en-US")} characters, so T3 Code did not open it.`,
+      error: `This prompt is longer than ${PROMPT_LINK_MAX_PROMPT_LENGTH.toLocaleString("en-US")} characters, so MyBot did not open it.`,
     };
   }
   const prompt = sanitizeLinkedPrompt(raw);
@@ -87,7 +87,7 @@ function readPrompt(params: URLSearchParams): PromptLinkResult<LinkedPrompt | nu
     return {
       ok: false,
       error:
-        "This prompt had only hidden characters, so it may be malicious. T3 Code did not open it.",
+        "This prompt had only hidden characters, so it may be malicious. MyBot did not open it.",
     };
   }
   return { ok: true, value: prompt.text.length > 0 ? prompt : null };

@@ -32,7 +32,7 @@ describe("buildCommandPaletteProjectMetadata", () => {
       projects: [
         {
           environmentId: localEnvironmentId,
-          title: "T3 Code",
+          title: "MyBot",
           workspaceRoot: "/Users/theo/Projects/t3code",
         },
         {
@@ -45,7 +45,7 @@ describe("buildCommandPaletteProjectMetadata", () => {
     });
 
     expect(metadata.searchTerms).toEqual([
-      "T3 Code",
+      "MyBot",
       "/Users/theo/Projects/t3code",
       "Local",
       "t3code",
@@ -62,7 +62,7 @@ describe("buildCommandPaletteProjectMetadata", () => {
         {
           kind: "action",
           value: "project:t3code",
-          title: "T3 Code",
+          title: "MyBot",
           searchTerms: metadata.searchTerms,
           icon: null,
           run: async () => undefined,
@@ -78,12 +78,12 @@ describe("buildCommandPaletteProjectMetadata", () => {
       projects: [
         {
           environmentId: remoteEnvironmentId,
-          title: "T3 Code",
+          title: "MyBot",
           workspaceRoot: "/srv/t3code",
         },
         {
           environmentId: remoteEnvironmentId,
-          title: "T3 Code copy",
+          title: "MyBot copy",
           workspaceRoot: "/srv/t3code-feature",
         },
       ],
@@ -99,12 +99,12 @@ describe("buildCommandPaletteProjectMetadata", () => {
       projects: [
         {
           environmentId: remoteEnvironmentId,
-          title: "T3 Code",
+          title: "MyBot",
           workspaceRoot: "/srv/t3code",
         },
         {
           environmentId: secondRemoteEnvironmentId,
-          title: "T3 Code mirror",
+          title: "MyBot mirror",
           workspaceRoot: "/srv/mirror/t3code",
         },
       ],
@@ -122,7 +122,7 @@ describe("buildCommandPaletteProjectMetadata", () => {
       projects: [
         {
           environmentId: remoteEnvironmentId,
-          title: "T3 Code",
+          title: "MyBot",
           workspaceRoot: "/srv/t3code",
         },
       ],
@@ -408,7 +408,7 @@ describe("buildThreadActionItems", () => {
     ];
     const items = buildThreadActionItems({
       threads,
-      projectTitleById: new Map([[PROJECT_ID, "T3 Code"]]),
+      projectTitleById: new Map([[PROJECT_ID, "MyBot"]]),
       sortOrder: "created_at",
       icon: null,
       getContentMatch: (thread) =>
@@ -557,7 +557,7 @@ describe("buildThreadActionItems", () => {
   it("keeps message excerpts searchable without replacing thread metadata", () => {
     const [item] = buildThreadActionItems({
       threads: [makeThread()],
-      projectTitleById: new Map([[PROJECT_ID, "T3 Code"]]),
+      projectTitleById: new Map([[PROJECT_ID, "MyBot"]]),
       sortOrder: "updated_at",
       icon: null,
       getContentMatch: () => ({
@@ -574,7 +574,7 @@ describe("buildThreadActionItems", () => {
       snippet: "The relay reconnect is now bounded.",
       query: "reconnect",
     });
-    expect(item?.description).toBe("T3 Code");
+    expect(item?.description).toBe("MyBot");
   });
 
   it("surfaces threads when the query is their ID, without outranking title matches", () => {
@@ -590,7 +590,7 @@ describe("buildThreadActionItems", () => {
     });
     const items = buildThreadActionItems({
       threads: [idThread, titleThread],
-      projectTitleById: new Map([[PROJECT_ID, "T3 Code"]]),
+      projectTitleById: new Map([[PROJECT_ID, "MyBot"]]),
       sortOrder: "updated_at",
       icon: null,
       runThread: async (_thread) => undefined,
@@ -614,14 +614,14 @@ describe("buildThreadActionItems", () => {
   it("prefers renderDescription when provided", () => {
     const [item] = buildThreadActionItems({
       threads: [makeThread({ title: "Search" })],
-      projectTitleById: new Map([[PROJECT_ID, "T3 Code"]]),
+      projectTitleById: new Map([[PROJECT_ID, "MyBot"]]),
       sortOrder: "updated_at",
       icon: null,
       renderDescription: (thread, { projectTitle }) => `${projectTitle}:${thread.title}`,
       runThread: async (_thread) => undefined,
     });
 
-    expect(item?.description).toBe("T3 Code:Search");
+    expect(item?.description).toBe("MyBot:Search");
   });
 
   it("filters archived threads out of thread search items", () => {

@@ -837,7 +837,7 @@ describe("CodexAdapterV2 dynamic tool projection", () => {
         status: "failed",
         arguments: {
           title: "Restrict the breakpoint to Git actions",
-          code: "await sky.type_text({app:'T3 Code (Nightly)',text:'debug(ga.run)'});",
+          code: "await sky.type_text({app:'MyBot (Nightly)',text:'debug(ga.run)'});",
         },
         result: { content: [{ type: "text", text: "Illegal Unicode escape sequence" }] },
       });
@@ -1629,7 +1629,7 @@ function codexReplayPreamble(input: {
       frame: {
         id: 1,
         result: {
-          userAgent: "T3 Code/0.156.1",
+          userAgent: "MyBot/0.156.1",
           codexHome: "/tmp/codex-home",
           platformFamily: "unix",
           platformOs: "macos",
