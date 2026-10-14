@@ -1,6 +1,6 @@
-# Threads from older T3 Code versions
+# Threads from older MyBot versions
 
-On your first V2 launch, T3 Code copies the V1 database, `state.sqlite`, into `statev2.sqlite`
+On your first V2 launch, MyBot copies the V1 database, `state.sqlite`, into `statev2.sqlite`
 in the same data directory and migrates the copy. Your threads appear automatically, with full
 transcripts imported as needed. You do not need to run an import command.
 
@@ -15,7 +15,7 @@ the V2 desktop app copies stashed prompts, unsent drafts, layout, and theme from
 change in V2 afterwards stays in V2.
 
 The migrated thread keeps its title, project, provider and model selection, permission and
-interaction modes, archive state, settlement state, and snooze and pin state. T3 Code also brings over user and assistant messages, their timestamps, and
+interaction modes, archive state, settlement state, and snooze and pin state. MyBot also brings over user and assistant messages, their timestamps, and
 supported attachments. Large histories may appear in stages while the server imports transcripts.
 
 The migration does not recreate the old provider's live session. It also does not convert old run
@@ -25,7 +25,7 @@ present.
 
 ## Continuing a migrated thread
 
-The first new message starts a fresh provider session. T3 Code selects intact user and assistant
+The first new message starts a fresh provider session. MyBot selects intact user and assistant
 messages using the same [handoff budget](./portable-handoffs.md) as a provider switch. Omitted text
 remains in the thread and can be retrieved by the agent. The migration retains its separate
 32,000-character recovery excerpt; neither that excerpt nor the handoff replaces the full imported
@@ -37,7 +37,7 @@ handoff is also a good choice when the old conversation contains conflicting ins
 
 ## Keeping a recovery copy
 
-T3 Code does not currently have a whole-thread export command. Before a major server update, stop
+MyBot does not currently have a whole-thread export command. Before a major server update, stop
 the server and copy its `userdata` directory to a safe location. The default is
 `~/.t3/userdata`; a server started with `--home-dir <path>` uses `<path>/userdata`.
 

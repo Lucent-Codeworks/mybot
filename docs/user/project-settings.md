@@ -121,7 +121,7 @@ working. Current logs, message attachments, and browser profiles are kept.
 
 Select the project and open Project to choose an icon, emoji, monogram, or image. The choice
 appears on connected clients. Choose **Automatic** to let
-T3 Code detect an icon again.
+MyBot detect an icon again.
 
 Choose **Monogram** in the icon picker to set one or two letters or numbers and a color.
 
