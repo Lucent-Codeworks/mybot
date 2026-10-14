@@ -46,7 +46,7 @@ export function SettingsClientStorageRouteScreen() {
       environment.environmentId;
     Alert.alert(
       `Clear cache for ${label}?`,
-      "This removes offline threads, server metadata, and cached branches for this environment. The saved connection and credentials stay intact.",
+      "This removes offline threads and server metadata for this environment. The saved connection and credentials stay intact.",
       [
         { text: "Cancel", style: "cancel" },
         {

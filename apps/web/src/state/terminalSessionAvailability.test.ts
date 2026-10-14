@@ -28,7 +28,6 @@ const terminal: TerminalSummary = {
   threadId: "thread",
   terminalId: "term-1",
   cwd: "/repo",
-  worktreePath: null,
   status: "running",
   pid: 123,
   exitCode: null,

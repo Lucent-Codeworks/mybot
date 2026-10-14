@@ -1,12 +1,9 @@
-import { threadPullRequestSearchTerms } from "@t3tools/shared/threadPullRequests";
-import type { CommandPaletteLinkedThreads } from "../commandPaletteBus";
 import {
   type EnvironmentId,
   type FilesystemBrowseEntry,
   type KeybindingCommand,
   THREAD_JUMP_KEYBINDING_COMMANDS,
 } from "@t3tools/contracts";
-import { filterFilesystemBrowseEntries } from "@t3tools/client-runtime/state/filesystem";
 import type { SidebarThreadSortOrder } from "@t3tools/contracts/settings";
 import * as Arr from "effect/Array";
 import * as Result from "effect/Result";
@@ -19,25 +16,6 @@ import { type Project, type SidebarThreadSummary, type Thread } from "../types";
 export const RECENT_THREAD_LIMIT = 12;
 export const ITEM_ICON_CLASS = "size-4 text-icon-muted";
 export const ADDON_ICON_CLASS = "size-4";
-
-/** A PR's relations include archived threads that normal palette search omits. */
-export function buildLinkedThreadActionItems(
-  input: CommandPaletteLinkedThreads & {
-    query: string;
-    icon: ReactNode;
-    runThread: (thread: Pick<SidebarThreadSummary, "environmentId" | "id">) => Promise<void>;
-  },
-): CommandPaletteActionItem[] {
-  return input.threads.map((thread) => ({
-    kind: "action",
-    value: `thread:${input.environmentId}:${thread.id}`,
-    title: thread.title || "Untitled thread",
-    description: thread.archivedAt === null ? "Linked thread" : "Archived thread",
-    searchTerms: [input.query, thread.title],
-    icon: input.icon,
-    run: () => input.runThread({ environmentId: input.environmentId, id: thread.id }),
-  }));
-}
 
 export function browseInputEndPaddingClass(input: {
   readonly willCreateProjectPath: boolean;
@@ -62,11 +40,7 @@ export type SearchOverlayMode = "command" | "files" | "content";
 
 export type CommandPaletteOpenIntent =
   | { readonly kind: "add-project" | "new-thread-in" | "change-theme" }
-  | {
-      readonly kind: "search";
-      readonly query: string;
-      readonly linkedThreads?: CommandPaletteLinkedThreads;
-    };
+  | { readonly kind: "search"; readonly query: string };
 
 export interface CommandPaletteUiState {
   readonly open: boolean;
@@ -77,11 +51,7 @@ export interface CommandPaletteUiState {
 export type CommandPaletteUiAction =
   | { readonly _tag: "SetOpen"; readonly open: boolean }
   | { readonly _tag: "ToggleMode"; readonly mode: SearchOverlayMode }
-  | {
-      readonly _tag: "OpenSearch";
-      readonly query: string;
-      readonly linkedThreads?: CommandPaletteLinkedThreads;
-    }
+  | { readonly _tag: "OpenSearch"; readonly query: string }
   | { readonly _tag: "OpenAddProject" }
   | { readonly _tag: "OpenNewThreadIn" }
   | { readonly _tag: "OpenChangeTheme" }
@@ -104,11 +74,7 @@ export function reduceCommandPaletteUiState(
       return {
         open: true,
         mode: "command",
-        openIntent: {
-          kind: "search",
-          query: action.query,
-          ...(action.linkedThreads ? { linkedThreads: action.linkedThreads } : {}),
-        },
+        openIntent: { kind: "search", query: action.query },
       };
     case "OpenAddProject":
       return { open: true, mode: "command", openIntent: { kind: "add-project" } };
@@ -245,8 +211,8 @@ export function enumerateCommandPaletteItems(
 
 export type CommandPaletteMode = "root" | "root-browse" | "submenu" | "submenu-browse";
 
-// A project as the palette shows it. `displayName` is the grouped label (for
-// example "owner/repo" when projects are merged across machines). Keep `title`
+// A project as the palette shows it. `displayName` is the group label shared by
+// the same folder's projects across environments. Keep `title`
 // as the real project title: the automatic project icon is derived from it, and
 // every other surface uses the real title, so overriding it desyncs the icon.
 export type CommandPaletteProject = Project & { readonly displayName: string };
@@ -298,7 +264,6 @@ export function buildProjectActionItems(input: {
 export type BuildThreadActionItemsThread = Pick<
   SidebarThreadSummary,
   | "archivedAt"
-  | "branch"
   | "createdAt"
   | "environmentId"
   | "id"
@@ -306,9 +271,7 @@ export type BuildThreadActionItemsThread = Pick<
   | "projectId"
   | "runtime"
   | "title"
-  | "worktreePath"
 > & {
-  pullRequests?: SidebarThreadSummary["pullRequests"];
   updatedAt: string;
   latestUserMessageAt?: string | null;
 };
@@ -343,9 +306,6 @@ export function buildThreadActionItems<TThread extends BuildThreadActionItemsThr
     if (projectTitle) {
       descriptionParts.push(projectTitle);
     }
-    if (thread.branch) {
-      descriptionParts.push(`#${thread.branch}`);
-    }
     if (thread.id === input.activeThreadId) {
       descriptionParts.push("Current thread");
     }
@@ -363,9 +323,7 @@ export function buildThreadActionItems<TThread extends BuildThreadActionItemsThr
         value: `thread:${thread.id}`,
         searchTerms: [
           thread.title,
-          ...threadPullRequestSearchTerms(thread),
           projectTitle ?? ``,
-          thread.branch ?? ``,
           contentMatch?.snippet ?? ``,
           // Last so pasted IDs never outrank title matches for shared substrings.
           thread.id,
@@ -560,25 +518,6 @@ export function buildBrowseGroups(input: {
   }
 
   return [{ value: "directories", label: "Directories", items }];
-}
-
-export function filterPinnedBrowseEntries(input: {
-  browseEntries: ReadonlyArray<FilesystemBrowseEntry>;
-  filterQuery: string;
-  pinnedDirectoryName: string;
-  caseSensitive: boolean;
-}): ReturnType<typeof filterFilesystemBrowseEntries> {
-  const namesMatch = (left: string, right: string) =>
-    input.caseSensitive ? left === right : left.toLowerCase() === right.toLowerCase();
-  const visibleFilterQuery = namesMatch(input.filterQuery, input.pinnedDirectoryName)
-    ? ""
-    : input.filterQuery;
-  const { visibleEntries } = filterFilesystemBrowseEntries(input.browseEntries, visibleFilterQuery);
-  const exactEntry =
-    input.filterQuery.length > 0
-      ? (input.browseEntries.find((entry) => namesMatch(entry.name, input.filterQuery)) ?? null)
-      : null;
-  return { visibleEntries, exactEntry };
 }
 
 export function getCommandPaletteMode(input: {

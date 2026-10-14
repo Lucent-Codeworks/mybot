@@ -183,8 +183,6 @@ it.effect("task_cancel ends a delegated child's background native subagent", () 
           modelSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: cwd,
           createdBy: "user",
           creationSource: "web",
         });

@@ -103,8 +103,6 @@ const seedScenario = Effect.fn(function* (scenario: Scenario) {
         modelSelection,
         runtimeMode: "full-access",
         interactionMode: "default",
-        branch: null,
-        worktreePath: null,
         activeProviderThreadId: null,
         lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: id },
         forkedFrom: null,

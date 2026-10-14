@@ -51,74 +51,6 @@ describe("ServerSettings response streaming", () => {
   });
 });
 
-describe("storage cleanup settings", () => {
-  it("keeps cleanup disabled for existing installations", () => {
-    expect(decodeServerSettings({}).worktreeCleanup).toBeNull();
-    expect(decodeServerSettings({}).storageCleanup).toEqual({
-      worktreeAfterDays: null,
-      worktreeOnMerge: false,
-      worktreeOnDelete: false,
-      worktreeUnchanged: false,
-      worktreeKeepWhen: "uncommitted-changes",
-      browserArtifactsAfterDays: null,
-      logsAfterDays: null,
-    });
-  });
-
-  it("accepts eight-day retention and disabling one rule without resetting others", () => {
-    expect(decodeServerSettingsPatch({ storageCleanup: { worktreeAfterDays: 8 } })).toEqual({
-      storageCleanup: { worktreeAfterDays: 8 },
-    });
-    expect(decodeServerSettingsPatch({ storageCleanup: { worktreeAfterDays: null } })).toEqual({
-      storageCleanup: { worktreeAfterDays: null },
-    });
-  });
-
-  it("accepts partial custom patches but requires complete stored project rules", () => {
-    expect(
-      decodeServerSettingsPatch({
-        worktreeCleanup: { mode: "custom", rules: { worktreeAfterDays: 8 } },
-      }),
-    ).toEqual({ worktreeCleanup: { mode: "custom", rules: { worktreeAfterDays: 8 } } });
-    expect(() =>
-      decodeServerSettings({
-        projectSettingsOverrides: {
-          project: { worktreeCleanup: { mode: "custom", rules: { worktreeAfterDays: 8 } } },
-        },
-      }),
-    ).toThrow();
-  });
-
-  it("decodes older custom rules with the default local-file policy", () => {
-    const settings = decodeServerSettings({
-      worktreeCleanup: {
-        mode: "custom",
-        rules: {
-          worktreeAfterDays: 8,
-          worktreeOnMerge: false,
-          worktreeOnDelete: false,
-          worktreeUnchanged: false,
-        },
-      },
-    });
-    expect(settings.worktreeCleanup).toMatchObject({
-      rules: { worktreeKeepWhen: "uncommitted-changes" },
-    });
-    expect(
-      decodeServerSettingsPatch({ storageCleanup: { worktreeKeepWhen: "tracked-changes" } }),
-    ).toEqual({ storageCleanup: { worktreeKeepWhen: "tracked-changes" } });
-    expect(() =>
-      decodeServerSettingsPatch({ storageCleanup: { worktreeKeepWhen: "unknown" } }),
-    ).toThrow();
-  });
-
-  it.each([0, -1, 1.5, 3651])("rejects invalid retention %s", (days) => {
-    expect(() =>
-      decodeServerSettingsPatch({ storageCleanup: { browserArtifactsAfterDays: days } }),
-    ).toThrow();
-  });
-});
-
 describe("ClientSettings rich text composer", () => {
   it("enables rich text for new and existing settings without a saved preference", () => {
     expect(decodeClientSettings({}).composerRichTextEnabled).toBe(true);
@@ -703,53 +635,6 @@ describe("ClientSettings composer collapse", () => {
   });
 });
 
-describe("ServerSettings thread settlement", () => {
-  it("defaults merge settlement on and inactivity settlement to three days", () => {
-    const settings = decodeServerSettings({});
-    expect(settings.sidebarAutoSettleAfterDays).toBe(3);
-    expect(settings.sidebarAutoSettleOnMerge).toBe(true);
-  });
-
-  it("allows both automatic rules to be disabled", () => {
-    expect(
-      decodeServerSettings({
-        sidebarAutoSettleAfterDays: null,
-        sidebarAutoSettleOnMerge: false,
-      }),
-    ).toMatchObject({ sidebarAutoSettleAfterDays: null, sidebarAutoSettleOnMerge: false });
-    expect(
-      decodeServerSettingsPatch({
-        sidebarAutoSettleAfterDays: null,
-        sidebarAutoSettleOnMerge: false,
-      }),
-    ).toMatchObject({ sidebarAutoSettleAfterDays: null, sidebarAutoSettleOnMerge: false });
-  });
-
-  it.each([-1, 0, 91])("rejects an auto-settle threshold outside 1..90: %s", (value) => {
-    expect(() => decodeServerSettings({ sidebarAutoSettleAfterDays: value })).toThrow();
-    expect(() => decodeServerSettingsPatch({ sidebarAutoSettleAfterDays: value })).toThrow();
-  });
-});
-
-describe("ClientSettings pull request merge methods", () => {
-  it("defaults to no project overrides and accepts supported methods", () => {
-    expect(decodeClientSettings({}).pullRequestMergeMethodOverrides).toEqual({});
-    expect(
-      decodeClientSettingsPatch({
-        pullRequestMergeMethodOverrides: { project: "squash" },
-      }).pullRequestMergeMethodOverrides,
-    ).toEqual({ project: "squash" });
-  });
-
-  it("rejects unsupported project merge methods", () => {
-    expect(() =>
-      decodeClientSettingsPatch({
-        pullRequestMergeMethodOverrides: { project: "fast-forward" },
-      }),
-    ).toThrow();
-  });
-});
-
 describe("ServerSettings.providerInstances (slice-2 invariant)", () => {
   it("defaults to an empty record so legacy configs without the key still decode", () => {
     expect(DEFAULT_SERVER_SETTINGS.providerInstances).toEqual({});
@@ -847,75 +732,6 @@ describe("provider enabled defaults", () => {
     expect(
       resolveProviderInstanceEnabled({ driver: codex, enabled: false, config: { enabled: true } }),
     ).toBe(false);
-  });
-});
-
-describe("ServerSettings worktree defaults", () => {
-  it("defaults the thread env mode to inherit and keeps stored values", () => {
-    expect(decodeServerSettings({}).defaultThreadEnvMode).toBeNull();
-    expect(decodeServerSettings({ defaultThreadEnvMode: "worktree" }).defaultThreadEnvMode).toBe(
-      "worktree",
-    );
-    expect(
-      decodeServerSettings({ defaultThreadEnvMode: "remote" }).defaultThreadEnvMode,
-    ).toBeNull();
-    expect(
-      decodeServerSettingsPatch({ defaultThreadEnvMode: null }).defaultThreadEnvMode,
-    ).toBeNull();
-  });
-
-  it("keeps an inherited thread env mode off the wire for older clients", () => {
-    const encode = Schema.encodeSync(ServerSettings);
-    expect("defaultThreadEnvMode" in encode(decodeServerSettings({}))).toBe(false);
-    expect(
-      encode(decodeServerSettings({ defaultThreadEnvMode: "worktree" })).defaultThreadEnvMode,
-    ).toBe("worktree");
-  });
-
-  it("defaults start-from-origin on for legacy configs", () => {
-    expect(decodeServerSettings({}).newWorktreesStartFromOrigin).toBe(true);
-  });
-
-  it("accepts start-from-origin updates", () => {
-    expect(
-      decodeServerSettingsPatch({ newWorktreesStartFromOrigin: false }).newWorktreesStartFromOrigin,
-    ).toBe(false);
-  });
-
-  it("defaults worktree submodules to inherit and tolerates unknown modes", () => {
-    expect(decodeServerSettings({}).worktreeSubmodules).toBeNull();
-    expect(decodeServerSettings({ worktreeSubmodules: "top-level" }).worktreeSubmodules).toBe(
-      "top-level",
-    );
-    expect(decodeServerSettings({ worktreeSubmodules: "shallow" }).worktreeSubmodules).toBeNull();
-    expect(decodeServerSettingsPatch({ worktreeSubmodules: null }).worktreeSubmodules).toBeNull();
-  });
-});
-
-describe("ServerSettings.sourceControlWritingStyle", () => {
-  it("defaults all style settings for legacy configs", () => {
-    const settings = decodeServerSettings({});
-
-    expect(settings.sourceControlWritingStyle).toEqual({
-      mode: "repo_conventions",
-      customInstructions: "",
-      followChangeRequestTemplates: true,
-    });
-    expect(settings.sourceControlWriterModelSelection).toBeNull();
-  });
-
-  it("trims partial style updates", () => {
-    const patch = decodeServerSettingsPatch({
-      sourceControlWritingStyle: {
-        mode: "custom",
-        customInstructions: "  Prefer concise wording.  ",
-      },
-    });
-
-    expect(patch.sourceControlWritingStyle).toEqual({
-      mode: "custom",
-      customInstructions: "Prefer concise wording.",
-    });
   });
 });
 
@@ -1025,43 +841,6 @@ it("validates remote device hosts and rejects ambiguous host ids", () => {
     decodeDeviceHostSettings({ deviceHosts: [{ ...host, target: "-oProxyCommand=bad" }] }),
   ).toThrow();
   expect(() => decodeDeviceHostSettings({ deviceHosts: [{ ...host, port: 0 }] })).toThrow();
-});
-
-describe("branch naming settings", () => {
-  it("defaults existing settings to the t3 static prefix", () => {
-    expect(decodeServerSettings({})).toMatchObject({
-      branchNamingMode: "static",
-      branchNamePrefix: "t3",
-      branchNameInstructions: "",
-    });
-  });
-  it.each(["static", "semantic", "custom"])(
-    "round-trips %s and project overrides",
-    (branchNamingMode) => {
-      const naming = {
-        branchNamingMode,
-        branchNamePrefix: "team/",
-        branchNameInstructions: "Include the issue ID.",
-      };
-      const input = { ...naming, projectSettingsOverrides: { project: naming } };
-      expect(encodeServerSettings(decodeServerSettings(input))).toMatchObject(input);
-      expect(decodeServerSettingsPatch(input)).toEqual(input);
-    },
-  );
-});
-
-describe("ServerSettings.removeAgentCreditsOnMerge", () => {
-  it("keeps agent credits by default and accepts opt-in patches", () => {
-    expect(decodeServerSettings({}).removeAgentCreditsOnMerge).toBe(false);
-    expect(
-      decodeServerSettingsPatch({ removeAgentCreditsOnMerge: true }).removeAgentCreditsOnMerge,
-    ).toBe(true);
-    expect(
-      decodeServerSettings({
-        projectSettingsOverrides: { project: { removeAgentCreditsOnMerge: true } },
-      }).projectSettingsOverrides["project" as ProjectId]?.removeAgentCreditsOnMerge,
-    ).toBe(true);
-  });
 });
 
 describe("resolveProjectProviderInstanceEnabled", () => {
@@ -1182,5 +961,25 @@ describe("server model preferences", () => {
     expect(decodeServerSettingsPatch({ migrateModelPreferences: input })).toEqual({
       migrateModelPreferences: input,
     });
+  });
+});
+
+describe("ServerSettings thread settlement", () => {
+  it("defaults inactivity settlement to three days", () => {
+    expect(decodeServerSettings({}).sidebarAutoSettleAfterDays).toBe(3);
+  });
+
+  it("allows inactivity settlement to be disabled", () => {
+    expect(decodeServerSettings({ sidebarAutoSettleAfterDays: null })).toMatchObject({
+      sidebarAutoSettleAfterDays: null,
+    });
+    expect(decodeServerSettingsPatch({ sidebarAutoSettleAfterDays: null })).toMatchObject({
+      sidebarAutoSettleAfterDays: null,
+    });
+  });
+
+  it.each([-1, 0, 91])("rejects an auto-settle threshold outside 1..90: %s", (value) => {
+    expect(() => decodeServerSettings({ sidebarAutoSettleAfterDays: value })).toThrow();
+    expect(() => decodeServerSettingsPatch({ sidebarAutoSettleAfterDays: value })).toThrow();
   });
 });

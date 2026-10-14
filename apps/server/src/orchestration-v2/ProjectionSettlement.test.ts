@@ -48,8 +48,6 @@ const createThread = Effect.fn(function* (
     modelSelection,
     runtimeMode: "full-access",
     interactionMode: "default",
-    branch: "feature",
-    worktreePath: null,
     activeProviderThreadId: null,
     lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
     forkedFrom: null,
@@ -271,10 +269,8 @@ it.effect.each([
         const expected = shell.threads.find((thread) => thread.id === candidate.id)!;
         assert.deepEqual(candidate.pendingBackgroundTasks, expected.pendingBackgroundTasks);
         const settings = {
-          pullRequest: null,
           nowMs: DateTime.toEpochMillis(now),
           autoSettleAfterDays: 7,
-          autoSettleOnMerge: false,
         };
         assert.deepEqual(
           resolveAutoSettlementAt({ ...settings, thread: candidate }),
@@ -352,56 +348,6 @@ it.effect.each([
       DateTime.formatIso(written),
     );
   }).pipe(Effect.provide(testLayer)),
-);
-
-const pullRequestLink = (number: number) => ({
-  host: "github.com",
-  repository: "owner/repository",
-  number,
-  url: `https://github.com/owner/repository/pull/${number}`,
-  source: "manual" as const,
-  linkedAt: DateTime.formatIso(old),
-  snapshot: null,
-  stack: null,
-});
-
-it.effect.each([
-  ["sql", layerSql],
-  ["memory", ProjectionStore.layerMemory],
-] as const)(
-  "%s: lists only active threads with pull request links, oldest first",
-  ([, testLayer]) =>
-    Effect.gen(function* () {
-      const store = yield* ProjectionStore.ProjectionStoreV2;
-      yield* createThread("no-links");
-      yield* createThread("empty-links", { pullRequests: [] });
-      yield* createThread("archived-link", {
-        archivedAt: old,
-        pullRequests: [pullRequestLink(1)],
-      });
-      const settled = yield* createThread("settled-link", {
-        settledOverride: "settled",
-        settledAt: old,
-        updatedAt: DateTime.subtract(now, { days: 12 }),
-        pullRequests: [pullRequestLink(2)],
-      });
-      const open = yield* createThread("open-link", {
-        pullRequests: [pullRequestLink(3), pullRequestLink(4)],
-      });
-
-      const threads = yield* store.getThreadsWithPullRequests();
-      assert.deepEqual(
-        threads.map((thread) => [thread.id, thread.settledOverride, thread.pullRequests?.length]),
-        [
-          [settled, "settled", 1],
-          [open, null, 2],
-        ],
-      );
-      assert.deepEqual(
-        (yield* store.getThreadsWithPullRequests(open)).map((thread) => thread.id),
-        [open],
-      );
-    }).pipe(Effect.provide(testLayer)),
 );
 
 it.effect.each([

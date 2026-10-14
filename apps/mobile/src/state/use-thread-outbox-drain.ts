@@ -14,7 +14,6 @@ import {
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   type MessageId,
 } from "@t3tools/contracts";
-import { buildTemporaryWorktreeBranchName } from "@t3tools/shared/git";
 import * as Cause from "effect/Cause";
 import { AsyncResult } from "effect/reactivity";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -25,7 +24,6 @@ import { scopedThreadKey } from "../lib/scopedEntities";
 import { buildProjectThreadStartTurnInput } from "../lib/projectThreadStartTurn";
 import { serializeComposerMessageForServer, uploadedComposerContext } from "../lib/composerContext";
 import { prepareTurnAttachments, type PreparedTurnAttachments } from "../lib/attachmentUpload";
-import { randomHex } from "../lib/uuid";
 import {
   describeUnavailableModelSelection,
   isModelSelectionUnavailable,
@@ -43,7 +41,6 @@ import {
   recordPendingThreadCreationOutcome,
 } from "./pending-thread-creation";
 import { serverEnvironment } from "./server";
-import { gitEnvironment } from "./git";
 import { readEnvironmentScope, useEnvironmentsWithScope } from "./session";
 import {
   confirmThreadOutboxMessageQueued,
@@ -523,19 +520,6 @@ export async function restoreRejectedQueuedMessage(
       ...(queuedMessage.modelSelection ? { modelSelection: queuedMessage.modelSelection } : {}),
       ...(queuedMessage.runtimeMode ? { runtimeMode: queuedMessage.runtimeMode } : {}),
       ...(queuedMessage.interactionMode ? { interactionMode: queuedMessage.interactionMode } : {}),
-      ...(queuedMessage.creation
-        ? {
-            workspaceSelection: {
-              mode: queuedMessage.creation.workspaceMode,
-              branch: queuedMessage.creation.branch,
-              worktreePath: queuedMessage.creation.worktreePath,
-              pullRequestReference: queuedMessage.creation.pullRequestReference,
-              ...(queuedMessage.creation.startFromOrigin !== undefined
-                ? { startFromOrigin: queuedMessage.creation.startFromOrigin }
-                : {}),
-            },
-          }
-        : {}),
     });
     const restoredDraft = getComposerDraftSnapshot(draftKey);
     rollback = { snapshot: originalDraft, merged: restoredDraft };
@@ -663,9 +647,6 @@ async function preserveUploadedAttachmentsForEditor(
 
 export function useThreadOutboxDrain(): void {
   const startTurn = useAtomCommand(threadEnvironment.startTurn, { reportFailure: false });
-  const preparePullRequest = useAtomCommand(gitEnvironment.preparePullRequestThread, {
-    reportFailure: false,
-  });
   const setThreadRuntimeMode = useAtomCommand(threadEnvironment.setRuntimeMode, {
     reportFailure: false,
   });
@@ -977,11 +958,7 @@ export function useThreadOutboxDrain(): void {
   );
 
   const sendQueuedCreation = useCallback(
-    async (
-      queuedMessage: QueuedThreadMessage,
-      creation: QueuedThreadCreation,
-      projectCwd: string,
-    ) => {
+    async (queuedMessage: QueuedThreadMessage, creation: QueuedThreadCreation) => {
       const hasAccess = () =>
         readEnvironmentScope(queuedMessage.environmentId, AuthOrchestrationOperateScope);
       if (!hasAccess()) return true;
@@ -1064,39 +1041,10 @@ export function useThreadOutboxDrain(): void {
       );
       if (!hasAccess()) return true;
       const { reportFailure } = makeDeliveryHelpers(queuedMessage);
-      let workspace = creation;
-      if (creation.pullRequestReference) {
-        // Keep opening the composer and queuing offline immediate. Only Send
-        // resolves the provider's actual PR head, including forks, in a worktree.
-        const checkout = await preparePullRequest({
-          environmentId: queuedMessage.environmentId,
-          input: { cwd: projectCwd, reference: creation.pullRequestReference, mode: "worktree" },
-        });
-        if (!isQueuedMessagePayloadCurrent(persistedMessage, deliveryRevision) || !hasAccess())
-          return true;
-        const failure = reportFailure(checkout, "start-turn");
-        if (failure?.action === "retry") return false;
-        if (failure?.action === "restore")
-          return restoreQueuedMessage(persistedMessage, failure.message);
-        if (!AsyncResult.isSuccess(checkout)) return false;
-        if (!checkout.value.worktreePath || !checkout.value.isOnPullRequestHead)
-          return restoreQueuedMessage(
-            persistedMessage,
-            "The PR worktree has local changes and could not update to the PR head. Resolve them before trying again.",
-          );
-        workspace = {
-          ...creation,
-          workspaceMode: "local",
-          branch: checkout.value.branch,
-          worktreePath: checkout.value.worktreePath,
-          startFromOrigin: false,
-        };
-      }
       const deliveryResult = await startTurn({
         environmentId: queuedMessage.environmentId,
         input: buildProjectThreadStartTurnInput({
           projectId: creation.projectId,
-          projectCwd,
           threadId: queuedMessage.threadId,
           commandId: queuedMessage.commandId,
           messageId: queuedMessage.messageId,
@@ -1114,11 +1062,6 @@ export function useThreadOutboxDrain(): void {
           modelSelection: sendSettings.modelSelection,
           runtimeMode: sendSettings.runtimeMode,
           interactionMode: sendSettings.interactionMode,
-          workspaceMode: workspace.workspaceMode,
-          branch: workspace.branch,
-          worktreePath: workspace.worktreePath,
-          startFromOrigin: workspace.startFromOrigin ?? false,
-          worktreeBranchName: buildTemporaryWorktreeBranchName(randomHex),
         }),
       });
       if (AsyncResult.isFailure(deliveryResult) && !hasAccess()) return true;
@@ -1146,7 +1089,7 @@ export function useThreadOutboxDrain(): void {
       }
       return outcome === "removed";
     },
-    [makeDeliveryHelpers, preparePullRequest, restoreQueuedMessage, startTurn],
+    [makeDeliveryHelpers, restoreQueuedMessage, startTurn],
   );
 
   // A creation outcome bridges setup until the server's shell has a turn.
@@ -1315,8 +1258,8 @@ export function useThreadOutboxDrain(): void {
             creation.projectCwd ??
             null)
           : null;
-      // An incomplete pending task (e.g. worktree mode without a branch) stays
-      // queued until the user finishes it in the editor.
+      // An incomplete pending task stays queued until the user finishes it in
+      // the editor.
       if (deliveryAction === "send" && creation !== undefined) {
         if (!isQueuedThreadCreationSendable(nextQueuedMessage)) {
           continue;
@@ -1386,7 +1329,7 @@ export function useThreadOutboxDrain(): void {
             : removeQueuedMessage("[thread-outbox] failed to remove message for a missing thread")
           : creation !== undefined
             ? creationProjectCwd !== null
-              ? sendQueuedCreation(nextQueuedMessage, creation, creationProjectCwd)
+              ? sendQueuedCreation(nextQueuedMessage, creation)
               : removeQueuedMessage("[thread-outbox] dropped pending task for a missing project")
             : thread !== undefined
               ? sendQueuedMessage(nextQueuedMessage, thread)

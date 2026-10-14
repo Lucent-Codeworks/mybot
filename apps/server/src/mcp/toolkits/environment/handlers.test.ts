@@ -45,7 +45,7 @@ const layerEnvironment = Layer.mock(Environment.ServerEnvironment)({
     label: "Test",
     platform: { os: "linux", arch: "x64" },
     serverVersion: "0.0.0",
-    capabilities: { repositoryIdentity: false },
+    capabilities: {},
   }),
 });
 
@@ -55,7 +55,7 @@ it.effect("updates preferences for a thread caller through the /mcp registration
     const result = yield* server
       .callTool({
         name: "t3_environment_preferences_update",
-        arguments: { newWorktreesStartFromOrigin: true },
+        arguments: { enableProviderUpdateChecks: false },
       })
       .pipe(
         Effect.provideService(McpInvocationContext.McpInvocationContext, caller),
@@ -76,7 +76,7 @@ it.effect("updates preferences for a thread caller through the /mcp registration
         ),
       );
     expect(result.isError).toBe(false);
-    expect(result.structuredContent).toMatchObject({ newWorktreesStartFromOrigin: true });
+    expect(result.structuredContent).toMatchObject({ enableProviderUpdateChecks: false });
   }).pipe(
     Effect.provide(
       McpHttpServer.layerEnvironmentToolkit.pipe(
@@ -123,7 +123,7 @@ it.effect("refuses a preferences update when the caller's turn ends while it wai
           label: "Test",
           platform: { os: "linux", arch: "x64" },
           serverVersion: "0.0.0",
-          capabilities: { repositoryIdentity: false },
+          capabilities: {},
         }),
       }),
       Layer.mock(Settings.ServerSettingsService)({
@@ -146,7 +146,7 @@ it.effect("refuses a preferences update when the caller's turn ends while it wai
         .pipe(Effect.forkChild);
       yield* Deferred.await(held);
       const update = yield* toolkit
-        .handle("t3_environment_preferences_update", { newWorktreesStartFromOrigin: true })
+        .handle("t3_environment_preferences_update", { enableProviderUpdateChecks: false })
         .pipe(Stream.unwrap, Stream.runCollect, Effect.forkChild);
       // The update passed its first check and waits for the lock; the turn then ends.
       yield* Deferred.await(checked);

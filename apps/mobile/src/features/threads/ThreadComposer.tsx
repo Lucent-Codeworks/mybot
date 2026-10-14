@@ -64,8 +64,7 @@ import {
 } from "../../state/use-composer-drafts";
 import { appAtomRegistry } from "../../state/atom-registry";
 import type { ComposerDocumentAttachment } from "../../lib/composerContext";
-import { useProject, useThreadShells } from "../../state/entities";
-import { scopeProjectRef } from "@t3tools/client-runtime/environment";
+import { useThreadShells } from "../../state/entities";
 
 import { AppText as Text } from "../../components/AppText";
 import { ComposerAttachmentButton } from "../../components/ComposerAttachmentButton";
@@ -377,7 +376,6 @@ export function ComposerSurface(props: {
 }
 
 export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposerProps) {
-  const project = useProject(scopeProjectRef(props.environmentId, props.selectedThread.projectId));
   const { themeVariables: materialTheme } = useAppearancePreferences();
   const composerPanel = materialTheme["--color-composer-panel"];
   const navigation = useNavigation();
@@ -498,10 +496,6 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
     threadShells: useThreadShells(),
     currentThreadId: props.selectedThread.id,
     projectCwd: props.projectCwd,
-    pullRequestProjectId: props.serverConfig?.environment.capabilities.pullRequests
-      ? (project?.id ?? null)
-      : null,
-    pullRequestRepository: project?.repositoryIdentity?.displayName ?? null,
     selectedProviderStatus,
     hasThread: true,
     hasCompactableConversation: props.hasCompactableConversation,
@@ -798,9 +792,7 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
         className="relative w-full self-center"
         style={{ maxWidth: props.contentMaxWidth }}
       >
-        {!voiceInput.isBusy &&
-        composerMenu.trigger &&
-        (composerMenu.items.length > 0 || composerMenu.trigger.kind === "pull-request") ? (
+        {!voiceInput.isBusy && composerMenu.trigger && composerMenu.items.length > 0 ? (
           <ComposerPopoverAnchor>
             <ComposerCommandPopover
               items={composerMenu.items}

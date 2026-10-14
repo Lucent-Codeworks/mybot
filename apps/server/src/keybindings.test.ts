@@ -251,6 +251,43 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
   );
 
   it.effect(
+    "loads retired source control commands without issues and still backfills defaults",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const { keybindingsConfigPath } = yield* ServerConfig.ServerConfig;
+        yield* fs.writeFileString(
+          keybindingsConfigPath,
+          JSON.stringify([
+            { key: "mod+shift+y", command: "terminal.toggle" },
+            { key: "mod+d", command: "diff.toggle", when: "!terminalFocus" },
+            { key: "mod+shift+c", command: "pullRequest.copyNumber" },
+            { key: "mod+shift+k", command: "composer.previousWorktree" },
+            { key: "mod+shift+g", command: "composer.branch" },
+            { key: "mod+shift+w", command: "composer.workspace" },
+          ]),
+        );
+
+        const keybindings = yield* Keybindings.Keybindings;
+        assert.deepEqual((yield* keybindings.loadConfigState).issues, []);
+
+        yield* keybindings.syncDefaultKeybindingsOnStartup;
+
+        const persisted = yield* readKeybindingsConfig(keybindingsConfigPath);
+        const persistedCommands = new Set<string>(persisted.map((entry) => entry.command));
+        for (const defaultRule of Keybindings.DEFAULT_KEYBINDINGS) {
+          assert.isTrue(
+            persistedCommands.has(defaultRule.command),
+            `expected ${defaultRule.command}`,
+          );
+        }
+        assert.isFalse(persistedCommands.has("diff.toggle"));
+        assert.isFalse(persistedCommands.has("pullRequest.copyNumber"));
+        assert.deepEqual((yield* keybindings.loadConfigState).issues, []);
+      }).pipe(Effect.provide(layerKeybindings())),
+  );
+
+  it.effect(
     "upserts missing default keybindings on startup without overriding existing command rules",
     () =>
       Effect.gen(function* () {

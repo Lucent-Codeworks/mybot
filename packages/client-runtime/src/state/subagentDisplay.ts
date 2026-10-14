@@ -57,14 +57,7 @@ export function formatSubagentDisplayTitle(title: string): string {
 export function resolveSubagentMetadata(input: {
   readonly model: string | null;
   readonly provider?: Pick<ServerProvider, "driver" | "models"> | null | undefined;
-  readonly parentThread?:
-    | Pick<OrchestrationV2ThreadShell, "projectId" | "worktreePath">
-    | null
-    | undefined;
-  readonly childThread?:
-    | Pick<OrchestrationV2ThreadShell, "branch" | "worktreePath">
-    | null
-    | undefined;
+  readonly parentThread?: Pick<OrchestrationV2ThreadShell, "projectId"> | null | undefined;
   readonly parentProject?: Pick<OrchestrationProjectShell, "workspaceRoot"> | null | undefined;
   readonly childProject?:
     | Pick<OrchestrationProjectShell, "id" | "title" | "workspaceRoot">
@@ -93,8 +86,8 @@ export function resolveSubagentMetadata(input: {
         )
         .trim() || reportedLabel
     : reportedLabel;
-  const parentWorkspace = input.parentThread?.worktreePath ?? input.parentProject?.workspaceRoot;
-  const childWorkspace = input.childThread?.worktreePath ?? input.childProject?.workspaceRoot;
+  const parentWorkspace = input.parentProject?.workspaceRoot;
+  const childWorkspace = input.childProject?.workspaceRoot;
   const workspace = [
     ...(input.parentThread &&
     input.childProject &&
@@ -104,12 +97,8 @@ export function resolveSubagentMetadata(input: {
     ...(parentWorkspace && childWorkspace && parentWorkspace !== childWorkspace
       ? [
           {
-            label: input.childThread?.branch
-              ? "Branch"
-              : input.childThread?.worktreePath
-                ? "Worktree"
-                : "Workspace",
-            value: input.childThread?.branch ?? fileBasename(childWorkspace),
+            label: "Workspace",
+            value: fileBasename(childWorkspace),
           },
         ]
       : []),

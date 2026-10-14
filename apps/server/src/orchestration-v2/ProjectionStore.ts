@@ -12,7 +12,6 @@ import {
   threadErrorSummary,
   usageLimitRunPresentedAsLatest,
 } from "@t3tools/shared/orchestrationV2ThreadError";
-import { threadPullRequestsOf } from "@t3tools/shared/threadPullRequests";
 import type {
   OrchestrationV2AppThread,
   OrchestrationV2CheckpointScope,
@@ -168,12 +167,6 @@ export type ProjectionLimitRecoveryCandidate = Pick<
   | "snoozedUntil"
 >;
 
-/** The thread fields pull request sync reads, for a thread with at least one link. */
-export type ProjectionThreadPullRequests = Pick<
-  OrchestrationV2AppThread,
-  "id" | "projectId" | "lineage" | "settledOverride" | "settledAt" | "pullRequests"
->;
-
 /**
  * Thread activity needed by settlement, without transcript or fork history.
  * Settlement always loads `latestUserAuthoredMessageAt`, so it is required here.
@@ -182,11 +175,6 @@ export type ProjectionSettlementCandidate = Pick<
   OrchestrationV2ThreadShell,
   | "id"
   | "projectId"
-  | "branch"
-  | "worktreePath"
-  | "pullRequests"
-  | "linkedPullRequest"
-  | "branchPullRequest"
   | "createdAt"
   | "updatedAt"
   | "archivedAt"
@@ -406,14 +394,6 @@ export interface ProjectionStoreV2Shape {
   readonly getSettlementCandidates: (
     threadId?: ThreadId,
   ) => Effect.Effect<ReadonlyArray<ProjectionSettlementCandidate>, ProjectionStoreV2Error>;
-  /**
-   * Active (not deleted, not archived) threads with at least one pull request
-   * link, in shell snapshot order, or only `threadId` when given. Skips run,
-   * message and item reads.
-   */
-  readonly getThreadsWithPullRequests: (
-    threadId?: ThreadId,
-  ) => Effect.Effect<ReadonlyArray<ProjectionThreadPullRequests>, ProjectionStoreV2Error>;
   readonly getTurnStartContext: (
     threadId: ThreadId,
     runId: RunId,
@@ -1456,7 +1436,6 @@ export function threadShellFromProjection(
     turnItems: projection.turnItems,
     activeProviderThreadId: projection.thread.activeProviderThreadId,
     runs: projection.runs,
-    pullRequests: projection.thread.pullRequests,
   });
   return {
     createdBy: projection.thread.createdBy,
@@ -1468,15 +1447,6 @@ export function threadShellFromProjection(
     modelSelection: projection.thread.modelSelection,
     runtimeMode: projection.thread.runtimeMode,
     interactionMode: projection.thread.interactionMode,
-    branch: projection.thread.branch,
-    worktreePath: projection.thread.worktreePath,
-    pullRequests: threadPullRequestsOf(projection.thread),
-    ...(projection.thread.linkedPullRequest === undefined
-      ? {}
-      : { linkedPullRequest: projection.thread.linkedPullRequest }),
-    ...(projection.thread.branchPullRequest === undefined
-      ? {}
-      : { branchPullRequest: projection.thread.branchPullRequest }),
     ...(projection.thread.activeOrderKey === undefined
       ? {}
       : { activeOrderKey: projection.thread.activeOrderKey }),
@@ -1736,15 +1706,6 @@ function shellFromState(input: {
     modelSelection: input.state.thread.modelSelection,
     runtimeMode: input.state.thread.runtimeMode,
     interactionMode: input.state.thread.interactionMode,
-    branch: input.state.thread.branch,
-    worktreePath: input.state.thread.worktreePath,
-    pullRequests: threadPullRequestsOf(input.state.thread),
-    ...(input.state.thread.linkedPullRequest === undefined
-      ? {}
-      : { linkedPullRequest: input.state.thread.linkedPullRequest }),
-    ...(input.state.thread.branchPullRequest === undefined
-      ? {}
-      : { branchPullRequest: input.state.thread.branchPullRequest }),
     ...(input.state.thread.activeOrderKey === undefined
       ? {}
       : { activeOrderKey: input.state.thread.activeOrderKey }),
@@ -5573,7 +5534,6 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
                     turnItems: pendingTurnItemsByThreadId.get(thread.id) ?? [],
                     activeProviderThreadId: thread.activeProviderThreadId,
                     hasActiveRun: false,
-                    pullRequests: thread.pullRequests,
                   }),
                 } satisfies ProjectionSettlementCandidate;
               }),
@@ -5581,32 +5541,6 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
           }),
         )
         .pipe(Effect.mapError((cause) => new ProjectionStoreSetupError({ cause })));
-
-    const getThreadsWithPullRequests: ProjectionStoreV2Shape["getThreadsWithPullRequests"] = (
-      threadId,
-    ) =>
-      Effect.gen(function* () {
-        const rows = yield* sql<PayloadRow>`
-          SELECT payload_json
-          FROM orchestration_v2_projection_threads
-          WHERE deleted_at IS NULL${threadId === undefined ? sql`` : sql` AND thread_id = ${threadId}`}
-            AND json_extract(payload_json, '$.archivedAt') IS NULL
-            AND json_array_length(payload_json, '$.pullRequests') > 0
-          ORDER BY updated_at ASC, thread_id ASC
-        `;
-        return yield* Effect.forEach(rows, (row) =>
-          decodeThreadPayload(row.payload_json).pipe(
-            Effect.map((thread): ProjectionThreadPullRequests => ({
-              id: thread.id,
-              projectId: thread.projectId,
-              lineage: thread.lineage,
-              settledOverride: thread.settledOverride,
-              settledAt: thread.settledAt,
-              pullRequests: thread.pullRequests ?? [],
-            })),
-          ),
-        );
-      }).pipe(Effect.mapError((cause) => new ProjectionStoreSetupError({ cause })));
 
     const shellThreadStateFromRow = (input: {
       readonly row: ShellThreadRow;
@@ -5697,7 +5631,6 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
             turnItems: pendingTurnItemsByThreadId.get(thread.id) ?? [],
             activeProviderThreadId: thread.activeProviderThreadId,
             hasActiveRun: row.active_run_id !== null,
-            pullRequests: thread.pullRequests,
           }),
         ];
         return {
@@ -5943,7 +5876,6 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
       getThreadShell,
       getThread,
       getSettlementCandidates,
-      getThreadsWithPullRequests,
       getThreadProjection,
       getTurnStartContext,
       getTurnStartHistory,
@@ -6092,33 +6024,6 @@ export const layerMemory: Layer.Layer<ProjectionStoreV2> = Layer.effect(
                 left.id.localeCompare(right.id),
             );
         }),
-      getThreadsWithPullRequests: (threadId) =>
-        Ref.get(replayState).pipe(
-          Effect.map((state) =>
-            [...state.projections.values()]
-              .map(({ thread }) => thread)
-              .filter(
-                (thread) =>
-                  (threadId === undefined || thread.id === threadId) &&
-                  thread.deletedAt === null &&
-                  thread.archivedAt === null &&
-                  (thread.pullRequests ?? []).length > 0,
-              )
-              .toSorted(
-                (left, right) =>
-                  DateTime.toEpochMillis(left.updatedAt) -
-                    DateTime.toEpochMillis(right.updatedAt) || left.id.localeCompare(right.id),
-              )
-              .map((thread): ProjectionThreadPullRequests => ({
-                id: thread.id,
-                projectId: thread.projectId,
-                lineage: thread.lineage,
-                settledOverride: thread.settledOverride,
-                settledAt: thread.settledAt,
-                pullRequests: thread.pullRequests ?? [],
-              })),
-          ),
-        ),
       getLimitRecoveryCandidates: (options) =>
         Ref.get(replayState).pipe(
           Effect.map((state) =>
@@ -6553,13 +6458,8 @@ export const layerMemory: Layer.Layer<ProjectionStoreV2> = Layer.effect(
             projection.thread.deletedAt !== null
               ? Effect.fail(new ProjectionStoreThreadNotFoundError({ threadId: input.threadId }))
               : Effect.succeed(
-                  // This store has no project records, so only worktree paths resolve labels.
-                  findProjectedThreadItems(
-                    projection.visibleTurnItems,
-                    input,
-                    snapshotSequence,
-                    projection.thread.worktreePath ?? undefined,
-                  ),
+                  // This store has no project records, so no workspace root resolves labels.
+                  findProjectedThreadItems(projection.visibleTurnItems, input, snapshotSequence),
                 ),
           ),
         ),

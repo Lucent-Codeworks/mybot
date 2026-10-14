@@ -22,7 +22,6 @@ import {
   RunId,
   ThreadId,
   TurnItemId,
-  type ThreadPullRequestLink,
 } from "@t3tools/contracts";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
@@ -112,8 +111,6 @@ const addRolledBackRecoveryCandidate = Effect.fn("addRolledBackRecoveryCandidate
       modelSelection,
       runtimeMode: "full-access",
       interactionMode: "default",
-      branch: null,
-      worktreePath: null,
       activeProviderThreadId: null,
       lineage: {
         parentThreadId: null,
@@ -206,8 +203,6 @@ const addOrphanedRecoveryCandidate = Effect.fn("addOrphanedRecoveryCandidate")(f
       modelSelection,
       runtimeMode: "full-access",
       interactionMode: "default",
-      branch: null,
-      worktreePath: null,
       activeProviderThreadId: null,
       lineage: {
         parentThreadId: null,
@@ -435,8 +430,6 @@ const assertProjectScopedShells = Effect.fn("assertProjectScopedShells")(functio
         modelSelection,
         runtimeMode: "full-access",
         interactionMode: "default",
-        branch: null,
-        worktreePath: null,
         activeProviderThreadId: null,
         lineage:
           input.forkedFromRunOf === undefined
@@ -644,8 +637,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
           modelSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: null,
           activeProviderThreadId: null,
           lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
           forkedFrom: null,
@@ -735,8 +726,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
           modelSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: null,
           activeProviderThreadId: null,
           lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
           forkedFrom: null,
@@ -912,8 +901,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
             modelSelection,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: null,
             activeProviderThreadId: null,
             lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
             forkedFrom: null,
@@ -1144,8 +1131,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
           modelSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: null,
           activeProviderThreadId: null,
           lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
           forkedFrom: null,
@@ -1767,8 +1752,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
         modelSelection,
         runtimeMode: "full-access" as const,
         interactionMode: "default" as const,
-        branch: null,
-        worktreePath: null,
         activeProviderThreadId: null,
         lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
         forkedFrom: null,
@@ -1873,8 +1856,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
           modelSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: null,
           activeProviderThreadId: null,
           lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
           forkedFrom: null,
@@ -1956,8 +1937,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
           modelSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: null,
           activeProviderThreadId: null,
           lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
           forkedFrom: null,
@@ -2035,8 +2014,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
             modelSelection,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: null,
             activeProviderThreadId: null,
             lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
             forkedFrom: null,
@@ -2135,8 +2112,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
         modelSelection,
         runtimeMode: "full-access" as const,
         interactionMode: "default" as const,
-        branch: null,
-        worktreePath: null,
         activeProviderThreadId: null,
         lineage: {
           parentThreadId: null,
@@ -2206,8 +2181,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
         modelSelection,
         runtimeMode: "full-access" as const,
         interactionMode: "default" as const,
-        branch: null,
-        worktreePath: null,
         activeProviderThreadId: null,
         lineage: {
           parentThreadId: null,
@@ -2377,8 +2350,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
           modelSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: null,
           activeProviderThreadId: null,
           lineage: {
             parentThreadId: null,
@@ -2588,8 +2559,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
         modelSelection,
         runtimeMode: "full-access" as const,
         interactionMode: "default" as const,
-        branch: null,
-        worktreePath: null,
         activeProviderThreadId: null,
         lineage: {
           parentThreadId: null,
@@ -3151,8 +3120,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
         modelSelection,
         runtimeMode: "full-access" as const,
         interactionMode: "default" as const,
-        branch: null,
-        worktreePath: null,
         activeProviderThreadId: null,
         lineage: {
           parentThreadId: null,
@@ -3284,8 +3251,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
             modelSelection,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: null,
             activeProviderThreadId: null,
             lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
             forkedFrom: null,
@@ -3467,8 +3432,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
             modelSelection,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: "feature",
-            worktreePath: "/repo/worktree",
             activeProviderThreadId: null,
             lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
             forkedFrom: null,
@@ -3666,8 +3629,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
           modelSelection: modelSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: null,
           activeProviderThreadId: null,
           lineage: {
             parentThreadId: null,
@@ -3785,8 +3746,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
           modelSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: null,
           activeProviderThreadId: null,
           historyOrigin: "v1_import",
           lineage: {
@@ -3819,8 +3778,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
           modelSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: null,
           activeProviderThreadId: null,
           lineage: {
             parentThreadId: sourceThreadId,
@@ -3947,8 +3904,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
           modelSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: null,
           activeProviderThreadId: providerThreadId,
           lineage: {
             parentThreadId: null,
@@ -4361,8 +4316,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
           modelSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: null,
           activeProviderThreadId: sourceProviderThreadId,
           lineage: {
             parentThreadId: null,
@@ -4394,8 +4347,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
           modelSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: null,
           activeProviderThreadId: targetProviderThreadId,
           lineage: {
             parentThreadId: sourceThreadId,
@@ -4920,8 +4871,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
           modelSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: null,
           activeProviderThreadId: null,
           lineage: {
             parentThreadId: targetThreadId,
@@ -5058,8 +5007,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
           modelSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: null,
           activeProviderThreadId: null,
           lineage: {
             parentThreadId: sourceThreadId,
@@ -5118,8 +5065,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
           modelSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: null,
           activeProviderThreadId: null,
           lineage: {
             parentThreadId: emptyMiddleThreadId,
@@ -5220,128 +5165,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
     }),
   );
 
-  it.effect("a pull request watch keeps a finished thread working until it ends", () =>
-    Effect.gen(function* () {
-      const store = yield* ProjectionStore.ProjectionStoreV2;
-      const threadId = ThreadId.make("thread:watched-pull-request");
-      const runId = RunId.make("run:watched-pull-request");
-      const at = DateTime.makeUnsafe("2026-10-05T12:00:00.000Z");
-      const thread = {
-        createdBy: "user" as const,
-        creationSource: "web" as const,
-        id: threadId,
-        projectId: ProjectId.make("project:watched-pull-request"),
-        title: "Babysit the PR",
-        providerInstanceId,
-        modelSelection,
-        runtimeMode: "full-access" as const,
-        interactionMode: "default" as const,
-        branch: null,
-        worktreePath: null,
-        activeProviderThreadId: null,
-        lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
-        forkedFrom: null,
-        createdAt: at,
-        updatedAt: at,
-        archivedAt: null,
-        settledOverride: null,
-        settledAt: null,
-        lastVisitedAt: null,
-        deletedAt: null,
-      };
-      yield* store.apply({
-        id: EventId.make("event:watched-pull-request:thread"),
-        type: "thread.created",
-        threadId,
-        occurredAt: at,
-        payload: thread,
-      });
-      yield* store.apply({
-        id: EventId.make("event:watched-pull-request:run"),
-        type: "run.created",
-        threadId,
-        runId,
-        driver,
-        providerInstanceId,
-        occurredAt: at,
-        payload: {
-          id: runId,
-          threadId,
-          ordinal: 1,
-          providerInstanceId,
-          modelSelection,
-          providerThreadId: null,
-          userMessageId: MessageId.make("message:watched-pull-request"),
-          rootNodeId: null,
-          activeAttemptId: null,
-          status: "completed",
-          requestedAt: at,
-          startedAt: at,
-          completedAt: at,
-          checkpointId: null,
-          contextHandoffId: null,
-        },
-      });
-      const link = {
-        host: "github.com",
-        repository: "pingdotgg/t3code",
-        number: 7,
-        url: "https://github.com/pingdotgg/t3code/pull/7",
-        source: "agent" as const,
-        linkedAt: DateTime.formatIso(at),
-        snapshot: null,
-        stack: null,
-      };
-      const syncPullRequests = (id: string, pullRequests: ReadonlyArray<ThreadPullRequestLink>) =>
-        store.apply({
-          id: EventId.make(`event:watched-pull-request:${id}`),
-          type: "thread.pull-request-synced",
-          threadId,
-          occurredAt: at,
-          payload: { ...thread, pullRequests },
-        });
-      const project = { title: "Project" };
-      const environmentId = EnvironmentId.make("environment:watched-pull-request");
-      const phase = Effect.gen(function* () {
-        const shell = yield* store.getThreadShell(threadId);
-        const listed = (yield* store.getShellSnapshot()).threads.find(
-          (candidate) => candidate.id === threadId,
-        );
-        assert.deepEqual(listed?.pendingBackgroundTasks, shell?.pendingBackgroundTasks);
-        return shell && projectThreadAwarenessV2({ environmentId, project, thread: shell })?.phase;
-      });
-
-      yield* syncPullRequests("watched", [
-        {
-          ...link,
-          watch: {
-            startedAt: DateTime.formatIso(at),
-            headSha: null,
-            failedChecks: [],
-            passed: false,
-            passedChecks: [],
-            remarksThrough: DateTime.formatIso(at),
-            remarkIds: [],
-            conflicting: false,
-            wakes: 0,
-          },
-        },
-      ]);
-      assert.deepEqual((yield* store.getThreadShell(threadId))?.pendingBackgroundTasks, [
-        {
-          taskId: "pull-request-watch:github.com/pingdotgg/t3code#7",
-          description: "Watching pull request #7",
-          kind: "monitor",
-        },
-      ]);
-      assert.equal(yield* phase, "running");
-
-      yield* syncPullRequests("unwatched", [link]);
-      assert.deepEqual((yield* store.getThreadShell(threadId))?.pendingBackgroundTasks, []);
-      assert.equal(yield* phase, "completed");
-    }),
-  );
-
   it.effect("dates a completion released by held background work at the release", () =>
     Effect.gen(function* () {
       const store = yield* ProjectionStore.ProjectionStoreV2;
@@ -5383,8 +5206,6 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
           modelSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: null,
           activeProviderThreadId: null,
           lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
           forkedFrom: null,

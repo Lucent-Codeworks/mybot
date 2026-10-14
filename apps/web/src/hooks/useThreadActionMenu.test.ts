@@ -57,8 +57,6 @@ vi.mock("../state/entities", () => ({
     environmentId: "secondary",
     projectId: "project",
     title: "Thread",
-    branch: "main",
-    worktreePath: null,
     runtime: null,
     latestRun: null,
   }),
@@ -84,9 +82,8 @@ vi.mock("../localApi", () => ({
   }),
 }));
 vi.mock("../logicalProject", () => ({
-  deriveLogicalProjectKeyFromSettings: () => "project",
+  deriveLogicalProjectKey: () => "project",
   derivePhysicalProjectKey: () => "project",
-  selectProjectGroupingSettings: () => ({}),
 }));
 vi.mock("../sidebarProjectGrouping", () => ({
   buildPhysicalToLogicalProjectKeyMap: () => new Map(),
@@ -109,9 +106,6 @@ vi.mock("../components/Sidebar.snooze", () => ({
 }));
 vi.mock("./useCopyToClipboard", () => ({
   useCopyToClipboard: () => ({ copyToClipboard: () => recordEffect("copy") }),
-}));
-vi.mock("./useHandleNewThread", () => ({
-  useNewThreadHandler: () => async () => recordEffect("draft"),
 }));
 vi.mock("./useSettings", () => ({
   useClientSettings: (select: (settings: unknown) => unknown) =>
@@ -208,7 +202,6 @@ describe("thread menu permissions", () => {
   );
 
   it.each([
-    ["new-thread-on-branch", "draft"],
     ["copy-thread-id", "copy"],
     ["mark-unread", "mark-unread"],
     ["project-settings", "project-settings"],

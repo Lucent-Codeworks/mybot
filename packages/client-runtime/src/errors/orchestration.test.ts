@@ -8,14 +8,14 @@ describe("wasBootstrapThreadDeleted", () => {
     expect(
       wasBootstrapThreadDeleted(
         new OrchestrationDispatchCommandError({
-          message: "Failed to create worktree.",
+          message: "Failed to create thread.",
           bootstrapThreadDisposition: "deleted",
         }),
       ),
     ).toBe(true);
     expect(
       wasBootstrapThreadDeleted(
-        new OrchestrationDispatchCommandError({ message: "Failed to create worktree." }),
+        new OrchestrationDispatchCommandError({ message: "Failed to create thread." }),
       ),
     ).toBe(false);
     expect(wasBootstrapThreadDeleted(new Error("connection lost"))).toBe(false);
@@ -25,7 +25,7 @@ describe("wasBootstrapThreadDeleted", () => {
 describe("wasBootstrapThreadNotCreated", () => {
   it("accepts only a confirmed never-created bootstrap thread", () => {
     const notCreated = new OrchestrationDispatchCommandError({
-      message: "A separate worktree requires a base commit.",
+      message: "Project not found.",
       bootstrapThreadDisposition: "not-created",
     });
     expect(wasBootstrapThreadNotCreated(notCreated)).toBe(true);
@@ -33,7 +33,7 @@ describe("wasBootstrapThreadNotCreated", () => {
     expect(
       wasBootstrapThreadNotCreated(
         new OrchestrationDispatchCommandError({
-          message: "Failed to create worktree.",
+          message: "Failed to create thread.",
           bootstrapThreadDisposition: "deleted",
         }),
       ),
@@ -41,7 +41,7 @@ describe("wasBootstrapThreadNotCreated", () => {
     expect(
       wasBootstrapThreadNotCreated(
         new OrchestrationDispatchCommandError({
-          message: "Failed to create worktree.",
+          message: "Failed to create thread.",
         }),
       ),
     ).toBe(false);

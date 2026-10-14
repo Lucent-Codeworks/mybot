@@ -45,7 +45,7 @@ import { useCallback, useRef, useState } from "react";
 
 import { ScreenRotationIcon } from "~/browser/ScreenRotationIcon";
 import { AnimatedHeight } from "~/components/AnimatedHeight";
-import { resolveEnvironmentOptionLabel } from "~/components/BranchToolbar.logic";
+import { resolveEnvironmentOptionLabel } from "~/components/ComposerContextStrip.logic";
 import { previewBridge } from "~/components/preview/previewBridge";
 import { cn, randomUUID } from "~/lib/utils";
 import { useEnvironments, usePrimaryEnvironment } from "~/state/environments";

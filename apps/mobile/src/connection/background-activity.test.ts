@@ -9,58 +9,44 @@ import {
 } from "./background-activity-scopes";
 
 describe("mobile background activity", () => {
-  it.effect("retains VCS demand only while the mobile subscription is active", () =>
+  it.effect("retains diagnostics demand only while the mobile subscription is active", () =>
     Effect.gen(function* () {
       const environmentId = EnvironmentId.make("mobile-environment");
-      const releasePassive = yield* observeMobileBackgroundActivitySubscription({
+      const releaseFirst = yield* observeMobileBackgroundActivitySubscription({
         environmentId,
-        method: WS_METHODS.subscribeVcsStatus,
-        input: { cwd: "/workspace", includeRemote: false },
+        method: WS_METHODS.subscribeResourceTelemetry,
+        input: {},
       });
-      expect(retainedMobileBackgroundScopes(environmentId)).toEqual([]);
-      const release = yield* observeMobileBackgroundActivitySubscription({
+      const releaseSecond = yield* observeMobileBackgroundActivitySubscription({
         environmentId,
-        method: WS_METHODS.subscribeVcsStatus,
-        input: { cwd: "/workspace" },
+        method: WS_METHODS.subscribeResourceTelemetry,
+        input: {},
       });
 
-      expect(retainedMobileBackgroundScopes(environmentId)).toEqual([
-        { type: "vcs-status", cwd: "/workspace" },
-      ]);
+      expect(retainedMobileBackgroundScopes(environmentId)).toEqual([{ type: "diagnostics" }]);
 
-      yield* releasePassive;
-      expect(retainedMobileBackgroundScopes(environmentId)).toEqual([
-        { type: "vcs-status", cwd: "/workspace" },
-      ]);
+      yield* releaseFirst;
+      expect(retainedMobileBackgroundScopes(environmentId)).toEqual([{ type: "diagnostics" }]);
 
-      yield* release;
+      yield* releaseSecond;
       expect(retainedMobileBackgroundScopes(environmentId)).toEqual([]);
     }),
   );
 
-  it.effect("keeps delimiter-containing environment and scope values distinct", () =>
+  it.effect("keeps delimiter-containing environment values distinct", () =>
     Effect.gen(function* () {
       const firstEnvironmentId = EnvironmentId.make("a");
-      const secondEnvironmentId = EnvironmentId.make("a:vcs-status:b");
+      const secondEnvironmentId = EnvironmentId.make("a:diagnostics:b");
       const releaseFirst = yield* observeMobileBackgroundActivitySubscription({
         environmentId: firstEnvironmentId,
-        method: WS_METHODS.subscribeVcsStatus,
-        input: { cwd: "b:vcs-status:c" },
-      });
-      const releaseSecond = yield* observeMobileBackgroundActivitySubscription({
-        environmentId: secondEnvironmentId,
-        method: WS_METHODS.subscribeVcsStatus,
-        input: { cwd: "c" },
+        method: WS_METHODS.subscribeResourceTelemetry,
+        input: {},
       });
 
-      expect(retainedMobileBackgroundScopes(firstEnvironmentId)).toEqual([
-        { type: "vcs-status", cwd: "b:vcs-status:c" },
-      ]);
-      expect(retainedMobileBackgroundScopes(secondEnvironmentId)).toEqual([
-        { type: "vcs-status", cwd: "c" },
-      ]);
+      expect(retainedMobileBackgroundScopes(firstEnvironmentId)).toEqual([{ type: "diagnostics" }]);
+      expect(retainedMobileBackgroundScopes(secondEnvironmentId)).toEqual([]);
 
-      yield* Effect.all([releaseFirst, releaseSecond]);
+      yield* releaseFirst;
     }),
   );
 
@@ -73,12 +59,10 @@ describe("mobile background activity", () => {
 
       const release = yield* observeMobileBackgroundActivitySubscription({
         environmentId,
-        method: WS_METHODS.subscribeVcsStatus,
-        input: { cwd: "/workspace" },
+        method: WS_METHODS.subscribeResourceTelemetry,
+        input: {},
       });
-      expect(retainedMobileBackgroundScopes(environmentId)).toEqual([
-        { type: "vcs-status", cwd: "/workspace" },
-      ]);
+      expect(retainedMobileBackgroundScopes(environmentId)).toEqual([{ type: "diagnostics" }]);
 
       yield* release;
       expect(retainedMobileBackgroundScopes(environmentId)).toEqual([]);

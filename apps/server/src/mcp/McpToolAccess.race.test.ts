@@ -168,8 +168,6 @@ const createSupervisedThread = (threadId: ThreadId) =>
       modelSelection: { instanceId, model: "gpt-5" },
       runtimeMode: "approval-required",
       interactionMode: "default",
-      branch: null,
-      worktreePath: null,
       createdBy: "user",
       creationSource: "web",
     });

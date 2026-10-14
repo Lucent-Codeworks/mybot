@@ -98,10 +98,6 @@ export function useEnvironmentIdentities() {
   return useAtomValue(environmentSummaries.identitiesAtom);
 }
 
-export function usePullRequestsSupported() {
-  return useAtomValue(environmentSummaries.pullRequestsSupportedAtom);
-}
-
 export function useEnvironmentMachines() {
   return useAtomValue(environmentSummaries.machineByIdAtom);
 }

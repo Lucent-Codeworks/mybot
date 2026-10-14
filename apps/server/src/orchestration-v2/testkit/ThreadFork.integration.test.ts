@@ -12,9 +12,6 @@ import {
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
-import * as PlatformError from "effect/PlatformError";
-import * as Schema from "effect/Schema";
-import { ChildProcess, ChildProcessSpawner } from "effect/process";
 
 import { ClaudeOrchestratorReplayHarness } from "../Adapters/ClaudeAdapterV2.testkit.ts";
 import { CodexOrchestratorReplayHarness } from "../Adapters/CodexAdapterV2.testkit.ts";
@@ -55,48 +52,11 @@ const CODEX_READ_ONLY_NEVER_POLICY = {
   },
 } as const;
 
-class ThreadForkGitCommandError extends Schema.TaggedError<ThreadForkGitCommandError>()(
-  "ThreadForkGitCommandError",
-  {
-    command: Schema.String,
-    exitCode: Schema.Number,
-  },
-) {
-  override get message(): string {
-    return `${this.command} failed with exit ${this.exitCode}.`;
-  }
-}
-
-function runGit(
-  cwd: string,
-  args: ReadonlyArray<string>,
-): Effect.Effect<
-  void,
-  ThreadForkGitCommandError | PlatformError.PlatformError,
-  ChildProcessSpawner.ChildProcessSpawner
-> {
-  return Effect.gen(function* () {
-    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-    const exitCode = yield* spawner.exitCode(ChildProcess.make("git", args, { cwd }));
-    if (Number(exitCode) !== 0) {
-      return yield* new ThreadForkGitCommandError({
-        command: `git ${args.join(" ")}`,
-        exitCode: Number(exitCode),
-      });
-    }
-  });
-}
-
 const makeCheckpointWorkspace = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const cwd = yield* fs.makeTempDirectory({ prefix: "t3-orchestrator-v2-thread-fork-" });
-  yield* runGit(cwd, ["init"]);
-  yield* runGit(cwd, ["config", "user.name", "T3 Code Test"]);
-  yield* runGit(cwd, ["config", "user.email", "t3code-test@example.com"]);
   yield* fs.writeFileString(path.join(cwd, "README.md"), "# thread fork\n");
-  yield* runGit(cwd, ["add", "README.md"]);
-  yield* runGit(cwd, ["commit", "-m", "initial"]);
   return cwd;
 });
 
@@ -178,8 +138,6 @@ describe("orchestration V2 thread fork", () => {
               modelSelection: CODEX_MODEL_SELECTION,
               runtimeMode: "full-access",
               interactionMode: "default",
-              branch: null,
-              worktreePath: null,
             },
             {
               type: "message.dispatch",
@@ -354,8 +312,6 @@ describe("orchestration V2 thread fork", () => {
               modelSelection: CLAUDE_MODEL_SELECTION,
               runtimeMode: "full-access",
               interactionMode: "default",
-              branch: null,
-              worktreePath: null,
             },
             {
               type: "message.dispatch",
@@ -495,8 +451,6 @@ describe("orchestration V2 thread fork", () => {
             modelSelection: CODEX_MODEL_SELECTION,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: null,
           },
           {
             type: "message.dispatch",
@@ -674,8 +628,6 @@ describe("orchestration V2 thread fork", () => {
             modelSelection: CLAUDE_MODEL_SELECTION,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: null,
           },
           {
             type: "message.dispatch",
@@ -837,8 +789,6 @@ describe("orchestration V2 thread fork", () => {
             modelSelection: CLAUDE_MODEL_SELECTION,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: null,
           },
           {
             type: "message.dispatch",
@@ -1043,8 +993,6 @@ describe("orchestration V2 thread fork", () => {
             modelSelection: CLAUDE_MODEL_SELECTION,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: null,
           },
           {
             type: "message.dispatch",

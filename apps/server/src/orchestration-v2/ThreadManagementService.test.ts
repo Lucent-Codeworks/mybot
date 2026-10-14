@@ -56,8 +56,6 @@ it("stamps authoritative provenance on commands that create threads or messages"
     },
     runtimeMode: "full-access",
     interactionMode: "default",
-    branch: null,
-    worktreePath: null,
   };
 
   expect(
@@ -107,8 +105,6 @@ it("identifies every existing thread that must be hydrated before dispatch", () 
       },
       runtimeMode: "full-access",
       interactionMode: "default",
-      branch: null,
-      worktreePath: null,
     }),
   ).toEqual([]);
 

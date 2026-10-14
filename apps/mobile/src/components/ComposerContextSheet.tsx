@@ -1,16 +1,14 @@
-import { useOpenPullRequest } from "../native/useOpenPullRequest";
 import { SourceFileSurface } from "../features/files/SourceFileSurface";
 import { filePreviewKind } from "@t3tools/shared/filePreview";
 import type {
   ComposerContextRecord,
   ElementContextSource,
   EnvironmentId,
-  ProjectId,
   ScopedThreadRef,
 } from "@t3tools/contracts";
 import { formatAttachmentSize } from "@t3tools/client-runtime/state/attachments";
 import { videoMimeType } from "@t3tools/shared/video";
-import { Alert, Platform, Pressable, ScrollView, View } from "react-native";
+import { Platform, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { REVIEW_MONO_FONT_FAMILY } from "../features/review/reviewDiffRendering";
 import { ReviewCommentCard, useReviewCommentColors } from "../features/review/ReviewCommentCard";
@@ -79,21 +77,13 @@ export function ComposerContextSheet(props: {
   readonly onClose: () => void;
   readonly onRemove?: () => void;
   readonly onOpenAttachment?: () => void;
-  readonly onOpenPullRequest?: () => void;
   readonly skillDescription?: string;
   readonly onOpenSkill?: () => void;
   readonly onOpenThread?: (thread: ScopedThreadRef) => void;
   readonly environmentId?: EnvironmentId;
-  readonly projectId?: ProjectId;
   readonly records?: ReadonlyArray<ComposerContextRecord>;
   readonly attachments?: ReadonlyArray<DraftComposerAttachment>;
 }) {
-  const openPullRequest = useOpenPullRequest({
-    context:
-      props.environmentId && props.projectId
-        ? { environmentId: props.environmentId, projectId: props.projectId }
-        : undefined,
-  });
   const reviewColors = useReviewCommentColors();
   const insets = useSafeAreaInsets();
   const { themeId, themeAppearance } = useAppearancePreferences();
@@ -177,10 +167,6 @@ export function ComposerContextSheet(props: {
             (entry) => entry.contextId === record.screenshotContextId && "attachmentId" in entry,
           )
         : undefined;
-  const pullRequestUrl =
-    record?.kind === "review-comment" && "pullRequest" in record
-      ? record.pullRequest?.url
-      : undefined;
   const terminal = record?.kind === "terminal" && !("payload" in record) ? record : null;
   return (
     <AppSheet title={terminal?.terminalLabel ?? props.label} onClose={props.onClose}>
@@ -237,22 +223,10 @@ export function ComposerContextSheet(props: {
               </View>
             ) : null}
             {record.kind === "review-comment" ? (
-              <>
-                {record.pullRequest ? (
-                  <ContextField
-                    label={`#${record.pullRequest.number} · ${record.pullRequest.isDraft ? "draft" : record.pullRequest.state}`}
-                    value={`${record.pullRequest.title}\n${record.pullRequest.headBranch} → ${record.pullRequest.baseBranch}`}
-                  />
-                ) : null}
-                {!record.sectionId.startsWith("pull-request:") ? (
-                  <>
-                    <ReviewCommentCard
-                      comment={{ ...record, id: record.contextId }}
-                      colors={reviewColors}
-                    />
-                  </>
-                ) : null}
-              </>
+              <ReviewCommentCard
+                comment={{ ...record, id: record.contextId }}
+                colors={reviewColors}
+              />
             ) : null}
             {record.kind === "preview-annotation" ? (
               <>
@@ -348,20 +322,6 @@ export function ComposerContextSheet(props: {
             )}
           />
         ) : null}
-        {pullRequestUrl && /^https?:\/\//i.test(pullRequestUrl) ? (
-          <Pressable
-            accessibilityRole="link"
-            onPress={() => {
-              props.onClose();
-              void openPullRequest(pullRequestUrl).catch(() =>
-                Alert.alert("Could not open pull request", "Try again when connected."),
-              );
-            }}
-            className="rounded-xl bg-subtle p-4"
-          >
-            <Text className="text-foreground">Open pull request</Text>
-          </Pressable>
-        ) : null}
         {props.onOpenAttachment ? (
           <Pressable
             accessibilityRole="button"
@@ -369,15 +329,6 @@ export function ComposerContextSheet(props: {
             className="rounded-xl bg-subtle p-4"
           >
             <Text className="text-foreground">Open attachment</Text>
-          </Pressable>
-        ) : null}
-        {props.onOpenPullRequest && !pullRequestUrl ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={props.onOpenPullRequest}
-            className="rounded-xl bg-subtle p-4"
-          >
-            <Text className="text-foreground">Open pull request</Text>
           </Pressable>
         ) : null}
         {props.onRemove ? (

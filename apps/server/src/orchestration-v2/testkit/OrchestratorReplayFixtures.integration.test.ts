@@ -27,6 +27,7 @@ import { PiOrchestratorReplayHarness } from "../Adapters/PiAdapterV2.testkit.ts"
 import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
 import { provideDeterministicTestRuntime } from "./DeterministicRuntime.ts";
 import { ORCHESTRATOR_REPLAY_FIXTURES } from "./fixtures/index.ts";
+import { claudeBackgroundSubagentAfterRootInput } from "./fixtures/claude_background_subagent_after_root/input.ts";
 import { messageRestartInput } from "./fixtures/message_steering/input.ts";
 import {
   assertProviderNativeSubagentRootTurns,
@@ -340,7 +341,8 @@ describe("orchestrator replay fixtures", () => {
       ([tool, opens, notificationStatus]) =>
         runFixtureProviderWithRegisteredHarness({
           fixtureName: afterRootFixture.name,
-          buildInput: afterRootFixture.buildInput,
+          // The final report is dropped below, so its last narration is step 2.
+          buildInput: () => claudeBackgroundSubagentAfterRootInput("SUB_STEP_2"),
           driver: {
             ...afterRootProvider,
             assertOutput: (result) => {

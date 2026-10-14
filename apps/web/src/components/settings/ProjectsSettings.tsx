@@ -8,7 +8,7 @@ import { SettingsPageContainer } from "./settingsLayout";
 /** Project identity and checkout management for the selected project. */
 export function ProjectsSettings() {
   const { search: value, scope } = useSettingsScope();
-  // The panel follows remembered members when grouping replaces a project key.
+  // The panel explains a missing project or checkout itself.
   const projectScope =
     scope.kind === "project" ||
     scope.kind === "checkout" ||

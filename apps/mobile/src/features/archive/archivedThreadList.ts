@@ -64,9 +64,7 @@ export function buildArchivedThreadGroups(input: {
         matchesQuery(environmentLabel, query);
       const matchingThreads = groupMatches
         ? projectThreads
-        : projectThreads.filter(
-            (thread) => matchesQuery(thread.title, query) || matchesQuery(thread.branch, query),
-          );
+        : projectThreads.filter((thread) => matchesQuery(thread.title, query));
 
       if (matchingThreads.length === 0) {
         continue;

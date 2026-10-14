@@ -114,7 +114,7 @@ const refuseReadOnlyClient = McpInvocationContext.McpInvocationContext.pipe(
 
 /**
  * The caller of a tool that changes something. Tools that act for a
- * capability of their own (preview, device, worktree, pull requests) check it
+ * capability of their own (preview, device) check it
  * themselves.
  */
 const writingCaller = refuseReadOnlyClient.pipe(
@@ -141,8 +141,8 @@ export const readsAsCaller = <P, A, E, R>(handle: (params: P) => Effect.Effect<A
   declare((params: P) => requireThreadCaller.pipe(Effect.flatMap(() => handle(params))));
 
 /**
- * Acts as the calling T3 thread (its subagents, preview tabs, devices,
- * worktree) while that thread's run is live. Only an agent running inside a
+ * Acts as the calling T3 thread (its subagents, preview tabs, devices)
+ * while that thread's run is live. Only an agent running inside a
  * T3 thread has one.
  */
 export const actsAsCaller = <P, A, E, R>(handle: (params: P) => Effect.Effect<A, E, R>) =>
@@ -156,14 +156,6 @@ export const actsAsCaller = <P, A, E, R>(handle: (params: P) => Effect.Effect<A,
 /** Changes something that belongs to no thread, such as a pending upload or a scheduled task. */
 export const writes = <P, A, E, R>(handle: (params: P) => Effect.Effect<A, E, R>) =>
   declare((params: P) => orchestratingCaller.pipe(Effect.flatMap(() => handle(params))));
-
-/**
- * Changes something that belongs to no thread under a capability of the tool's own, such as
- * writing a pull request's review guide. Unlike `writes` it does not need thread control; the
- * handler checks its capability, as the capability toolkits do.
- */
-export const writesWithCapability = <P, A, E, R>(handle: (params: P) => Effect.Effect<A, E, R>) =>
-  declare((params: P) => writingCaller.pipe(Effect.flatMap(() => handle(params))));
 
 /**
  * Changes the threads `threads` names. An omitted id is the caller's own

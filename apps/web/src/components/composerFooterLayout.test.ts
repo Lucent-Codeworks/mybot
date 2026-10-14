@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { resolveContextStripLabelsCompact } from "./BranchToolbar.logic";
+import { resolveContextStripLabelsCompact } from "./ComposerContextStrip.logic";
 import {
   COMPOSER_FOOTER_COMPACT_BREAKPOINT_PX,
   COMPOSER_FOOTER_WIDE_ACTIONS_COMPACT_BREAKPOINT_PX,

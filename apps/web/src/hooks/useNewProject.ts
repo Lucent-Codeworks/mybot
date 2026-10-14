@@ -1,9 +1,5 @@
 import { scopeProjectRef } from "@t3tools/client-runtime/environment";
 import {
-  getNewProjectRepository,
-  type NewProjectPublishTarget,
-} from "@t3tools/client-runtime/operations/projects";
-import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
 } from "@t3tools/client-runtime/state/runtime";
@@ -13,7 +9,6 @@ import { useCallback } from "react";
 import { stackedThreadToast, toastManager } from "~/components/ui/toast";
 import { waitForProject } from "~/state/entities";
 import { projectEnvironment } from "~/state/projects";
-import { sourceControlEnvironment } from "~/state/sourceControl";
 import { useAtomCommand } from "~/state/use-atom-command";
 import { useNewThreadHandler } from "./useHandleNewThread";
 
@@ -25,63 +20,19 @@ function errorMessage(error: unknown): string {
 
 /**
  * Starts a project from just a name. The server makes a folder under its
- * `newProjectsRoot` with a README, an icon, and a first commit; this then
- * opens a new thread draft in it. With `publishTo`, it also publishes the
- * repository as private on that host, without holding up the draft.
+ * `newProjectsRoot` with a README and an icon; this then
+ * opens a new thread draft in it.
  *
  * Resolves to whether the project was created.
  */
 export function useNewProject() {
   const createNew = useAtomCommand(projectEnvironment.createNew, { reportFailure: false });
-  const publishRepository = useAtomCommand(sourceControlEnvironment.publishRepository, {
-    reportFailure: false,
-  });
   const handleNewThread = useNewThreadHandler();
-
-  const publishNewRepository = useCallback(
-    async (input: {
-      readonly environmentId: EnvironmentId;
-      readonly workspaceRoot: string;
-      readonly target: NewProjectPublishTarget;
-    }) => {
-      const { label } = input.target.definition;
-      const result = await publishRepository({
-        environmentId: input.environmentId,
-        input: {
-          cwd: input.workspaceRoot,
-          provider: input.target.definition.kind,
-          repository: getNewProjectRepository(input.target, input.workspaceRoot),
-          visibility: "private",
-        },
-      });
-      if (result._tag === "Failure") {
-        if (!isAtomCommandInterrupted(result)) {
-          toastManager.add(
-            stackedThreadToast({
-              type: "error",
-              title: `Could not create the ${label} repository`,
-              description: `${errorMessage(squashAtomCommandFailure(result))} Use Publish Repository in the Git menu to try again.`,
-            }),
-          );
-        }
-        return;
-      }
-      toastManager.add(
-        stackedThreadToast({
-          type: "success",
-          title: `Published to ${label}`,
-          description: result.value.repository.nameWithOwner,
-        }),
-      );
-    },
-    [publishRepository],
-  );
 
   return useCallback(
     async (input: {
       readonly environmentId: EnvironmentId;
       readonly name: string;
-      readonly publishTo: NewProjectPublishTarget | null;
     }): Promise<boolean> => {
       const result = await createNew({
         environmentId: input.environmentId,
@@ -100,26 +51,15 @@ export function useNewProject() {
         return false;
       }
 
-      const { projectId, workspaceRoot, commitError } = result.value;
+      const { projectId, workspaceRoot } = result.value;
       // The folder sits in T3 Code's data directory, so always say where.
       toastManager.add(
-        stackedThreadToast(
-          commitError === undefined
-            ? { type: "success", title: `Created ${input.name}`, description: workspaceRoot }
-            : {
-                type: "warning",
-                title: `Created ${input.name} without a first commit`,
-                description: `${commitError} The project is in ${workspaceRoot}.`,
-              },
-        ),
+        stackedThreadToast({
+          type: "success",
+          title: `Created ${input.name}`,
+          description: workspaceRoot,
+        }),
       );
-      if (input.publishTo) {
-        void publishNewRepository({
-          environmentId: input.environmentId,
-          workspaceRoot,
-          target: input.publishTo,
-        });
-      }
 
       const projectRef = scopeProjectRef(input.environmentId, projectId);
       // Drafts key off the project's stored path, so wait for the create event
@@ -146,6 +86,6 @@ export function useNewProject() {
       });
       return true;
     },
-    [createNew, handleNewThread, publishNewRepository],
+    [createNew, handleNewThread],
   );
 }

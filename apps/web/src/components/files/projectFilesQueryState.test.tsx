@@ -176,7 +176,6 @@ describe("project query refresh", () => {
     const registry = AtomRegistry.make();
     atomHooks.registry = registry;
     const config = {
-      defaultThreadEnvMode: "worktree",
       scripts: [{ name: "Test", command: "vp test" }],
     };
     projectMocks.readFile.mockReturnValue(
@@ -233,7 +232,6 @@ describe("project query refresh", () => {
       const registry = AtomRegistry.make();
       atomHooks.registry = registry;
       const config = {
-        defaultThreadEnvMode: "worktree",
         scripts: [{ name: "Test", command: "vp test" }],
       };
       projectMocks.readFile.mockReturnValue(

@@ -48,7 +48,6 @@ import * as ProjectionStore from "./ProjectionStore.ts";
 import * as ProviderEventIngestor from "./ProviderEventIngestor.ts";
 import * as McpAppModelContext from "../mcpApps/McpAppModelContext.ts";
 import * as RunExecutionService from "./RunExecutionService.ts";
-import * as RunFinalizationService from "./RunFinalizationService.ts";
 
 const driver = ProviderDriverKind.make("codex");
 
@@ -56,7 +55,7 @@ const layerRunExecutionTest = RunExecutionService.layer.pipe(
   Layer.provide(
     Layer.mergeAll(
       McpAppModelContext.layerEmpty,
-      Layer.mock(CheckpointService.CheckpointServiceV2)({ captureBaseline: () => Effect.void }),
+      Layer.mock(CheckpointService.CheckpointServiceV2)({}),
       Layer.mock(EventSink.EventSinkV2)({}),
       IdAllocator.layer,
       Layer.mock(ProviderEventIngestor.ProviderEventIngestorV2)({
@@ -752,9 +751,7 @@ it.effect("passes the thread's MCP app context to the provider under a safe key"
                   },
                 ]),
             }),
-            Layer.mock(CheckpointService.CheckpointServiceV2)({
-              captureBaseline: () => Effect.void,
-            }),
+            Layer.mock(CheckpointService.CheckpointServiceV2)({}),
             Layer.mock(EventSink.EventSinkV2)({}),
             IdAllocator.layer,
             Layer.mock(ProviderEventIngestor.ProviderEventIngestorV2)({
@@ -781,7 +778,7 @@ it.effect("fails the run when its ownership check cannot be read before calling 
       Layer.provide(
         Layer.mergeAll(
           McpAppModelContext.layerEmpty,
-          Layer.mock(CheckpointService.CheckpointServiceV2)({ captureBaseline: () => Effect.void }),
+          Layer.mock(CheckpointService.CheckpointServiceV2)({}),
           Layer.mock(EventSink.EventSinkV2)({
             writeIfRunCurrent: (input) =>
               Ref.update(writes, (current) => [...current, ...input.events]).pipe(
@@ -1030,125 +1027,6 @@ it.effect("refreshes MCP credential liveness before calling the provider", () =>
   }).pipe(Effect.provide(layerRunExecutionTest)),
 );
 
-it.effect("starts the provider when checkpoint baseline capture fails", () =>
-  Effect.gen(function* () {
-    const threadId = ThreadId.make("thread:run-execution-baseline-failure");
-    const runId = RunId.make("run:run-execution-baseline-failure");
-    const attemptId = RunAttemptId.make("attempt:run-execution-baseline-failure");
-    const providerThreadId = ProviderThreadId.make(
-      "provider-thread:run-execution-baseline-failure",
-    );
-    const providerInstanceId = ProviderInstanceId.make("codex");
-    const providerSessionId = ProviderSessionId.make("session:run-execution-baseline-failure");
-    const rootNodeId = NodeId.make("node:run-execution-baseline-failure");
-    const checkpointScope = {
-      id: CheckpointScopeId.make("checkpoint-scope:run-execution-baseline-failure"),
-    } as OrchestrationV2CheckpointScope;
-    const providerStarts = yield* Ref.make(0);
-    const writes = yield* Ref.make<
-      ReadonlyArray<{
-        events: ReadonlyArray<OrchestrationV2DomainEvent>;
-        effects: ReadonlyArray<PendingOrchestrationEffectV2>;
-      }>
-    >([]);
-    const layerTest = RunExecutionService.layer.pipe(
-      Layer.provide(
-        Layer.mergeAll(
-          McpAppModelContext.layerEmpty,
-          Layer.mock(CheckpointService.CheckpointServiceV2)({
-            captureBaseline: () =>
-              Effect.fail(
-                new CheckpointService.CheckpointBaselineCaptureError({
-                  scopeId: checkpointScope.id,
-                  ordinalWithinScope: 0,
-                  cause: new Error("VCS process timed out"),
-                }),
-              ),
-          }),
-          Layer.mock(EventSink.EventSinkV2)({
-            writeWithEffects: (input) =>
-              Ref.update(writes, (current) => [
-                ...current,
-                { events: input.events, effects: input.effects },
-              ]).pipe(Effect.as([])),
-          }),
-          IdAllocator.layer,
-          Layer.mock(ProviderEventIngestor.ProviderEventIngestorV2)({
-            ingestNormalized: () => Effect.succeed([]),
-          }),
-          ServerSettings.layerTest(),
-        ),
-      ),
-    );
-
-    yield* Effect.gen(function* () {
-      const runExecution = yield* RunExecutionService.RunExecutionServiceV2;
-      yield* runExecution.startRootRun({
-        commandId: CommandId.make("command:run-execution-baseline-failure"),
-        appThread: { id: threadId } as OrchestrationV2AppThread,
-        providerSessionId,
-        session: {
-          events: Stream.never,
-          startTurn: () => Ref.update(providerStarts, (count) => count + 1),
-        } as unknown as ProviderAdapter.ProviderAdapterV2SessionRuntime,
-        run: {
-          id: runId,
-          threadId,
-          ordinal: 1,
-          providerInstanceId,
-        } as OrchestrationV2Run,
-        rootNode: { id: rootNodeId } as OrchestrationV2ExecutionNode,
-        checkpointScope,
-        providerThread: {
-          id: providerThreadId,
-          driver,
-        } as OrchestrationV2ProviderThread,
-        attempt: {
-          id: attemptId,
-          providerTurnId: null,
-        } as OrchestrationV2RunAttempt,
-        attemptId,
-        providerTurnOrdinal: 1,
-        message: {
-          messageId: MessageId.make("message:run-execution-baseline-failure"),
-          text: "Start the provider without a baseline.",
-          attachments: [],
-          createdBy: "user",
-          creationSource: "web",
-        },
-        modelSelection: { instanceId: providerInstanceId, model: "gpt-5.4" },
-        runtimePolicy: {
-          runtimeMode: "full-access",
-          interactionMode: "default",
-          cwd: process.cwd(),
-          approvalPolicy: "never",
-          sandboxPolicy: {
-            type: "readOnly",
-            access: { type: "fullAccess" },
-            networkAccess: false,
-          },
-        },
-      });
-    }).pipe(Effect.provide(layerTest));
-
-    assert.equal(yield* Ref.get(providerStarts), 1);
-
-    const events = (yield* Ref.get(writes)).flatMap((write) => [...write.events]);
-    const failedEvent = events.find(
-      (event) =>
-        (event.type === "run.updated" ||
-          event.type === "run-attempt.updated" ||
-          event.type === "node.updated") &&
-        event.payload.status === "failed",
-    );
-    assert.isUndefined(failedEvent);
-    const errorItem = events.find(
-      (event) => event.type === "turn-item.updated" && event.payload.type === "error",
-    );
-    assert.isUndefined(errorItem);
-  }),
-);
-
 it.effect.each(["failure", "interruption", "stale-attempt", "start-guard"] as const)(
   "handles %s before the provider turn starts",
   (scenario) =>
@@ -1166,17 +1044,13 @@ it.effect.each(["failure", "interruption", "stale-attempt", "start-guard"] as co
         id: CheckpointScopeId.make("checkpoint-scope:run-execution-settings-failure"),
       } as OrchestrationV2CheckpointScope;
       const providerStarts = yield* Ref.make(0);
-      const refreshes = yield* Ref.make(0);
       const guardedWrites = yield* Ref.make(0);
       const writes = yield* Ref.make<ReadonlyArray<ReadonlyArray<OrchestrationV2DomainEvent>>>([]);
       const layerTest = RunExecutionService.layer.pipe(
         Layer.provide(
           Layer.mergeAll(
             McpAppModelContext.layerEmpty,
-            Layer.mock(CheckpointService.CheckpointServiceV2)({
-              captureBaseline: () =>
-                scenario === "start-guard" ? Effect.void : Effect.die("not reached"),
-            }),
+            Layer.mock(CheckpointService.CheckpointServiceV2)({}),
             Layer.mock(EventSink.EventSinkV2)({
               writeIfRunCurrent: (input) =>
                 Effect.gen(function* () {
@@ -1210,10 +1084,6 @@ it.effect.each(["failure", "interruption", "stale-attempt", "start-guard"] as co
                           }),
                         ),
                 }),
-            Layer.succeed(RunFinalizationService.RunFinalizationObserver, {
-              refresh: () => Effect.void,
-              refreshAfterTurn: () => Ref.update(refreshes, (count) => count + 1),
-            }),
           ),
         ),
       );
@@ -1280,24 +1150,20 @@ it.effect.each(["failure", "interruption", "stale-attempt", "start-guard"] as co
         assert.isTrue(Exit.isFailure(result));
         if (Exit.isFailure(result)) assert.isTrue(Cause.hasInterruptsOnly(result.cause));
         assert.equal(yield* Ref.get(guardedWrites), 0);
-        assert.equal(yield* Ref.get(refreshes), 0);
         assert.isEmpty(events);
         return;
       }
       assert.isTrue(Exit.isSuccess(result));
       if (scenario === "start-guard") {
         assert.equal(yield* Ref.get(guardedWrites), 0);
-        assert.equal(yield* Ref.get(refreshes), 0);
         assert.isEmpty(events);
         return;
       }
       assert.equal(yield* Ref.get(guardedWrites), 1);
       if (scenario === "stale-attempt") {
-        assert.equal(yield* Ref.get(refreshes), 0);
         assert.isEmpty(events);
         return;
       }
-      assert.equal(yield* Ref.get(refreshes), 1);
       assert.deepEqual(
         events
           .filter(
@@ -1345,7 +1211,7 @@ it.effect("ingests new member threads of an owned child after the root turn term
       Layer.provide(
         Layer.mergeAll(
           McpAppModelContext.layerEmpty,
-          Layer.mock(CheckpointService.CheckpointServiceV2)({ captureBaseline: () => Effect.void }),
+          Layer.mock(CheckpointService.CheckpointServiceV2)({}),
           Layer.mock(EventSink.EventSinkV2)({
             write: () => Effect.succeed([]),
             writeWithEffects: (input) =>
@@ -1574,7 +1440,7 @@ it.effect("ends a nested native subagent and its thread when the root run is int
       Layer.provide(
         Layer.mergeAll(
           McpAppModelContext.layerEmpty,
-          Layer.mock(CheckpointService.CheckpointServiceV2)({ captureBaseline: () => Effect.void }),
+          Layer.mock(CheckpointService.CheckpointServiceV2)({}),
           Layer.mock(EventSink.EventSinkV2)({
             write: () => Effect.succeed([]),
             writeWithEffects: (input) =>
@@ -1929,9 +1795,7 @@ it.effect(
         Layer.provide(
           Layer.mergeAll(
             McpAppModelContext.layerEmpty,
-            Layer.mock(CheckpointService.CheckpointServiceV2)({
-              captureBaseline: () => Effect.void,
-            }),
+            Layer.mock(CheckpointService.CheckpointServiceV2)({}),
             Layer.mock(EventSink.EventSinkV2)({
               write: () => Effect.succeed([]),
               writeWithEffects: (input) =>
@@ -2147,7 +2011,7 @@ it.effect("drops late root provider-thread writes from a superseded attempt", ()
       Layer.provide(
         Layer.mergeAll(
           McpAppModelContext.layerEmpty,
-          Layer.mock(CheckpointService.CheckpointServiceV2)({ captureBaseline: () => Effect.void }),
+          Layer.mock(CheckpointService.CheckpointServiceV2)({}),
           Layer.mock(EventSink.EventSinkV2)({
             write: () => Effect.succeed([]),
             writeWithEffects: (input) =>
@@ -2352,9 +2216,7 @@ it.effect(
         Layer.provide(
           Layer.mergeAll(
             McpAppModelContext.layerEmpty,
-            Layer.mock(CheckpointService.CheckpointServiceV2)({
-              captureBaseline: () => Effect.void,
-            }),
+            Layer.mock(CheckpointService.CheckpointServiceV2)({}),
             Layer.mock(EventSink.EventSinkV2)({
               write: () => Effect.succeed([]),
               writeWithEffects: (input) =>
@@ -2524,9 +2386,7 @@ it.effect(
         Layer.provide(
           Layer.mergeAll(
             McpAppModelContext.layerEmpty,
-            Layer.mock(CheckpointService.CheckpointServiceV2)({
-              captureBaseline: () => Effect.void,
-            }),
+            Layer.mock(CheckpointService.CheckpointServiceV2)({}),
             Layer.mock(EventSink.EventSinkV2)({
               write: () => Effect.succeed([]),
               writeWithEffects: (input) =>
@@ -2694,9 +2554,7 @@ it.effect(
         Layer.provide(
           Layer.mergeAll(
             McpAppModelContext.layerEmpty,
-            Layer.mock(CheckpointService.CheckpointServiceV2)({
-              captureBaseline: () => Effect.void,
-            }),
+            Layer.mock(CheckpointService.CheckpointServiceV2)({}),
             Layer.mock(EventSink.EventSinkV2)({
               write: () => Effect.succeed([]),
               writeWithEffects: (input) =>
@@ -3135,9 +2993,7 @@ it.effect(
         Layer.provide(
           Layer.mergeAll(
             McpAppModelContext.layerEmpty,
-            Layer.mock(CheckpointService.CheckpointServiceV2)({
-              captureBaseline: () => Effect.void,
-            }),
+            Layer.mock(CheckpointService.CheckpointServiceV2)({}),
             Layer.mock(EventSink.EventSinkV2)({
               write: () => Effect.succeed([]),
               writeWithEffects: (input) =>
@@ -3628,7 +3484,7 @@ it.effect("emits run_interrupt_result when superseded attempt still has a hard-s
       written.map((item) => item.type),
       ["run_interrupt_result"],
     );
-    assert.deepEqual(observed, ["pull-requests-refreshed"]);
+    assert.deepEqual(observed, []);
     const ids = backgroundScenarioIds("stop-then-steer-supersede");
     const expectedRequestId = yield* Effect.gen(function* () {
       const idAllocator = yield* IdAllocator.IdAllocatorV2;
@@ -3684,7 +3540,7 @@ it.effect("emits run_interrupt_result when hard-stop finalizes the active attemp
       written.map((item) => item.type),
       ["run_interrupt_result"],
     );
-    assert.deepEqual(observed, ["run:interrupted", "pull-requests-refreshed"]);
+    assert.deepEqual(observed, ["run:interrupted"]);
     assert.deepEqual(
       committedEffects.map((effect) => effect.request.type),
       ["checkpoint.capture"],
@@ -3693,18 +3549,15 @@ it.effect("emits run_interrupt_result when hard-stop finalizes the active attemp
 );
 
 it.effect.each(["completed", "interrupted", "cancelled", "failed"] as const)(
-  "refreshes pull requests after the current root run %s",
+  "finalizes the current root run %s",
   (status) =>
     Effect.gen(function* () {
       const { observed } = yield* captureRootRunTermination({
-        key: `pull-request-refresh:${status}`,
+        key: `root-run-finalization:${status}`,
         shouldFinalizeRun: () => Effect.succeed(true),
         events: (ids) => Stream.make(rootTerminalEvent(ids, status)),
       });
-      assert.deepEqual(observed, [
-        `run:${status === "completed" ? "waiting" : status}`,
-        "pull-requests-refreshed",
-      ]);
+      assert.deepEqual(observed, [`run:${status === "completed" ? "waiting" : status}`]);
     }),
 );
 
@@ -3727,10 +3580,10 @@ it.effect("records a finished run as failed when its ownership check cannot be r
   }),
 );
 
-it.effect("does not refresh pull requests for auxiliary or stale provider terminals", () =>
+it.effect("does not finalize the run for auxiliary or stale provider terminals", () =>
   Effect.gen(function* () {
     const { observed } = yield* captureRootRunTermination({
-      key: "pull-request-refresh:auxiliary",
+      key: "root-run-finalization:auxiliary",
       shouldFinalizeRun: () => Effect.succeed(true),
       events: (ids) =>
         Stream.fromIterable([
@@ -3748,10 +3601,10 @@ it.effect("does not refresh pull requests for auxiliary or stale provider termin
   }),
 );
 
-it.effect("refreshes pull requests after a provider stream exits with an error", () =>
+it.effect("fails the run after a provider stream exits with an error", () =>
   Effect.gen(function* () {
     const { written, observed } = yield* captureRootRunTermination({
-      key: "pull-request-refresh:stream-error",
+      key: "root-run-finalization:stream-error",
       shouldFinalizeRun: () => Effect.succeed(true),
       events: () =>
         Stream.fail(
@@ -3762,7 +3615,7 @@ it.effect("refreshes pull requests after a provider stream exits with an error",
           }),
         ),
     });
-    assert.deepEqual(observed, ["run:failed", "pull-requests-refreshed"]);
+    assert.deepEqual(observed, ["run:failed"]);
     assert.deepEqual(
       written.map((item) => item.type),
       ["error"],
@@ -3772,11 +3625,11 @@ it.effect("refreshes pull requests after a provider stream exits with an error",
   }),
 );
 
-it.effect("refreshes pull requests only once when startup failure closes its event stream", () =>
+it.effect("fails the run once when startup failure closes its event stream", () =>
   Effect.gen(function* () {
     const ingestionStarted = yield* Deferred.make<void>();
     const { observed, written } = yield* captureRootRunTermination({
-      key: "pull-request-refresh:startup-error",
+      key: "root-run-finalization:startup-error",
       shouldFinalizeRun: () => Effect.succeed(true),
       events: () =>
         Stream.unwrap(Deferred.succeed(ingestionStarted, undefined).pipe(Effect.as(Stream.never))),
@@ -3795,22 +3648,9 @@ it.effect("refreshes pull requests only once when startup failure closes its eve
           ),
         ),
     });
-    assert.equal(observed.filter((item) => item === "pull-requests-refreshed").length, 1);
-    assert.equal(observed[0], "run:failed");
+    assert.deepEqual(observed, ["run:failed"]);
     const error = written.find((item) => item.type === "error");
     assert.include(error?.failure.message ?? "", "provider could not start this turn");
-  }),
-);
-
-it.effect("keeps completed runs completed when pull request refresh fails", () =>
-  Effect.gen(function* () {
-    const { observed } = yield* captureRootRunTermination({
-      key: "pull-request-refresh:refresh-failure",
-      shouldFinalizeRun: () => Effect.succeed(true),
-      events: (ids) => Stream.make(rootTerminalEvent(ids, "completed")),
-      refreshAfterTurn: Effect.die("refresh failed"),
-    });
-    assert.deepEqual(observed, ["run:waiting", "pull-requests-refreshed"]);
   }),
 );
 
@@ -3827,7 +3667,6 @@ function captureRootRunTermination(input: {
     ProviderAdapter.ProviderAdapterV2Error
   >;
   readonly startTurn?: ProviderAdapter.ProviderAdapterV2SessionRuntime["startTurn"];
-  readonly refreshAfterTurn?: Effect.Effect<void>;
 }) {
   return Effect.gen(function* () {
     const ids = backgroundScenarioIds(input.key);
@@ -3861,7 +3700,7 @@ function captureRootRunTermination(input: {
       Layer.provide(
         Layer.mergeAll(
           McpAppModelContext.layerEmpty,
-          Layer.mock(CheckpointService.CheckpointServiceV2)({ captureBaseline: () => Effect.void }),
+          Layer.mock(CheckpointService.CheckpointServiceV2)({}),
           Layer.mock(EventSink.EventSinkV2)({
             write: (payload) =>
               Effect.gen(function* () {
@@ -3896,13 +3735,6 @@ function captureRootRunTermination(input: {
             ingestNormalized: () => Effect.succeed([]),
           }),
           ServerSettings.layerTest(),
-          Layer.succeed(RunFinalizationService.RunFinalizationObserver, {
-            refresh: () => Effect.void,
-            refreshAfterTurn: () =>
-              Ref.update(observed, (current) => [...current, "pull-requests-refreshed"]).pipe(
-                Effect.andThen(input.refreshAfterTurn ?? Effect.void),
-              ),
-          }),
         ),
       ),
     );
@@ -4342,7 +4174,7 @@ function runBackgroundItemScenario(
       Layer.provide(
         Layer.mergeAll(
           McpAppModelContext.layerEmpty,
-          Layer.mock(CheckpointService.CheckpointServiceV2)({ captureBaseline: () => Effect.void }),
+          Layer.mock(CheckpointService.CheckpointServiceV2)({}),
           Layer.mock(EventSink.EventSinkV2)({
             write: () => Effect.succeed([]),
             writeWithEffects: (input) =>

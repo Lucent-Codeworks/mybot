@@ -40,6 +40,7 @@ import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
 import * as ProviderAdapterRegistry from "../ProviderAdapterRegistry.ts";
 import * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
 import type { OrchestratorV2ProviderReplayHarness } from "../testkit/ProviderReplayHarness.ts";
+import type { ProviderReplayGate } from "@t3tools/provider-testing/replayGate";
 import { materializeReplayTranscriptWorkspace } from "@t3tools/provider-testing/replayTranscript";
 import { makeMuseAdapterV2 } from "@t3tools/provider-muse/server";
 
@@ -235,9 +236,13 @@ class MuseReplayController {
   private readonly held: Array<{ readonly host: MuseReplayHost; readonly actual: unknown }> = [];
   private readonly hosts: Array<MuseReplayHost> = [];
   private readonly transcript: MuseReplayTranscript;
+  private readonly replayGate: ProviderReplayGate | undefined;
+  /** The cursor of the gated line already released, which emits without waiting again. */
+  private releasedGateCursor = -1;
 
-  constructor(transcript: MuseReplayTranscript) {
+  constructor(transcript: MuseReplayTranscript, replayGate?: ProviderReplayGate) {
     this.transcript = transcript;
+    this.replayGate = replayGate;
   }
 
   spawn(args: ReadonlyArray<string>): MuseReplayHost {
@@ -363,6 +368,22 @@ class MuseReplayController {
       if (entry?.type !== "emit_inbound") return emitted;
       const host = this.hosts[entryHost(entry) - 1];
       if (host === undefined) return emitted;
+      // A gated line holds the lines after it until the scenario releases it.
+      if (
+        this.replayGate !== undefined &&
+        entry.label !== undefined &&
+        this.releasedGateCursor !== this.cursor
+      ) {
+        const released = this.replayGate.beforeEmit(entry.label);
+        if (this.replayGate.hasReached(entry.label)) {
+          const cursor = this.cursor;
+          void released.then(() => {
+            this.releasedGateCursor = cursor;
+            this.advance();
+          });
+          return emitted;
+        }
+      }
       this.cursor += 1;
       emitted = true;
       // Output a host wrote after T3 released it was never observed.
@@ -511,10 +532,10 @@ export const MuseOrchestratorReplayHarness: OrchestratorV2ProviderReplayHarness<
         (cause) => new MuseReplayTranscriptDecodeError({ scenario: transcript.scenario, cause }),
       ),
     ),
-  makeProviderAdapterRegistryLayer: (transcript) =>
+  makeProviderAdapterRegistryLayer: (transcript, options) =>
     Layer.unwrap(
       Effect.gen(function* () {
-        const controller = new MuseReplayController(transcript);
+        const controller = new MuseReplayController(transcript, options?.replayGate);
         yield* Effect.addFinalizer(() => Effect.sync(() => controller.assertComplete()));
         return layer({
           scenario: transcript.scenario,

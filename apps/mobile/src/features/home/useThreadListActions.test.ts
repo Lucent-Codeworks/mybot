@@ -264,7 +264,7 @@ describe("thread list operation permissions", () => {
     expect(state.requests).toEqual([]);
   });
 
-  it("keeps delete independent of terminal and source-control permissions", async () => {
+  it("keeps delete independent of terminal permissions", async () => {
     vi.stubEnv("EXPO_OS", "android");
     useArchivedThreadListActions(() => {}).confirmDeleteThread(makeThread());
     await state.dialogs[0]!.onConfirm();

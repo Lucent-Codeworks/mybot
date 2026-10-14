@@ -332,7 +332,6 @@ export interface ComposerDraft {
   readonly modelSelection?: ModelSelection;
   readonly runtimeMode?: RuntimeMode;
   readonly interactionMode?: ProviderInteractionMode;
-  readonly workspaceSelection?: ComposerDraftWorkspaceSelection;
   /**
    * Set on new-task drafts only. The project is stored here rather than in
    * the key so a project can hold any number of drafts and a draft can be
@@ -354,27 +353,10 @@ export interface ComposerDraftContent {
   readonly sourceShareId?: string;
 }
 
-export interface ComposerDraftWorkspaceSelection {
-  readonly mode: "local" | "worktree";
-  readonly branch: string | null;
-  readonly worktreePath: string | null;
-  readonly startFromOrigin?: boolean;
-  /** Resolve and check out this PR when the queued task is sent. */
-  readonly pullRequestReference?: string;
-}
-
 export type ComposerDraftSettingsUpdate = Pick<
   ComposerDraft,
-  "modelSelection" | "runtimeMode" | "interactionMode" | "workspaceSelection" | "project"
+  "modelSelection" | "runtimeMode" | "interactionMode" | "project"
 >;
-
-const ComposerDraftWorkspaceSelectionSchema = Schema.Struct({
-  mode: Schema.Literals(["local", "worktree"]),
-  branch: Schema.NullOr(Schema.String),
-  worktreePath: Schema.NullOr(Schema.String),
-  startFromOrigin: Schema.optional(Schema.Boolean),
-  pullRequestReference: Schema.optional(Schema.String),
-});
 
 const ComposerDraftProjectSchema = Schema.Struct({
   environmentId: EnvironmentIdSchema,
@@ -397,7 +379,6 @@ const ComposerDraftSchema = Schema.Struct({
   modelSelection: Schema.optional(ModelSelectionSchema),
   runtimeMode: Schema.optional(RuntimeModeSchema),
   interactionMode: Schema.optional(ProviderInteractionModeSchema),
-  workspaceSelection: Schema.optional(ComposerDraftWorkspaceSelectionSchema),
   project: Schema.optional(ComposerDraftProjectSchema),
 });
 
@@ -566,8 +547,7 @@ function isEmptyDraft(draft: ComposerDraft): boolean {
     draft.attachments.length === 0 &&
     draft.modelSelection === undefined &&
     draft.runtimeMode === undefined &&
-    draft.interactionMode === undefined &&
-    draft.workspaceSelection === undefined
+    draft.interactionMode === undefined
   );
 }
 
@@ -651,8 +631,7 @@ export function decodePersistedComposerState(value: unknown): {
               draft.text.length === 0 &&
               draft.attachments.length === 0 &&
               draft.runtimeMode === undefined &&
-              draft.interactionMode === undefined &&
-              draft.workspaceSelection === undefined
+              draft.interactionMode === undefined
               ? { ...draft, modelSelection: undefined }
               : draft,
             now,
@@ -1193,15 +1172,7 @@ export async function removeDeliveredCloudQueuedMessage(
           JSON.stringify(editor.modelSelection) !== JSON.stringify(message.modelSelection)) ||
         (editor.runtimeMode !== undefined && editor.runtimeMode !== message.runtimeMode) ||
         (editor.interactionMode !== undefined &&
-          editor.interactionMode !== message.interactionMode) ||
-        (editor.workspaceSelection !== undefined &&
-          (editor.workspaceSelection.mode !== message.creation?.workspaceMode ||
-            editor.workspaceSelection.branch !== message.creation?.branch ||
-            editor.workspaceSelection.worktreePath !== message.creation?.worktreePath ||
-            editor.workspaceSelection.pullRequestReference !==
-              message.creation?.pullRequestReference ||
-            (editor.workspaceSelection.startFromOrigin ?? false) !==
-              (message.creation?.startFromOrigin ?? false))))
+          editor.interactionMode !== message.interactionMode))
     )
       continue;
     const drafts = { ...saved.drafts };
@@ -1519,7 +1490,6 @@ export function clearComposerDraftContentState(
   draftKey: string,
   options?: {
     readonly clearModelSelection?: boolean;
-    readonly clearWorkspaceSelection?: boolean;
   },
 ): Record<string, ComposerDraft> {
   const existing = current[draftKey];
@@ -1533,16 +1503,12 @@ export function clearComposerDraftContentState(
     importedShareIds: _importedShareIds,
     context: _context,
     modelSelection,
-    workspaceSelection,
     project: _project,
     ...retained
   } = existing;
   const draft = {
     ...retained,
     ...(options?.clearModelSelection || modelSelection === undefined ? {} : { modelSelection }),
-    ...(options?.clearWorkspaceSelection || workspaceSelection === undefined
-      ? {}
-      : { workspaceSelection }),
     text: "",
     attachments: [],
   };
@@ -1722,8 +1688,7 @@ export function sameComposerDraftState(a: ComposerDraft, b: ComposerDraft): bool
     a.importedShareIds === b.importedShareIds &&
     a.modelSelection === b.modelSelection &&
     a.runtimeMode === b.runtimeMode &&
-    a.interactionMode === b.interactionMode &&
-    a.workspaceSelection === b.workspaceSelection
+    a.interactionMode === b.interactionMode
   );
 }
 
@@ -1755,9 +1720,7 @@ export function undoComposerDraftMergeState(
   );
   // A setting still holding the merge's value is the merge's doing: restore
   // the snapshot's. One the user changed since the merge stays theirs.
-  const undoSetting = <
-    K extends "modelSelection" | "runtimeMode" | "interactionMode" | "workspaceSelection",
-  >(
+  const undoSetting = <K extends "modelSelection" | "runtimeMode" | "interactionMode">(
     key: K,
   ): ComposerDraft[K] => (existing[key] === merged[key] ? snapshot[key] : existing[key]);
   const text =
@@ -1776,7 +1739,6 @@ export function undoComposerDraftMergeState(
     modelSelection: undoSetting("modelSelection"),
     runtimeMode: undoSetting("runtimeMode"),
     interactionMode: undoSetting("interactionMode"),
-    workspaceSelection: undoSetting("workspaceSelection"),
   };
   return withComposerDraft(current, draftKey, draft);
 }
@@ -1811,7 +1773,6 @@ export function clearComposerDraftContent(
   draftKey: string,
   options?: {
     readonly clearModelSelection?: boolean;
-    readonly clearWorkspaceSelection?: boolean;
     // Send clears the draft while the durable outbox write is still in
     // flight. Sweeping then would race the write: a failed enqueue rolls the
     // message out of the queue mid-sweep and its files get deleted right
@@ -1883,8 +1844,7 @@ export function createNewTaskDraft(project: {
 
 /**
  * Points an existing new-task draft at a different project, keeping its
- * content and identity. Workspace selection is project-specific (branch,
- * worktree), so it is cleared; model and mode choices carry over.
+ * content and identity; model and mode choices carry over.
  */
 export function retargetNewTaskDraft(
   draftKey: string,
@@ -1900,7 +1860,7 @@ export function retargetNewTaskDraft(
     ) {
       return current;
     }
-    const { workspaceSelection: _workspaceSelection, ...retained } = normalizeDraft(existing);
+    const retained = normalizeDraft(existing);
     // Pending uploads live on one server. Crossing environments keeps the
     // local bytes (the upload worker re-sends them to the new environment)
     // but drops the old stamp, so it cannot pin the source environment's

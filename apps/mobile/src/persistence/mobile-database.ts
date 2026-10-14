@@ -20,9 +20,7 @@ export const ClientCacheKind = Schema.Literals([
   "shell",
   "thread",
   "server-config",
-  "vcs-refs",
   "project-favicon",
-  "pull-request",
 ]);
 export type ClientCacheKind = typeof ClientCacheKind.Type;
 
@@ -137,15 +135,8 @@ export function decodeLegacyCacheRecord(
         payload,
       };
     case "connection-vcs-refs":
-      return typeof parsed.cwd === "string"
-        ? {
-            environmentId: parsed.environmentId,
-            kind: "vcs-refs",
-            cacheKey: parsed.cwd,
-            schemaVersion: parsed.schemaVersion,
-            payload,
-          }
-        : null;
+      // Source control was removed; the directory is only deleted.
+      return null;
   }
 }
 
@@ -276,6 +267,9 @@ const makeAvailable = Effect.gen(function* () {
                 payload TEXT NOT NULL,
                 updated_at INTEGER NOT NULL
               );
+
+              -- Kinds written by builds that still had source control.
+              DELETE FROM client_cache WHERE kind IN ('vcs-refs', 'pull-request');
             `);
       });
       if ((schema?.user_version ?? 0) < DATABASE_SCHEMA_VERSION) {
@@ -295,12 +289,10 @@ const makeAvailable = Effect.gen(function* () {
           database.getFirstAsync<{ readonly payload: string }>(
             `SELECT payload
                      FROM client_cache
-                     WHERE environment_id = ? AND kind = ? AND cache_key = ?
-                       AND (kind != 'pull-request' OR updated_at >= ?)`,
+                     WHERE environment_id = ? AND kind = ? AND cache_key = ?`,
             environmentId,
             kind,
             cacheKey,
-            Date.now() - 30 * 24 * 60 * 60_000,
           ),
         catch: databaseError("load-cache"),
       }).pipe(Effect.map((row) => Option.fromNullishOr(row?.payload))),
@@ -319,13 +311,6 @@ const makeAvailable = Effect.gen(function* () {
       (environmentId, kind, cacheKey, schemaVersion, payload) =>
         Effect.tryPromise({
           try: async () => {
-            // Diffs can be large. Keep the offline PR cache within 32 MiB and 256
-            // responses per environment, and don't let one huge diff evict it all.
-            if (
-              kind === "pull-request" &&
-              new TextEncoder().encode(payload).length > 4 * 1024 * 1024
-            )
-              return;
             const save = async (transaction: SQLiteDatabase) => {
               await transaction.runAsync(
                 `INSERT INTO client_cache
@@ -342,24 +327,6 @@ const makeAvailable = Effect.gen(function* () {
                 payload,
                 Date.now(),
               );
-              if (kind === "pull-request") {
-                await transaction.runAsync(
-                  `DELETE FROM client_cache WHERE environment_id = ? AND kind = 'pull-request'
-                   AND cache_key IN (
-                     SELECT cache_key FROM (
-                       SELECT cache_key, updated_at,
-                         ROW_NUMBER() OVER (ORDER BY updated_at DESC, cache_key) AS position,
-                         SUM(LENGTH(CAST(payload AS BLOB))) OVER (
-                           ORDER BY updated_at DESC, cache_key
-                         ) AS total_bytes
-                       FROM client_cache WHERE environment_id = ? AND kind = 'pull-request'
-                     ) WHERE position > 256 OR total_bytes > 33554432 OR updated_at < ?
-                   )`,
-                  environmentId,
-                  environmentId,
-                  Date.now() - 30 * 24 * 60 * 60_000,
-                );
-              }
             };
             await save(database);
           },

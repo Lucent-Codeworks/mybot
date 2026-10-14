@@ -45,7 +45,7 @@ describe("home list options across layout changes", () => {
           { value: registry },
           createElement(
             HomeListOptionsProvider,
-            { projectGroupingMode: "repository", savedFilters },
+            { savedFilters },
             // Replace the list while keeping the workspace provider mounted.
             createElement(ThreadList, { key: layout }),
           ),
@@ -106,7 +106,6 @@ describe("home list options across layout changes", () => {
             expect(latest.options).toMatchObject({
               selectedEnvironmentId,
               selectedProjectKey,
-              projectGroupingMode: "repository",
             });
           }
         }

@@ -11,7 +11,7 @@ import {
 
 import { resolveShortcutCommand, type ShortcutEventLike } from "./keybindings";
 
-export type ComposerTriggerKind = "path" | "pull-request" | "slash-command" | "skill";
+export type ComposerTriggerKind = "path" | "slash-command" | "skill";
 export type ComposerSlashCommand = "model" | "plan" | "default";
 export type ComposerSubmissionIntent = "foreground" | "background" | "alternate";
 
@@ -264,15 +264,6 @@ export function detectComposerTrigger(text: string, cursorInput: number): Compos
     return {
       kind: "slash-command",
       query: token.slice(1),
-      rangeStart: tokenStart,
-      rangeEnd: cursor,
-    };
-  }
-  const pullRequestMatch = /^#([\p{L}\p{N}][\p{L}\p{N}_-]*)?$/u.exec(token);
-  if (pullRequestMatch) {
-    return {
-      kind: "pull-request",
-      query: pullRequestMatch[1] ?? "",
       rangeStart: tokenStart,
       rangeEnd: cursor,
     };

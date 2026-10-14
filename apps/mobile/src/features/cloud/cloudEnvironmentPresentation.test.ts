@@ -36,7 +36,7 @@ describe("available cloud environment presentation", () => {
         platform: { os: "darwin", arch: "arm64" },
         serverVersion: "2.0.0",
         orchestrationProtocolVersion: ORCHESTRATION_PROTOCOL_VERSION + 1,
-        capabilities: { repositoryIdentity: true },
+        capabilities: {},
       },
     } satisfies RelayEnvironmentStatusResponse;
     expect(

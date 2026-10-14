@@ -33,28 +33,6 @@ describe("ExecutionEnvironmentDescriptor", () => {
       ).toBeUndefined();
     }
   });
-  it("requires an advertised required-worktree bootstrap capability", () => {
-    expect(decodeDescriptor(descriptor).capabilities.requiredWorktreeBootstrap).toBeUndefined();
-    expect(
-      decodeDescriptor({
-        ...descriptor,
-        capabilities: { ...descriptor.capabilities, requiredWorktreeBootstrap: true },
-      }).capabilities.requiredWorktreeBootstrap,
-    ).toBe(true);
-  });
-
-  it("treats a missing pull-request capability as unsupported under version skew", () => {
-    expect(decodeDescriptor(descriptor).capabilities.pullRequests).toBeUndefined();
-  });
-
-  it("preserves an advertised pull-request capability", () => {
-    expect(
-      decodeDescriptor({
-        ...descriptor,
-        capabilities: { ...descriptor.capabilities, pullRequests: true },
-      }).capabilities.pullRequests,
-    ).toBe(true);
-  });
 
   it("treats a missing attachment upload capability as unsupported", () => {
     expect(decodeDescriptor(descriptor).capabilities.attachmentUploads).toBeUndefined();

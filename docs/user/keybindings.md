@@ -24,10 +24,7 @@ steer. Change it under **Queue: Send First Queued Message as Steer** in Keybindi
 Use `mod+shift+m` to choose a model and `mod+shift+h` to choose a host.
 To step a new thread to the next machine instead of opening the menu, bind
 **Composer: Cycle Host** in Keybindings. It has no default shortcut.
-Use `mod+shift+e` for effort, `mod+shift+a` for access mode, `mod+shift+x` for the
-workspace, and `mod+shift+g` for the Git branch. The workspace menu includes the
-current checkout, a new worktree, and the previous worktree when available.
-Use `mod+shift+l` to reuse the previous worktree directly.
+Use `mod+shift+e` for effort and `mod+shift+a` for access mode.
 
 In the model picker, press Left in an empty search field or Shift+Tab to reach
 the provider list. Use Up/Down to move and Enter to choose. Right returns to
@@ -38,22 +35,6 @@ These shortcuts run inside the focused web or desktop client. `mod` uses Command
 on macOS and Ctrl on Windows and Linux, including GNOME, KDE Plasma, Niri, and
 Hyprland. If a custom desktop shortcut takes the same keys, choose another binding
 in Settings.
-
-## Copy pull request references
-
-With a PR open in the right panel or on the Pull Requests page, use `mod+shift+c`
-to copy its URL and `mod+shift+k` to copy its number with a `#` prefix.
-Both shortcuts can be changed in Settings. Search for “Copy Link or Thread ID”
-or “Copy Number”. They copy the selected PR and leave terminal input alone.
-
-## Find in a diff
-
-Click into a diff in the Diff panel or a pull request's Code tab, then press
-`mod+f` to search every file in it, including folded files and unchanged lines
-hidden between changes. Enter and `Shift+Enter` move between matches, and a
-match in a folded file opens it. Escape closes the search. This shortcut is not
-configurable. A very large uncommitted diff loads its files as you scroll, and
-find only searches the files loaded so far.
 
 ## iPad
 
@@ -164,7 +145,7 @@ closes the browser tab; rebind `rightPanel.close` and `terminal.close` to an ava
 shortcut such as `alt+w`.
 
 `mod+shift+t` reopens the last closed tab across the app, including files,
-diffs, pull requests, browsers, and devices, in the order you closed them.
+browsers, and devices, in the order you closed them.
 A browser opens in a fresh session without its old page history. Incognito tabs
 can reopen until you reload or quit the app. This shortcut does not undo deleted work.
 Browsers also use it to reopen browser tabs; choose another binding in Settings

@@ -21,7 +21,6 @@ export interface PendingQueuedTask {
   readonly projectId: ProjectId;
   readonly projectTitle: string | undefined;
   readonly projectCwd: string | undefined;
-  readonly branch: string | null;
   readonly title: string;
   readonly createdAt: string;
   readonly message: QueuedThreadMessage;
@@ -35,7 +34,6 @@ export interface PendingDraftTask {
   readonly projectId: ProjectId;
   readonly projectTitle: undefined;
   readonly projectCwd: undefined;
-  readonly branch: string | null;
   readonly title: string;
   readonly createdAt: string;
   readonly draftKey: string;
@@ -74,7 +72,6 @@ export function buildPendingNewTasks(input: {
       projectId: message.creation.projectId,
       projectTitle: message.creation.projectTitle,
       projectCwd: message.creation.projectCwd,
-      branch: message.creation.branch,
       title: deriveThreadTitleFromPrompt(message.text),
       createdAt: message.createdAt,
       message,
@@ -92,7 +89,6 @@ export function buildPendingNewTasks(input: {
       projectId: draft.project.projectId,
       projectTitle: undefined,
       projectCwd: undefined,
-      branch: draft.workspaceSelection?.branch ?? null,
       title: draftTitle(draft),
       createdAt: draft.project.createdAt,
       draftKey,

@@ -178,7 +178,6 @@ it("retains visible output and selection until a replacement subscription receiv
     threadId: "thread",
     terminalId: "term-1",
     cwd: "/repo",
-    worktreePath: null,
     status: "running" as const,
     pid: 123,
     history: "host output",

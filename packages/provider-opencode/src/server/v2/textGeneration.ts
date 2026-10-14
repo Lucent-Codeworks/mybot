@@ -7,7 +7,7 @@
  * @module textGeneration/OpenCode2TextGeneration
  */
 import { AbsolutePath, Location, Model, Provider, Session } from "@opencode/client/effect";
-import { TextGenerationError } from "@t3tools/contracts";
+import { TextGenerationError } from "@t3tools/provider-core/server/textGeneration";
 import { getModelSelectionStringOptionValue } from "@t3tools/shared/model";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
@@ -201,8 +201,5 @@ export const make = Effect.fn("OpenCode2TextGeneration.make")(function* () {
         ),
         Effect.flatMap((raw) => TextGenerationOperations.decodeJsonReply(input, "OpenCode", raw)),
       );
-  return TextGenerationOperations.fromRunner(
-    "OpenCode2TextGeneration",
-    TextGenerationOperations.withoutInvestigation("OpenCode", run),
-  );
+  return TextGenerationOperations.fromRunner("OpenCode2TextGeneration", run);
 });

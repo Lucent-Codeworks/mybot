@@ -196,6 +196,24 @@ const decodeResolvedKeybindingFromConfigExit = Schema.decodeExit(ResolvedKeybind
 const decodeRawKeybindingsEntriesExit = Schema.decodeUnknownExit(RawKeybindingsEntries);
 const encodeKeybindingsConfigPrettyJson = Schema.encodeEffect(KeybindingsConfigPrettyJson);
 
+// Retired with source control; kept so existing config files, which still carry
+// their default rules, load cleanly. The next write drops them from the file.
+const RETIRED_KEYBINDING_COMMANDS: ReadonlySet<string> = new Set([
+  "pullRequest.copyNumber",
+  "diff.toggle",
+  "composer.previousWorktree",
+  "composer.branch",
+  "composer.workspace",
+]);
+
+function isRetiredKeybindingEntry(entry: unknown): boolean {
+  return (
+    Predicate.hasProperty(entry, "command") &&
+    typeof entry.command === "string" &&
+    RETIRED_KEYBINDING_COMMANDS.has(entry.command)
+  );
+}
+
 export interface KeybindingsConfigState {
   readonly keybindings: ResolvedKeybindingsConfig;
   readonly issues: readonly ServerConfigIssue[];
@@ -346,6 +364,7 @@ const make = Effect.gen(function* () {
 
     return yield* Effect.forEach(rawConfig, (entry) =>
       Effect.gen(function* () {
+        if (isRetiredKeybindingEntry(entry)) return null;
         const decodedRule = decodeKeybindingRuleExit(entry);
         if (decodedRule._tag === "Failure") {
           yield* Effect.logWarning("ignoring invalid keybinding entry", {
@@ -393,6 +412,7 @@ const make = Effect.gen(function* () {
     const keybindings: KeybindingRule[] = [];
     const issues: ServerConfigIssue[] = [];
     for (const [index, entry] of decodedEntries.value.entries()) {
+      if (isRetiredKeybindingEntry(entry)) continue;
       const decodedRule = decodeKeybindingRuleExit(entry);
       if (decodedRule._tag === "Failure") {
         const detail = Cause.pretty(decodedRule.cause);

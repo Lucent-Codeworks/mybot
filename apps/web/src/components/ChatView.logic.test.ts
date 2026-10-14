@@ -1,9 +1,4 @@
-import { findRecordedWorktreeSetup, resolveVisibleWorktreeSetup } from "./ChatView.logic";
-import {
-  recallCheckoutIsRepo,
-  rememberCheckoutIsRepo,
-  threadShellHasStarted,
-} from "./ChatView.logic";
+import { threadShellHasStarted } from "./ChatView.logic";
 import {
   ANTIGRAVITY_DEFAULT_MODEL,
   ProviderDriverKind,
@@ -22,7 +17,6 @@ import {
   RunId,
   TurnItemId,
   type OrchestrationV2ProjectedTurnItem,
-  type WorktreeSetupSnapshot,
 } from "@t3tools/contracts";
 import type { CodexArtifactTemplate } from "@t3tools/shared/codexArtifactTemplates";
 import * as DateTime from "effect/DateTime";
@@ -32,19 +26,16 @@ import { Atom, AsyncResult } from "effect/reactivity";
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { environmentThreadDetails } from "../state/threads";
 
-import type { Thread, TurnDiffSummary } from "../types";
+import type { Thread } from "../types";
 import { makeThreadFixture, makeThreadProjectionFixture } from "../test-fixtures";
 import {
   agentControlledBrowserCloseConfirmation,
   ENVIRONMENT_RECONNECT_WARNING_GRACE_MS,
   getAntigravitySendBlockReason,
-  resolveBackgroundDraftWorkspaceOptions,
   resolveComposerInteractionMode,
   restorePlanFollowUpComposer,
   resolveComposerProviderSelection,
-  resolveProactiveTurnDiffAction,
   resolveDraftHeroState,
-  resolveWorktreeSetupProgress,
   isPaintOnlyThreadTimeline,
   peekHeldThreadTimeline,
   peekRememberedThreadTimeline,
@@ -58,29 +49,20 @@ import {
   shouldDockDraftHeroForSubmission,
   shouldReleaseTimelineAnchorForToolActivity,
   shouldRefocusComposerOnWindowFocus,
-  shouldOpenProactivePullRequest,
-  shouldRetargetThreadPullRequestPanel,
-  shouldOpenProactiveTurnDiff,
   shouldRenderPreviewMiniPlayer,
   MAX_HIDDEN_MOUNTED_TERMINAL_THREADS,
-  branchMismatchKey,
   buildExpiredTerminalContextToastCopy,
   createLocalDispatchSnapshot,
   deriveCommittedServerUserMessageIds,
   deriveComposerSendState,
   deriveLockedProvider,
-  dismissBranchMismatchForSession,
   getStartedThreadModelChangeBlockReason,
   hasEnvironmentReconnectWarningGraceElapsed,
   hasServerAcknowledgedLocalDispatch,
-  isBranchMismatchDismissedForSession,
   reconcileMountedTerminalThreadIds,
   resolveDraftPromotionNavigationTarget,
   resolveEffectiveInteractionMode,
-  resolveThreadMetadataUpdateForNextTurn,
-  resolveSendEnvMode,
   startNewThreadForProject,
-  shouldShowBranchMismatchBanner,
   shouldShowPlanFollowUpPrompt,
   shouldWriteThreadErrorToCurrentServerThread,
   waitForRevertedMessage,
@@ -118,8 +100,6 @@ function makeThread(overrides: Partial<Thread> = {}): Thread {
     settledAt: null,
     deletedAt: null,
     latestRun: null,
-    branch: null,
-    worktreePath: null,
     ...overrides,
   });
 }
@@ -168,7 +148,7 @@ describe("resolveDraftPromotionNavigationTarget", () => {
     ).toBeNull();
   });
 
-  it("promotes a persisted send while its worktree is still preparing", () => {
+  it("promotes a persisted send while its run is still preparing", () => {
     const serverThread = makeThread({ latestRun: preparingRun, latestUserMessageAt: now });
     expect(
       resolveDraftPromotionNavigationTarget({
@@ -235,34 +215,6 @@ describe("resolveEffectiveInteractionMode", () => {
         threadInteractionMode: "plan",
       }),
     ).toBe("plan");
-  });
-});
-
-describe("resolveThreadMetadataUpdateForNextTurn", () => {
-  const modelSelection = {
-    instanceId: ProviderInstanceId.make("codex"),
-    model: "gpt-5.4",
-  };
-
-  it("updates a stale local thread branch to the active checkout", () => {
-    expect(
-      resolveThreadMetadataUpdateForNextTurn({
-        currentModelSelection: modelSelection,
-        currentBranch: "feature/thread",
-        nextBranch: "feature/checkout",
-      }),
-    ).toEqual({ branch: "feature/checkout", worktreePath: null });
-  });
-
-  it("does not write metadata when the model and branch are unchanged", () => {
-    expect(
-      resolveThreadMetadataUpdateForNextTurn({
-        currentModelSelection: modelSelection,
-        nextModelSelection: modelSelection,
-        currentBranch: "feature/current",
-        nextBranch: "feature/current",
-      }),
-    ).toBeNull();
   });
 });
 
@@ -419,58 +371,6 @@ describe("getStartedThreadModelChangeBlockReason", () => {
   });
 });
 
-describe("resolveSendEnvMode", () => {
-  it("keeps worktree mode only for git repositories", () => {
-    expect(resolveSendEnvMode({ requestedEnvMode: "worktree", isGitRepo: true })).toBe("worktree");
-    expect(resolveSendEnvMode({ requestedEnvMode: "worktree", isGitRepo: false })).toBe("local");
-  });
-});
-
-describe("branchMismatchKey", () => {
-  it("builds a key from thread id and both branches", () => {
-    expect(branchMismatchKey("thread-1", { threadBranch: "feat/a", currentBranch: "feat/b" })).toBe(
-      "thread-1:feat/a:feat/b",
-    );
-  });
-
-  it("returns null without a thread or mismatch", () => {
-    expect(branchMismatchKey(null, { threadBranch: "a", currentBranch: "b" })).toBeNull();
-    expect(branchMismatchKey("thread-1", null)).toBeNull();
-  });
-});
-
-describe("shouldShowBranchMismatchBanner", () => {
-  const base = {
-    hasMismatch: true,
-    isDismissed: false,
-    composerHasContent: false,
-    wasShownForCurrentMismatch: false,
-  };
-
-  it("stays hidden during passive browsing (even though the composer autofocuses)", () => {
-    expect(shouldShowBranchMismatchBanner(base)).toBe(false);
-  });
-
-  it("shows once the composer has draft content", () => {
-    expect(shouldShowBranchMismatchBanner({ ...base, composerHasContent: true })).toBe(true);
-  });
-
-  it("stays mounted after the draft clears once shown for the current mismatch", () => {
-    expect(shouldShowBranchMismatchBanner({ ...base, wasShownForCurrentMismatch: true })).toBe(
-      true,
-    );
-  });
-
-  it("never shows when dismissed or without a mismatch", () => {
-    expect(
-      shouldShowBranchMismatchBanner({ ...base, composerHasContent: true, isDismissed: true }),
-    ).toBe(false);
-    expect(
-      shouldShowBranchMismatchBanner({ ...base, composerHasContent: true, hasMismatch: false }),
-    ).toBe(false);
-  });
-});
-
 describe("shouldShowPlanFollowUpPrompt", () => {
   const base = {
     pendingUserInputCount: 0,
@@ -493,16 +393,6 @@ describe("shouldShowPlanFollowUpPrompt", () => {
     expect(shouldShowPlanFollowUpPrompt({ ...base, interactionMode: "default" })).toBe(false);
     expect(shouldShowPlanFollowUpPrompt({ ...base, latestTurnSettled: false })).toBe(false);
     expect(shouldShowPlanFollowUpPrompt({ ...base, hasActionableProposedPlan: false })).toBe(false);
-  });
-});
-
-describe("session branch mismatch dismissal", () => {
-  it("tracks dismissed keys and treats other keys as active", () => {
-    expect(isBranchMismatchDismissedForSession("t1:a:b")).toBe(false);
-    dismissBranchMismatchForSession("t1:a:b");
-    expect(isBranchMismatchDismissedForSession("t1:a:b")).toBe(true);
-    expect(isBranchMismatchDismissedForSession("t1:a:c")).toBe(false);
-    expect(isBranchMismatchDismissedForSession(null)).toBe(false);
   });
 });
 
@@ -849,7 +739,7 @@ describe("agent browser close confirmation", () => {
   const surfaces = [
     { id: "browser:one", kind: "preview", resourceId: "tab-1" },
     { id: "browser:two", kind: "preview", resourceId: "tab-2" },
-    { id: "diff", kind: "diff" },
+    { id: "files", kind: "files" },
   ] satisfies RightPanelSurface[];
 
   it("only warns for browsers under active agent control", () => {
@@ -908,54 +798,9 @@ describe("floating browser preview", () => {
     expect(
       shouldRenderPreviewMiniPlayer(
         { kind: "browser", tabId: "tab-1" },
-        { id: "diff", kind: "diff" },
+        { id: "files", kind: "files" },
       ),
     ).toBe(true);
-  });
-});
-
-describe("proactive panels", () => {
-  it("opens an existing pull request on entry and follows newly observed links", () => {
-    expect(shouldOpenProactivePullRequest(undefined, "project:repo:42")).toBe(true);
-    expect(shouldOpenProactivePullRequest(null, "project:repo:42")).toBe(true);
-    expect(shouldOpenProactivePullRequest("project:repo:42", "project:repo:42")).toBe(false);
-    expect(shouldOpenProactivePullRequest("project:repo:42", null)).toBe(false);
-  });
-
-  it("opens a completed diff on entry or when the observed running turn settles", () => {
-    const turnId = RunId.make("turn-1");
-    expect(
-      shouldOpenProactiveTurnDiff({
-        previousRunningTurnId: undefined,
-        runningTurnId: null,
-        settledTurnId: turnId,
-        turnCompleted: true,
-      }),
-    ).toBe(true);
-    expect(
-      shouldOpenProactiveTurnDiff({
-        previousRunningTurnId: turnId,
-        runningTurnId: null,
-        settledTurnId: turnId,
-        turnCompleted: true,
-      }),
-    ).toBe(true);
-    expect(
-      shouldOpenProactiveTurnDiff({
-        previousRunningTurnId: turnId,
-        runningTurnId: RunId.make("turn-2"),
-        settledTurnId: turnId,
-        turnCompleted: true,
-      }),
-    ).toBe(false);
-    expect(
-      shouldOpenProactiveTurnDiff({
-        previousRunningTurnId: turnId,
-        runningTurnId: null,
-        settledTurnId: turnId,
-        turnCompleted: false,
-      }),
-    ).toBe(false);
   });
 });
 
@@ -974,30 +819,6 @@ describe("draft hero submission transition", () => {
         isDraftHeroState: true,
         activeThreadKey: "environment-local:thread-1",
         submissionIntent: "background",
-      }),
-    ).toBe(false);
-  });
-
-  it("leaves the hero layout while a worktree setup card is on the timeline", () => {
-    expect(
-      resolveDraftHeroState({
-        isLocalDraftThread: true,
-        hasTimelineEntries: false,
-        isWorking: false,
-        draftHeroDockRequested: false,
-        backgroundSubmissionPending: false,
-        hasWorktreeSetupCard: true,
-      }),
-    ).toBe(false);
-    // A background submission normally pins the hero, but never over the card.
-    expect(
-      resolveDraftHeroState({
-        isLocalDraftThread: true,
-        hasTimelineEntries: false,
-        isWorking: false,
-        draftHeroDockRequested: false,
-        backgroundSubmissionPending: true,
-        hasWorktreeSetupCard: true,
       }),
     ).toBe(false);
   });
@@ -1211,7 +1032,7 @@ describe("shouldReleaseTimelineAnchorForToolActivity", () => {
       runId: activeTurnId,
       label: "Run command",
       tone: "tool" as const,
-      command: "git status",
+      command: "ls",
     },
   };
 
@@ -1690,124 +1511,6 @@ describe("resolveComposerInteractionMode", () => {
   });
 });
 
-describe("resolveBackgroundDraftWorkspaceOptions", () => {
-  it("keeps New worktree selected without reusing the launched worktree", () => {
-    expect(
-      resolveBackgroundDraftWorkspaceOptions({
-        envMode: "worktree",
-        branch: "main",
-        startFromOrigin: true,
-      }),
-    ).toEqual({
-      envMode: "worktree",
-      branch: "main",
-      worktreePath: null,
-      startFromOrigin: true,
-    });
-  });
-});
-
-describe("proactive completed diff guard", () => {
-  it.each([
-    { files: 0, additions: 0, deletions: 0, action: "ignore" },
-    { files: 1, additions: 1, deletions: 0, action: "ignore" },
-    { files: 2, additions: 12, deletions: 12, action: "ignore" },
-    { files: 1, additions: 25, deletions: 24, action: "ignore" },
-    { files: 1, additions: 25, deletions: 25, action: "open" },
-    { files: 1, additions: 0, deletions: 50, action: "open" },
-    { files: 3, additions: 1, deletions: 0, action: "open" },
-  ])(
-    "uses change size for automatic diffs: $files files, +$additions/-$deletions",
-    ({ files, additions, deletions, action }) => {
-      const changedCheckpoint = {
-        status: "ready",
-        files: Array.from({ length: files }, (_, index) => ({
-          path: `src/app-${index}.ts`,
-          kind: "modified" as const,
-          additions,
-          deletions,
-        })),
-      } satisfies Pick<TurnDiffSummary, "status" | "files">;
-
-      expect(
-        resolveProactiveTurnDiffAction({
-          checkpoint: changedCheckpoint,
-          isGitRepo: true,
-          activeSurfaceKind: null,
-        }),
-      ).toBe(action);
-    },
-  );
-
-  it("waits for definitive checkpoint and repository state", () => {
-    const missingCheckpoint = {
-      status: "missing",
-      files: [],
-    } satisfies Pick<TurnDiffSummary, "status" | "files">;
-    const changedCheckpoint = {
-      status: "ready",
-      files: [{ path: "src/app.ts", kind: "modified", additions: 1, deletions: 0 }],
-    } satisfies Pick<TurnDiffSummary, "status" | "files">;
-
-    expect(
-      resolveProactiveTurnDiffAction({
-        checkpoint: undefined,
-        isGitRepo: true,
-        activeSurfaceKind: null,
-      }),
-    ).toBe("defer");
-    expect(
-      resolveProactiveTurnDiffAction({
-        checkpoint: missingCheckpoint,
-        isGitRepo: true,
-        activeSurfaceKind: null,
-      }),
-    ).toBe("defer");
-    expect(
-      resolveProactiveTurnDiffAction({
-        checkpoint: changedCheckpoint,
-        isGitRepo: undefined,
-        activeSurfaceKind: null,
-      }),
-    ).toBe("defer");
-  });
-
-  it("keeps an active pull request above a completed turn diff", () => {
-    const changedCheckpoint = {
-      status: "ready",
-      files: [{ path: "src/app.ts", kind: "modified", additions: 1, deletions: 0 }],
-    } satisfies Pick<TurnDiffSummary, "status" | "files">;
-
-    expect(
-      resolveProactiveTurnDiffAction({
-        checkpoint: changedCheckpoint,
-        isGitRepo: true,
-        activeSurfaceKind: "pull-request",
-      }),
-    ).toBe("ignore");
-  });
-
-  it("leaves an already open diff and its chosen scope alone", () => {
-    const largeCheckpoint = {
-      status: "ready",
-      files: Array.from({ length: 3 }, (_, index) => ({
-        path: `src/app-${index}.ts`,
-        kind: "modified" as const,
-        additions: 20,
-        deletions: 0,
-      })),
-    } satisfies Pick<TurnDiffSummary, "status" | "files">;
-
-    expect(
-      resolveProactiveTurnDiffAction({
-        checkpoint: largeCheckpoint,
-        isGitRepo: true,
-        activeSurfaceKind: "diff",
-      }),
-    ).toBe("ignore");
-  });
-});
-
 describe("shouldRefocusComposerOnWindowFocus", () => {
   function element(
     tagName: string,
@@ -1827,7 +1530,7 @@ describe("shouldRefocusComposerOnWindowFocus", () => {
     expect(shouldRefocusComposerOnWindowFocus(element("BODY"))).toBe(true);
   });
 
-  it("refocuses away from a plain button, such as a pull request tab", () => {
+  it("refocuses away from a plain button, such as a panel tab", () => {
     expect(shouldRefocusComposerOnWindowFocus(element("BUTTON"))).toBe(true);
   });
 
@@ -1851,32 +1554,6 @@ describe("shouldRefocusComposerOnWindowFocus", () => {
   it("leaves focus inside a dialog or popup alone", () => {
     expect(shouldRefocusComposerOnWindowFocus(element("BUTTON", { within: "dialog" }))).toBe(false);
     expect(shouldRefocusComposerOnWindowFocus(element("BUTTON", { within: "-popup" }))).toBe(false);
-  });
-});
-
-describe("checkout Git memory", () => {
-  it("answers from the last status seen for the same checkout", () => {
-    rememberCheckoutIsRepo(environmentId, "/repo/plain-folder", false);
-    expect(recallCheckoutIsRepo(environmentId, "/repo/plain-folder")).toBe(false);
-    rememberCheckoutIsRepo(environmentId, "/repo/plain-folder", true);
-    expect(recallCheckoutIsRepo(environmentId, "/repo/plain-folder")).toBe(true);
-  });
-
-  it("does not answer for a checkout it has not seen", () => {
-    expect(recallCheckoutIsRepo(environmentId, "/repo/never-opened")).toBeUndefined();
-    expect(recallCheckoutIsRepo(environmentId, null)).toBeUndefined();
-  });
-
-  it("keeps environments apart", () => {
-    rememberCheckoutIsRepo(environmentId, "/repo/shared-path", false);
-    expect(
-      recallCheckoutIsRepo(EnvironmentId.make("env-other"), "/repo/shared-path"),
-    ).toBeUndefined();
-  });
-
-  it("does not confuse an environment id containing the separator with a path", () => {
-    rememberCheckoutIsRepo(EnvironmentId.make("env"), "a:b", false);
-    expect(recallCheckoutIsRepo(EnvironmentId.make("env:a"), "b")).toBeUndefined();
   });
 });
 
@@ -1909,207 +1586,6 @@ describe("threadShellHasStarted", () => {
       threadShellHasStarted({ latestRun: null, latestUserMessageAt: null, runtime: null }),
     ).toBe(false);
     expect(threadShellHasStarted(null)).toBe(false);
-  });
-});
-
-it("follows a changed server PR link without replacing an unrelated open panel", () => {
-  const previous = {
-    projectId: ProjectId.make("project-1"),
-    repository: "pingdotgg/t3code",
-    number: 42,
-    url: "https://github.com/pingdotgg/t3code/pull/42",
-  };
-  const current = {
-    ...previous,
-    number: 43,
-    url: "https://github.com/pingdotgg/t3code/pull/43",
-  };
-  const surface = {
-    id: "pull-request:previous",
-    kind: "pull-request",
-    projectId: previous.projectId,
-    repository: "PingDotGG/T3Code",
-    number: previous.number,
-  } satisfies RightPanelSurface;
-
-  expect(shouldRetargetThreadPullRequestPanel(previous, current, surface)).toBe(true);
-  expect(shouldRetargetThreadPullRequestPanel(previous, previous, surface)).toBe(false);
-  expect(shouldRetargetThreadPullRequestPanel(previous, null, surface)).toBe(false);
-  expect(shouldRetargetThreadPullRequestPanel(previous, current, { ...surface, number: 99 })).toBe(
-    false,
-  );
-  expect(
-    shouldRetargetThreadPullRequestPanel(previous, current, {
-      ...surface,
-      projectId: "another-project",
-    }),
-  ).toBe(false);
-});
-
-describe("worktree setup visibility", () => {
-  const stage = (
-    id: "fetch" | "checkout" | "submodules" | "setup-script" | "agent",
-    status: "done" | "running" | "failed" | "pending",
-  ) => ({
-    id,
-    status,
-    startedAt: now,
-    endedAt: status === "running" || status === "pending" ? null : now,
-    percent: null,
-    detail: null,
-    tail: [],
-  });
-  const base = {
-    threadId,
-    phase: "running" as const,
-    startedAt: now,
-    endedAt: null,
-    branch: "feature",
-    baseRef: "main",
-    worktreePath: null,
-    setupScript: null,
-    stages: [stage("checkout", "running"), stage("agent", "pending")],
-    error: null,
-    sequence: 1,
-  };
-  const settledDone = {
-    ...base,
-    phase: "done" as const,
-    endedAt: now,
-    stages: [stage("checkout", "done"), stage("setup-script", "done"), stage("agent", "done")],
-  };
-
-  it("keeps setup presentation continuous until the provider handoff", () => {
-    const progress = (
-      localPreparing: boolean,
-      runStatus: NonNullable<Thread["latestRun"]>["status"] | undefined,
-      latest: WorktreeSetupSnapshot | null,
-      held: WorktreeSetupSnapshot | null = null,
-    ) => resolveWorktreeSetupProgress({ threadId, localPreparing, runStatus, latest, held });
-
-    // The local send, its durable acknowledgement, and the stream arrive separately.
-    expect(progress(true, undefined, null).isPreparingWorktree).toBe(true);
-    expect(progress(false, "preparing", null).isPreparingWorktree).toBe(true);
-    expect(progress(false, "preparing", base).snapshot).toBe(base);
-    // Releasing the prepared run precedes the tracker marking the agent started.
-    expect(progress(false, "starting", base).isPreparingWorktree).toBe(true);
-    const handedOff = {
-      ...base,
-      sequence: 2,
-      stages: [stage("setup-script", "running"), stage("agent", "done")],
-    };
-    expect(progress(false, "starting", handedOff, base)).toEqual({
-      snapshot: handedOff,
-      isPreparingWorktree: false,
-    });
-    expect(progress(false, "running", null, handedOff).snapshot).toBe(handedOff);
-  });
-
-  it("uses streamed setup progress immediately without reverting to an older held snapshot", () => {
-    const newest = { ...settledDone, sequence: 9 };
-    const resolve = (latest: WorktreeSetupSnapshot | null, held: WorktreeSetupSnapshot | null) =>
-      resolveWorktreeSetupProgress({
-        threadId,
-        localPreparing: false,
-        runStatus: "running",
-        latest,
-        held,
-      });
-    expect(resolve(newest, base)).toEqual({ snapshot: newest, isPreparingWorktree: false });
-    expect(resolve(base, newest)).toEqual({ snapshot: newest, isPreparingWorktree: false });
-    const other = { ...base, threadId: ThreadId.make("another-thread") };
-    expect(resolve(other, other)).toEqual({ snapshot: null, isPreparingWorktree: false });
-  });
-
-  it.each(["failed", "cancelled"] as const)(
-    "does not keep %s setup in the preparing state",
-    (phase) => {
-      const snapshot = { ...base, phase };
-      expect(
-        resolveWorktreeSetupProgress({
-          threadId,
-          localPreparing: false,
-          runStatus: "failed",
-          latest: snapshot,
-          held: base,
-        }),
-      ).toEqual({ snapshot, isPreparingWorktree: false });
-    },
-  );
-
-  it("reads the settled snapshot back from the thread's activities", () => {
-    const activities = [
-      { kind: "setup-script.started", payload: {} },
-      { kind: "worktree-setup", payload: settledDone },
-      { kind: "worktree-setup", payload: { not: "a snapshot" } },
-    ];
-    expect(findRecordedWorktreeSetup(activities, threadId)).toEqual(settledDone);
-    expect(findRecordedWorktreeSetup(activities, ThreadId.make("other"))).toBeNull();
-  });
-
-  it("shows a running setup and drops a clean one once the turn started", () => {
-    const visible = (snapshot: WorktreeSetupSnapshot | null, turnStarted: boolean) =>
-      resolveVisibleWorktreeSetup({
-        live: null,
-        recorded: snapshot,
-        turnStarted,
-        followUpSent: false,
-      });
-    expect(
-      resolveVisibleWorktreeSetup({
-        live: base,
-        recorded: null,
-        turnStarted: false,
-        followUpSent: false,
-      }),
-    ).toEqual(base);
-    expect(visible(settledDone, false)).toEqual(settledDone);
-    expect(visible(settledDone, true)).toBeNull();
-    expect(visible(null, true)).toBeNull();
-  });
-
-  it("keeps a failed script, a failed setup, and a cancelled setup visible", () => {
-    const scriptFailed = {
-      ...settledDone,
-      stages: [stage("checkout", "done"), stage("setup-script", "failed"), stage("agent", "done")],
-    };
-    const visible = (snapshot: WorktreeSetupSnapshot, followUpSent = false) =>
-      resolveVisibleWorktreeSetup({
-        live: null,
-        recorded: snapshot,
-        turnStarted: true,
-        followUpSent,
-      });
-    expect(visible(scriptFailed)).toEqual(scriptFailed);
-    const failed = { ...settledDone, phase: "failed" as const, error: "git exploded" };
-    expect(visible(failed)).toEqual(failed);
-    const cancelled = { ...settledDone, phase: "cancelled" as const };
-    expect(visible(cancelled)).toEqual(cancelled);
-
-    // The setup belongs to the first turn. A follow-up send retires every
-    // settled outcome; only a script that is still running stays.
-    expect(visible(scriptFailed, true)).toBeNull();
-    expect(visible(failed, true)).toBeNull();
-    expect(visible(cancelled, true)).toBeNull();
-    expect(visible(settledDone, true)).toBeNull();
-    const stillRunning = {
-      ...base,
-      stages: [stage("checkout", "done"), stage("setup-script", "running"), stage("agent", "done")],
-    };
-    expect(visible(stillRunning, true)).toEqual(stillRunning);
-  });
-
-  it("prefers whichever snapshot is newer by sequence", () => {
-    const pick = (live: WorktreeSetupSnapshot | null, recorded: WorktreeSetupSnapshot | null) =>
-      resolveVisibleWorktreeSetup({ live, recorded, turnStarted: false, followUpSent: false });
-    expect(pick({ ...base, sequence: 3 }, { ...settledDone, sequence: 7 })).toEqual({
-      ...settledDone,
-      sequence: 7,
-    });
-    expect(pick({ ...settledDone, sequence: 9 }, { ...base, sequence: 1 })).toEqual({
-      ...settledDone,
-      sequence: 9,
-    });
   });
 });
 

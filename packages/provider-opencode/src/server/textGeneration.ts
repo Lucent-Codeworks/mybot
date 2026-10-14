@@ -1,7 +1,8 @@
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 
-import { NonNegativeInt, TextGenerationError } from "@t3tools/contracts";
+import { NonNegativeInt } from "@t3tools/contracts";
+import { TextGenerationError } from "@t3tools/provider-core/server/textGeneration";
 import type { OpenCodeSettings } from "../settings.ts";
 import { getModelSelectionStringOptionValue } from "@t3tools/shared/model";
 
@@ -10,13 +11,7 @@ import * as TextGenerationOperations from "@t3tools/provider-core/server/textGen
 import * as OpenCodeRuntime from "./OpenCodeRuntime.ts";
 import * as OpenCodeServerOwner from "./OpenCodeServerOwner.ts";
 
-const OpenCodeTextGenerationOperation = Schema.Literals([
-  "generateCommitMessage",
-  "generatePrContent",
-  "generateBranchName",
-  "generateThreadTitle",
-  "generateReviewGuide",
-]);
+const OpenCodeTextGenerationOperation = Schema.Literals(["generateThreadTitle"]);
 
 const openCodeTextGenerationErrorContext = {
   operation: OpenCodeTextGenerationOperation,
@@ -321,8 +316,5 @@ export const makeOpenCodeTextGeneration = Effect.fn("makeOpenCodeTextGeneration"
     return yield* TextGenerationOperations.decodeJsonReply(input, "OpenCode", rawOutput);
   });
 
-  return TextGenerationOperations.fromRunner(
-    "OpenCodeTextGeneration",
-    TextGenerationOperations.withoutInvestigation("OpenCode", runOpenCodeJson),
-  );
+  return TextGenerationOperations.fromRunner("OpenCodeTextGeneration", runOpenCodeJson);
 });

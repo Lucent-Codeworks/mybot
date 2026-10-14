@@ -251,8 +251,6 @@ function makeCreateCommand(input: {
     modelSelection: input.modelSelection,
     runtimeMode: "full-access",
     interactionMode: "default",
-    branch: null,
-    worktreePath: null,
   };
 }
 

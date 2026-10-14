@@ -10,12 +10,8 @@ not introduce another execution model. See
 
 An environment keeps its ID across server restarts and endpoint changes. Saved
 connections are local to a client profile; the server's identity and state are
-not. A repository identity can correlate clones across environments, but never
-routes work between them. A project and its threads belong to one environment.
-The canonical key follows the `upstream` remote when one exists, so pull request
-features target the repository a fork tracks. A fork also reports its own
-`origin`, and clients group and label by that, so a fork never collapses into a
-checkout of its upstream.
+not. A project and its threads belong to one environment; projects in the same
+folder on different environments stay separate projects.
 
 [Environment ID initialization](../../apps/server/src/environment/ServerEnvironment.ts)
 must publish a complete ID atomically. Repair of an empty ID file retains a
@@ -52,8 +48,9 @@ how a changed LAN address replaces the old one; routes the user saved are never
 touched. The reported addresses are hints like any advertised endpoint, so a
 learned route still has to answer as this environment before it is used.
 
-GitHub routing trust covers the whole route list. Adding or changing a route
-revokes it; reordering does not, because the same addresses remain trusted.
+A saved "unsupported server" verdict covers the whole route list. Adding or
+changing a route clears it; reordering does not, because the same addresses
+remain.
 
 ## Hosted web is a client
 

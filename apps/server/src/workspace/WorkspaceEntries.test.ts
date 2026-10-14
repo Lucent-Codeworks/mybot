@@ -1,4 +1,5 @@
 // @effect-diagnostics nodeBuiltinImport:off
+import * as NodeChildProcess from "node:child_process";
 import * as NodeFSP from "node:fs/promises";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { FileFinder } from "@ff-labs/fff-node";
@@ -12,7 +13,6 @@ import { vi } from "vite-plus/test";
 
 import * as ServerConfig from "../config.ts";
 import * as HostProcess from "@t3tools/shared/HostProcess";
-import * as VcsProcess from "../vcs/VcsProcess.ts";
 import * as WorkspaceEntries from "./WorkspaceEntries.ts";
 import * as WorkspacePaths from "./WorkspacePaths.ts";
 
@@ -24,7 +24,6 @@ vi.mock("node:fs/promises", async (importOriginal) => {
 const layerTest = Layer.empty.pipe(
   Layer.provideMerge(WorkspaceEntries.layer.pipe(Layer.provide(WorkspacePaths.layer))),
   Layer.provideMerge(WorkspacePaths.layer),
-  Layer.provideMerge(VcsProcess.layer),
   Layer.provide(
     ServerConfig.ServerConfig.layerTest(process.cwd(), {
       prefix: "t3-workspace-entries-test-",
@@ -58,18 +57,10 @@ function writeTextFile(
   });
 }
 
-const git = (cwd: string, args: ReadonlyArray<string>, env?: NodeJS.ProcessEnv) =>
-  Effect.gen(function* () {
-    const process = yield* VcsProcess.VcsProcess;
-    const result = yield* process.run({
-      operation: "WorkspaceEntries.test.git",
-      command: "git",
-      cwd,
-      args,
-      ...(env ? { env } : {}),
-      timeoutMs: 10_000,
-    });
-    return result.stdout.trim();
+// fff honors ignore rules only inside a repository, so ignore-rule tests need one.
+const git = (cwd: string, args: ReadonlyArray<string>) =>
+  Effect.sync(() => {
+    NodeChildProcess.execFileSync("git", args, { cwd, stdio: "ignore" });
   });
 
 const searchWorkspaceEntries = (input: {
@@ -102,7 +93,6 @@ it.layer(layerTest, { excludeTestServices: true })("WorkspaceEntries", (it) => {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         yield* writeTextFile(cwd, "tracked.txt");
-        yield* git(cwd, ["add", "tracked.txt"]);
         yield* writeTextFile(cwd, ".gitignore", "node_modules/\n.env\ntracked.txt\n");
         yield* writeTextFile(cwd, ".env", "secret=value");
         yield* writeTextFile(cwd, "node_modules/pkg/index.js");
@@ -113,8 +103,8 @@ it.layer(layerTest, { excludeTestServices: true })("WorkspaceEntries", (it) => {
         const root = yield* workspaceEntries.list({ cwd, directoryPath: "" });
         expect(root.entries).toEqual(
           expect.arrayContaining([
-            { path: ".env", kind: "file", ignored: true },
-            { path: "node_modules", kind: "directory", ignored: true },
+            { path: ".env", kind: "file" },
+            { path: "node_modules", kind: "directory" },
             { path: "src", kind: "directory" },
             { path: "empty", kind: "directory" },
             { path: "tracked.txt", kind: "file" },
@@ -124,7 +114,7 @@ it.layer(layerTest, { excludeTestServices: true })("WorkspaceEntries", (it) => {
         expect(root.entries.some((entry) => entry.path === ".git")).toBe(false);
         expect(root.truncated).toBe(false);
         expect(yield* workspaceEntries.list({ cwd, directoryPath: "node_modules/pkg" })).toEqual({
-          entries: [{ path: "node_modules/pkg/index.js", kind: "file", ignored: true }],
+          entries: [{ path: "node_modules/pkg/index.js", kind: "file" }],
           truncated: false,
         });
         expect(yield* workspaceEntries.list({ cwd, directoryPath: "empty" })).toEqual({

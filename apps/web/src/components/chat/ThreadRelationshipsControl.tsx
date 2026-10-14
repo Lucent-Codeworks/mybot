@@ -4,7 +4,6 @@ import { ThreadHoverCardPopup } from "../ThreadHoverCard";
 import { ThreadDetailsSection } from "./ThreadDetailsSection";
 import { CollapsibleSectionHeader, SectionHeaderStatus } from "../ui/collapsible-section-header";
 import { SubagentTooltipContent } from "./SubagentTooltipContent";
-import { PullRequestGlyph } from "../pullRequest/pullRequestIcons";
 import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environment";
 import {
   deriveWorkflowGroups,
@@ -43,6 +42,7 @@ import {
   CornerLeftUpIcon,
   GitForkIcon,
   LoaderCircleIcon,
+  MergeIcon,
   MoreHorizontalIcon,
   PlusIcon,
   SquareIcon,
@@ -645,7 +645,7 @@ export function ThreadRelationshipsPanel(props: {
                               {busyAction === "merge" ? (
                                 <LoaderCircleIcon className="size-3 animate-spin" />
                               ) : (
-                                <PullRequestGlyph.merged className="size-3" />
+                                <MergeIcon className="size-3" />
                               )}
                             </ThreadDetailsControl>
                           }

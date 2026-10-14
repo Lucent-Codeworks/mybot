@@ -4,7 +4,6 @@ import {
   ProviderDriverKind,
   ProviderInstanceId,
   UsageLimitSourceId,
-  type ServerProvider,
 } from "@t3tools/contracts";
 import * as Duration from "effect/Duration";
 import { describe, expect, it } from "vite-plus/test";
@@ -16,11 +15,8 @@ import {
   fallbackTextGenerationModelSelection,
   modelPreferencesMigrationPatch,
   resolveModelPreferences,
-  isModelSelectionProviderEnabled,
   parsePersistedServerObservabilitySettings,
-  resolveSourceControlWriterModelSelection,
   resolveProjectAgentBrowserAccess,
-  resolveProjectAutoPull,
 } from "./serverSettings.ts";
 
 /** Settings after the server has folded legacy per-project fields into `projectSettingsOverrides`. */
@@ -55,34 +51,15 @@ describe("fallbackTextGenerationModelSelection", () => {
 describe("serverSettings helpers", () => {
   it("changes a cleanup rule without replacing the machine's other rules", () => {
     const enabled = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
-      storageCleanup: { worktreeAfterDays: 8, worktreeOnMerge: true, logsAfterDays: 30 },
+      storageCleanup: { browserArtifactsAfterDays: 8, logsAfterDays: 30 },
     });
     expect(
       applyServerSettingsPatch(enabled, {
-        storageCleanup: { worktreeAfterDays: null },
+        storageCleanup: { browserArtifactsAfterDays: null },
       }).storageCleanup,
     ).toEqual({
-      worktreeAfterDays: null,
-      worktreeOnMerge: true,
-      worktreeOnDelete: false,
-      worktreeUnchanged: false,
-      worktreeKeepWhen: "uncommitted-changes",
       browserArtifactsAfterDays: null,
       logsAfterDays: 30,
-    });
-  });
-  it("replaces a source control host's patched field so a cleared account pin does not survive", () => {
-    const pinned = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
-      sourceControlHosts: {
-        github: { hosts: { "github.com": { account: "work", enabled: true } }, tokens: {} },
-      },
-    });
-    const unpinned = applyServerSettingsPatch(pinned, {
-      sourceControlHosts: { github: { hosts: { "github.com": { enabled: false } } } },
-    });
-    expect(unpinned.sourceControlHosts.github).toEqual({
-      hosts: { "github.com": { enabled: false } },
-      tokens: {},
     });
   });
   it("replaces SSH host lists when saving, editing, and removing hosts", () => {
@@ -102,7 +79,6 @@ describe("serverSettings helpers", () => {
       name: "Check",
       command: "npm test",
       icon: "play" as const,
-      runOnWorktreeCreate: false,
     };
     const existing = { ...project, scripts: [{ ...action, command: "npm run lint" }] };
     // Before the one-time fold, scripts stored on the project aggregate still apply.
@@ -147,7 +123,6 @@ describe("serverSettings helpers", () => {
       name: "Check",
       command: "npm test",
       icon: "play" as const,
-      runOnWorktreeCreate: false,
     };
     const firstAction = { ...defaultAction, command: "npm run lint" };
     const secondAction = { ...defaultAction, command: "npm run build" };
@@ -177,28 +152,6 @@ describe("serverSettings helpers", () => {
     expect(resolveProjectScripts(secondUpdate, firstProject)).toEqual([firstAction]);
   });
 
-  it("inherits automatic pull while preserving legacy opt-ins and explicit overrides", () => {
-    const projectId = ProjectId.make("project-pull");
-    expect(resolveProjectAutoPull(DEFAULT_SERVER_SETTINGS, projectId, false)).toBe(false);
-    expect(resolveProjectAutoPull(DEFAULT_SERVER_SETTINGS, projectId, true)).toBe(true);
-    const enabled = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, { defaultAutoPull: true });
-    expect(resolveProjectAutoPull(enabled, projectId, false)).toBe(true);
-    const overridden = applyServerSettingsPatch(enabled, {
-      projectAutoPullOverrides: { [projectId]: false },
-    });
-    expect(resolveProjectAutoPull(overridden, projectId, true)).toBe(false);
-    const reset = applyServerSettingsPatch(overridden, {
-      projectAutoPullOverrides: { [projectId]: null },
-    });
-    expect(resolveProjectAutoPull(reset, projectId, false)).toBe(true);
-    const disabled = applyServerSettingsPatch(reset, {
-      defaultAutoPull: false,
-      projectAutoPullOverrides: { [projectId]: true },
-    });
-    expect(resolveProjectAutoPull(disabled, projectId, false)).toBe(true);
-    expect(resolveProjectAutoPull(disabled, ProjectId.make("other-project"), false)).toBe(false);
-  });
-
   it("inherits browser access and restores inheritance when a project override is removed", () => {
     const projectId = ProjectId.make("project-browser");
     const otherProjectId = ProjectId.make("other-project");
@@ -223,30 +176,21 @@ describe("serverSettings helpers", () => {
     const firstProjectId = ProjectId.make("first-project");
     const secondProjectId = ProjectId.make("second-project");
     const firstUpdate = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
-      defaultAutoPull: true,
-      projectAutoPullOverrides: { [firstProjectId]: false },
       projectAgentBrowserAccessOverrides: { [firstProjectId]: false },
     });
     const secondUpdate = applyServerSettingsPatch(firstUpdate, {
-      projectAutoPullOverrides: { [secondProjectId]: false },
       projectAgentBrowserAccessOverrides: { [secondProjectId]: false },
     });
     for (const projectId of [firstProjectId, secondProjectId]) {
-      expect(resolveProjectAutoPull(secondUpdate, projectId, false)).toBe(false);
       expect(resolveProjectAgentBrowserAccess(secondUpdate, projectId)).toBe(false);
     }
 
     const reset = applyServerSettingsPatch(secondUpdate, {
-      projectAutoPullOverrides: { [firstProjectId]: null },
       projectAgentBrowserAccessOverrides: { [firstProjectId]: null },
     });
-    expect(resolveProjectAutoPull(reset, firstProjectId, false)).toBe(true);
     expect(resolveProjectAgentBrowserAccess(reset, firstProjectId)).toBe(true);
-    expect(resolveProjectAutoPull(reset, secondProjectId, false)).toBe(false);
     expect(resolveProjectAgentBrowserAccess(reset, secondProjectId)).toBe(false);
-    expect(reset.projectAutoPullOverrides[firstProjectId]).toBeUndefined();
     expect(reset.projectAgentBrowserAccessOverrides[firstProjectId]).toBeUndefined();
-    expect(resolveProjectAutoPull(secondUpdate, firstProjectId, false)).toBe(false);
     expect(resolveProjectAgentBrowserAccess(secondUpdate, firstProjectId)).toBe(false);
   });
 
@@ -412,213 +356,6 @@ describe("serverSettings helpers", () => {
     });
   });
 
-  it("replaces source control writer selection without retaining stale options", () => {
-    const current = {
-      ...DEFAULT_SERVER_SETTINGS,
-      sourceControlWriterModelSelection: createModelSelection(
-        ProviderInstanceId.make("codex"),
-        "gpt-5.4-mini",
-        [{ id: "reasoningEffort", value: "high" }],
-      ),
-    };
-
-    expect(
-      applyServerSettingsPatch(current, {
-        sourceControlWriterModelSelection: {
-          instanceId: ProviderInstanceId.make("opencode"),
-          model: "openai/gpt-5",
-        },
-      }).sourceControlWriterModelSelection,
-    ).toEqual({
-      instanceId: "opencode",
-      model: "openai/gpt-5",
-    });
-  });
-
-  it("clears source control writer selection with null", () => {
-    const current = {
-      ...DEFAULT_SERVER_SETTINGS,
-      sourceControlWriterModelSelection: createModelSelection(
-        ProviderInstanceId.make("codex"),
-        "gpt-5.4-mini",
-      ),
-    };
-
-    expect(
-      applyServerSettingsPatch(current, {
-        sourceControlWriterModelSelection: null,
-      }).sourceControlWriterModelSelection,
-    ).toBeNull();
-  });
-
-  it("falls back from a disabled source control writer provider without clearing its selection", () => {
-    const instanceId = ProviderInstanceId.make("codex_writer");
-    const sourceControlWriterModelSelection = createModelSelection(instanceId, "gpt-5.4-mini");
-    const settings = {
-      ...DEFAULT_SERVER_SETTINGS,
-      providerInstances: {
-        [instanceId]: {
-          driver: ProviderDriverKind.make("codex"),
-          enabled: false,
-          config: {},
-        },
-      },
-      sourceControlWriterModelSelection,
-    };
-
-    expect(isModelSelectionProviderEnabled(settings, sourceControlWriterModelSelection)).toBe(
-      false,
-    );
-    expect(resolveSourceControlWriterModelSelection(settings, undefined, null)).toBe(
-      settings.textGenerationModelSelection,
-    );
-    expect(settings.sourceControlWriterModelSelection).toBe(sourceControlWriterModelSelection);
-  });
-
-  it("falls back from an unavailable source control writer provider", () => {
-    const instanceId = ProviderInstanceId.make("missing_writer");
-    const sourceControlWriterModelSelection = createModelSelection(instanceId, "missing-model");
-    const settings = {
-      ...DEFAULT_SERVER_SETTINGS,
-      providerInstances: {
-        [instanceId]: {
-          driver: ProviderDriverKind.make("missing-driver"),
-          config: {},
-        },
-      },
-      sourceControlWriterModelSelection,
-    };
-    const unavailableProvider = {
-      instanceId,
-      driver: ProviderDriverKind.make("missing-driver"),
-      enabled: false,
-      installed: false,
-      version: null,
-      status: "disabled",
-      auth: { status: "unknown" },
-      checkedAt: "2026-07-27T00:00:00.000Z",
-      availability: "unavailable",
-      unavailableReason: "This provider driver is not available in this build.",
-      models: [],
-      slashCommands: [],
-      skills: [],
-    } satisfies ServerProvider;
-
-    expect(resolveSourceControlWriterModelSelection(settings, [unavailableProvider], null)).toBe(
-      settings.textGenerationModelSelection,
-    );
-    expect(settings.sourceControlWriterModelSelection).toBe(sourceControlWriterModelSelection);
-  });
-
-  it("falls back from a writer provider that cannot generate application text", () => {
-    const instanceId = ProviderInstanceId.make("acp_writer");
-    const sourceControlWriterModelSelection = createModelSelection(instanceId, "default");
-    const settings = {
-      ...DEFAULT_SERVER_SETTINGS,
-      providerInstances: {
-        [instanceId]: {
-          driver: ProviderDriverKind.make("acpRegistry"),
-          enabled: true,
-          config: {},
-        },
-      },
-      sourceControlWriterModelSelection,
-    };
-    const incapableProvider = {
-      instanceId,
-      driver: ProviderDriverKind.make("acpRegistry"),
-      supportsTextGeneration: false,
-      enabled: true,
-      installed: true,
-      version: null,
-      status: "ready",
-      auth: { status: "authenticated" },
-      checkedAt: "2026-07-27T00:00:00.000Z",
-      models: [],
-      slashCommands: [],
-      skills: [],
-    } satisfies ServerProvider;
-
-    expect(resolveSourceControlWriterModelSelection(settings, [incapableProvider], null)).toBe(
-      settings.textGenerationModelSelection,
-    );
-    expect(settings.sourceControlWriterModelSelection).toBe(sourceControlWriterModelSelection);
-  });
-
-  it("falls back from a writer provider a project turned off, keeping it for other projects", () => {
-    const instanceId = ProviderInstanceId.make("codex_writer");
-    const projectId = ProjectId.make("project-a");
-    const sourceControlWriterModelSelection = createModelSelection(instanceId, "gpt-5.4-mini");
-    const settings = {
-      ...DEFAULT_SERVER_SETTINGS,
-      providerInstances: {
-        [instanceId]: { driver: ProviderDriverKind.make("codex"), enabled: true, config: {} },
-      },
-      projectSettingsOverrides: {
-        [projectId]: { providerInstances: { [instanceId]: { enabled: false } } },
-      },
-      sourceControlWriterModelSelection,
-    };
-    const provider = {
-      instanceId,
-      driver: ProviderDriverKind.make("codex"),
-      enabled: true,
-      installed: true,
-      version: null,
-      status: "ready",
-      auth: { status: "authenticated" },
-      checkedAt: "2026-07-27T00:00:00.000Z",
-      availability: "available",
-      models: [],
-      slashCommands: [],
-      skills: [],
-    } satisfies ServerProvider;
-
-    expect(resolveSourceControlWriterModelSelection(settings, [provider], projectId)).toBe(
-      settings.textGenerationModelSelection,
-    );
-    expect(resolveSourceControlWriterModelSelection(settings, [provider], null)).toBe(
-      sourceControlWriterModelSelection,
-    );
-  });
-
-  it("keeps a writer on an instance the project turned on while the machine has it off", () => {
-    const instanceId = ProviderInstanceId.make("codex_writer");
-    const projectId = ProjectId.make("project-a");
-    const sourceControlWriterModelSelection = createModelSelection(instanceId, "gpt-5.4-mini");
-    const settings = {
-      ...DEFAULT_SERVER_SETTINGS,
-      providerInstances: {
-        [instanceId]: { driver: ProviderDriverKind.make("codex"), enabled: false, config: {} },
-      },
-      projectSettingsOverrides: {
-        [projectId]: { providerInstances: { [instanceId]: { enabled: true } } },
-      },
-      sourceControlWriterModelSelection,
-    };
-    const provider = {
-      instanceId,
-      driver: ProviderDriverKind.make("codex"),
-      enabled: true,
-      installed: true,
-      version: null,
-      status: "ready",
-      auth: { status: "authenticated" },
-      checkedAt: "2026-07-27T00:00:00.000Z",
-      availability: "available",
-      models: [],
-      slashCommands: [],
-      skills: [],
-    } satisfies ServerProvider;
-
-    expect(resolveSourceControlWriterModelSelection(settings, [provider], projectId)).toBe(
-      sourceControlWriterModelSelection,
-    );
-    expect(resolveSourceControlWriterModelSelection(settings, [provider], null)).toBe(
-      settings.textGenerationModelSelection,
-    );
-  });
-
   it("replaces providerInstances maps so omitted instance fields are cleared", () => {
     const codexId = ProviderInstanceId.make("codex");
     const current = {
@@ -663,7 +400,7 @@ describe("serverSettings helpers", () => {
       ...DEFAULT_SERVER_SETTINGS,
       projectSettingsOverrides: {
         [projectId]: {
-          newWorktreesStartFromOrigin: true,
+          enableAgentDeviceAccess: true,
           providerInstances: { [instanceId]: { enabled: false } },
         },
       },
@@ -671,12 +408,12 @@ describe("serverSettings helpers", () => {
 
     const patched = applyServerSettingsPatch(current, {
       projectSettingsOverrides: {
-        [projectId]: { newWorktreesStartFromOrigin: false },
+        [projectId]: { enableAgentDeviceAccess: false },
       },
     });
 
     expect(patched.projectSettingsOverrides[projectId]).toEqual({
-      newWorktreesStartFromOrigin: false,
+      enableAgentDeviceAccess: false,
       providerInstances: { [instanceId]: { enabled: false } },
     });
   });
@@ -691,7 +428,7 @@ describe("serverSettings helpers", () => {
       ...DEFAULT_SERVER_SETTINGS,
       projectSettingsOverrides: {
         [projectId]: {
-          newWorktreesStartFromOrigin: true,
+          enableAgentDeviceAccess: true,
           providerInstances: { [instanceId]: { enabled: false } },
         },
       },
@@ -699,12 +436,12 @@ describe("serverSettings helpers", () => {
 
     const patched = applyServerSettingsPatch(current, {
       projectSettingsOverrides: {
-        [projectId]: { newWorktreesStartFromOrigin: true, providerInstances: {} },
+        [projectId]: { enableAgentDeviceAccess: true, providerInstances: {} },
       },
     });
 
     expect(patched.projectSettingsOverrides[projectId]).toEqual({
-      newWorktreesStartFromOrigin: true,
+      enableAgentDeviceAccess: true,
       providerInstances: {},
     });
   });
@@ -769,7 +506,6 @@ describe("serverSettings helpers", () => {
       overrides: {},
     });
     expect(next.backgroundActivityProfile).toBe("battery-saver");
-    expect(Duration.toMillis(next.automaticGitFetchInterval)).toBe(0);
     expect(Duration.toMillis(next.providerHealthRefreshInterval)).toBe(
       Duration.toMillis(Duration.minutes(15)),
     );
@@ -777,7 +513,7 @@ describe("serverSettings helpers", () => {
 
   it("turns legacy interval patches into custom background activity overrides", () => {
     const next = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
-      automaticGitFetchInterval: Duration.seconds(15),
+      providerHealthRefreshInterval: Duration.minutes(3),
     });
 
     expect(next.backgroundActivity).toEqual({
@@ -785,41 +521,35 @@ describe("serverSettings helpers", () => {
       profile: "custom",
       baseProfile: "balanced",
       overrides: {
-        automaticGitFetchInterval: Duration.seconds(15),
+        providerHealthRefreshInterval: Duration.minutes(3),
       },
     });
     expect(resolveServerBackgroundActivitySettings(next).profile).toBe("balanced");
     expect(
-      Duration.toMillis(resolveServerBackgroundActivitySettings(next).automaticGitFetchInterval),
-    ).toBe(15_000);
+      Duration.toMillis(
+        resolveServerBackgroundActivitySettings(next).providerHealthRefreshInterval,
+      ),
+    ).toBe(180_000);
   });
 
   it("preserves legacy background activity settings when applying an unrelated patch", () => {
     const current = {
       ...DEFAULT_SERVER_SETTINGS,
       backgroundActivityProfile: "performance" as const,
-      automaticGitFetchInterval: Duration.seconds(7),
       providerHealthRefreshInterval: Duration.minutes(4),
     };
 
-    const next = applyServerSettingsPatch(current, {
-      sourceControlWriterModelSelection: createModelSelection(
-        ProviderInstanceId.make("codex"),
-        "gpt-5.4-mini",
-      ),
-    });
+    const next = applyServerSettingsPatch(current, { sidebarAutoSettleAfterDays: 5 });
 
     expect(next.backgroundActivity).toEqual({
       schemaVersion: 1,
       profile: "custom",
       baseProfile: "performance",
       overrides: {
-        automaticGitFetchInterval: Duration.seconds(7),
         providerHealthRefreshInterval: Duration.minutes(4),
       },
     });
     expect(next.backgroundActivityProfile).toBe("performance");
-    expect(Duration.toMillis(next.automaticGitFetchInterval)).toBe(7_000);
     expect(Duration.toMillis(next.providerHealthRefreshInterval)).toBe(240_000);
   });
 
@@ -830,13 +560,13 @@ describe("serverSettings helpers", () => {
         schemaVersion: 1 as const,
         profile: "battery-saver" as const,
         overrides: {
-          providerHealthRefreshInterval: Duration.seconds(5),
+          hostPowerMonitorActiveInterval: Duration.seconds(5),
         },
       },
     };
 
     const next = applyServerSettingsPatch(current, {
-      automaticGitFetchInterval: Duration.seconds(15),
+      providerHealthRefreshInterval: Duration.minutes(3),
     });
 
     expect(next.backgroundActivity).toEqual({
@@ -844,7 +574,7 @@ describe("serverSettings helpers", () => {
       profile: "custom",
       baseProfile: "battery-saver",
       overrides: {
-        automaticGitFetchInterval: Duration.seconds(15),
+        providerHealthRefreshInterval: Duration.minutes(3),
       },
     });
   });
@@ -856,7 +586,7 @@ describe("serverSettings helpers", () => {
         profile: "battery-saver",
         overrides: {},
       },
-      automaticGitFetchInterval: Duration.seconds(5),
+      providerHealthRefreshInterval: Duration.minutes(1),
       backgroundActivityProfile: "performance",
     });
 
@@ -866,15 +596,15 @@ describe("serverSettings helpers", () => {
       overrides: {},
     });
     expect(next.backgroundActivityProfile).toBe("battery-saver");
-    expect(Duration.toMillis(next.automaticGitFetchInterval)).toBe(0);
+    expect(Duration.toMillis(next.providerHealthRefreshInterval)).toBe(900_000);
   });
 
   it("reconciles custom background activity back to a preset when overrides match the preset", () => {
     const custom = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
-      automaticGitFetchInterval: Duration.seconds(15),
+      providerHealthRefreshInterval: Duration.minutes(3),
     });
     const next = applyServerSettingsPatch(custom, {
-      automaticGitFetchInterval: Duration.seconds(30),
+      providerHealthRefreshInterval: Duration.minutes(5),
     });
 
     expect(next.backgroundActivity).toEqual({
@@ -883,7 +613,7 @@ describe("serverSettings helpers", () => {
       overrides: {},
     });
     expect(next.backgroundActivityProfile).toBe("balanced");
-    expect(Duration.toMillis(next.automaticGitFetchInterval)).toBe(30_000);
+    expect(Duration.toMillis(next.providerHealthRefreshInterval)).toBe(300_000);
   });
 
   it("drops custom overrides that duplicate the base profile", () => {
@@ -893,7 +623,7 @@ describe("serverSettings helpers", () => {
         profile: "custom",
         baseProfile: "balanced",
         overrides: {
-          automaticGitFetchInterval: Duration.seconds(30),
+          providerHealthRefreshInterval: Duration.minutes(5),
         },
       },
     });
@@ -912,7 +642,7 @@ describe("serverSettings helpers", () => {
         profile: "custom",
         baseProfile: "balanced",
         overrides: {
-          automaticGitFetchInterval: Duration.seconds(15),
+          hostPowerMonitorActiveInterval: Duration.seconds(10),
           providerHealthRefreshInterval: Duration.minutes(3),
         },
       },
@@ -921,7 +651,7 @@ describe("serverSettings helpers", () => {
     const next = applyServerSettingsPatch(current, {
       backgroundActivity: {
         overrides: {
-          automaticGitFetchInterval: Duration.seconds(10),
+          providerHealthRefreshInterval: Duration.minutes(2),
         },
       },
     });
@@ -931,7 +661,7 @@ describe("serverSettings helpers", () => {
       profile: "custom",
       baseProfile: "balanced",
       overrides: {
-        automaticGitFetchInterval: Duration.seconds(10),
+        providerHealthRefreshInterval: Duration.minutes(2),
       },
     });
   });
@@ -939,7 +669,6 @@ describe("serverSettings helpers", () => {
   it("keeps interval overrides supplied with a profile patch", () => {
     const next = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
       backgroundActivityProfile: "performance",
-      automaticGitFetchInterval: Duration.seconds(0),
       providerHealthRefreshInterval: Duration.minutes(4),
     });
 
@@ -948,7 +677,6 @@ describe("serverSettings helpers", () => {
       profile: "custom",
       baseProfile: "performance",
       overrides: {
-        automaticGitFetchInterval: Duration.seconds(0),
         providerHealthRefreshInterval: Duration.minutes(4),
       },
     });
@@ -967,19 +695,6 @@ describe("serverSettings helpers", () => {
     });
 
     expect(resolved.pauseWhenOnBattery).toBe(false);
-  });
-});
-
-describe("worktreesDirectory", () => {
-  it("remembers previous custom locations so their worktrees stay managed", () => {
-    const first = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, { worktreesDirectory: "/a" });
-    expect(first.previousWorktreesDirectories).toEqual([]);
-    const second = applyServerSettingsPatch(first, { worktreesDirectory: "/b" });
-    expect(second.previousWorktreesDirectories).toEqual(["/a"]);
-    const reset = applyServerSettingsPatch(second, { worktreesDirectory: "" });
-    expect(reset.previousWorktreesDirectories).toEqual(["/a", "/b"]);
-    const back = applyServerSettingsPatch(reset, { worktreesDirectory: "/a" });
-    expect(back.previousWorktreesDirectories).toEqual(["/b"]);
   });
 });
 

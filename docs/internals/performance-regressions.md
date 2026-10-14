@@ -30,11 +30,10 @@ The v2 checks pin these invariants:
 - Raw command output, dynamic-tool result bodies, and inline file-change bodies are omitted at
   the wire boundary, including small outputs. Explicit failure flags and bounded result IDs
   preserve status and grouped action counts without shipping those bodies. Persisted events
-  remain complete; the existing diff endpoints still provide file content when requested.
+  remain complete.
 - The initial shell contains active navigation rows only. Archived rows use the dedicated archive
   query, and transcript message bodies stay in thread detail regardless of message size.
-- Shell resume sends deltas plus compact repository-enrichment metadata, not another full project
-  and thread snapshot.
+- Shell resume sends deltas, not another full project and thread snapshot.
 - Auto, steer, and restart sends resolve delivery from authoritative state inside the
   server's per-thread dispatch lock. Model selection and identified-checkpoint rollback also
   dispatch without first fetching a full thread projection when the server advertises support.
@@ -83,11 +82,7 @@ queries use a covering thread/run index for item counts and a partial index for 
 background items, including idle items. Latest user-message reads use an index ordered by update
 time.
 
-Command palette results keep live VCS and linked pull-request queries leased to the visible
-viewport, including a small overscan region. Cached badges remain available while leases are
-released. Local Git status reads skip divergence calculations; callers that need ahead/behind
-counts keep the full status path. Cached fetch failures share the existing backoff and log only
-the actual failed attempt. Unchanged desktop environment bootstrap reads retain their array
+Unchanged desktop environment bootstrap reads retain their array
 identity so polling does not invalidate subscribers.
 
 Relay awareness queues one pending publication per thread and retains a follow-up when the thread
@@ -100,5 +95,5 @@ After the budget is exhausted, publication waits for another relevant event inst
 continuous traffic during an outage.
 
 Focused coverage: `ProjectionSettlement.test.ts`, `ThreadSettlementService.test.ts`,
-`runtimeLayer.test.ts`, `AgentAwarenessRelay.test.ts`, `GitVcsDriverCore.test.ts`,
+`runtimeLayer.test.ts`, `AgentAwarenessRelay.test.ts`,
 `ThreadStatusIndicators.subscriptions.test.tsx`, and `desktopLocal.test.ts`.

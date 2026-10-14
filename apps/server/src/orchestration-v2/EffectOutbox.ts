@@ -84,7 +84,6 @@ export const OrchestrationEffectRequestV2 = Schema.Union([
   }),
   Schema.Struct({
     type: Schema.Literal("provider-thread.rollback"),
-    restoreFiles: Schema.optional(Schema.Boolean),
     providerThreadId: ProviderThreadId,
     checkpointId: CheckpointId,
     scopeId: CheckpointScopeId,
@@ -158,8 +157,7 @@ export type OrchestrationEffectStatusV2 = typeof OrchestrationEffectStatusV2.Typ
  * run. Command retries are deduplicated by their receipts first, and a run's
  * effects are re-enqueued only around one server restart, so a week is far
  * longer than either and leaves recent history for debugging.
- * Failed rows are kept: storage cleanup keeps a deleted thread's worktree while
- * any of its effects failed.
+ * Failed rows are kept for debugging.
  */
 export const SETTLED_EFFECT_RETENTION = Duration.days(7);
 const PRUNE_BATCH_SIZE = 500;

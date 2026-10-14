@@ -2,7 +2,6 @@ import {
   type BackgroundActivityProfile,
   type BackgroundActivitySettings,
   DEFAULT_BACKGROUND_ACTIVITY_PROFILE,
-  DEFAULT_AUTOMATIC_GIT_FETCH_INTERVAL,
   DEFAULT_PROVIDER_HEALTH_REFRESH_INTERVAL,
   type ServerSettings,
 } from "@t3tools/contracts";
@@ -10,7 +9,6 @@ import * as Duration from "effect/Duration";
 
 export interface ResolvedBackgroundActivitySettings {
   readonly profile: BackgroundActivityProfile;
-  readonly automaticGitFetchInterval: Duration.Duration;
   readonly providerHealthRefreshInterval: Duration.Duration;
   readonly hostPowerMonitorActiveInterval: Duration.Duration;
   readonly hostPowerMonitorIdleInterval: Duration.Duration;
@@ -24,7 +22,6 @@ export interface ResolvedBackgroundActivitySettings {
 const PRESET_SETTINGS: Record<BackgroundActivityProfile, ResolvedBackgroundActivitySettings> = {
   performance: {
     profile: "performance",
-    automaticGitFetchInterval: Duration.seconds(15),
     providerHealthRefreshInterval: Duration.minutes(1),
     hostPowerMonitorActiveInterval: Duration.seconds(30),
     hostPowerMonitorIdleInterval: Duration.minutes(2),
@@ -36,7 +33,6 @@ const PRESET_SETTINGS: Record<BackgroundActivityProfile, ResolvedBackgroundActiv
   },
   balanced: {
     profile: "balanced",
-    automaticGitFetchInterval: DEFAULT_AUTOMATIC_GIT_FETCH_INTERVAL,
     providerHealthRefreshInterval: DEFAULT_PROVIDER_HEALTH_REFRESH_INTERVAL,
     hostPowerMonitorActiveInterval: Duration.seconds(30),
     hostPowerMonitorIdleInterval: Duration.minutes(5),
@@ -48,7 +44,6 @@ const PRESET_SETTINGS: Record<BackgroundActivityProfile, ResolvedBackgroundActiv
   },
   "battery-saver": {
     profile: "battery-saver",
-    automaticGitFetchInterval: Duration.seconds(0),
     providerHealthRefreshInterval: Duration.minutes(15),
     hostPowerMonitorActiveInterval: Duration.minutes(1),
     hostPowerMonitorIdleInterval: Duration.minutes(10),
@@ -83,8 +78,6 @@ export function resolveBackgroundActivitySettings(
   const overrides = backgroundActivity.profile === "custom" ? backgroundActivity.overrides : {};
   return {
     profile: baseProfile,
-    automaticGitFetchInterval:
-      overrides.automaticGitFetchInterval ?? preset.automaticGitFetchInterval,
     providerHealthRefreshInterval:
       overrides.providerHealthRefreshInterval ?? preset.providerHealthRefreshInterval,
     hostPowerMonitorActiveInterval:
@@ -108,7 +101,6 @@ function resolvedSettingsEqual(
   b: ResolvedBackgroundActivitySettings,
 ): boolean {
   return (
-    durationsEqual(a.automaticGitFetchInterval, b.automaticGitFetchInterval) &&
     durationsEqual(a.providerHealthRefreshInterval, b.providerHealthRefreshInterval) &&
     durationsEqual(a.hostPowerMonitorActiveInterval, b.hostPowerMonitorActiveInterval) &&
     durationsEqual(a.hostPowerMonitorIdleInterval, b.hostPowerMonitorIdleInterval) &&
@@ -151,9 +143,6 @@ export function normalizeBackgroundActivitySettings(
   const baseProfile = getBackgroundActivityBaseProfile(backgroundActivity);
   const preset = PRESET_SETTINGS[baseProfile];
   const overrides: BackgroundActivitySettings["overrides"] = {
-    ...(!durationsEqual(resolved.automaticGitFetchInterval, preset.automaticGitFetchInterval)
-      ? { automaticGitFetchInterval: resolved.automaticGitFetchInterval }
-      : {}),
     ...(!durationsEqual(
       resolved.providerHealthRefreshInterval,
       preset.providerHealthRefreshInterval,
@@ -209,32 +198,20 @@ export function resolveServerBackgroundActivitySettings(
   const legacyProfile = settings.backgroundActivityProfile;
   const hasLegacyOverrides =
     legacyProfile !== DEFAULT_BACKGROUND_ACTIVITY_PROFILE ||
-    Duration.toMillis(settings.automaticGitFetchInterval) !==
-      Duration.toMillis(DEFAULT_AUTOMATIC_GIT_FETCH_INTERVAL) ||
     Duration.toMillis(settings.providerHealthRefreshInterval) !==
       Duration.toMillis(DEFAULT_PROVIDER_HEALTH_REFRESH_INTERVAL);
   if (backgroundActivityIsDefault && hasLegacyOverrides) {
     return resolveBackgroundActivitySettings({
       schemaVersion: 1,
       profile:
-        Duration.toMillis(settings.automaticGitFetchInterval) ===
-          Duration.toMillis(
-            getBackgroundActivityPresetSettings(legacyProfile).automaticGitFetchInterval,
-          ) &&
         Duration.toMillis(settings.providerHealthRefreshInterval) ===
-          Duration.toMillis(
-            getBackgroundActivityPresetSettings(legacyProfile).providerHealthRefreshInterval,
-          )
+        Duration.toMillis(
+          getBackgroundActivityPresetSettings(legacyProfile).providerHealthRefreshInterval,
+        )
           ? legacyProfile
           : "custom",
       baseProfile: legacyProfile,
       overrides: {
-        ...(Duration.toMillis(settings.automaticGitFetchInterval) !==
-        Duration.toMillis(
-          getBackgroundActivityPresetSettings(legacyProfile).automaticGitFetchInterval,
-        )
-          ? { automaticGitFetchInterval: settings.automaticGitFetchInterval }
-          : {}),
         ...(Duration.toMillis(settings.providerHealthRefreshInterval) !==
         Duration.toMillis(
           getBackgroundActivityPresetSettings(legacyProfile).providerHealthRefreshInterval,
@@ -256,7 +233,6 @@ export function normalizeServerBackgroundActivitySettings(
     profile: "custom",
     baseProfile: resolved.profile,
     overrides: {
-      automaticGitFetchInterval: resolved.automaticGitFetchInterval,
       providerHealthRefreshInterval: resolved.providerHealthRefreshInterval,
       hostPowerMonitorActiveInterval: resolved.hostPowerMonitorActiveInterval,
       hostPowerMonitorIdleInterval: resolved.hostPowerMonitorIdleInterval,

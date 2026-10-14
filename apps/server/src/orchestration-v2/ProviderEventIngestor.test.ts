@@ -109,9 +109,6 @@ function threadCreatedEvent(
       modelSelection: modelSelection,
       runtimeMode: "full-access",
       interactionMode: "default",
-      branch: null,
-      worktreePath: null,
-      branchPullRequest: null,
       activeOrderKey: null,
       activeProviderThreadId: providerThreadId,
       lineage: {
@@ -1637,7 +1634,6 @@ layer("ProviderEventIngestorV2", (it) => {
         archivedAt: now,
         deletedAt: now,
         activeProviderThreadId: rootEvent.payload.activeProviderThreadId,
-        branch: "user/checkout",
       };
       yield* eventSink.write({
         events: [

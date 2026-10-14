@@ -39,14 +39,6 @@ export const providerTurnDuration = Metric.timer("t3_provider_turn_duration", {
   description: "Time for the provider adapter to start a turn, not how long the turn runs.",
 });
 
-export const gitCommandsTotal = Metric.counter("t3_git_commands_total", {
-  description: "Total git commands executed by the server runtime.",
-});
-
-export const gitCommandDuration = Metric.timer("t3_git_command_duration", {
-  description: "Git command execution duration.",
-});
-
 export const terminalSessionsTotal = Metric.counter("t3_terminal_sessions_total", {
   description: "Total terminal sessions started.",
 });

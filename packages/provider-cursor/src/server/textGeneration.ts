@@ -5,7 +5,8 @@ import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 
-import { type ProviderSetupError, TextGenerationError } from "@t3tools/contracts";
+import { type ProviderSetupError } from "@t3tools/contracts";
+import { TextGenerationError } from "@t3tools/provider-core/server/textGeneration";
 import type { CursorSettings } from "../settings.ts";
 
 import * as TextGenerationOperations from "@t3tools/provider-core/server/textGenerationOperations";
@@ -198,8 +199,5 @@ export const makeCursorTextGeneration = Effect.fn("makeCursorTextGeneration")(fu
     );
   };
 
-  return TextGenerationOperations.fromRunner(
-    "CursorTextGeneration",
-    TextGenerationOperations.withoutInvestigation("Cursor", runCursorJson),
-  );
+  return TextGenerationOperations.fromRunner("CursorTextGeneration", runCursorJson);
 });

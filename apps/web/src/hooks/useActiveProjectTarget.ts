@@ -28,13 +28,12 @@ export function useActiveProjectTarget(): ActiveProjectTarget | null {
           candidate.environmentId === thread.environmentId && candidate.id === thread.projectId,
       )
     : null;
-  const cwd = thread?.worktreePath ?? project?.workspaceRoot;
 
-  if (!thread || !threadId || !project || !cwd) return null;
+  if (!thread || !threadId || !project) return null;
 
   return {
     environmentId: project.environmentId,
-    cwd,
+    cwd: project.workspaceRoot,
     projectName: project.title,
     threadRef: scopeThreadRef(thread.environmentId, threadId),
   };

@@ -18,7 +18,7 @@ import {
 } from "./KeybindingsSettings.logic";
 
 describe("KeybindingsSettings.logic", () => {
-  it("lists composer, provider, and pull request commands with editable defaults", () => {
+  it("lists composer, provider, and thread commands with editable defaults", () => {
     const rows = buildKeybindingRows(DEFAULT_RESOLVED_KEYBINDINGS, "");
     for (const command of [
       "composer.sendAlternate",
@@ -28,13 +28,9 @@ describe("KeybindingsSettings.logic", () => {
       "composer.host",
       "composer.effort",
       "composer.mode",
-      "composer.workspace",
-      "composer.branch",
-      "composer.previousWorktree",
       "modelPicker.previousProvider",
       "modelPicker.nextProvider",
       "thread.copyReference",
-      "pullRequest.copyNumber",
     ]) {
       expect(rows.find((row) => row.command === command)).toMatchObject({
         source: "Default",
@@ -50,15 +46,12 @@ describe("KeybindingsSettings.logic", () => {
       }),
     );
   });
-  it.each(["pu", "pull request", "copy link", "thread id"])(
-    "finds the copy link shortcut with %s",
-    (query) => {
-      const rows = buildKeybindingRows(DEFAULT_RESOLVED_KEYBINDINGS, query);
-      expect(rows).toContainEqual(
-        expect.objectContaining({ command: "thread.copyReference", key: "mod+shift+c" }),
-      );
-    },
-  );
+  it.each(["copy thread", "thread id"])("finds the copy thread ID shortcut with %s", (query) => {
+    const rows = buildKeybindingRows(DEFAULT_RESOLVED_KEYBINDINGS, query);
+    expect(rows).toContainEqual(
+      expect.objectContaining({ command: "thread.copyReference", key: "mod+shift+c" }),
+    );
+  });
   it("groups rows by command area in page order and drops empty groups", () => {
     const groups = groupKeybindingRows(buildKeybindingRows(DEFAULT_RESOLVED_KEYBINDINGS, ""));
     expect(groups.map((group) => group.title)).toEqual([
@@ -66,7 +59,7 @@ describe("KeybindingsSettings.logic", () => {
       "Threads",
       "Composer",
       "Terminal",
-      "Preview & diff",
+      "Preview",
       "Appearance",
       "Other",
     ]);

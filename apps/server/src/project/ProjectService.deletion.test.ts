@@ -33,7 +33,6 @@ import * as WorkspacePaths from "../workspace/WorkspacePaths.ts";
 import * as ProjectEnrichmentService from "./ProjectEnrichmentService.ts";
 import * as ProjectFaviconResolver from "./ProjectFaviconResolver.ts";
 import * as ProjectService from "./ProjectService.ts";
-import * as RepositoryIdentityResolver from "./RepositoryIdentityResolver.ts";
 
 const layerEventPersistence = EventSink.layer.pipe(
   Layer.provideMerge(Layer.merge(EventStore.layer, ProjectionStore.layer)),
@@ -53,14 +52,9 @@ const layerServices = Layer.mergeAll(
   Layer.provideMerge(
     ProjectEnrichmentService.layer.pipe(
       Layer.provide(
-        Layer.merge(
-          Layer.succeed(RepositoryIdentityResolver.RepositoryIdentityResolver, {
-            resolve: () => Effect.succeed(null),
-          }),
-          Layer.succeed(ProjectFaviconResolver.ProjectFaviconResolver, {
-            resolvePath: () => Effect.succeed(null),
-          }),
-        ),
+        Layer.succeed(ProjectFaviconResolver.ProjectFaviconResolver, {
+          resolvePath: () => Effect.succeed(null),
+        }),
       ),
     ),
   ),
@@ -100,8 +94,6 @@ function nativeThreadCreated(projectId: ProjectId, threadId: ThreadId) {
     modelSelection: { instanceId: providerInstanceId, model: "gpt-5" },
     runtimeMode: "full-access",
     interactionMode: "default",
-    branch: null,
-    worktreePath: null,
     activeProviderThreadId: null,
     lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
     forkedFrom: null,

@@ -46,11 +46,13 @@ describe("supportsSharedSettingsSync", () => {
 describe("splitSharedServerPatch", () => {
   it("keeps project overrides local: project ids belong to one environment", () => {
     const patch = {
-      projectSettingsOverrides: { [ProjectId.make("project")]: { defaultAutoPull: true } },
-      sidebarAutoSettleOnMerge: false,
+      projectSettingsOverrides: {
+        [ProjectId.make("project")]: { enableAgentBrowserAccess: false },
+      },
+      sidebarAutoSettleAfterDays: 7,
     };
     expect(splitSharedServerPatch(patch)).toEqual({
-      sharedPatch: { sidebarAutoSettleOnMerge: false },
+      sharedPatch: { sidebarAutoSettleAfterDays: 7 },
       localPatch: { projectSettingsOverrides: patch.projectSettingsOverrides },
     });
   });
@@ -99,21 +101,17 @@ describe("splitSharedServerPatch", () => {
   it("routes preference keys to the shared patch and machine keys to the local patch", () => {
     const { sharedPatch, localPatch } = splitSharedServerPatch({
       sidebarAutoSettleAfterDays: 7,
-      sidebarAutoSettleOnMerge: false,
       continueThreadsAfterServerUpdate: true,
       enableAgentBrowserAccess: false,
-      defaultThreadEnvMode: "worktree",
-      newWorktreesStartFromOrigin: true,
+      defaultRuntimeMode: "approval-required",
     });
     expect(sharedPatch).toEqual({
       sidebarAutoSettleAfterDays: 7,
-      sidebarAutoSettleOnMerge: false,
       continueThreadsAfterServerUpdate: true,
-      newWorktreesStartFromOrigin: true,
     });
     expect(localPatch).toEqual({
       enableAgentBrowserAccess: false,
-      defaultThreadEnvMode: "worktree",
+      defaultRuntimeMode: "approval-required",
     });
   });
 });
@@ -125,11 +123,8 @@ describe("pickSharedServerSettings", () => {
     ).toEqual([
       "autoResumeLimitedThreads",
       "continueThreadsAfterServerUpdate",
-      "newWorktreesStartFromOrigin",
       "sidebarAutoSettleAfterDays",
-      "sidebarAutoSettleOnMerge",
       "snoozeLimitedThreads",
-      "sourceControlWritingStyle",
       "textGenerationModelSelection",
     ]);
   });
@@ -355,8 +350,8 @@ describe("findSharedSettingsMismatches", () => {
           settings: {
             ...primarySettings,
             enableAgentBrowserAccess: false,
-            defaultThreadEnvMode:
-              primarySettings.defaultThreadEnvMode === "local" ? "worktree" : "local",
+            defaultRuntimeMode:
+              primarySettings.defaultRuntimeMode === "auto" ? "approval-required" : "auto",
           },
         },
       ],

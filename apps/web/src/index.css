@@ -2098,12 +2098,6 @@ code {
   --diff-deletion-foreground: var(--diff-deletion);
   --diffs-addition-color-override: var(--diff-addition);
   --diffs-deletion-color-override: var(--diff-deletion);
-  --trees-status-added-override: var(--diff-addition);
-  --trees-status-deleted-override: var(--diff-deletion);
-  --trees-status-untracked-override: var(--diff-addition);
-  --trees-git-added-color-override: var(--diff-addition);
-  --trees-git-deleted-color-override: var(--diff-deletion);
-  --trees-git-untracked-color-override: var(--diff-addition);
 }
 
 .diff-render-surface diffs-container {

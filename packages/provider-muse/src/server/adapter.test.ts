@@ -289,8 +289,6 @@ const turnInput = Effect.fnUntraced(function* (
     modelSelection: selection,
     runtimeMode: policy.runtimeMode,
     interactionMode: policy.interactionMode,
-    branch: null,
-    worktreePath: null,
     activeProviderThreadId: providerThread.id,
     lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
     forkedFrom: null,

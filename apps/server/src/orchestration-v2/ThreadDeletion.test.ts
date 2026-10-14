@@ -53,8 +53,6 @@ function makeProjection(): OrchestrationV2ThreadProjection {
       modelSelection,
       runtimeMode: "full-access",
       interactionMode: "default",
-      branch: "feature",
-      worktreePath: "/workspace/feature",
       activeProviderThreadId: null,
       lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
       forkedFrom: null,
@@ -190,7 +188,6 @@ it.effect("cancels active work without reviving a run while disposing delegated 
     });
     const deleted = plan.events.reduce(applyToProjection, projection);
     assert.deepEqual(deleted.thread.deletedAt, deletedAt);
-    assert.equal(deleted.thread.worktreePath, "/workspace/feature");
     assert.isNull(projection.thread.deletedAt);
     for (const run of deleted.runs) {
       assert.equal(run.status, run.id.endsWith(":completed") ? "completed" : "cancelled");

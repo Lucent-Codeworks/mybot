@@ -21,11 +21,8 @@ import {
   type ScopedThreadRef,
   type ThreadContextRecord,
   type ThreadId,
-  type ThreadLinkedPullRequest,
   type RunId,
-  type WorktreeSetupSnapshot,
 } from "@t3tools/contracts";
-import { worktreeSetupAgentStarted } from "@t3tools/client-runtime/worktree-setup";
 import * as DateTime from "effect/DateTime";
 import { parseScopedThreadKey } from "@t3tools/client-runtime/environment";
 import { resolveAssetUrl } from "@t3tools/client-runtime/state/assets";
@@ -40,13 +37,7 @@ import {
   type CodexArtifactTemplate,
 } from "@t3tools/shared/codexArtifactTemplates";
 import { presentThreadShell } from "@t3tools/client-runtime/state/shell";
-import {
-  type ChatMessage,
-  isImageAttachment,
-  type SessionPhase,
-  type Thread,
-  type TurnDiffSummary,
-} from "../types";
+import { type ChatMessage, isImageAttachment, type SessionPhase, type Thread } from "../types";
 import { type ComposerImageAttachment, type DraftThreadState } from "../composerDraftStore";
 import * as Schema from "effect/Schema";
 import { appAtomRegistry } from "../rpc/atomRegistry";
@@ -54,7 +45,6 @@ import { environmentThreadShells, environmentThreadDetails } from "../state/thre
 import { waitForAtomValue } from "../state/waitForAtomValue";
 import { filterTerminalContextsWithText, type TerminalContextDraft } from "../lib/terminalContext";
 import { stripInlineContextReferences } from "~/lib/composerContextReferences";
-import type { DraftThreadEnvMode } from "../composerDraftStore";
 import { collapseExpandedComposerCursor, type ComposerSubmissionIntent } from "../composer-logic";
 import type { ReviewCommentContext } from "../reviewCommentContext";
 import { derivePhase, type TimelineEntry } from "../session-logic";
@@ -114,97 +104,6 @@ export function shouldRenderPreviewMiniPlayer(
   );
 }
 
-export function shouldOpenProactivePullRequest(
-  previousTargetKey: string | null | undefined,
-  targetKey: string | null,
-): boolean {
-  return targetKey !== null && targetKey !== previousTargetKey;
-}
-
-interface ProactivePanelObservation {
-  threadKey: string;
-  runningTurnId: RunId | null | undefined;
-  targetKey: string | null | undefined;
-  userActionTurnId: RunId | null;
-  userActionRevision: number;
-}
-
-/** Capture user intent before loading or metadata writes can defer panel activation. */
-export function observeProactivePanelUserChoice(
-  previous: ProactivePanelObservation | null,
-  input: { threadKey: string; runningTurnId: RunId | null; userActionRevision: number },
-): ProactivePanelObservation {
-  const sameThread = previous?.threadKey === input.threadKey;
-  const newTurn =
-    sameThread && input.runningTurnId !== null && input.runningTurnId !== previous.userActionTurnId;
-  return {
-    threadKey: input.threadKey,
-    runningTurnId: sameThread ? previous.runningTurnId : undefined,
-    targetKey: sameThread ? previous.targetKey : undefined,
-    userActionTurnId: input.runningTurnId ?? (sameThread ? previous.userActionTurnId : null),
-    userActionRevision:
-      !sameThread || newTurn ? input.userActionRevision : previous.userActionRevision,
-  };
-}
-
-/** Follow a changed server link only when the panel still shows the previous linked PR. */
-export function shouldRetargetThreadPullRequestPanel(
-  previous: ThreadLinkedPullRequest | null,
-  current: ThreadLinkedPullRequest | null,
-  surface: RightPanelSurface | null,
-): boolean {
-  if (previous === null || current === null || surface?.kind !== "pull-request") return false;
-  const previousRepository = previous.repository.toLowerCase();
-  return (
-    (previous.projectId !== current.projectId ||
-      previousRepository !== current.repository.toLowerCase() ||
-      previous.number !== current.number) &&
-    surface.projectId === previous.projectId &&
-    surface.repository.toLowerCase() === previousRepository &&
-    surface.number === previous.number
-  );
-}
-
-export function shouldOpenProactiveTurnDiff(input: {
-  previousRunningTurnId: RunId | null | undefined;
-  runningTurnId: RunId | null;
-  settledTurnId: RunId | null;
-  turnCompleted: boolean;
-}): boolean {
-  return (
-    input.runningTurnId === null &&
-    input.turnCompleted &&
-    input.settledTurnId !== null &&
-    (input.previousRunningTurnId === undefined ||
-      input.settledTurnId === input.previousRunningTurnId)
-  );
-}
-
-export function resolveProactiveTurnDiffAction(input: {
-  checkpoint: Pick<TurnDiffSummary, "status" | "files"> | undefined;
-  isGitRepo: boolean | undefined;
-  activeSurfaceKind: RightPanelSurface["kind"] | null;
-}): "defer" | "ignore" | "open" {
-  // An open diff already shows the work; reopening it would reset the chosen scope.
-  if (input.activeSurfaceKind === "pull-request" || input.activeSurfaceKind === "diff") {
-    return "ignore";
-  }
-  if (input.checkpoint === undefined || input.checkpoint.status === "missing") return "defer";
-  if (input.isGitRepo === undefined) return "defer";
-  if (
-    !input.isGitRepo ||
-    input.checkpoint.status !== "ready" ||
-    input.checkpoint.files.length === 0
-  ) {
-    return "ignore";
-  }
-  const changedLines = input.checkpoint.files.reduce(
-    (total, file) => total + file.additions + file.deletions,
-    0,
-  );
-  return input.checkpoint.files.length >= 3 || changedLines >= 50 ? "open" : "ignore";
-}
-
 export function codexArtifactTemplatePromptToAppend(
   currentDraft: string,
   template: CodexArtifactTemplate,
@@ -262,43 +161,13 @@ export function shouldReleaseTimelineAnchorForToolActivity(input: {
   });
 }
 
-export {
-  findRecordedWorktreeSetup,
-  resolveVisibleWorktreeSetup,
-} from "@t3tools/client-runtime/worktree-setup";
-
-/** Keep setup visible across local dispatch, durable preparation, and the live stream. */
-export function resolveWorktreeSetupProgress(input: {
-  threadId: ThreadId;
-  localPreparing: boolean;
-  runStatus: NonNullable<Thread["latestRun"]>["status"] | undefined;
-  latest: WorktreeSetupSnapshot | null | undefined;
-  held: WorktreeSetupSnapshot | null;
-}) {
-  const latest = input.latest?.threadId === input.threadId ? input.latest : null;
-  const held = input.held?.threadId === input.threadId ? input.held : null;
-  const snapshot = latest && (!held || latest.sequence >= held.sequence) ? latest : held;
-  return {
-    snapshot,
-    isPreparingWorktree:
-      input.localPreparing ||
-      input.runStatus === "preparing" ||
-      (snapshot?.phase === "running" && !worktreeSetupAgentStarted(snapshot)),
-  };
-}
-
 export function resolveDraftHeroState(input: {
   isLocalDraftThread: boolean;
   hasTimelineEntries: boolean;
   isWorking: boolean;
   draftHeroDockRequested: boolean;
   backgroundSubmissionPending: boolean;
-  /** A worktree setup card is on the timeline, so the timeline must stay visible. */
-  hasWorktreeSetupCard?: boolean;
 }): boolean {
-  if (input.hasWorktreeSetupCard) {
-    return false;
-  }
   if (input.backgroundSubmissionPending) {
     return true;
   }
@@ -481,33 +350,6 @@ export function startNewThreadForProject(
   return true;
 }
 
-export function resolveThreadMetadataUpdateForNextTurn(input: {
-  currentModelSelection: ModelSelection;
-  nextModelSelection?: ModelSelection;
-  currentBranch: string | null;
-  nextBranch?: string;
-}): {
-  modelSelection?: ModelSelection;
-  branch?: string;
-  worktreePath?: null;
-} | null {
-  const nextModelSelection = input.nextModelSelection;
-  const modelSelectionChanged =
-    nextModelSelection !== undefined &&
-    (nextModelSelection.model !== input.currentModelSelection.model ||
-      nextModelSelection.instanceId !== input.currentModelSelection.instanceId ||
-      JSON.stringify(nextModelSelection.options ?? null) !==
-        JSON.stringify(input.currentModelSelection.options ?? null));
-  const branchChanged = input.nextBranch !== undefined && input.nextBranch !== input.currentBranch;
-  if (!modelSelectionChanged && !branchChanged) {
-    return null;
-  }
-  return {
-    ...(modelSelectionChanged ? { modelSelection: nextModelSelection } : {}),
-    ...(branchChanged ? { branch: input.nextBranch, worktreePath: null } : {}),
-  };
-}
-
 export function buildLocalDraftThread(
   threadId: ThreadId,
   draftThread: DraftThreadState,
@@ -522,8 +364,6 @@ export function buildLocalDraftThread(
     modelSelection: fallbackModelSelection,
     runtimeMode: draftThread.runtimeMode,
     interactionMode: draftThread.interactionMode,
-    branch: draftThread.branch,
-    worktreePath: draftThread.worktreePath,
     activeProviderThreadId: null,
     lineage: { rootThreadId: threadId, parentThreadId: null, relationshipToParent: null },
     forkedFrom: null,
@@ -808,37 +648,7 @@ export function collectUserMessageBlobPreviewUrls(message: ChatMessage): string[
   return previewUrls;
 }
 
-export interface PullRequestDialogState {
-  initialReference: string | null;
-  key: number;
-}
-
 export { readFileAsDataUrl } from "../lib/imageCompression";
-
-export function resolveSendEnvMode(input: {
-  requestedEnvMode: DraftThreadEnvMode;
-  isGitRepo: boolean;
-}): DraftThreadEnvMode {
-  return input.isGitRepo ? input.requestedEnvMode : "local";
-}
-
-export function resolveBackgroundDraftWorkspaceOptions(input: {
-  envMode: DraftThreadEnvMode;
-  branch: string | null;
-  startFromOrigin: boolean;
-}): {
-  envMode: DraftThreadEnvMode;
-  branch: string | null;
-  worktreePath: null;
-  startFromOrigin: boolean;
-} {
-  return {
-    envMode: input.envMode,
-    branch: input.branch,
-    worktreePath: null,
-    startFromOrigin: input.envMode === "worktree" && input.startFromOrigin,
-  };
-}
 
 export function cloneComposerImageForRetry(
   image: ComposerImageAttachment,
@@ -907,34 +717,6 @@ export function buildExpiredTerminalContextToastCopy(
   };
 }
 
-export function branchMismatchKey(
-  threadId: string | null,
-  mismatch: { threadBranch: string; currentBranch: string } | null,
-): string | null {
-  if (!threadId || !mismatch) {
-    return null;
-  }
-  return `${threadId}:${mismatch.threadBranch}:${mismatch.currentBranch}`;
-}
-
-// The mismatch banner only matters when the user is about to send: passive
-// reading of an old thread carries no risk (the branch picker tint already
-// covers ambient awareness). Draft content is the intent signal — composer
-// focus is useless here because ChatView autofocuses the composer on every
-// thread open. `wasShownForCurrentMismatch` keeps the banner mounted once
-// revealed so it doesn't flicker away when the draft is cleared.
-export function shouldShowBranchMismatchBanner(input: {
-  hasMismatch: boolean;
-  isDismissed: boolean;
-  composerHasContent: boolean;
-  wasShownForCurrentMismatch: boolean;
-}): boolean {
-  if (!input.hasMismatch || input.isDismissed) {
-    return false;
-  }
-  return input.composerHasContent || input.wasShownForCurrentMismatch;
-}
-
 export function shouldShowPlanFollowUpPrompt(input: {
   pendingUserInputCount: number;
   interactionMode: ProviderInteractionMode;
@@ -949,45 +731,6 @@ export function shouldShowPlanFollowUpPrompt(input: {
     input.hasActionableProposedPlan &&
     !input.hasComposerAttachments
   );
-}
-
-// Session-scoped (module-level so it survives ChatView remounts, e.g. route
-// changes). Durable cross-device dismissal is planned as a server-side ack.
-const sessionDismissedBranchMismatchKeys = new Set<string>();
-
-export function dismissBranchMismatchForSession(key: string): void {
-  sessionDismissedBranchMismatchKeys.add(key);
-}
-
-export function isBranchMismatchDismissedForSession(key: string | null): boolean {
-  return key !== null && sessionDismissedBranchMismatchKeys.has(key);
-}
-
-// Git status for a checkout arrives after the composer paints, and the branch
-// strip mounts on the assumption that a project is a Git repo. Without a
-// memory, a non-Git project would mount the strip and drop it on every visit.
-// Keyed by environment and checkout for the session; never persisted.
-const sessionCheckoutIsRepo = new Map<string, boolean>();
-
-function checkoutIsRepoKey(environmentId: EnvironmentId, cwd: string): string {
-  return JSON.stringify([environmentId, cwd]);
-}
-
-export function rememberCheckoutIsRepo(
-  environmentId: EnvironmentId,
-  cwd: string,
-  isRepo: boolean,
-): void {
-  sessionCheckoutIsRepo.set(checkoutIsRepoKey(environmentId, cwd), isRepo);
-}
-
-export function recallCheckoutIsRepo(
-  environmentId: EnvironmentId,
-  cwd: string | null,
-): boolean | undefined {
-  return cwd === null
-    ? undefined
-    : sessionCheckoutIsRepo.get(checkoutIsRepoKey(environmentId, cwd));
 }
 
 export function threadHasStarted(thread: Thread | null | undefined): boolean {
@@ -1169,7 +912,6 @@ export async function waitForRevertedMessage(
 
 export interface LocalDispatchSnapshot {
   startedAt: string;
-  preparingWorktree: boolean;
   submissionIntent: ComposerSubmissionIntent;
   latestUserMessageId: ChatMessage["id"] | null;
   latestRunId: RunId | null;
@@ -1183,7 +925,6 @@ export interface LocalDispatchSnapshot {
 export function createLocalDispatchSnapshot(
   activeThread: Thread | undefined,
   options?: {
-    preparingWorktree?: boolean;
     latestUserMessageId?: ChatMessage["id"] | null;
     submissionIntent?: ComposerSubmissionIntent;
   },
@@ -1192,7 +933,6 @@ export function createLocalDispatchSnapshot(
   const runtime = activeThread?.runtime ?? null;
   return {
     startedAt: new Date().toISOString(),
-    preparingWorktree: Boolean(options?.preparingWorktree),
     submissionIntent: options?.submissionIntent ?? "foreground",
     latestUserMessageId: options?.latestUserMessageId ?? null,
     latestRunId: latestRun?.runId ?? null,

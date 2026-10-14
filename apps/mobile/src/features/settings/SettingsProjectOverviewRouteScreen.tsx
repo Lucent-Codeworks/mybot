@@ -1,7 +1,6 @@
 import { ScreenScrollView as ScrollView } from "../../components/ScreenScrollView";
 import { AppText as Text, AppTextInput } from "../../components/AppText";
 import { ProjectFavicon } from "../../components/ProjectFavicon";
-import { deriveProjectGroupLabel } from "@t3tools/client-runtime/state/project-grouping";
 import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
 import { useState } from "react";
 import { Platform, Pressable, View } from "react-native";
@@ -61,7 +60,7 @@ function ProjectOverviewContent(props: {
   readonly environments: readonly SettingsTarget[];
 }) {
   const representative = props.members[0]!;
-  const displayName = deriveProjectGroupLabel({ representative, members: props.members });
+  const displayName = representative.title;
   const [draftName, setDraftName] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const updateProject = useAtomCommand(projectEnvironment.update, {

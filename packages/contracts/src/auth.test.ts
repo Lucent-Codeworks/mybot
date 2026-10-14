@@ -22,6 +22,14 @@ describe("authorization grants", () => {
     expect(AuthStandardClientScopes).not.toContain("review:write");
   });
 
+  it("decodes retired source control credentials without offering them in new grants", () => {
+    expect(Schema.decodeUnknownSync(AuthEnvironmentScopes)(["source-control:write"])).toEqual([
+      "source-control:write",
+    ]);
+    expect(() => Schema.decodeUnknownSync(AuthGrantScopes)(["source-control:write"])).toThrow();
+    expect(AuthStandardClientScopes).not.toContain("source-control:write");
+  });
+
   // Frozen vocabulary from the client before granular scopes shipped. Do not
   // derive it from the current enum: that would hide compatibility regressions.
   const oldScopes = Schema.Array(
@@ -39,7 +47,7 @@ describe("authorization grants", () => {
 
   const decodeOldScopes = Schema.decodeUnknownSync(oldScopes);
 
-  it.each(AuthEnvironmentScope.literals)(
+  it.each(AuthEnvironmentScope.literals.filter((scope) => scope !== "source-control:write"))(
     "keeps %s permission errors decodable by old clients",
     (scope) => {
       const response = authScopeRequiredResponse(scope);

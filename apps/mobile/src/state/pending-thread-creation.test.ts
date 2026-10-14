@@ -38,9 +38,6 @@ const creation: QueuedThreadMessage = {
   runtimeMode: "full-access",
   creation: {
     projectId: ProjectId.make("project-1"),
-    workspaceMode: "worktree",
-    branch: "main",
-    worktreePath: null,
   },
   createdAt: "2026-08-24T12:00:00.000Z",
 };
@@ -167,25 +164,10 @@ describe("pendingThreadCreationShell", () => {
       modelSelection: creation.modelSelection,
       runtimeMode: "full-access",
       interactionMode: "default",
-      branch: "main",
-      worktreePath: null,
       latestRun: null,
       runtime: null,
       latestUserMessageAt: creation.createdAt,
     });
-  });
-
-  it("keeps a local task's explicit worktree path", () => {
-    expect(
-      pendingThreadCreationShell({
-        ...creation,
-        creation: {
-          ...creation.creation!,
-          workspaceMode: "local",
-          worktreePath: "/repo/.worktrees/feature",
-        },
-      })?.worktreePath,
-    ).toBe("/repo/.worktrees/feature");
   });
 
   it("returns null for a follow-up message or a creation without a model", () => {
@@ -203,8 +185,7 @@ describe("isPendingThreadCreationVisible", () => {
     );
   });
 
-  // The regression: the server creates the thread, THEN builds the worktree,
-  // then starts the turn. The shell and an empty detail arrive seconds before
+  // The regression: the server creates the thread, THEN starts the turn. The shell and an empty detail arrive seconds before
   // the prompt, and keying on the shell left the thread empty for that whole
   // window.
   it("keeps standing in while the created thread has no messages yet", () => {

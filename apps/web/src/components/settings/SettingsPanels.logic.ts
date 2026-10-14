@@ -5,7 +5,6 @@ import type {
   PreviewViewportSetting,
   ProviderInstanceId,
   ServerSettings,
-  SidebarProjectGroupingMode,
   UnifiedSettings,
 } from "@t3tools/contracts";
 import { DEFAULT_UNIFIED_SETTINGS } from "@t3tools/contracts/settings";
@@ -18,55 +17,15 @@ import {
 import * as Duration from "effect/Duration";
 import * as Equal from "effect/Equal";
 
-export function isProjectGroupingEnabled(mode: SidebarProjectGroupingMode): boolean {
-  return mode !== "separate";
-}
-
-export function projectGroupingModeFromToggle(
-  enabled: boolean,
-  lastEnabledMode: SidebarProjectGroupingMode = "repository",
-): SidebarProjectGroupingMode {
-  if (!enabled) return "separate";
-  return lastEnabledMode === "repository_path" ? "repository_path" : "repository";
-}
-
-const LAST_ENABLED_PROJECT_GROUPING_MODE_KEY = "t3code:last-enabled-project-grouping-mode";
-
-export function readLastEnabledProjectGroupingMode(): SidebarProjectGroupingMode {
-  try {
-    return localStorage.getItem(LAST_ENABLED_PROJECT_GROUPING_MODE_KEY) === "repository_path"
-      ? "repository_path"
-      : "repository";
-  } catch {
-    return "repository";
-  }
-}
-
-export function rememberEnabledProjectGroupingMode(mode: SidebarProjectGroupingMode): void {
-  if (mode === "separate") return;
-  try {
-    localStorage.setItem(LAST_ENABLED_PROJECT_GROUPING_MODE_KEY, mode);
-  } catch {
-    // Storage can be unavailable in restricted browser contexts.
-  }
-}
-
 export function hasChangedBackgroundActivitySettings(
   settings: Pick<
     UnifiedSettings,
-    | "backgroundActivity"
-    | "backgroundActivityProfile"
-    | "automaticGitFetchInterval"
-    | "providerHealthRefreshInterval"
+    "backgroundActivity" | "backgroundActivityProfile" | "providerHealthRefreshInterval"
   >,
 ): boolean {
   return (
     !Equal.equals(settings.backgroundActivity, DEFAULT_UNIFIED_SETTINGS.backgroundActivity) ||
     settings.backgroundActivityProfile !== DEFAULT_UNIFIED_SETTINGS.backgroundActivityProfile ||
-    !Equal.equals(
-      settings.automaticGitFetchInterval,
-      DEFAULT_UNIFIED_SETTINGS.automaticGitFetchInterval,
-    ) ||
     !Equal.equals(
       settings.providerHealthRefreshInterval,
       DEFAULT_UNIFIED_SETTINGS.providerHealthRefreshInterval,
@@ -178,7 +137,6 @@ export function resolveBackgroundActivityProfileOption(
     profile: "custom",
     baseProfile: resolved.profile,
     overrides: {
-      automaticGitFetchInterval: resolved.automaticGitFetchInterval,
       providerHealthRefreshInterval: resolved.providerHealthRefreshInterval,
       hostPowerMonitorActiveInterval: resolved.hostPowerMonitorActiveInterval,
       hostPowerMonitorIdleInterval: resolved.hostPowerMonitorIdleInterval,
@@ -301,7 +259,6 @@ export function backgroundActivityOverrideSettings(
   overrides: BackgroundActivityOverridePatch,
 ) {
   const nextOverrides: BackgroundActivityOverridePatch = {
-    automaticGitFetchInterval: resolved.automaticGitFetchInterval,
     providerHealthRefreshInterval: resolved.providerHealthRefreshInterval,
     hostPowerMonitorActiveInterval: resolved.hostPowerMonitorActiveInterval,
     hostPowerMonitorIdleInterval: resolved.hostPowerMonitorIdleInterval,

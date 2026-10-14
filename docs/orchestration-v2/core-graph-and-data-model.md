@@ -149,8 +149,6 @@ type AppThread = {
   modelSelection: ModelSelection;
   runtimeMode: RuntimeMode;
   interactionMode: InteractionMode;
-  branch: string | null;
-  worktreePath: string | null;
   activeProviderThreadId: ProviderThreadId | null;
   lineage: AppThreadLineage | null;
   createdAt: string;
@@ -288,7 +286,7 @@ The root node of a run is the only node allowed to complete the run. Subagent no
 
 ## CheckpointScope
 
-A `CheckpointScope` describes a unit of filesystem state that can be checkpointed. Root runs and child execution nodes can both have checkpoint scopes.
+A `CheckpointScope` describes a conversation scope that can be checkpointed. Root runs and child execution nodes can both have checkpoint scopes.
 
 ```ts
 type CheckpointScope = {
@@ -527,7 +525,9 @@ Codex `turn/plan/updated` maps to a `todo_list` artifact. Plan-mode final plan i
 
 ## Checkpoint
 
-Checkpoints attach to checkpoint scopes. A root run checkpoint is the user-visible conversation checkpoint. A child checkpoint records nested filesystem state for a subagent, tool, or provider thread without advancing the parent run count.
+Checkpoints attach to checkpoint scopes. A root run checkpoint is the user-visible conversation checkpoint. A child checkpoint records a nested position for a subagent, tool, or provider thread without advancing the parent run count.
+
+Checkpoints mark conversation positions for rewind. They do not snapshot or restore project files; `ref` is an identifier only, and `files` is empty for new checkpoints (older stored checkpoints may still carry file summaries).
 
 ```ts
 type Checkpoint = {

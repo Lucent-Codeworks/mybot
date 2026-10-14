@@ -283,10 +283,6 @@ const make = Effect.gen(function* () {
             modelSelection: { instanceId: thread.providerInstanceId, model },
             runtimeMode: DEFAULT_RUNTIME_MODE,
             interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
-            branch: null,
-            worktreePath: null,
-            linkedPullRequest: null,
-            branchPullRequest: null,
             activeProviderThreadId: providerThreadId,
             historyOrigin: "v1_import",
             lineage: {

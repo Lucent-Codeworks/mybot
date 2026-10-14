@@ -1,14 +1,6 @@
 // @vitest-environment jsdom
 
-import {
-  ApprovalRequestId,
-  CheckpointRef,
-  EnvironmentId,
-  MessageId,
-  ProjectId,
-  RunId,
-  ThreadId,
-} from "@t3tools/contracts";
+import { ApprovalRequestId, EnvironmentId, MessageId, RunId, ThreadId } from "@t3tools/contracts";
 import {
   act,
   createRef,
@@ -52,10 +44,6 @@ vi.mock("../ui/tooltip", async (importOriginal) => {
       activityTestState.subagentTooltips ? props.children : <original.TooltipPopup {...props} />,
   };
 });
-
-vi.mock("../DiffWorkerPoolProvider", () => ({
-  DiffWorkerPoolProvider: ({ children }: { children?: ReactNode }) => children,
-}));
 
 vi.mock("./MessagesTimeline.logic", async (importOriginal) => {
   const logic = await importOriginal<typeof import("./MessagesTimeline.logic")>();
@@ -200,25 +188,6 @@ vi.mock("@legendapp/list/react", async () => {
   return { LegendList };
 });
 
-function MockFileDiff(props: {
-  fileDiff: { name?: string | null; prevName?: string | null };
-  renderCustomHeader?: (fileDiff: {
-    name?: string | null;
-    prevName?: string | null;
-  }) => React.ReactNode;
-}) {
-  return (
-    <div data-testid="file-diff">
-      {props.renderCustomHeader?.(props.fileDiff)}
-      {props.fileDiff.name ?? props.fileDiff.prevName ?? "diff"}
-    </div>
-  );
-}
-
-vi.mock("@pierre/diffs/react", () => {
-  return { FileDiff: MockFileDiff };
-});
-
 function matchMedia() {
   return {
     matches: false,
@@ -286,13 +255,7 @@ describe("timeline tooltip scroll dismissal", () => {
     "hover then focus",
     "outside timeline",
     "wheel without scroll",
-    "pr hover",
-    "pr delayed hover",
-    "pr focus",
-    "pr hover then focus",
-  ])("handles %s through the real tooltip interactions", async (scenario) => {
-    const isPullRequest = scenario.startsWith("pr ");
-    const interaction = isPullRequest ? scenario.slice(3) : scenario;
+  ])("handles %s through the real tooltip interactions", async (interaction) => {
     vi.unstubAllGlobals();
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     vi.useFakeTimers();
@@ -302,33 +265,7 @@ describe("timeline tooltip scroll dismissal", () => {
     document.body.append(container);
     const root = createRoot(container);
     const onMouseEnter = vi.fn();
-    const query = await import("~/state/query");
-    const querySpy = isPullRequest
-      ? vi.spyOn(query, "useEnvironmentQuery").mockReturnValue({
-          data: null,
-          dataUpdatedAt: 0,
-          error: "Pull request not found",
-          failure: null,
-          isPending: false,
-          isSuccess: false,
-          refresh: vi.fn(),
-        })
-      : null;
-    const { PullRequestLinkPreview } = await import("../pullRequest/PullRequestLinkPreview");
-    const tooltip = isPullRequest ? (
-      <PullRequestLinkPreview
-        link={<button onMouseEnter={onMouseEnter}>message link</button>}
-        originalUrl="https://example.com"
-        target={{
-          environmentId: ACTIVE_THREAD_ENVIRONMENT_ID,
-          input: {
-            projectId: ProjectId.make("project-1"),
-            repository: "pingdotgg/t3code",
-            number: 1,
-          },
-        }}
-      />
-    ) : (
+    const tooltip = (
       <Tooltip>
         <TooltipTrigger delay={50} onMouseEnter={onMouseEnter}>
           message link
@@ -362,7 +299,7 @@ describe("timeline tooltip scroll dismissal", () => {
           trigger.focus();
         }
         if (interaction !== "delayed hover") {
-          await vi.advanceTimersByTimeAsync(isPullRequest ? 400 : 60);
+          await vi.advanceTimersByTimeAsync(60);
         }
       });
       expect(onMouseEnter).toHaveBeenCalledTimes(interaction === "focus" ? 0 : 1);
@@ -376,7 +313,7 @@ describe("timeline tooltip scroll dismissal", () => {
             ? new WheelEvent("wheel", { bubbles: true, deltaY: 100 })
             : new Event("scroll"),
         );
-        await vi.advanceTimersByTimeAsync(isPullRequest ? 1000 : 100);
+        await vi.advanceTimersByTimeAsync(100);
       });
       expect(
         document.querySelector('[data-slot="tooltip-popup"][data-open]')?.textContent ?? null,
@@ -388,7 +325,6 @@ describe("timeline tooltip scroll dismissal", () => {
       }
     } finally {
       await act(async () => root.unmount());
-      querySpy?.mockRestore();
       container.remove();
       vi.useRealTimers();
       vi.unstubAllGlobals();
@@ -406,7 +342,6 @@ function buildProps() {
     providerStatuses: [],
     runs: [],
     routeThreadKey: "environment-local:thread-1",
-    onOpenTurnDiff: () => {},
     onOpenThread: () => {},
     onForkFromRun: async () => {},
     onRollbackCheckpoint: () => {},
@@ -1080,57 +1015,6 @@ describe("MessagesTimeline", () => {
     expect(compactMarkup).not.toContain("topbar-scroll-fade");
     expect(fadedMarkup).toContain('class="h-[var(--workspace-titlebar-scroll-fade-height)]"');
     expect(fadedMarkup).toContain("topbar-scroll-fade");
-  });
-
-  it("keeps assistant changed-files headers sticky below the thread header", () => {
-    const assistantMessageId = MessageId.make("message-assistant-with-files");
-    const runId = RunId.make("run-with-files");
-    const markup = renderToStaticMarkup(
-      <MessagesTimeline
-        {...buildProps()}
-        latestRun={{
-          runId,
-          status: "completed",
-          startedAt: MESSAGE_CREATED_AT,
-          completedAt: MESSAGE_CREATED_AT,
-        }}
-        timelineEntries={[
-          {
-            id: "entry-assistant-with-files",
-            kind: "message",
-            createdAt: MESSAGE_CREATED_AT,
-            message: {
-              id: assistantMessageId,
-              role: "assistant",
-              text: "Updated the fixture.",
-              runId,
-              createdAt: MESSAGE_CREATED_AT,
-              updatedAt: MESSAGE_CREATED_AT,
-              streaming: false,
-            },
-          },
-        ]}
-        turnDiffSummaries={[
-          {
-            runId,
-            checkpointTurnCount: 1,
-            checkpointRef: CheckpointRef.make("checkpoint-with-files"),
-            status: "ready",
-            files: [{ path: "README.md", kind: "modified", additions: 2, deletions: 1 }],
-            assistantMessageId,
-            completedAt: MESSAGE_CREATED_AT,
-          },
-        ]}
-      />,
-    );
-
-    expect(markup).toContain("sticky top-2 z-10");
-    expect(markup).not.toContain("self-start");
-    expect(markup).toContain("whitespace-nowrap");
-    expect(markup).toContain("size-3");
-    expect(markup).not.toContain('aria-label="Collapse all folders"');
-    expect(markup).toContain('aria-label="Open diff"');
-    expect(markup).toContain("1 changed file");
   });
 
   it("treats the follow re-arm band above the content bottom as the live edge", async () => {
@@ -2672,7 +2556,7 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain("&lt;/review_comment&gt;");
   });
 
-  it("renders file review comments as source code instead of diffs", () => {
+  it("renders file review comments as source code", () => {
     const markup = renderToStaticMarkup(
       <MessagesTimeline
         {...buildProps()}
@@ -2705,7 +2589,6 @@ describe("MessagesTimeline", () => {
 
     expect(markup).toContain("plan.md L1 to L2");
     expect(markup).not.toContain("review_comment");
-    expect(markup).not.toContain('data-testid="file-diff"');
   });
 
   it("collapses settled tool runs behind a generated summary toggle", () => {

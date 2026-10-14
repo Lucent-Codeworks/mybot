@@ -37,44 +37,10 @@ describe("sanitizeLinkedPrompt", () => {
 });
 
 describe("parseNewThreadLink", () => {
-  it("reads a shared prompt with its optional repository and model", () => {
-    const result = parseNewThreadLink(
-      "?prompt=Rate+me&repo=https://github.com/pingdotgg/t3code.git&provider=Codex&model=gpt-5",
-    );
-    expect(result).toEqual({
-      ok: true,
-      value: {
-        kind: "new",
-        prompt: { text: "Rate me", hiddenCharacters: 0 },
-        repository: { owner: "pingdotgg", name: "t3code" },
-        provider: "codex",
-        model: "gpt-5",
-      },
-    });
-  });
-
-  it("reads a pull request link, whose prompt is optional", () => {
-    for (const pr of [
-      "pingdotgg/t3code/42",
-      "pingdotgg/t3code%2342",
-      "https://github.com/pingdotgg/t3code/pull/42/files",
-    ]) {
-      expect(parseNewThreadLink(`?pr=${pr}`)).toEqual({
-        ok: true,
-        value: {
-          kind: "pull-request",
-          pullRequest: { owner: "pingdotgg", name: "t3code", number: 42 },
-          prompt: null,
-        },
-      });
-    }
-  });
-
   it("refuses links it cannot open safely", () => {
-    expect(parseNewThreadLink("?repo=a/b").ok).toBe(false);
+    expect(parseNewThreadLink("?provider=codex").ok).toBe(false);
     expect(parseNewThreadLink("?prompt=%E2%80%8B").ok).toBe(false);
     expect(parseThreadLinkPrompt("?prompt=%E2%80%8B").ok).toBe(false);
-    expect(parseNewThreadLink("?prompt=x&repo=../etc").ok).toBe(false);
     expect(parseNewThreadLink(`?prompt=${"x".repeat(8_001)}`).ok).toBe(false);
   });
 });
@@ -94,7 +60,6 @@ describe("link round trips", () => {
   it("builds a link that parses back to the same prompt", () => {
     const link = buildNewThreadLink({
       prompt: "Swear count & rating?",
-      repository: { owner: "pingdotgg", name: "t3code" },
       provider: "claudeAgent",
       model: "opus",
     });

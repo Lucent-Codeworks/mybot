@@ -13,8 +13,7 @@ describe("promptLinkSearchFromParams", () => {
   it("round-trips decoded route params into the shared parser", () => {
     const search = promptLinkSearchFromParams({
       prompt: "Fix the bug & add tests = done?",
-      repo: ["pingdotgg/t3code", "ignored/second"],
-      provider: "codex",
+      provider: ["codex", "ignored"],
       screen: "NewTask",
     });
 
@@ -23,7 +22,6 @@ describe("promptLinkSearchFromParams", () => {
       value: {
         kind: "new",
         prompt: { text: "Fix the bug & add tests = done?", hiddenCharacters: 0 },
-        repository: { owner: "pingdotgg", name: "t3code" },
         provider: "codex",
         model: null,
       },

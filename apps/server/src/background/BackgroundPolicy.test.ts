@@ -2,6 +2,7 @@ import { assert, describe, it } from "@effect/vitest";
 import {
   AuthSessionId,
   RpcClientId,
+  ThreadId,
   type HostPowerSnapshot,
   type ClientActivityReportInput,
 } from "@t3tools/contracts";
@@ -18,6 +19,8 @@ import * as ServerSettings from "../serverSettings.ts";
 import * as BackgroundPolicy from "./BackgroundPolicy.ts";
 import * as HostPowerMonitor from "./HostPowerMonitor.ts";
 
+const ACTIVE_THREAD_ID = ThreadId.make("thread-active");
+const OTHER_THREAD_ID = ThreadId.make("thread-other");
 const TEST_NOW = DateTime.makeUnsafe("2026-05-13T00:00:00.000Z");
 
 const nominalHostPower: HostPowerSnapshot = {
@@ -46,7 +49,7 @@ function makeReport(overrides: Partial<ClientActivityReportInput> = {}): ClientA
     visible: true,
     focused: true,
     recentlyInteracted: true,
-    scopes: [{ type: "vcs-status", cwd: "/repo" }],
+    scopes: [{ type: "thread", threadId: ACTIVE_THREAD_ID }],
     ttlMs: 45_000,
     observedAt: TEST_NOW,
     ...overrides,
@@ -89,12 +92,18 @@ describe("BackgroundPolicy", () => {
 
       const snapshot = yield* policy.snapshot;
       assert.equal(snapshot.activeForegroundLeaseCount, 1);
-      assert.deepStrictEqual(snapshot.activeScopeKeys, ["vcs-status:/repo"]);
+      assert.deepStrictEqual(snapshot.activeScopeKeys, ["thread:thread-active"]);
       assert.equal(snapshot.shouldRunOpportunisticWork, true);
-      assert.equal(yield* policy.hasDemand({ type: "vcs-status", cwd: "/repo" }), true);
-      assert.equal(yield* policy.hasDemand({ type: "vcs-status", cwd: "/other" }), false);
-      assert.equal(yield* policy.shouldRunScopeWork({ type: "vcs-status", cwd: "/repo" }), true);
-      assert.equal(yield* policy.shouldRunScopeWork({ type: "vcs-status", cwd: "/other" }), false);
+      assert.equal(yield* policy.hasDemand({ type: "thread", threadId: ACTIVE_THREAD_ID }), true);
+      assert.equal(yield* policy.hasDemand({ type: "thread", threadId: OTHER_THREAD_ID }), false);
+      assert.equal(
+        yield* policy.shouldRunScopeWork({ type: "thread", threadId: ACTIVE_THREAD_ID }),
+        true,
+      );
+      assert.equal(
+        yield* policy.shouldRunScopeWork({ type: "thread", threadId: OTHER_THREAD_ID }),
+        false,
+      );
     }).pipe(Effect.provide(layerFor(nominalHostPower))),
   );
 
@@ -235,10 +244,13 @@ describe("BackgroundPolicy", () => {
 
       const snapshot = yield* policy.snapshot;
       assert.equal(snapshot.activeForegroundLeaseCount, 1);
-      assert.deepStrictEqual(snapshot.activeScopeKeys, ["vcs-status:/repo"]);
+      assert.deepStrictEqual(snapshot.activeScopeKeys, ["thread:thread-active"]);
       assert.equal(snapshot.shouldRunOpportunisticWork, false);
-      assert.equal(yield* policy.hasDemand({ type: "vcs-status", cwd: "/repo" }), true);
-      assert.equal(yield* policy.shouldRunScopeWork({ type: "vcs-status", cwd: "/repo" }), false);
+      assert.equal(yield* policy.hasDemand({ type: "thread", threadId: ACTIVE_THREAD_ID }), true);
+      assert.equal(
+        yield* policy.shouldRunScopeWork({ type: "thread", threadId: ACTIVE_THREAD_ID }),
+        false,
+      );
     }).pipe(Effect.provide(layerFor(constrainedHostPower))),
   );
 
@@ -254,8 +266,11 @@ describe("BackgroundPolicy", () => {
       const snapshot = yield* policy.snapshot;
       assert.equal(snapshot.activeForegroundLeaseCount, 1);
       assert.equal(snapshot.shouldRunOpportunisticWork, false);
-      assert.equal(yield* policy.hasDemand({ type: "vcs-status", cwd: "/repo" }), true);
-      assert.equal(yield* policy.shouldRunScopeWork({ type: "vcs-status", cwd: "/repo" }), false);
+      assert.equal(yield* policy.hasDemand({ type: "thread", threadId: ACTIVE_THREAD_ID }), true);
+      assert.equal(
+        yield* policy.shouldRunScopeWork({ type: "thread", threadId: ACTIVE_THREAD_ID }),
+        false,
+      );
     }).pipe(
       Effect.provide(
         layerFor({
@@ -278,9 +293,12 @@ describe("BackgroundPolicy", () => {
 
       const snapshot = yield* policy.snapshot;
       assert.equal(snapshot.activeForegroundLeaseCount, 0);
-      assert.deepStrictEqual(snapshot.activeScopeKeys, ["vcs-status:/repo"]);
-      assert.equal(yield* policy.hasDemand({ type: "vcs-status", cwd: "/repo" }), true);
-      assert.equal(yield* policy.shouldRunScopeWork({ type: "vcs-status", cwd: "/repo" }), false);
+      assert.deepStrictEqual(snapshot.activeScopeKeys, ["thread:thread-active"]);
+      assert.equal(yield* policy.hasDemand({ type: "thread", threadId: ACTIVE_THREAD_ID }), true);
+      assert.equal(
+        yield* policy.shouldRunScopeWork({ type: "thread", threadId: ACTIVE_THREAD_ID }),
+        false,
+      );
     }).pipe(Effect.provide(layerFor(nominalHostPower))),
   );
 
@@ -296,7 +314,10 @@ describe("BackgroundPolicy", () => {
       const snapshot = yield* policy.snapshot;
       assert.equal(snapshot.activeForegroundLeaseCount, 1);
       assert.equal(snapshot.shouldRunOpportunisticWork, true);
-      assert.equal(yield* policy.shouldRunScopeWork({ type: "vcs-status", cwd: "/repo" }), true);
+      assert.equal(
+        yield* policy.shouldRunScopeWork({ type: "thread", threadId: ACTIVE_THREAD_ID }),
+        true,
+      );
     }).pipe(Effect.provide(layerFor(nominalHostPower))),
   );
 
@@ -312,7 +333,10 @@ describe("BackgroundPolicy", () => {
       const snapshot = yield* policy.snapshot;
       assert.equal(snapshot.activeForegroundLeaseCount, 0);
       assert.equal(snapshot.shouldRunOpportunisticWork, false);
-      assert.equal(yield* policy.shouldRunScopeWork({ type: "vcs-status", cwd: "/repo" }), false);
+      assert.equal(
+        yield* policy.shouldRunScopeWork({ type: "thread", threadId: ACTIVE_THREAD_ID }),
+        false,
+      );
     }).pipe(Effect.provide(layerFor(nominalHostPower))),
   );
 
@@ -327,7 +351,10 @@ describe("BackgroundPolicy", () => {
           makeReport({ focused: false, visible: false }),
         );
 
-        assert.equal(yield* policy.shouldRunScopeWork({ type: "vcs-status", cwd: "/repo" }), true);
+        assert.equal(
+          yield* policy.shouldRunScopeWork({ type: "thread", threadId: ACTIVE_THREAD_ID }),
+          true,
+        );
       }).pipe(
         Effect.provide(layerFor(nominalHostPower, { backgroundActivityProfile: "performance" })),
       ),
@@ -342,7 +369,10 @@ describe("BackgroundPolicy", () => {
         makeReport(),
       );
 
-      assert.equal(yield* policy.shouldRunScopeWork({ type: "vcs-status", cwd: "/repo" }), false);
+      assert.equal(
+        yield* policy.shouldRunScopeWork({ type: "thread", threadId: ACTIVE_THREAD_ID }),
+        false,
+      );
     }).pipe(
       Effect.provide(
         layerFor(
@@ -366,7 +396,10 @@ describe("BackgroundPolicy", () => {
         makeReport(),
       );
 
-      assert.equal(yield* policy.shouldRunScopeWork({ type: "vcs-status", cwd: "/repo" }), true);
+      assert.equal(
+        yield* policy.shouldRunScopeWork({ type: "thread", threadId: ACTIVE_THREAD_ID }),
+        true,
+      );
     }).pipe(
       Effect.provide(
         layerFor(

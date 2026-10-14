@@ -16,8 +16,7 @@ import {
 import { tryCopyTextWithHaptic } from "../../lib/copyTextWithHaptic";
 import { T3KeyboardCommands } from "../../native/T3KeyboardCommands";
 import { useThreadShell } from "../../state/entities";
-import type { GitActionProgress } from "../../state/use-vcs-action-state";
-import { GitActionProgressOverlay } from "../threads/GitActionProgressOverlay";
+import { StatusToastOverlay, type StatusToast } from "../../components/StatusToastOverlay";
 import { CommandPalette } from "./CommandPalette";
 import {
   dispatchHardwareKeyboardCommand,
@@ -28,7 +27,7 @@ import {
   type HardwareKeyboardCommand,
 } from "./hardwareKeyboardCommands";
 
-const EMPTY_COPY_FEEDBACK: GitActionProgress = {
+const EMPTY_COPY_FEEDBACK: StatusToast = {
   phase: "idle",
   label: null,
   description: null,
@@ -57,13 +56,10 @@ export function HardwareKeyboardCommandProvider({
         ? null
         : resolveThreadReferenceCopyTarget({
             threadId: activeThread?.id ?? activeThreadRef.threadId,
-            pullRequests: activeThread?.pullRequests,
-            linkedPullRequestUrl:
-              (activeThread?.linkedPullRequest ?? activeThread?.branchPullRequest)?.url ?? null,
           }),
     [activeThread, activeThreadRef],
   );
-  const [copyFeedback, setCopyFeedback] = useState<GitActionProgress>(EMPTY_COPY_FEEDBACK);
+  const [copyFeedback, setCopyFeedback] = useState<StatusToast>(EMPTY_COPY_FEEDBACK);
   const copyRequestIdRef = useRef(0);
   const copyFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dismissCopyFeedback = useCallback(() => {
@@ -73,7 +69,7 @@ export function HardwareKeyboardCommandProvider({
     }
     setCopyFeedback(EMPTY_COPY_FEEDBACK);
   }, []);
-  const showCopyFeedback = useCallback((feedback: GitActionProgress) => {
+  const showCopyFeedback = useCallback((feedback: StatusToast) => {
     if (copyFeedbackTimerRef.current !== null) {
       clearTimeout(copyFeedbackTimerRef.current);
     }
@@ -109,7 +105,6 @@ export function HardwareKeyboardCommandProvider({
     if (activeThreadRef !== null) {
       commands.add("files");
       commands.add("terminal");
-      commands.add("review");
       if (pathname.split("/")[4] !== "terminal") commands.add("copyThreadReference");
     }
     return [...commands];
@@ -168,9 +163,6 @@ export function HardwareKeyboardCommandProvider({
       if (command === "terminal" && !/\/terminal(?:\/|$)/.test(pathname)) {
         navigation.navigate("ThreadTerminal", thread);
       }
-      if (command === "review" && !/\/review(?:\/|$)/.test(pathname)) {
-        navigation.navigate("ThreadReview", thread);
-      }
     },
     [copyTarget, navigation, pathname, showCopyFeedback],
   );
@@ -188,7 +180,7 @@ export function HardwareKeyboardCommandProvider({
       <T3KeyboardCommands enabledCommands={enabledCommands} onCommand={onCommand}>
         {children}
       </T3KeyboardCommands>
-      <GitActionProgressOverlay progress={copyFeedback} onDismiss={dismissCopyFeedback} />
+      <StatusToastOverlay progress={copyFeedback} onDismiss={dismissCopyFeedback} />
     </CommandPaletteContext>
   );
 }

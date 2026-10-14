@@ -70,8 +70,7 @@ export function WorkspaceToolbar(props: {
                   obscureBackground: false,
                   placement: "stacked",
                   allowToolbarIntegration: false,
-                  placeholder:
-                    selectedTab === "pullRequests" ? "Search pull requests" : "Search threads",
+                  placeholder: "Search threads",
                   cancelButtonText: "✕",
                   onFocus: () => workspace.dispatch({ type: "search", tab: selectedTab }),
                   onBlur: () => workspace.dispatch({ type: "expand", tab: selectedTab }),
@@ -103,9 +102,7 @@ export function WorkspaceToolbar(props: {
           }
         />
         <NativeHeaderToolbar.Button
-          accessibilityLabel={
-            selectedTab === "pullRequests" ? "Search pull requests" : "Search threads"
-          }
+          accessibilityLabel="Search threads"
           icon="magnifyingglass"
           onPress={focusSearch}
         />

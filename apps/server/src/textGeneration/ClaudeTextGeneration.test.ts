@@ -196,21 +196,16 @@ it.layer(layerClaudeTextGenerationTest)("ClaudeTextGeneration", (it) => {
     withFakeClaudeEnv(
       {
         output: JSON.stringify({
-          structured_output: {
-            subject: "Add important change",
-            body: "",
-          },
+          structured_output: { title: "Add important change" },
         }),
         argsMustContain: '--settings {"disableAllHooks":true,"alwaysThinkingEnabled":false}',
         argsMustNotContain: "--effort",
       },
       (textGeneration) =>
         Effect.gen(function* () {
-          const generated = yield* textGeneration.generateCommitMessage({
+          const generated = yield* textGeneration.generateThreadTitle({
             cwd: process.cwd(),
-            branch: "feature/claude-effect",
-            stagedSummary: "M README.md",
-            stagedPatch: "diff --git a/README.md b/README.md",
+            message: "Update the README.",
             modelSelection: {
               ...createModelSelection(
                 ProviderInstanceId.make("claudeAgent"),
@@ -223,7 +218,7 @@ it.layer(layerClaudeTextGenerationTest)("ClaudeTextGeneration", (it) => {
             },
           });
 
-          expect(generated.subject).toBe("Add important change");
+          expect(generated.title).toBe("Add important change");
         }),
     ),
   );
@@ -232,23 +227,16 @@ it.layer(layerClaudeTextGenerationTest)("ClaudeTextGeneration", (it) => {
     withFakeClaudeEnv(
       {
         output: JSON.stringify({
-          structured_output: {
-            title: "Keep custom model",
-            body: "",
-          },
+          structured_output: { title: "Keep custom model" },
         }),
         argsMustContain: `--model ${SYNTHETIC_CLAUDE_COLLIDING_ALIAS} --settings`,
         claudeConfig: { customModels: [SYNTHETIC_CLAUDE_COLLIDING_ALIAS] },
       },
       (textGeneration) =>
         Effect.gen(function* () {
-          const generated = yield* textGeneration.generatePrContent({
+          const generated = yield* textGeneration.generateThreadTitle({
             cwd: process.cwd(),
-            baseBranch: "main",
-            headBranch: "feature/custom-model",
-            commitSummary: "Keep custom model",
-            diffSummary: "1 file changed",
-            diffPatch: "diff --git a/README.md b/README.md",
+            message: "Keep custom model",
             modelSelection: createModelSelection(
               ProviderInstanceId.make("claudeAgent"),
               SYNTHETIC_CLAUDE_COLLIDING_ALIAS,
@@ -271,23 +259,16 @@ it.layer(layerClaudeTextGenerationTest)("ClaudeTextGeneration", (it) => {
       withFakeClaudeEnv(
         {
           output: JSON.stringify({
-            structured_output: {
-              title: "Improve orchestration flow",
-              body: "Body",
-            },
+            structured_output: { title: "Improve orchestration flow" },
           }),
           argsMustContain: `--model ${SYNTHETIC_CLAUDE_CAPABLE_MODEL}[expanded] --effort max --settings {"disableAllHooks":true,"fastMode":true}`,
           claudeConfig: { customModels: [SYNTHETIC_CLAUDE_COLLIDING_ALIAS] },
         },
         (textGeneration) =>
           Effect.gen(function* () {
-            const generated = yield* textGeneration.generatePrContent({
+            const generated = yield* textGeneration.generateThreadTitle({
               cwd: process.cwd(),
-              baseBranch: "main",
-              headBranch: "feature/claude-effect",
-              commitSummary: "Improve orchestration",
-              diffSummary: "1 file changed",
-              diffPatch: "diff --git a/README.md b/README.md",
+              message: "Improve orchestration",
               modelSelection: {
                 ...createModelSelection(
                   ProviderInstanceId.make("claudeAgent"),
@@ -337,28 +318,6 @@ it.layer(layerClaudeTextGenerationTest)("ClaudeTextGeneration", (it) => {
             );
           }),
       ),
-  );
-
-  it.effect("generates branch names from skill prompts without executable capabilities", () =>
-    withFakeClaudeEnv(
-      {
-        output: JSON.stringify({ structured_output: { branch: "call-script" } }),
-        stdinMustContain: "/call-script",
-      },
-      (textGeneration) =>
-        Effect.gen(function* () {
-          const generated = yield* textGeneration.generateBranchName({
-            cwd: process.cwd(),
-            message: "/call-script",
-            modelSelection: {
-              instanceId: ProviderInstanceId.make("claudeAgent"),
-              model: SYNTHETIC_CLAUDE_STANDARD_MODEL,
-            },
-          });
-
-          expect(generated.branch).toBe("call-script");
-        }),
-    ),
   );
 
   it.effect("runs Claude text generation with the configured CLAUDE_CONFIG_DIR", () =>

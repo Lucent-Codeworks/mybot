@@ -3,10 +3,10 @@
 > For maintainers. Using T3 Code? See [docs/user](../user/).
 
 The screenshot harness runs the real mobile application against three disposable local T3
-environments. It creates an isolated base directory and server for each environment, real Git
+environments. It creates an isolated base directory and server for each environment, real
 projects with deterministic content, seeded orchestration projections, and persisted terminal
 history. The app pairs with every server through its normal connection flow and React Navigation
-opens the production Home, Thread, ThreadTerminal, ThreadReview, and SettingsEnvironments routes.
+opens the production Home, Thread, ThreadTerminal, and SettingsEnvironments routes.
 
 No screenshot-specific screen recreates application UI. `EXPO_PUBLIC_SHOWCASE=1` only enables the
 non-rendering pairing/readiness coordinator, disables terminal autofocus so captures do not contain
@@ -23,8 +23,8 @@ The command:
 
 1. Creates three temporary T3 base directories and starts a local server for each on an available
    port.
-2. Creates T3 Code, React, and Linux Git repositories with recognizable favicons, feature branches,
-   and a deterministic T3 Code review diff.
+2. Creates T3 Code, React, and Linux project folders with recognizable favicons and deterministic
+   content.
 3. Seeds each server's migrated SQLite database with playful threads, messages, activities, and
    terminal history, then adds two persisted mobile-outbox tasks waiting to send.
 4. Starts an isolated Metro server, builds the selected native apps, and boots each device.
@@ -41,7 +41,7 @@ paths and server ports.
 
 Captures wait for the real environment snapshot to hydrate and for the requested route to become
 active. Both platforms record readiness in the simulator/emulator app container. A final settle
-delay allows native terminal and Git review data to finish rendering.
+delay allows native terminal data to finish rendering.
 
 A full capture regenerates the selected native project with Expo's clean production prebuild before
 building it. Use --skip-build for repeated captures after the first build.
@@ -174,7 +174,7 @@ Validate existing files without starting Metro, servers, simulators, or emulator
 
 ## Customize the seeded environment
 
-- Project repository, thread projections, conversation, terminal transcript, and Git changes:
+- Project folders, thread projections, conversation, and terminal transcript:
   [mobile-showcase-environment.ts](../../scripts/mobile-showcase-environment.ts)
 - Device and capture matrix:
   [mobile-showcase.config.ts](../../scripts/mobile-showcase.config.ts)

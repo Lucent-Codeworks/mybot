@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Keyboard, View } from "react-native";
 import {
   CommonActions,
@@ -31,12 +31,6 @@ import {
 } from "./showcasePendingTasks";
 import { buildShowcaseAgentActivity } from "./showcaseAgentActivity";
 import { retryShowcaseOperation } from "./showcaseRetry";
-import {
-  clearShowcaseRenderSignal,
-  getShowcaseRenderSignal,
-  isShowcaseNativeContentReady,
-  subscribeToShowcaseRenderSignal,
-} from "./showcaseRenderSignal";
 import { stageShowcaseAgentActivity } from "./stageShowcaseAgentActivity";
 
 const SHOWCASE_ENABLED = process.env.EXPO_PUBLIC_SHOWCASE === "1";
@@ -50,7 +44,6 @@ function sceneFromPathname(pathname: string): ShowcaseScene | null {
     return "environments";
   }
   if (routePath.endsWith("/terminal")) return "terminal";
-  if (routePath.endsWith("/review")) return "review";
   if (routePath.startsWith("/threads/")) return "thread";
   if (routePath === "/") return "threads";
   return null;
@@ -68,7 +61,6 @@ function EnabledShowcaseCaptureCoordinator(props: { readonly pathname: string })
   const { connectPairingUrl } = useConnectionController();
   const {
     isReady: appearancePreferencesReady,
-    themeId,
     themeIds,
     setThemeIdForBothAppearances,
   } = useAppearancePreferences();
@@ -92,11 +84,6 @@ function EnabledShowcaseCaptureCoordinator(props: { readonly pathname: string })
   useEffect(() => {
     entitiesRef.current = { threads, projects };
   }, [projects, threads]);
-  const renderSignal = useSyncExternalStore(
-    subscribeToShowcaseRenderSignal,
-    getShowcaseRenderSignal,
-    getShowcaseRenderSignal,
-  );
 
   useEffect(() => {
     if (pairingUrls.length > 0) return;
@@ -141,9 +128,6 @@ function EnabledShowcaseCaptureCoordinator(props: { readonly pathname: string })
       const value = getNativeShowcaseScene();
       if (!value || requestedSceneRef.current === value) return;
       requestedSceneRef.current = value;
-      // A native draw belongs only to the scene request that produced it. In
-      // particular, revisiting review must wait for its newly mounted surface.
-      clearShowcaseRenderSignal();
       setAgentActivityStaged(false);
       setRequestedScene(value);
     };
@@ -276,8 +260,6 @@ function EnabledShowcaseCaptureCoordinator(props: { readonly pathname: string })
           name: "ThreadTerminal",
           params: { ...params, terminalId: "term-1" },
         });
-      } else if (requestedScene === "review") {
-        routes.push({ name: "ThreadReview", params });
       }
     }
     navigation.dispatch(
@@ -332,8 +314,7 @@ function EnabledShowcaseCaptureCoordinator(props: { readonly pathname: string })
       !orientationSettled ||
       // Likewise for the palette: an early screenshot shows the default theme.
       !themeApplied ||
-      (scene === "agent-activity" && !agentActivityStaged) ||
-      !isShowcaseNativeContentReady({ scene, themeId, renderSignal })
+      (scene === "agent-activity" && !agentActivityStaged)
     ) {
       setReadyScene(null);
       return;
@@ -355,16 +336,7 @@ function EnabledShowcaseCaptureCoordinator(props: { readonly pathname: string })
       if (renderFrame !== null) cancelAnimationFrame(renderFrame);
       if (readyFrame !== null) cancelAnimationFrame(readyFrame);
     };
-  }, [
-    agentActivityStaged,
-    hasFixture,
-    orientationSettled,
-    renderSignal,
-    requestedScene,
-    scene,
-    themeApplied,
-    themeId,
-  ]);
+  }, [agentActivityStaged, hasFixture, orientationSettled, requestedScene, scene, themeApplied]);
 
   if (readyScene === null) return null;
 

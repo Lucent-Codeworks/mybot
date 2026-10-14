@@ -48,7 +48,6 @@ function makeKnownSession(input: {
             threadId: "thread-1",
             terminalId: input.terminalId,
             cwd: input.cwd,
-            worktreePath: input.cwd,
             status: input.status === "closed" ? "error" : input.status,
             pid: input.status === "running" ? 123 : null,
             exitCode: null,

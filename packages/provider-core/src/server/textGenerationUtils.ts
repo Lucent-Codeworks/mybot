@@ -1,6 +1,7 @@
-import { TextGenerationError } from "@t3tools/contracts";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
+
+import { TextGenerationError } from "./textGeneration.ts";
 
 const isTextGenerationError = Schema.is(TextGenerationError);
 const decodeJsonThreadTitle = Schema.decodeOption(
@@ -27,29 +28,6 @@ export function limitSection(value: string, maxChars: number): string {
   if (value.length <= maxChars) return value;
   const truncated = value.slice(0, maxChars);
   return `${truncated}\n\n[truncated]`;
-}
-
-/** Normalise a raw commit subject to imperative-mood, ≤72 chars, no trailing period. */
-export function sanitizeCommitSubject(raw: string): string {
-  const singleLine = raw.trim().split(/\r?\n/g)[0]?.trim() ?? "";
-  const withoutTrailingPeriod = singleLine.replace(/[.]+$/g, "").trim();
-  if (withoutTrailingPeriod.length === 0) {
-    return "Update project files";
-  }
-
-  if (withoutTrailingPeriod.length <= 72) {
-    return withoutTrailingPeriod;
-  }
-  return withoutTrailingPeriod.slice(0, 72).trimEnd();
-}
-
-/** Normalise a raw PR title to a single line with a sensible fallback. */
-export function sanitizePrTitle(raw: string): string {
-  const singleLine = raw.trim().split(/\r?\n/g)[0]?.trim() ?? "";
-  if (singleLine.length > 0) {
-    return singleLine;
-  }
-  return "Update project changes";
 }
 
 // Prompts ask for under 40 characters. This cap only stops a runaway model

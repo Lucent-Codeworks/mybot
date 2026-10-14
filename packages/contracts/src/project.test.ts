@@ -3,7 +3,6 @@ import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import { describe, expect, it } from "vite-plus/test";
 
-import { ProjectId } from "./baseSchemas.ts";
 import { OrchestrationProjectShell } from "./orchestrationProject.ts";
 
 import {
@@ -130,7 +129,6 @@ describe("shared project payloads", () => {
       createWorkspaceRootIfMissing: false,
     });
     const update = decodeProjectUpdatePayload({
-      autoPull: false,
       defaultModelSelection: null,
       faviconPath: null,
     });
@@ -145,7 +143,6 @@ describe("shared project payloads", () => {
     expect(decodeProjectMutation({ type: "project.update", ...envelope, ...update })).toEqual({
       type: "project.update",
       ...envelope,
-      autoPull: false,
       defaultModelSelection: null,
       faviconPath: null,
     });

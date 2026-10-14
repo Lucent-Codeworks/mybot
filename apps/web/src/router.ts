@@ -9,7 +9,7 @@ export function getRouter(history: RouterHistory) {
     context: {},
     // Route components are split chunks (autoCodeSplitting in vite.config);
     // fetching them on hover/focus intent hides the load from the first
-    // settings or pull-request navigation.
+    // settings navigation.
     defaultPreload: "intent",
   });
 }

@@ -7,28 +7,21 @@ const mode = process.argv[3];
 const withHandoff = mode.startsWith("handoff");
 const require = NodeModule.createRequire(root + "/apps/server/package.json");
 const load = (name) => import(NodeURL.pathToFileURL(require.resolve("effect/" + name)));
-const [Effect, Layer, FileSystem] = await Promise.all([
-  load("Effect"),
-  load("Layer"),
-  load("FileSystem"),
-]);
+const [Effect, Layer] = await Promise.all([load("Effect"), load("Layer")]);
 const app = (file) => import(NodeURL.pathToFileURL(root + "/apps/server/src/" + file + ".ts"));
 const providerCore = (file) =>
   import(NodeURL.pathToFileURL(root + "/packages/provider-core/src/server/" + file + ".ts"));
-const [Start, Projection, Run, Sessions, Policy, Id, Sink, Handoff, Git, Project, Auth] =
-  await Promise.all([
-    app("orchestration-v2/ProviderTurnStartService"),
-    app("orchestration-v2/ProjectionStore"),
-    app("orchestration-v2/RunExecutionService"),
-    app("orchestration-v2/ProviderSessionManager"),
-    app("orchestration-v2/RuntimePolicy"),
-    providerCore("IdAllocator"),
-    app("orchestration-v2/EventSink"),
-    app("orchestration-v2/ContextHandoffService"),
-    app("git/GitWorkflowService"),
-    app("project/ProjectService"),
-    app("provider/ProviderAuthService"),
-  ]);
+const [Start, Projection, Run, Sessions, Policy, Id, Sink, Handoff, Auth] = await Promise.all([
+  app("orchestration-v2/ProviderTurnStartService"),
+  app("orchestration-v2/ProjectionStore"),
+  app("orchestration-v2/RunExecutionService"),
+  app("orchestration-v2/ProviderSessionManager"),
+  app("orchestration-v2/RuntimePolicy"),
+  providerCore("IdAllocator"),
+  app("orchestration-v2/EventSink"),
+  app("orchestration-v2/ContextHandoffService"),
+  app("provider/ProviderAuthService"),
+]);
 let current;
 let fullReads = 0;
 const liveRuns = [];
@@ -47,9 +40,6 @@ const session = {
 const dependencies = Layer.mergeAll(
   Layer.mock(Handoff.ContextHandoffServiceV2)({}),
   Id.layer,
-  FileSystem.layerNoop({}),
-  Layer.mock(Git.GitWorkflowService)({}),
-  Layer.mock(Project.ProjectService)({}),
   Layer.mock(Auth.ProviderAuthService)({}),
   Layer.mock(Projection.ProjectionStoreV2)({
     getThreadProjection: () =>
@@ -109,7 +99,7 @@ function fixture(index) {
   );
   refs.push(new WeakRef(history));
   return {
-    thread: { id: "thread", projectId: "project", branch: null, worktreePath: null },
+    thread: { id: "thread", projectId: "project" },
     runs: [
       {
         id: runId,

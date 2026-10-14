@@ -423,8 +423,6 @@ const makeAppThread = Effect.fnUntraced(function* (model: string, threadId = THR
     modelSelection: modelSelection(model),
     runtimeMode: "full-access",
     interactionMode: "default",
-    branch: null,
-    worktreePath: null,
     activeProviderThreadId: null,
     lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
     forkedFrom: null,

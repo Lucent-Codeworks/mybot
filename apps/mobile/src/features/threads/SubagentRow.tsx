@@ -114,7 +114,6 @@ function SubagentMetadata(props: {
     model: subagent.model,
     provider,
     parentThread: parent,
-    childThread: child,
     parentProject,
     childProject,
   });
@@ -140,11 +139,7 @@ function SubagentMetadata(props: {
           className="min-w-0 shrink flex-row items-center gap-1.5"
         >
           <Text className="text-xs text-foreground-muted">·</Text>
-          <SymbolView
-            name={label === "Branch" ? "arrow.triangle.branch" : "folder"}
-            size={11}
-            tintColorClassName="accent-icon-muted"
-          />
+          <SymbolView name="folder" size={11} tintColorClassName="accent-icon-muted" />
           <Text className="min-w-0 shrink text-xs text-foreground-muted" numberOfLines={1}>
             {value}
           </Text>

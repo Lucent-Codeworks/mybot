@@ -1,4 +1,4 @@
-import type { EnvironmentId, SidebarProjectGroupingMode } from "@t3tools/contracts";
+import type { EnvironmentId } from "@t3tools/contracts";
 import { DEFAULT_SIDEBAR_PROJECT_SORT_ORDER } from "@t3tools/contracts";
 import { useAtomSet } from "@effect/atom-react";
 import {
@@ -25,10 +25,6 @@ export interface HomeListOptions {
   readonly projectSortOrder: HomeProjectSortOrder;
 }
 
-export interface ResolvedHomeListOptions extends HomeListOptions {
-  readonly projectGroupingMode: SidebarProjectGroupingMode;
-}
-
 function defaultHomeListOptions(filters?: ThreadListFilters): HomeListOptions {
   return {
     selectedEnvironmentId: filters?.environmentId ?? null,
@@ -43,7 +39,6 @@ function defaultHomeListOptions(filters?: ThreadListFilters): HomeListOptions {
 interface HomeListOptionsContextValue {
   readonly options: HomeListOptions;
   readonly setOptions: Dispatch<SetStateAction<HomeListOptions>>;
-  readonly projectGroupingMode: SidebarProjectGroupingMode;
 }
 
 const HomeListOptionsContext = createContext<HomeListOptionsContextValue | null>(null);
@@ -54,10 +49,8 @@ const HomeListOptionsContext = createContext<HomeListOptionsContextValue | null>
  */
 export function HomeListOptionsProvider({
   children,
-  projectGroupingMode,
   savedFilters,
 }: PropsWithChildren<{
-  readonly projectGroupingMode: SidebarProjectGroupingMode;
   readonly savedFilters?: ThreadListFilters | undefined;
 }>) {
   const [options, setOptions] = useState(() => defaultHomeListOptions(savedFilters));
@@ -73,10 +66,7 @@ export function HomeListOptionsProvider({
     saved.current = { environmentId, projectKey };
     savePreferences({ threadListFilters: saved.current });
   }, [environmentId, projectKey, savePreferences]);
-  const value = useMemo(
-    () => ({ options, setOptions, projectGroupingMode }),
-    [options, projectGroupingMode],
-  );
+  const value = useMemo(() => ({ options, setOptions }), [options]);
   return createElement(HomeListOptionsContext, { value }, children);
 }
 
@@ -94,10 +84,6 @@ export function useHomeListOptions(availableEnvironmentIds: ReadonlySet<Environm
     selectedEnvironmentId === options.selectedEnvironmentId
       ? options
       : { ...options, selectedEnvironmentId };
-  const resolvedOptions: ResolvedHomeListOptions = {
-    ...availableOptions,
-    projectGroupingMode: shared?.projectGroupingMode ?? "repository",
-  };
 
   const setSelectedEnvironmentId = useCallback((value: EnvironmentId | null) => {
     setOptions((current) => ({ ...current, selectedEnvironmentId: value }));
@@ -112,7 +98,7 @@ export function useHomeListOptions(availableEnvironmentIds: ReadonlySet<Environm
     setOptions((current) => ({ ...current, projectSortOrder: value }));
   }, []);
   return {
-    options: resolvedOptions,
+    options: availableOptions,
     setSelectedEnvironmentId,
     setSelectedProjectKey,
     setProjectSortOrder,

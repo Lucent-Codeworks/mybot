@@ -12,7 +12,6 @@ import {
   inlineCodeFilePathCandidate,
 } from "@t3tools/shared/markdownLinks";
 import { isAbsolutePath } from "@t3tools/shared/path";
-import { usePullRequestLinking } from "~/hooks/usePullRequestLinking";
 import { AuthFilesystemReadScope, AuthOrchestrationOperateScope } from "@t3tools/contracts";
 import {
   CHAT_MARKDOWN_REMARK_PLUGINS,
@@ -52,10 +51,8 @@ import {
   type EnvironmentId,
   type ScopedThreadRef,
   type ServerProviderSkill,
-  type ThreadPullRequestKey,
 } from "@t3tools/contracts";
 import { faviconUrlForOrigin } from "@t3tools/shared/favicon";
-import { githubMediaFetchUrl } from "@t3tools/shared/githubMedia";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
@@ -179,7 +176,6 @@ import { useAssetUrlRefresh, useAssetUrlState } from "../assets/assetUrls";
 import { cn } from "../lib/utils";
 import { useRemoteOpenResolution, type RemoteOpenMode } from "../remoteOpen";
 import { useRightPanelStore } from "../rightPanelStore";
-import { readThreadShell, useProjects } from "../state/entities";
 import { serverEnvironment } from "../state/server";
 import { shellEnvironment } from "../state/shell";
 import { assetEnvironment } from "../state/assets";
@@ -194,13 +190,6 @@ import {
   pickWorkspaceBasenameMatch,
   WORKSPACE_BASENAME_LOOKUP_LIMIT,
 } from "../workspaceBasenameLookup";
-import {
-  parseChangeRequestUrl,
-  pullRequestCandidateUrlFromReferenceAutolink,
-  resolvePullRequestPreviewTarget,
-  useOpenChangeRequestLink,
-} from "~/lib/openPullRequestLink";
-import { useOpenLink } from "../browser/useOpenLink";
 import { writeTextToClipboard } from "../hooks/useCopyToClipboard";
 import { isPreviewAvailableFor } from "../browser/previewRuntime";
 import {
@@ -211,15 +200,12 @@ import {
   BrowserSettingsReadError,
 } from "../browser/openFileInPreview";
 import { resolveLinkTarget } from "../browser/browserLinkTarget";
-import { PullRequestLinkPreview } from "./pullRequest/PullRequestLinkPreview";
 
 interface ChatMarkdownProps {
   text: string;
   cwd: string | undefined;
   threadRef?: ScopedThreadRef | undefined;
-  /** Panel that receives pull request links, including the standalone PR view. */
-  pullRequestPanelRef?: ScopedThreadRef | undefined;
-  /** Environment that owns non-thread markdown, such as a pull request panel. */
+  /** Environment that owns non-thread markdown, such as a file preview. */
   environmentId?: EnvironmentId | undefined;
   onTaskListChange?: ((input: { markerOffset: number; checked: boolean }) => void) | undefined;
   isStreaming?: boolean;
@@ -239,9 +225,6 @@ interface ChatMarkdownProps {
   extraRemarkPlugins?: NonNullable<ReactMarkdownOptions["remarkPlugins"]>;
   /** Renders a `t3-context://` link as a chip; without it the link shows its label as text. */
   renderContextReference?: ((reference: ChatMarkdownContextReference) => ReactNode) | undefined;
-  /** Loads GitHub-hosted media through `cwd`'s GitHub credential, which a private repository's
-      uploads need; without it those images and videos load unauthenticated and 404. */
-  githubMedia?: boolean | undefined;
   /** Levels added to each markdown heading in the accessibility tree so the
       text nests under the heading that introduces it, such as a chat message's
       author. Rendered tags and their styling are unchanged. */
@@ -1568,12 +1551,7 @@ export const ChatMarkdownAssetImage = memo(function ChatMarkdownAssetImage(props
   readonly resource: Extract<
     AssetResource,
     {
-      readonly _tag:
-        | "attachment"
-        | "workspace-file"
-        | "media-file"
-        | "github-media"
-        | "tool-output-image";
+      readonly _tag: "attachment" | "workspace-file" | "media-file" | "tool-output-image";
     }
   >;
   readonly kind?: "image" | "video";
@@ -1592,11 +1570,6 @@ export const ChatMarkdownAssetImage = memo(function ChatMarkdownAssetImage(props
     | undefined;
   /** Where the media also lives on the web, for the failure state's escape hatch. */
   readonly originalUrl?: string | undefined;
-  /** The workspace media frame, on by default; off for media that keeps the author's own box. */
-  readonly framed?: boolean | undefined;
-  /** Loaded instead of the failure state when no URL can be signed, such as against a server
-      too old to know this resource. Only safe when the client can reach it directly. */
-  readonly fallbackSrc?: string | undefined;
   readonly workspaceRoot?: string | undefined;
   readonly onImageExpand?: ((preview: ExpandedImagePreview) => void) | undefined;
 }) {
@@ -1615,13 +1588,7 @@ export const ChatMarkdownAssetImage = memo(function ChatMarkdownAssetImage(props
       ? mediaUrlReference(props.originalUrl)
       : undefined;
   const relativePath = reference?.kind === "file" ? reference.relativePath : undefined;
-  const fallbackSrc = assetUrl._tag === "Failure" ? props.fallbackSrc : undefined;
-  const src =
-    assetUrl._tag === "Success"
-      ? assetUrl.url + (props.srcFragment ?? "")
-      : fallbackSrc === undefined
-        ? null
-        : fallbackSrc + (props.srcFragment ?? "");
+  const src = assetUrl._tag === "Success" ? assetUrl.url + (props.srcFragment ?? "") : null;
   // The server reads the pixel size from the file header, so the slot can be
   // the image's final box instead of a 16:9 guess. An authored size wins; a
   // caller's height cap shrinks the box while keeping the ratio.
@@ -1638,9 +1605,7 @@ export const ChatMarkdownAssetImage = memo(function ChatMarkdownAssetImage(props
     kind: props.kind ?? "image",
     name: props.alt || (props.kind ?? "image"),
     src,
-    ...(fallbackSrc === undefined
-      ? { asset: { environmentId: props.environmentId, resource } }
-      : {}),
+    asset: { environmentId: props.environmentId, resource },
     ...(reference ? { reference } : {}),
     ...(relativePath && (resource._tag === "media-file" || resource._tag === "workspace-file")
       ? {
@@ -1659,7 +1624,7 @@ export const ChatMarkdownAssetImage = memo(function ChatMarkdownAssetImage(props
     return (
       <ChatMarkdownVideo
         src={src}
-        sourceFailed={assetUrl._tag === "Failure" && fallbackSrc === undefined}
+        sourceFailed={assetUrl._tag === "Failure"}
         alt={props.alt}
         copyMarkdown={props.copyMarkdown}
         originalUrl={props.originalUrl}
@@ -1675,14 +1640,11 @@ export const ChatMarkdownAssetImage = memo(function ChatMarkdownAssetImage(props
     <ChatMarkdownImage
       key={JSON.stringify([props.environmentId, props.resource, props.srcFragment])}
       src={src}
-      sourceFailed={assetUrl._tag === "Failure" && fallbackSrc === undefined}
+      sourceFailed={assetUrl._tag === "Failure"}
       alt={props.alt}
       copyMarkdown={props.copyMarkdown}
       standalone={props.standalone ?? true}
-      className={cn(
-        props.framed === false ? undefined : CHAT_MARKDOWN_WORKSPACE_IMAGE_CLASS_NAME,
-        props.className,
-      )}
+      className={cn(CHAT_MARKDOWN_WORKSPACE_IMAGE_CLASS_NAME, props.className)}
       style={style}
       imageProps={props.imageProps}
       actionsSource={actionsSource}
@@ -2308,7 +2270,6 @@ function useChatMarkdownState({
   text,
   cwd,
   threadRef,
-  pullRequestPanelRef,
   environmentId: explicitEnvironmentId,
   onTaskListChange,
   isStreaming = false,
@@ -2319,7 +2280,6 @@ function useChatMarkdownState({
   onImageExpand,
   renderContextReference,
   headingLevelOffset = 0,
-  githubMedia = false,
 }: ChatMarkdownProps) {
   const { resolvedTheme } = useTheme();
   const [localMediaPreview, setLocalMediaPreview] = useState<ExpandedImagePreview | null>(null);
@@ -2342,7 +2302,6 @@ function useChatMarkdownState({
   const openPreview = useAtomCommand(previewEnvironment.open, {
     reportFailure: false,
   });
-  const pullRequestLinking = usePullRequestLinking(threadRef?.environmentId);
   const environmentId = threadRef?.environmentId ?? explicitEnvironmentId ?? null;
   const canOperateHost = useEnvironmentScope(environmentId, AuthOrchestrationOperateScope);
   const canOperatePreview = useEnvironmentScope(environmentId, AuthPreviewOperateScope);
@@ -2394,7 +2353,6 @@ function useChatMarkdownState({
     [createAssetUrl, cwd, expandMedia, preparedConnection, threadRef],
   );
   const serverConfig = useAtomValue(serverEnvironment.configValueAtom(environmentId));
-  const projects = useProjects();
   const availableEditors = serverConfig?.availableEditors ?? [];
   const [preferredEditor] = usePreferredEditor(availableEditors);
   const preferredEditorMenuLabel = openInEditorMenuLabel(preferredEditor);
@@ -2492,42 +2450,10 @@ function useChatMarkdownState({
         : payload.html,
     );
   }, []);
-  const openChangeRequestLink = useOpenChangeRequestLink(threadRef, pullRequestPanelRef);
-  const openDeferredMarkdownLink = useOpenLink(threadRef);
   // Subscribed rather than read at click time: the anchor has to decide
   // synchronously whether to intercept its `_blank`, and a subscription is what
   // makes a persisted "app" apply once settings hydrate after launch.
   const linkTargetPreference = useClientSettings((settings) => settings.browserLinkTarget);
-  const resolveThreadPullRequest = useCallback(
-    (href: string): (ThreadPullRequestKey & { readonly url: string }) | null => {
-      if (
-        threadRef === undefined ||
-        readThreadShell(threadRef) === null ||
-        !pullRequestLinking.canLink(href)
-      )
-        return null;
-      const parsed = parseChangeRequestUrl(href);
-      return parsed === null ? null : { ...parsed, url: href };
-    },
-    [pullRequestLinking, threadRef],
-  );
-  const linkedThreadPullRequestFor = useCallback(
-    (href: string) => {
-      if (threadRef === undefined || !pullRequestLinking.isLinked(readThreadShell(threadRef), href))
-        return null;
-      const parsed = parseChangeRequestUrl(href);
-      return parsed === null ? null : { ...parsed, url: href };
-    },
-    [pullRequestLinking, threadRef],
-  );
-  const updateThreadPullRequestLink = useCallback(
-    async (href: string, linked: boolean) => {
-      if (threadRef === undefined || (!linked && linkedThreadPullRequestFor(href) === null)) return;
-      if (!readEnvironmentScope(threadRef.environmentId, AuthOrchestrationOperateScope)) return;
-      await pullRequestLinking.changeLink(threadRef, href, linked);
-    },
-    [linkedThreadPullRequestFor, pullRequestLinking, threadRef],
-  );
   const openExternalLinkInPreview = useCallback(
     (url: string) => {
       if (!threadRef || !canOperatePreview) {
@@ -2719,14 +2645,12 @@ function useChatMarkdownState({
 
   const componentState = useMemo(
     () => ({
-      canOperateHost,
       canOperatePreview,
       cwd,
       diffThemeName,
       environmentId,
       expandMedia,
       fileLinkChip,
-      githubMedia,
       renderContextReference,
       headingLevelOffset,
       imageBaseDir,
@@ -2737,29 +2661,20 @@ function useChatMarkdownState({
       onTaskListChange,
       onUseArtifactTemplate,
       onRunShellCommand,
-      openChangeRequestLink,
-      openDeferredMarkdownLink,
       openExternalLinkInPreview,
       openMarkdownMedia,
-      projects,
-      linkedThreadPullRequestFor,
-      resolveThreadPullRequest,
       resolvedTheme,
-      serverConfig,
       skills,
       text,
       threadRef,
-      updateThreadPullRequestLink,
     }),
     [
-      canOperateHost,
       canOperatePreview,
       cwd,
       diffThemeName,
       environmentId,
       expandMedia,
       fileLinkChip,
-      githubMedia,
       renderContextReference,
       headingLevelOffset,
       imageBaseDir,
@@ -2770,19 +2685,12 @@ function useChatMarkdownState({
       onTaskListChange,
       onUseArtifactTemplate,
       onRunShellCommand,
-      openChangeRequestLink,
-      openDeferredMarkdownLink,
       openExternalLinkInPreview,
       openMarkdownMedia,
-      projects,
-      linkedThreadPullRequestFor,
-      resolveThreadPullRequest,
       resolvedTheme,
-      serverConfig,
       skills,
       text,
       threadRef,
-      updateThreadPullRequestLink,
     ],
   );
   return {
@@ -2911,7 +2819,6 @@ const CHAT_MARKDOWN_COMPONENTS = {
   },
   a: function MarkdownAnchor({ node, href, children, title: _title, ...props }) {
     const {
-      canOperateHost,
       canOperatePreview,
       cwd,
       environmentId,
@@ -2919,15 +2826,8 @@ const CHAT_MARKDOWN_COMPONENTS = {
       markdownFileLinkMetaByHref,
       threadRef,
       openMarkdownMedia,
-      openChangeRequestLink,
-      openDeferredMarkdownLink,
       linkTargetPreference,
       openExternalLinkInPreview,
-      projects,
-      linkedThreadPullRequestFor,
-      resolveThreadPullRequest,
-      serverConfig,
-      updateThreadPullRequestLink,
       fileLinkChip,
       renderContextReference,
       text,
@@ -2961,27 +2861,6 @@ const CHAT_MARKDOWN_COMPONENTS = {
     if (!fileLinkMeta) {
       const faviconHost = resolveExternalWebLinkHost(href);
       const hasText = hastHasText(node);
-      const pullRequestAutolink = String(
-        (props as Record<string, unknown>)["data-pull-request-autolink"] ?? "",
-      );
-      const pullRequestCopy =
-        pullRequestAutolink === "commit"
-          ? /\/commit\/([0-9a-f]{40})$/iu.exec(href ?? "")?.[1]
-          : pullRequestAutolink === "reference"
-            ? plainHastText(node)
-            : undefined;
-      const isPullRequestAutolink = pullRequestCopy !== undefined;
-      const confirmBeforeOpen = pullRequestAutolink === "reference";
-      const pullRequestCandidateUrl =
-        confirmBeforeOpen && href ? pullRequestCandidateUrlFromReferenceAutolink(href) : href;
-      const pullRequestPreviewTarget = pullRequestCandidateUrl
-        ? resolvePullRequestPreviewTarget({
-            environmentId,
-            projects,
-            pullRequestsEnabled: serverConfig?.environment.capabilities.pullRequests === true,
-            url: pullRequestCandidateUrl,
-          })
-        : null;
       const isSameDocumentLink = href?.startsWith("#") ?? false;
       const onClick = props.onClick;
       const canOpenInPreview =
@@ -2990,8 +2869,6 @@ const CHAT_MARKDOWN_COMPONENTS = {
       const link = (
         <a
           {...props}
-          className={cn(props.className, pullRequestAutolink === "commit" && "font-mono")}
-          data-markdown-copy={pullRequestCopy}
           data-markdown-image-link={!hasText || undefined}
           href={href}
           target={isSameDocumentLink ? undefined : "_blank"}
@@ -3023,16 +2900,8 @@ const CHAT_MARKDOWN_COMPONENTS = {
               );
               return;
             }
-            // A link to a change request in a workspace project opens beside the
-            // conversation instead of in a browser: it is the thing being talked about, and
-            // the panel it opens offers the browser as one of its actions.
-            if (
-              !href ||
-              openChangeRequestLink(event, href, undefined, environmentId ?? undefined)
-            ) {
-              return;
-            }
-            // Anything else follows the "Open links in" setting. The system browser
+            if (!href) return;
+            // Links follow the "Open links in" setting. The system browser
             // keeps the `_blank` the shell already handles; the in-app browser needs
             // the click intercepted here. A modifier click is the way out of the
             // in-app default, so it is left to the shell too.
@@ -3081,17 +2950,9 @@ const CHAT_MARKDOWN_COMPONENTS = {
             event.stopPropagation();
             const api = readLocalApi();
             if (!api) return;
-            const threadLinkAction = !canOperateHost
-              ? undefined
-              : linkedThreadPullRequestFor(href) !== null
-                ? "unlink-from-thread"
-                : resolveThreadPullRequest(href) === null
-                  ? undefined
-                  : "link-to-thread";
             void showExternalLinkContextMenu({
               href,
               canOpenInPreview,
-              threadLinkAction,
               position: { x: event.clientX, y: event.clientY },
               showContextMenu: (items, position) => api.contextMenu.show(items, position),
               openInPreview: async (target) => {
@@ -3105,29 +2966,12 @@ const CHAT_MARKDOWN_COMPONENTS = {
               },
               openExternal: (target) => api.shell.openExternal(target),
               copyLink: (target) => writeTextToClipboard(target, "link"),
-              updateThreadLink: updateThreadPullRequestLink,
-              reportFailure: (operation, cause) => {
-                reportMarkdownActionFailure({ operation, target: href }, cause);
-                if (
-                  operation === "link-pull-request-to-thread" ||
-                  operation === "unlink-pull-request-from-thread"
-                ) {
-                  toastManager.add(
-                    stackedThreadToast({
-                      type: "error",
-                      title:
-                        operation === "link-pull-request-to-thread"
-                          ? "Unable to link pull request"
-                          : "Unable to unlink pull request",
-                      description: cause instanceof Error ? cause.message : "The request failed.",
-                    }),
-                  );
-                }
-              },
+              reportFailure: (operation, cause) =>
+                reportMarkdownActionFailure({ operation, target: href }, cause),
             });
           }}
         >
-          {faviconHost && hasText && !isPullRequestAutolink ? (
+          {faviconHost && hasText ? (
             <MarkdownExternalLinkContent host={faviconHost} plainText={plainHastText(node)}>
               {linkChildren}
             </MarkdownExternalLinkContent>
@@ -3138,30 +2982,6 @@ const CHAT_MARKDOWN_COMPONENTS = {
       );
       if (!faviconHost || !href) {
         return link;
-      }
-      if (pullRequestPreviewTarget !== null) {
-        return (
-          <PullRequestLinkPreview
-            link={link}
-            originalUrl={href}
-            target={pullRequestPreviewTarget}
-            confirmBeforeOpen={confirmBeforeOpen}
-            onOpenPullRequest={(targetUrl) =>
-              openChangeRequestLink(
-                {
-                  metaKey: false,
-                  ctrlKey: false,
-                  preventDefault: () => undefined,
-                  stopPropagation: () => undefined,
-                },
-                targetUrl,
-                undefined,
-                environmentId ?? undefined,
-              )
-            }
-            onOpenFallback={openDeferredMarkdownLink}
-          />
-        );
       }
       return (
         <Tooltip>
@@ -3212,15 +3032,9 @@ const CHAT_MARKDOWN_COMPONENTS = {
     );
   },
   img: function MarkdownImage({ node, title, src, alt, ...props }) {
-    const {
-      expandMedia,
-      cwd,
-      environmentId,
-      githubMedia,
-      imageBaseDir,
-      threadRef,
-      renderContextReference,
-    } = use(ChatMarkdownRendererContext);
+    const { expandMedia, cwd, imageBaseDir, threadRef, renderContextReference } = use(
+      ChatMarkdownRendererContext,
+    );
     const imageExpand = use(MarkdownLinkContext) ? undefined : expandMedia;
     const contextReference = typeof src === "string" ? parseComposerContextHref(src) : null;
     if (contextReference) {
@@ -3246,39 +3060,6 @@ const CHAT_MARKDOWN_COMPONENTS = {
     const authoredSizeStyle = authoredImageSizeStyle(width, height);
     const imageSource = classifyMarkdownImageSource(classifiedSrc, imageBaseDir ?? cwd);
     const kind = mediaKindFromPath(classifiedSrc) ?? "image";
-    const directUri = imageSource._tag === "Direct" ? imageSource.uri : null;
-    const githubMediaUrl =
-      directUri === null ? null : githubMediaFetchUrl(resolveProtocolRelativeMediaUrl(directUri));
-    if (
-      githubMedia &&
-      cwd !== undefined &&
-      environmentId !== null &&
-      directUri !== null &&
-      githubMediaUrl !== null
-    ) {
-      return (
-        <ChatMarkdownAssetImage
-          environmentId={environmentId}
-          resource={{ _tag: "github-media", cwd, url: githubMediaUrl }}
-          alt={altText}
-          kind={kind}
-          copyMarkdown={copyMarkdown}
-          standalone={standalone}
-          className={className}
-          style={authoredSizeStyle}
-          imageProps={imageProps}
-          srcFragment={markdownImageSourceFragment(classifiedSrc)}
-          originalUrl={resolveProtocolRelativeMediaUrl(directUri)}
-          // A pull request body draws its own boxes; keep the author's, not the workspace frame.
-          framed={false}
-          // A server too old to sign this resource, or one with no route to GitHub, still leaves
-          // the public half of these working exactly as it did before. The canonical URL, not the
-          // authored one: a `blob` link addresses the page, and only the raw host has the bytes.
-          fallbackSrc={githubMediaUrl}
-          onImageExpand={imageExpand}
-        />
-      );
-    }
     if (imageSource._tag === "Direct") {
       const mediaSrc = resolveProtocolRelativeMediaUrl(imageSource.uri);
       const originalUrl =

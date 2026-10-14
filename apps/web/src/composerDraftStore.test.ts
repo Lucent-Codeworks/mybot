@@ -145,7 +145,7 @@ function makeTerminalContext(input: {
     terminalLabel: input.terminalLabel ?? "Terminal 1",
     lineStart: input.lineStart ?? 4,
     lineEnd: input.lineEnd ?? 5,
-    text: input.text ?? "git status\nOn branch main",
+    text: input.text ?? "ls\nREADME.md",
     createdAt: "2026-03-13T12:00:00.000Z",
   };
 }
@@ -1148,7 +1148,7 @@ describe("composerDraftStore review comments", () => {
     endIndex: 2,
     rangeLabel: "L2 to L3",
     text: "Keep this configurable.",
-    diff: "@@ -2,2 +2,2 @@\n two\n three",
+    diff: "two\nthree",
   } as const;
 
   beforeEach(() => {
@@ -1308,8 +1308,6 @@ describe("composerDraftStore project draft thread mapping", () => {
 
     store.setProjectDraftThreadId(projectRef, draftId, {
       threadId,
-      branch: "feature/test",
-      worktreePath: "/tmp/worktree-test",
       createdAt: "2026-01-01T00:00:00.000Z",
     });
     expect(useComposerDraftStore.getState().getDraftThreadByProjectRef(projectRef)).toMatchObject({
@@ -1317,9 +1315,6 @@ describe("composerDraftStore project draft thread mapping", () => {
       environmentId: TEST_ENVIRONMENT_ID,
       projectId,
       logicalProjectKey: scopedProjectKey(projectRef),
-      branch: "feature/test",
-      worktreePath: "/tmp/worktree-test",
-      envMode: "worktree",
       runtimeMode: "full-access",
       interactionMode: "default",
       createdAt: "2026-01-01T00:00:00.000Z",
@@ -1328,9 +1323,6 @@ describe("composerDraftStore project draft thread mapping", () => {
       environmentId: TEST_ENVIRONMENT_ID,
       projectId,
       logicalProjectKey: scopedProjectKey(projectRef),
-      branch: "feature/test",
-      worktreePath: "/tmp/worktree-test",
-      envMode: "worktree",
       runtimeMode: "full-access",
       interactionMode: "default",
       createdAt: "2026-01-01T00:00:00.000Z",
@@ -1354,11 +1346,7 @@ describe("composerDraftStore project draft thread mapping", () => {
     const retryThreadId = ThreadId.make("thread-retry");
     store.setProjectDraftThreadId(projectRef, draftId, {
       threadId,
-      branch: "feature/test",
-      worktreePath: null,
       createdAt: "2026-01-01T00:00:00.000Z",
-      envMode: "worktree",
-      startFromOrigin: true,
       runtimeMode: "approval-required",
       interactionMode: "plan",
     });
@@ -1372,11 +1360,7 @@ describe("composerDraftStore project draft thread mapping", () => {
 
     expect(useComposerDraftStore.getState().getDraftThread(draftId)).toMatchObject({
       threadId: retryThreadId,
-      branch: "feature/test",
-      worktreePath: null,
       createdAt: "2026-01-01T00:01:00.000Z",
-      envMode: "worktree",
-      startFromOrigin: true,
       runtimeMode: "approval-required",
       interactionMode: "plan",
       promotedTo: null,
@@ -1708,121 +1692,6 @@ describe("composerDraftStore project draft thread mapping", () => {
     expect(draftFor(threadId, TEST_ENVIRONMENT_ID)?.prompt).toBe("promote me");
   });
 
-  it("updates branch context on an existing draft thread", () => {
-    const store = useComposerDraftStore.getState();
-    store.setProjectDraftThreadId(projectRef, draftId, {
-      threadId,
-      branch: "main",
-      worktreePath: null,
-    });
-    store.setDraftThreadContext(draftId, {
-      branch: "feature/next",
-      worktreePath: "/tmp/feature-next",
-    });
-    expect(useComposerDraftStore.getState().getDraftThreadByProjectRef(projectRef)?.threadId).toBe(
-      threadId,
-    );
-    expect(useComposerDraftStore.getState().getDraftThread(draftId)).toMatchObject({
-      environmentId: TEST_ENVIRONMENT_ID,
-      projectId,
-      branch: "feature/next",
-      worktreePath: "/tmp/feature-next",
-      envMode: "worktree",
-    });
-  });
-
-  it("stores the start-from-origin choice with the draft thread", () => {
-    const store = useComposerDraftStore.getState();
-    store.setProjectDraftThreadId(projectRef, draftId, {
-      threadId,
-      envMode: "worktree",
-      startFromOrigin: true,
-    });
-
-    expect(useComposerDraftStore.getState().getDraftThread(draftId)?.startFromOrigin).toBe(true);
-
-    store.setDraftThreadContext(draftId, { startFromOrigin: false });
-
-    expect(useComposerDraftStore.getState().getDraftThread(draftId)?.startFromOrigin).toBe(false);
-  });
-
-  it("preserves existing branch and worktree when setProjectDraftThreadId receives undefined", () => {
-    const store = useComposerDraftStore.getState();
-    store.setProjectDraftThreadId(projectRef, draftId, {
-      threadId,
-      branch: "main",
-      worktreePath: "/tmp/main-worktree",
-    });
-    const runtimeUndefinedOptions = {
-      branch: undefined,
-      worktreePath: undefined,
-    } as unknown as {
-      branch?: string | null;
-      worktreePath?: string | null;
-    };
-    store.setProjectDraftThreadId(projectRef, draftId, runtimeUndefinedOptions);
-
-    expect(useComposerDraftStore.getState().getDraftThread(draftId)).toMatchObject({
-      environmentId: TEST_ENVIRONMENT_ID,
-      projectId,
-      branch: "main",
-      worktreePath: "/tmp/main-worktree",
-      envMode: "worktree",
-    });
-  });
-
-  it("preserves worktree env mode without a worktree path", () => {
-    const store = useComposerDraftStore.getState();
-    store.setProjectDraftThreadId(projectRef, draftId, {
-      threadId,
-      branch: "feature/base",
-      worktreePath: null,
-      envMode: "worktree",
-    });
-    const runtimeUndefinedOptions = {
-      branch: undefined,
-      worktreePath: undefined,
-      envMode: undefined,
-    } as unknown as {
-      branch?: string | null;
-      worktreePath?: string | null;
-      envMode?: "local" | "worktree";
-    };
-    store.setProjectDraftThreadId(projectRef, draftId, runtimeUndefinedOptions);
-
-    expect(useComposerDraftStore.getState().getDraftThread(draftId)).toMatchObject({
-      environmentId: TEST_ENVIRONMENT_ID,
-      projectId,
-      branch: "feature/base",
-      worktreePath: null,
-      envMode: "worktree",
-    });
-  });
-
-  it("clears branch and worktree but keeps env mode when remapping a draft to another environment", () => {
-    const store = useComposerDraftStore.getState();
-    store.setProjectDraftThreadId(projectRef, draftId, {
-      threadId,
-      branch: "feature/local-only",
-      worktreePath: "/tmp/local-worktree",
-      envMode: "worktree",
-      startFromOrigin: true,
-    });
-
-    store.setLogicalProjectDraftThreadId(scopedProjectKey(projectRef), remoteProjectRef, draftId, {
-      threadId,
-    });
-
-    expect(useComposerDraftStore.getState().getDraftThread(draftId)).toMatchObject({
-      environmentId: OTHER_TEST_ENVIRONMENT_ID,
-      projectId,
-      branch: null,
-      worktreePath: null,
-      envMode: "worktree",
-      startFromOrigin: true,
-    });
-  });
-
   it("clears stale upload metadata when retargeting a draft to another environment", () => {
     const store = useComposerDraftStore.getState();
     const hydratedFile: ComposerFileAttachment = {
@@ -1867,14 +1736,6 @@ describe("composerDraftStore project draft thread mapping", () => {
     });
   });
 
-  it("does not opt a legacy branch choice into balancing when runtime mode changes", () => {
-    const store = useComposerDraftStore.getState();
-    store.setProjectDraftThreadId(projectRef, draftId, { threadId, branch: "feature/pinned" });
-    store.setDraftThreadContext(draftId, { runtimeMode: "full-access" });
-    expect(store.getDraftThread(draftId)?.environmentSelection).toBeUndefined();
-    expect(store.getDraftThread(draftId)?.branch).toBe("feature/pinned");
-  });
-
   it("pins manual workspace choices and can return to automatic routing without losing the prompt", () => {
     const store = useComposerDraftStore.getState();
     store.setProjectDraftThreadId(projectRef, draftId, { threadId });
@@ -1889,43 +1750,17 @@ describe("composerDraftStore project draft thread mapping", () => {
       environmentSelection: "auto",
       loadBalancedEnvironmentId: OTHER_TEST_ENVIRONMENT_ID,
     });
-    store.setDraftThreadContext(draftId, { branch: "feature/pinned" });
+    store.setDraftThreadContext(draftId, { environmentSelection: "manual" });
     expect(store.getDraftThread(draftId)?.environmentSelection).toBe("manual");
     store.setDraftThreadContext(draftId, {
-      branch: null,
       environmentSelection: "auto",
       loadBalancedEnvironmentId: null,
     });
     expect(store.getDraftThread(draftId)).toMatchObject({
-      branch: null,
       environmentSelection: "auto",
       loadBalancedEnvironmentId: null,
     });
     expect(store.getComposerDraft(draftId)?.prompt).toBe("keep this prompt");
-  });
-
-  it("clears branch and worktree but keeps env mode when changing a draft thread project ref", () => {
-    const store = useComposerDraftStore.getState();
-    store.setProjectDraftThreadId(projectRef, draftId, {
-      threadId,
-      branch: "feature/local-only",
-      worktreePath: "/tmp/local-worktree",
-      envMode: "worktree",
-      startFromOrigin: true,
-    });
-
-    store.setDraftThreadContext(draftId, {
-      projectRef: remoteProjectRef,
-    });
-
-    expect(useComposerDraftStore.getState().getDraftThread(draftId)).toMatchObject({
-      environmentId: OTHER_TEST_ENVIRONMENT_ID,
-      projectId,
-      branch: null,
-      worktreePath: null,
-      envMode: "worktree",
-      startFromOrigin: true,
-    });
   });
 });
 
@@ -2610,10 +2445,6 @@ describe("composerDraftStore model seed migration", () => {
     createdAt: "2026-08-01T00:00:00.000Z",
     runtimeMode: "full-access",
     interactionMode: "default",
-    branch: null,
-    worktreePath: null,
-    envMode: "local",
-    startFromOrigin: false,
     promotedTo: null,
   });
 
@@ -3170,16 +3001,16 @@ describe("composerDraftStore inline context references", () => {
 
   it("keeps bulk-set review records and their inline references in sync", () => {
     const store = useComposerDraftStore.getState();
-    store.setPrompt(threadRef, "Explain this pull request.");
+    store.setPrompt(threadRef, "Explain this file.");
     store.setReviewComments(threadRef, [reviewComment]);
 
     expect(draftFor(threadId, TEST_ENVIRONMENT_ID)?.prompt).toBe(
-      `Explain this pull request. ${reviewLink} `,
+      `Explain this file. ${reviewLink} `,
     );
     expect(draftFor(threadId, TEST_ENVIRONMENT_ID)?.reviewComments).toEqual([reviewComment]);
 
     store.setReviewComments(threadRef, []);
-    expect(draftFor(threadId, TEST_ENVIRONMENT_ID)?.prompt).toBe("Explain this pull request.");
+    expect(draftFor(threadId, TEST_ENVIRONMENT_ID)?.prompt).toBe("Explain this file.");
     expect(draftFor(threadId, TEST_ENVIRONMENT_ID)?.reviewComments).toEqual([]);
   });
 

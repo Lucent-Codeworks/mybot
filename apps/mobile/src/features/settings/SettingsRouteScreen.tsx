@@ -2,7 +2,6 @@ import { ScreenScrollView as ScrollView } from "../../components/ScreenScrollVie
 import { useAuth, useUser } from "@clerk/expo";
 import { useNavigation } from "@react-navigation/native";
 import { Platform, View } from "react-native";
-import { deriveProjectGroupLabel } from "@t3tools/client-runtime/state/project-grouping";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { hasCloudPublicConfig } from "../cloud/publicConfig";
@@ -144,10 +143,7 @@ function SettingsIndexSections() {
       ) ?? [];
   const projectLabel =
     scopedProjectMembers.length > 0
-      ? deriveProjectGroupLabel({
-          representative: scopedProjectMembers[0]!,
-          members: scopedProjectMembers,
-        })
+      ? scopedProjectMembers[0]!.title
       : (selectedProject?.label ?? "Unavailable project");
   return (
     <>
@@ -174,7 +170,6 @@ function SettingsIndexSections() {
             target="SettingsProjectOverview"
           />
         ) : null}
-        <SettingsRow icon="folder" label="Organization" target="SettingsOrganization" />
         <SettingsRow icon="text.bubble" label="Thread behavior" target="SettingsThreads" />
         <SettingsRow icon="arrow.turn.left.up" label="Follow-ups" target="SettingsFollowUp" />
         <SettingsRow icon="archivebox" label="Archived Threads" target="SettingsArchive" />
@@ -191,12 +186,6 @@ function SettingsIndexSections() {
           icon="text.bubble"
           label="New threads"
           target="SettingsEnvironmentNewThreads"
-          disabled={noServerTargets}
-        />
-        <SettingsRow
-          icon="arrow.triangle.branch"
-          label="Source control"
-          target="SettingsEnvironmentSourceControl"
           disabled={noServerTargets}
         />
         <SettingsRow

@@ -1,4 +1,5 @@
-import { ProviderInstanceId, TextGenerationError } from "@t3tools/contracts";
+import { ProviderInstanceId } from "@t3tools/contracts";
+import { TextGenerationError } from "@t3tools/provider-core/server/textGeneration";
 import { OpenCodeSettings } from "../settings.ts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { it } from "@effect/vitest";
@@ -117,10 +118,7 @@ const OpenCodeRuntimeTestDouble: OpenCodeRuntime.OpenCodeRuntime["Service"] = {
                 parts: [
                   {
                     type: "text",
-                    text: JSON.stringify({
-                      subject: "Improve OpenCode reuse",
-                      body: "Reuse one server for the full action.",
-                    }),
+                    text: JSON.stringify({ title: "Improve OpenCode reuse" }),
                   },
                 ],
               },
@@ -155,11 +153,9 @@ const DEFAULT_TEST_MODEL_SELECTION = {
   instanceId: ProviderInstanceId.make("opencode"),
   model: "openai/gpt-5",
 };
-const DEFAULT_COMMIT_MESSAGE_INPUT = {
+const DEFAULT_THREAD_TITLE_INPUT = {
   cwd: process.cwd(),
-  branch: "feature/opencode-reuse",
-  stagedSummary: "M README.md",
-  stagedPatch: "diff --git a/README.md b/README.md",
+  message: "Reuse one OpenCode server for back-to-back requests.",
   modelSelection: DEFAULT_TEST_MODEL_SELECTION,
 };
 
@@ -272,7 +268,7 @@ it.layer(layerOpenCodeTextGenerationTest)("OpenCodeTextGeneration", (it) => {
   it.effect("passes configured authentication to a locally spawned server", () =>
     withOpenCodeTextGeneration(LOCAL_AUTH_OPENCODE_SETTINGS, (textGeneration) =>
       Effect.gen(function* () {
-        yield* textGeneration.generateCommitMessage(DEFAULT_COMMIT_MESSAGE_INPUT);
+        yield* textGeneration.generateThreadTitle(DEFAULT_THREAD_TITLE_INPUT);
 
         expect(runtimeMock.state.startCalls).toEqual(["fake-opencode"]);
         expect(runtimeMock.state.authHeaders).toEqual([
@@ -287,7 +283,7 @@ it.layer(layerOpenCodeTextGenerationTest)("OpenCodeTextGeneration", (it) => {
       DEFAULT_OPENCODE_SETTINGS,
       (textGeneration) =>
         Effect.gen(function* () {
-          yield* textGeneration.generateCommitMessage(DEFAULT_COMMIT_MESSAGE_INPUT);
+          yield* textGeneration.generateThreadTitle(DEFAULT_THREAD_TITLE_INPUT);
 
           expect(runtimeMock.state.authHeaders).toEqual([
             `Basic ${btoa("opencode:environment-password")}`,
@@ -302,7 +298,7 @@ it.layer(layerOpenCodeTextGenerationTest)("OpenCodeTextGeneration", (it) => {
       LOCAL_AUTH_OPENCODE_SETTINGS,
       (textGeneration) =>
         Effect.gen(function* () {
-          yield* textGeneration.generateCommitMessage(DEFAULT_COMMIT_MESSAGE_INPUT);
+          yield* textGeneration.generateThreadTitle(DEFAULT_THREAD_TITLE_INPUT);
 
           expect(runtimeMock.state.authHeaders).toEqual([
             `Basic ${btoa("opencode:secret-password")}`,
@@ -315,18 +311,14 @@ it.layer(layerOpenCodeTextGenerationTest)("OpenCodeTextGeneration", (it) => {
   it.effect("reuses a warm server across back-to-back requests and closes it after idling", () =>
     withOpenCodeTextGeneration(DEFAULT_OPENCODE_SETTINGS, (textGeneration) =>
       Effect.gen(function* () {
-        yield* textGeneration.generateCommitMessage({
+        yield* textGeneration.generateThreadTitle({
           cwd: process.cwd(),
-          branch: "feature/opencode-reuse",
-          stagedSummary: "M README.md",
-          stagedPatch: "diff --git a/README.md b/README.md",
+          message: "Reuse one OpenCode server for back-to-back requests.",
           modelSelection: DEFAULT_TEST_MODEL_SELECTION,
         });
-        yield* textGeneration.generateCommitMessage({
+        yield* textGeneration.generateThreadTitle({
           cwd: process.cwd(),
-          branch: "feature/opencode-reuse",
-          stagedSummary: "M README.md",
-          stagedPatch: "diff --git a/README.md b/README.md",
+          message: "Reuse one OpenCode server for back-to-back requests.",
           modelSelection: DEFAULT_TEST_MODEL_SELECTION,
         });
 
@@ -347,21 +339,17 @@ it.layer(layerOpenCodeTextGenerationTest)("OpenCodeTextGeneration", (it) => {
   it.effect("starts a new server after the warm server idles out", () =>
     withOpenCodeTextGeneration(DEFAULT_OPENCODE_SETTINGS, (textGeneration) =>
       Effect.gen(function* () {
-        yield* textGeneration.generateCommitMessage({
+        yield* textGeneration.generateThreadTitle({
           cwd: process.cwd(),
-          branch: "feature/opencode-reuse",
-          stagedSummary: "M README.md",
-          stagedPatch: "diff --git a/README.md b/README.md",
+          message: "Reuse one OpenCode server for back-to-back requests.",
           modelSelection: DEFAULT_TEST_MODEL_SELECTION,
         });
 
         yield* advanceIdleClock;
 
-        yield* textGeneration.generateCommitMessage({
+        yield* textGeneration.generateThreadTitle({
           cwd: process.cwd(),
-          branch: "feature/opencode-reuse",
-          stagedSummary: "M README.md",
-          stagedPatch: "diff --git a/README.md b/README.md",
+          message: "Reuse one OpenCode server for back-to-back requests.",
           modelSelection: DEFAULT_TEST_MODEL_SELECTION,
         });
 
@@ -382,14 +370,14 @@ it.layer(layerOpenCodeTextGenerationTest)("OpenCodeTextGeneration", (it) => {
         runtimeMock.state.sessionCreateError = sdkCause;
 
         const error = yield* textGeneration
-          .generateCommitMessage(DEFAULT_COMMIT_MESSAGE_INPUT)
+          .generateThreadTitle(DEFAULT_THREAD_TITLE_INPUT)
           .pipe(Effect.flip);
 
         expect(error).toBeInstanceOf(TextGenerationError);
         expect(error.message).toContain("OpenCode session.create request failed.");
         expect(error.cause).toMatchObject({
           _tag: "OpenCodeTextGenerationSessionRequestError",
-          operation: "generateCommitMessage",
+          operation: "generateThreadTitle",
           cwd: process.cwd(),
           cause: sdkCause,
         });
@@ -404,13 +392,13 @@ it.layer(layerOpenCodeTextGenerationTest)("OpenCodeTextGeneration", (it) => {
         runtimeMock.state.sessionResult = {};
 
         const error = yield* textGeneration
-          .generateCommitMessage(DEFAULT_COMMIT_MESSAGE_INPUT)
+          .generateThreadTitle(DEFAULT_THREAD_TITLE_INPUT)
           .pipe(Effect.flip);
 
         expect(error.message).toContain("OpenCode session.create returned no session payload.");
         expect(error.cause).toMatchObject({
           _tag: "OpenCodeTextGenerationSessionPayloadError",
-          operation: "generateCommitMessage",
+          operation: "generateThreadTitle",
           cwd: process.cwd(),
         });
         expect(error.cause).not.toHaveProperty("cause");
@@ -425,13 +413,13 @@ it.layer(layerOpenCodeTextGenerationTest)("OpenCodeTextGeneration", (it) => {
         runtimeMock.state.promptRequestError = sdkCause;
 
         const error = yield* textGeneration
-          .generateCommitMessage(DEFAULT_COMMIT_MESSAGE_INPUT)
+          .generateThreadTitle(DEFAULT_THREAD_TITLE_INPUT)
           .pipe(Effect.flip);
 
         expect(error.message).toContain("OpenCode session.prompt request failed.");
         expect(error.cause).toMatchObject({
           _tag: "OpenCodeTextGenerationPromptRequestError",
-          operation: "generateCommitMessage",
+          operation: "generateThreadTitle",
           cwd: process.cwd(),
           sessionId: "http://127.0.0.1:4301/session",
           providerId: "openai",
@@ -453,13 +441,13 @@ it.layer(layerOpenCodeTextGenerationTest)("OpenCodeTextGeneration", (it) => {
         };
 
         const error = yield* textGeneration
-          .generateCommitMessage(DEFAULT_COMMIT_MESSAGE_INPUT)
+          .generateThreadTitle(DEFAULT_THREAD_TITLE_INPUT)
           .pipe(Effect.flip);
 
         expect(error.message).toContain("OpenCode returned empty output.");
         expect(error.cause).toMatchObject({
           _tag: "OpenCodeTextGenerationEmptyOutputError",
-          operation: "generateCommitMessage",
+          operation: "generateThreadTitle",
           cwd: process.cwd(),
           sessionId: "http://127.0.0.1:4301/session",
           providerId: "openai",
@@ -480,24 +468,19 @@ it.layer(layerOpenCodeTextGenerationTest)("OpenCodeTextGeneration", (it) => {
             parts: [
               {
                 type: "text",
-                text: 'Here is the result:\n{"subject":"Tighten OpenCode parsing","body":"Handle JSON text output locally."}',
+                text: 'Here is the result:\n{"title":"Tighten OpenCode parsing"}',
               },
             ],
           },
         };
 
-        const result = yield* textGeneration.generateCommitMessage({
+        const result = yield* textGeneration.generateThreadTitle({
           cwd: process.cwd(),
-          branch: "feature/opencode-reuse",
-          stagedSummary: "M README.md",
-          stagedPatch: "diff --git a/README.md b/README.md",
+          message: "Reuse one OpenCode server for back-to-back requests.",
           modelSelection: DEFAULT_TEST_MODEL_SELECTION,
         });
 
-        expect(result).toEqual({
-          subject: "Tighten OpenCode parsing",
-          body: "Handle JSON text output locally.",
-        });
+        expect(result).toEqual({ title: "Tighten OpenCode parsing" });
       }),
     ),
   );
@@ -520,13 +503,13 @@ it.layer(layerOpenCodeTextGenerationTest)("OpenCodeTextGeneration", (it) => {
         };
 
         const error = yield* textGeneration
-          .generateCommitMessage(DEFAULT_COMMIT_MESSAGE_INPUT)
+          .generateThreadTitle(DEFAULT_THREAD_TITLE_INPUT)
           .pipe(Effect.flip);
 
         expect(error.message).toContain("Model did not produce structured output");
         expect(error.cause).toMatchObject({
           _tag: "OpenCodeTextGenerationPromptResponseError",
-          operation: "generateCommitMessage",
+          operation: "generateThreadTitle",
           cwd: process.cwd(),
           sessionId: "http://127.0.0.1:4301/session",
           providerId: "openai",
@@ -548,7 +531,7 @@ it.layer(layerOpenCodeTextGenerationExistingServerTest)(
         EXTERNAL_SERVER_WITHOUT_AUTH_OPENCODE_SETTINGS,
         (textGeneration) =>
           Effect.gen(function* () {
-            yield* textGeneration.generateCommitMessage(DEFAULT_COMMIT_MESSAGE_INPUT);
+            yield* textGeneration.generateThreadTitle(DEFAULT_THREAD_TITLE_INPUT);
             expect(runtimeMock.state.authHeaders).toEqual([null]);
           }),
         { OPENCODE_SERVER_PASSWORD: "local-secret" },
@@ -563,7 +546,7 @@ it.layer(layerOpenCodeTextGenerationExistingServerTest)(
           );
 
           const error = yield* textGeneration
-            .generateCommitMessage(DEFAULT_COMMIT_MESSAGE_INPUT)
+            .generateThreadTitle(DEFAULT_THREAD_TITLE_INPUT)
             .pipe(Effect.flip);
 
           expect(error).toBeInstanceOf(TextGenerationError);
@@ -576,18 +559,14 @@ it.layer(layerOpenCodeTextGenerationExistingServerTest)(
     it.effect("reuses a configured OpenCode server URL without spawning or applying idle TTL", () =>
       withOpenCodeTextGeneration(EXISTING_SERVER_OPENCODE_SETTINGS, (textGeneration) =>
         Effect.gen(function* () {
-          yield* textGeneration.generateCommitMessage({
+          yield* textGeneration.generateThreadTitle({
             cwd: process.cwd(),
-            branch: "feature/opencode-reuse",
-            stagedSummary: "M README.md",
-            stagedPatch: "diff --git a/README.md b/README.md",
+            message: "Reuse one OpenCode server for back-to-back requests.",
             modelSelection: DEFAULT_TEST_MODEL_SELECTION,
           });
-          yield* textGeneration.generateCommitMessage({
+          yield* textGeneration.generateThreadTitle({
             cwd: process.cwd(),
-            branch: "feature/opencode-reuse",
-            stagedSummary: "M README.md",
-            stagedPatch: "diff --git a/README.md b/README.md",
+            message: "Reuse one OpenCode server for back-to-back requests.",
             modelSelection: DEFAULT_TEST_MODEL_SELECTION,
           });
 

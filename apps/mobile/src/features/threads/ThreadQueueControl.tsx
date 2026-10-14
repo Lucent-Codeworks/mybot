@@ -416,7 +416,7 @@ export function ThreadQueueSheet({ route }: StaticScreenProps<QueueTarget>) {
 
   if (Platform.OS === "ios") {
     // A plain formSheet screen never renders a stack header, so it comes from
-    // a nested native stack inside the sheet (same shape as the git sheet).
+    // a nested native stack inside the sheet (same shape as the agents sheet).
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <View collapsable={false} className="flex-1 bg-sheet">

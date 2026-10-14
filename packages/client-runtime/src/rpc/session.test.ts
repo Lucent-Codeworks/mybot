@@ -128,7 +128,6 @@ const SERVER_CONFIG: ServerConfigType = {
     },
     serverVersion: "0.0.0-test",
     capabilities: {
-      repositoryIdentity: true,
       connectionProbe: true,
     },
   },
@@ -205,9 +204,7 @@ const LEGACY_SERVER_CONFIG = {
   ...ENCODED_SERVER_CONFIG,
   environment: {
     ...ENCODED_SERVER_CONFIG.environment,
-    capabilities: {
-      repositoryIdentity: true,
-    },
+    capabilities: {},
   },
 };
 
@@ -826,10 +823,6 @@ describe("RpcSessionFactory", () => {
             removeThread: () => Effect.void,
             loadServerConfig: () => Effect.succeedNone,
             saveServerConfig: () => Effect.void,
-            loadVcsRefs: () => Effect.succeedNone,
-            saveVcsRefs: () => Effect.void,
-            removeVcsRefs: () => Effect.void,
-            clearVcsRefs: () => Effect.void,
             clear: () => Effect.void,
           });
           const configState = yield* makeEnvironmentServerConfigState({
@@ -992,24 +985,6 @@ describe("RpcSessionFactory", () => {
             skills: [],
           },
         ],
-      },
-    },
-    {
-      event: {
-        version: 1,
-        type: "settingsUpdated",
-        payload: {
-          settings: {
-            ...DEFAULT_SERVER_SETTINGS,
-            newWorktreesStartFromOrigin: !DEFAULT_SERVER_SETTINGS.newWorktreesStartFromOrigin,
-          },
-        },
-      },
-      expectedConfig: {
-        settings: {
-          ...DEFAULT_SERVER_SETTINGS,
-          newWorktreesStartFromOrigin: !DEFAULT_SERVER_SETTINGS.newWorktreesStartFromOrigin,
-        },
       },
     },
   ])(

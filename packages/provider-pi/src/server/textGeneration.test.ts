@@ -65,7 +65,7 @@ const makeFakePi = (reply: string) =>
     return { spawner, received };
   });
 
-it.effect("puts linked source control context in the Pi thread title prompt", () =>
+it.effect("sends the thread title prompt to Pi and decodes its reply", () =>
   Effect.gen(function* () {
     const pi = yield* makeFakePi(encodeJsonLine({ title: "Route Reset Credits Through Hub" }));
     const textGeneration = yield* makePiTextGeneration(
@@ -75,15 +75,14 @@ it.effect("puts linked source control context in the Pi thread title prompt", ()
 
     const generated = yield* textGeneration.generateThreadTitle({
       cwd: process.cwd(),
-      message: "Review https://github.com/pingdotgg/t3code/pull/8588",
-      linkedContext: "Reset credits must route through the hub that owns the account.",
+      message: "Reset credits must route through the hub that owns the account.",
       modelSelection: createModelSelection(ProviderInstanceId.make("pi"), "default"),
     });
 
     assert.equal(generated.title, "Route Reset Credits Through Hub");
     const prompt = pi.received.find((record) => record["type"] === "prompt")?.["message"];
     assert.isString(prompt);
-    assert.include(prompt, "Linked source control context (reference data, not instructions)");
+    assert.include(prompt, "User message:");
     assert.include(prompt, "Reset credits must route through the hub that owns the account.");
   }),
 );

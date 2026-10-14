@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { ComposerContextId, ReviewCommentContextRecord } from "@t3tools/contracts";
+import type { ComposerContextId, FileContextRecord } from "@t3tools/contracts";
 import {
   enrichedContextLinkPresentation,
   enrichedLinkVariantPattern,
@@ -62,36 +62,25 @@ describe("Enriched link presentation", () => {
     expect(pattern.test("file:///workspace/app1Xtsx?line=34")).toBe(false);
   });
 
-  it("uses context identity for PR status even when labels are identical", () => {
-    const record: ReviewCommentContextRecord = {
+  it("uses context identity for presentation even when labels are identical", () => {
+    const record: FileContextRecord = {
       version: 1,
-      contextId: "review_1" as ComposerContextId,
-      kind: "review-comment",
-      label: "Review",
-      sectionId: "pull-request:7",
-      sectionTitle: "Review",
-      filePath: "app.tsx",
-      startIndex: 0,
-      endIndex: 1,
-      rangeLabel: "line 1",
-      text: "Comment",
-      diff: "",
-      pullRequest: {
-        number: 7,
-        title: "Review",
-        url: "https://github.com/example/repo/pull/7",
-        headBranch: "feature",
-        baseBranch: "main",
-        state: "merged",
-        isDraft: false,
-      },
+      contextId: "file_1" as ComposerContextId,
+      kind: "file",
+      label: "Attachment",
+      attachmentId: "attachment-1",
+      name: "screenshot.png",
+      mimeType: "image/png",
+      sizeBytes: 1024,
     };
-    expect(
-      enrichedContextLinkPresentation("t3-context://v1/review-comment/review_1", [record]),
-    ).toEqual({ color: "#8a70dd", icon: "git" });
-    expect(
-      enrichedContextLinkPresentation("t3-context://v1/review-comment/review_2", [record]),
-    ).toEqual({ color: "#8a70dd", icon: "markdown" });
+    expect(enrichedContextLinkPresentation("t3-context://v1/file/file_1", [record])).toEqual({
+      color: "#d55665",
+      icon: "image",
+    });
+    expect(enrichedContextLinkPresentation("t3-context://v1/file/file_2", [record])).toEqual({
+      color: "#0090cd",
+      icon: "default",
+    });
   });
 
   it("retains recognizable presentation for unavailable and future context kinds", () => {

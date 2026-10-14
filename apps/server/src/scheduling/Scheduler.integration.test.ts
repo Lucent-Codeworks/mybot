@@ -44,8 +44,6 @@ it.effect.each(["on time", "after restart"])(
         interactionMode: "default",
         createdBy: "user",
         creationSource: "web",
-        branch: null,
-        worktreePath: null,
         lineage: {
           rootThreadId: ThreadId.make("thread:limited"),
           parentThreadId: null,

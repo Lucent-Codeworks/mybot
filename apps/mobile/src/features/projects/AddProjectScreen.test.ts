@@ -1,12 +1,8 @@
-import * as NodeFS from "node:fs";
-import * as NodeFSP from "node:fs/promises";
-import * as NodeOS from "node:os";
-import * as NodePath from "node:path";
-import { AuthOrchestrationOperateScope, AuthSourceControlWriteScope } from "@t3tools/contracts";
+import { AuthOrchestrationOperateScope } from "@t3tools/contracts";
 import * as Cause from "effect/Cause";
 import { AsyncResult } from "effect/reactivity";
 import { isValidElement, type ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 const state = vi.hoisted(() => ({
   scopes: new Set<string>(),
@@ -51,7 +47,6 @@ vi.mock("../../components/EnvironmentMachineSymbol", () => ({
   EnvironmentMachineSymbol: "EnvironmentMachineSymbol",
 }));
 vi.mock("../../components/ErrorBanner", () => ({ ErrorBanner: "ErrorBanner" }));
-vi.mock("../../components/SourceControlIcon", () => ({ SourceControlIcon: "SourceControlIcon" }));
 vi.mock("../../lib/uuid", () => ({ uuidv4: () => "project" }));
 vi.mock("../../state/session", () => ({
   useEnvironmentScope: (environmentId: string, scope: string) =>
@@ -101,14 +96,6 @@ vi.mock("../../state/presentation", () => ({
   useEnvironmentPresentation: () => ({ isReady: true, presentation: null }),
 }));
 vi.mock("../../state/filesystem", () => ({ filesystemEnvironment: {} }));
-vi.mock("../../state/sourceControl", () => ({
-  sourceControlEnvironment: {
-    cloneRepository: async ({ input }: { input: { destinationPath: string } }) => {
-      NodeFS.mkdirSync(input.destinationPath);
-      return AsyncResult.success({ cwd: input.destinationPath });
-    },
-  },
-}));
 vi.mock("../../state/projects", () => ({
   projectEnvironment: {
     create: async ({
@@ -129,7 +116,7 @@ vi.mock("../../state/projects", () => ({
   },
 }));
 
-import { AddProjectDestinationScreen, AddProjectLocalFolderScreen } from "./AddProjectScreen";
+import { AddProjectLocalFolderScreen } from "./AddProjectScreen";
 
 function findAction(node: ReactNode, label: string): (() => unknown) | null {
   if (Array.isArray(node)) {
@@ -146,69 +133,11 @@ function findAction(node: ReactNode, label: string): (() => unknown) | null {
   return findAction(node.props.children, label);
 }
 
-function cloneAction() {
-  const action = findAction(
-    AddProjectDestinationScreen({
-      environmentId: "environment",
-      remoteUrl: "https://example.com/repo.git",
-      repositoryName: "repo",
-    }),
-    "Clone project",
-  );
-  if (!action) throw new Error("Clone action missing");
-  return action;
-}
-
 function localProjectAction(environmentId = "environment") {
   const action = findAction(AddProjectLocalFolderScreen({ environmentId }), "Add project");
   if (!action) throw new Error("Add project action missing");
   return action;
 }
-
-describe("clone project permissions", () => {
-  beforeEach(async () => {
-    state.baseDirectory = await NodeFSP.mkdtemp(
-      NodePath.join(NodeOS.tmpdir(), "t3-clone-permissions-"),
-    );
-    state.scopes = new Set([AuthSourceControlWriteScope]);
-    state.otherScopes = new Set();
-    state.projects = [];
-    state.createRequests = [];
-  });
-
-  afterEach(async () => {
-    await NodeFSP.rm(state.baseDirectory, { recursive: true, force: true });
-  });
-
-  it("does not leave a clone on disk when project creation is denied", async () => {
-    await cloneAction()();
-
-    expect(NodeFS.existsSync(NodePath.join(state.baseDirectory, "repo"))).toBe(false);
-    expect(state.projects).toEqual([]);
-  });
-
-  it("clones and registers the project when both permissions are granted", async () => {
-    state.scopes.add(AuthOrchestrationOperateScope);
-    await cloneAction()();
-
-    const destination = NodePath.join(state.baseDirectory, "repo");
-    expect(NodeFS.existsSync(destination)).toBe(true);
-    expect(state.projects).toEqual([destination]);
-  });
-
-  it.each([AuthSourceControlWriteScope, AuthOrchestrationOperateScope])(
-    "rechecks %s before a retained clone action creates a directory",
-    async (scope) => {
-      state.scopes.add(AuthOrchestrationOperateScope);
-      const submit = cloneAction();
-      state.scopes.delete(scope);
-      await submit();
-
-      expect(NodeFS.existsSync(NodePath.join(state.baseDirectory, "repo"))).toBe(false);
-      expect(state.projects).toEqual([]);
-    },
-  );
-});
 
 describe("local project permissions", () => {
   beforeEach(() => {

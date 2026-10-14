@@ -12,7 +12,6 @@ import { useCallback } from "react";
 import { connectionAtomRuntime } from "../connection/runtime";
 import { projectFaviconDatabaseCache } from "../lib/projectFaviconDatabaseCache";
 import { type AssetUrlState, deriveAssetUrlState } from "./asset-url-state";
-import { environmentProjectCloneListAtom } from "./projectClones";
 import { environmentSession, usePreparedConnection } from "./session";
 import { useEnvironmentPresentation } from "./presentation";
 import { useEnvironmentQuery } from "./query";
@@ -26,7 +25,6 @@ export const projectFaviconUrlAtom = createProjectFaviconUrlAtomFamily({
   imageCache: projectFaviconDatabaseCache,
   createUrl: assetEnvironment.createUrl,
   preparedConnection: environmentSession.preparedConnectionValueAtom,
-  projectClones: environmentProjectCloneListAtom,
 });
 
 export function useAssetUrlState(

@@ -92,50 +92,8 @@ describe("resolveSubagentMetadata", () => {
     expect(resolveSubagentMetadata({ model: " " }).modelLabel).toBe("Not reported");
   });
 
-  const parentThread = { projectId: ProjectId.make("parent"), worktreePath: null };
+  const parentThread = { projectId: ProjectId.make("parent") };
   const parentProject = { workspaceRoot: "/repo" };
-
-  it("shows another project and its branch when the child has a different workspace", () => {
-    expect(
-      resolveSubagentMetadata({
-        model: null,
-        parentThread,
-        parentProject,
-        childThread: { branch: "fix/agents", worktreePath: "/worktrees/agents" },
-        childProject: {
-          id: ProjectId.make("child"),
-          title: "Other project",
-          workspaceRoot: "/other",
-        },
-      }).workspace,
-    ).toEqual([
-      { label: "Project", value: "Other project" },
-      { label: "Branch", value: "fix/agents" },
-    ]);
-  });
-
-  it("labels a detached worktree or another project workspace without a branch", () => {
-    expect(
-      resolveSubagentMetadata({
-        model: null,
-        parentThread,
-        parentProject,
-        childThread: { branch: null, worktreePath: "/worktrees/agents" },
-      }).workspace,
-    ).toEqual([{ label: "Worktree", value: "agents" }]);
-    expect(
-      resolveSubagentMetadata({
-        model: null,
-        parentThread,
-        parentProject,
-        childProject: {
-          id: parentThread.projectId,
-          title: "Same project",
-          workspaceRoot: "/other",
-        },
-      }).workspace,
-    ).toEqual([{ label: "Workspace", value: "other" }]);
-  });
 
   it("hides redundant workspace metadata and tolerates unavailable child shells", () => {
     expect(
@@ -143,7 +101,6 @@ describe("resolveSubagentMetadata", () => {
         model: null,
         parentThread,
         parentProject,
-        childThread: { branch: "main", worktreePath: "/repo" },
         childProject: { id: parentThread.projectId, title: "Same project", workspaceRoot: "/repo" },
       }).workspace,
     ).toEqual([]);

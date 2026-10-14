@@ -62,20 +62,13 @@ function ColumnScreen(props: {
   readonly descriptor: Descriptor;
   readonly primary?: boolean;
   readonly selectedThreadKey?: string | null;
-  readonly selectedPullRequestKey?: string | null;
   readonly onDismiss: (routeKey: string) => void;
   readonly navigation: ViewProps["navigation"];
 }) {
   const { descriptor } = props;
   const primaryColumn = useMemo(
-    () =>
-      props.primary
-        ? {
-            selectedThreadKey: props.selectedThreadKey ?? null,
-            selectedPullRequestKey: props.selectedPullRequestKey ?? null,
-          }
-        : null,
-    [props.primary, props.selectedThreadKey, props.selectedPullRequestKey],
+    () => (props.primary ? { selectedThreadKey: props.selectedThreadKey ?? null } : null),
+    [props.primary, props.selectedThreadKey],
   );
   const key = descriptor.route.key;
   return (
@@ -130,24 +123,6 @@ function WorkspaceColumns(
   const compactColumn = activeDetailKey ? "secondary" : "primary";
   const shownCompactColumn = useRef(compactColumn);
   const threadParams = props.detail.findLast((route) => route.name === "Thread")?.params;
-  const pullRequestParams = props.detail.findLast(
-    (route) =>
-      route.name === "PullRequest" ||
-      route.name === "PullRequestFile" ||
-      route.name === "PullRequestFiles",
-  )?.params;
-  const selectedPullRequestKey =
-    pullRequestParams &&
-    "environmentId" in pullRequestParams &&
-    "host" in pullRequestParams &&
-    "repository" in pullRequestParams &&
-    "number" in pullRequestParams &&
-    typeof pullRequestParams.environmentId === "string" &&
-    typeof pullRequestParams.host === "string" &&
-    typeof pullRequestParams.repository === "string" &&
-    typeof pullRequestParams.number === "number"
-      ? `${pullRequestParams.environmentId}:${pullRequestParams.host}:${pullRequestParams.repository}:${pullRequestParams.number}`
-      : null;
   const selectedThreadKey =
     threadParams &&
     "environmentId" in threadParams &&
@@ -208,7 +183,6 @@ function WorkspaceColumns(
             descriptor={primary}
             primary
             selectedThreadKey={selectedThreadKey}
-            selectedPullRequestKey={selectedPullRequestKey}
             onDismiss={handleNativeDismiss}
             navigation={props.navigation}
           />

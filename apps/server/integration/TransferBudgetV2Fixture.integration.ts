@@ -38,8 +38,6 @@ export function threadCreated(provider: ProviderDriverKind): OrchestrationV2Doma
       },
       runtimeMode: "full-access",
       interactionMode: "default",
-      branch: null,
-      worktreePath: null,
       activeProviderThreadId: null,
       lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: THREAD_ID },
       forkedFrom: null,

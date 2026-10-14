@@ -51,12 +51,6 @@ vi.mock("../editorPreferences", () => ({
   useOpenInPreferredEditor: () => vi.fn(),
   usePreferredEditor: () => [null, vi.fn()],
 }));
-vi.mock("~/lib/openPullRequestLink", () => ({
-  findProjectForChangeRequest: () => undefined,
-  matchesLinkedPullRequestUrl: () => false,
-  parseChangeRequestUrl: () => null,
-  useOpenChangeRequestLink: () => vi.fn(),
-}));
 
 import ChatMarkdown from "./ChatMarkdown";
 

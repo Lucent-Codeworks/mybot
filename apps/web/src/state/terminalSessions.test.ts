@@ -20,7 +20,6 @@ function summary(
     threadId,
     terminalId,
     cwd: "/repo",
-    worktreePath: null,
     status: "running",
     pid: 123,
     exitCode: null,

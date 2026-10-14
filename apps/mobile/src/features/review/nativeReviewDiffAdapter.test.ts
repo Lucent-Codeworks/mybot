@@ -59,8 +59,8 @@ describe("buildNativeReviewSnippetRows", () => {
 function makeComment(text: string): ReviewInlineComment {
   return {
     id: "comment-1",
-    sectionId: "git:working-tree",
-    sectionTitle: "Dirty worktree",
+    sectionId: "turn:1",
+    sectionTitle: "Turn 1",
     filePath: "example.ts",
     startIndex: 0,
     endIndex: 0,
@@ -201,10 +201,10 @@ describe("getCachedNativeReviewDiffData", () => {
     const first = getCachedNativeReviewDiffData({ parsedDiff: diff, comments: [comment] });
     const renamed = getCachedNativeReviewDiffData({
       parsedDiff: diff,
-      comments: [{ ...comment, sectionTitle: "Branch comparison" }],
+      comments: [{ ...comment, sectionTitle: "All turns" }],
     });
     expect(renamed.rows.find((row) => row.id === comment.id)?.commentSectionTitle).toBe(
-      "Branch comparison",
+      "All turns",
     );
     const moved = getCachedNativeReviewDiffData({
       parsedDiff: diff,
@@ -224,9 +224,7 @@ describe("getCachedNativeReviewDiffData", () => {
     expect(moved.rows.filter((row) => row.kind !== "comment")).toEqual(
       first.rows.filter((row) => row.kind !== "comment"),
     );
-    expect(first.rows.find((row) => row.id === comment.id)?.commentSectionTitle).toBe(
-      "Dirty worktree",
-    );
+    expect(first.rows.find((row) => row.id === comment.id)?.commentSectionTitle).toBe("Turn 1");
   });
 
   it("keeps cached IDs and targets local to each parsed section and file layout", () => {

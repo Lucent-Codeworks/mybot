@@ -10,7 +10,6 @@ const CONTEXT_ICONS: Readonly<Record<string, MarkdownFileIcon>> = {
   terminal: "bash",
   "cursorarrow.click": "react",
   "text.bubble": "markdown",
-  "git-pull-request": "git",
   cube: "mcp",
   doc: "default",
 };

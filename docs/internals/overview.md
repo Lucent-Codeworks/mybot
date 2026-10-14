@@ -7,7 +7,7 @@ but its renderer follows the same boundary.
 
 ## Ownership boundaries
 
-Provider processes, terminals, Git, and project files belong to the server. Shared connection and
+Provider processes, terminals, and project files belong to the server. Shared connection and
 domain state belongs in `packages/client-runtime`; clients supply platform services and UI.
 Keeping that logic shared prevents reconnect and multi-environment behavior from diverging between
 web and mobile. See [connection runtime](./connection-runtime.md) and
@@ -17,25 +17,6 @@ The [RPC contract](../../packages/contracts/src/rpc.ts) is the boundary between 
 versioned clients and servers. Subscriptions send the state a client needs, so a client viewing one
 thread does not pay for every thread's history. Authentication of a socket does not authorize every
 method on it. See [environment auth](./environment-auth.md).
-
-### Pull request linking compatibility
-
-Web, desktop, mobile, and environments upgrade independently. Negotiate linking through the
-environment descriptor, never through a client version or an assumed coordinated release:
-
-| Environment capability                | Client behavior                                                                                                   |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `threadPullRequests: true`            | Use persisted `pullRequests[]`, multi-link commands, stack UI, and reverse thread lookup.                         |
-| Only `threadPullRequestLinking: true` | Use `linkedPullRequest` and the existing `thread.meta.update` single-link operation. Do not call multi-link RPCs. |
-| Neither flag                          | Hide linking actions; existing branch-discovered PR display remains available.                                    |
-
-New environments continue advertising the legacy flag, accepting legacy metadata commands, and
-emitting the derived `linkedPullRequest` field for older clients. That hostless field includes only
-links in the thread project's own repository; cross-host and cross-repository links require the
-multi-link protocol. New clients accept snapshots that
-omit `pullRequests`. Retain the legacy wire fields, projection column, and replay support; this feature
-does not schedule their removal. Missing new capabilities must also override cached multi-link data
-after an environment downgrade.
 
 Provider-specific behavior belongs behind an adapter. Orchestration works with normalized commands
 and events, so adding a provider should not require branches throughout the domain or clients.
@@ -47,8 +28,7 @@ Client preferences stay in the current client; environment defaults and project 
 on their owning server. The web and desktop settings target is URL state, resolved against current
 connections and project membership. An unavailable target must not fall back to another environment.
 **All environments** is an explicit bulk edit of connected, loaded servers, not a durable global
-default or a promise to synchronize offline or future environments. Project-group targets similarly
-select known environment-local checkouts; the group itself does not store inherited defaults.
+default or a promise to synchronize offline or future environments.
 
 ## Durable intent and side effects
 
@@ -75,25 +55,21 @@ what the newest client sends.
 A provider turn ending and its follow-up work settling are separate milestones. Orchestration
 records provider turn and run state independently from
 [run finalization](../../apps/server/src/orchestration-v2/RunFinalizationService.ts). A late
-checkpoint or diff must not extend the recorded provider duration or keep the client showing
-provider work as active. PR discovery after completion also checks that the checkout still matches
-the thread's non-default branch and that a newer run is not active.
+checkpoint must not extend the recorded provider duration or keep the client showing provider
+work as active.
 
-[Checkpoints](../../apps/server/src/checkpointing/CheckpointStore.ts) use hidden Git refs to
-capture workspace state without adding commits to the user's branch. A revert must coordinate
-workspace state with the provider conversation. A provider that cannot roll back its conversation
-must reject that operation before changing the filesystem.
+[Checkpoints](../../apps/server/src/orchestration-v2/CheckpointService.ts) mark conversation
+positions that a thread can rewind to. They do not snapshot the filesystem: rewinding truncates the
+thread and provider conversation and leaves project files as they are. A provider that cannot roll
+back its conversation must reject the rewind, or start a fresh session when its adapter says so.
 
 Thread settlement is server-owned. The
-[settlement service](../../apps/server/src/orchestration-v2/ThreadSettlementService.ts) evaluates PR
-and inactivity settings without a connected client. Merge notifications invalidate cached PR state
-and trigger a check. A merge outside T3, such as an agent running `gh pr merge`, sends no
-notification, so the [PR sync reactor](../../apps/server/src/orchestration-v2/PullRequestSyncReactor.ts)
-re-reads a thread's open links when a run that ran a merge or close command ends. The guarded
+[settlement service](../../apps/server/src/orchestration-v2/ThreadSettlementService.ts) evaluates
+inactivity settings without a connected client. The guarded
 `thread.auto-settle` command rejects newer activity, explicit settlement overrides, and live or
 blocked work. It records the activity timestamp for stable
 sorting and detaches idle provider sessions. Clients render the persisted result; they do not
-derive settlement from their own clocks or PR caches.
+derive settlement from their own clocks.
 
 ## Waiting for asynchronous work
 

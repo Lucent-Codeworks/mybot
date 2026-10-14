@@ -78,8 +78,6 @@ it.effect.each(forkCases)(
         modelSelection,
         runtimeMode: "full-access",
         interactionMode: "default",
-        branch: null,
-        worktreePath: null,
         createdBy: "user",
         creationSource: "web",
       });

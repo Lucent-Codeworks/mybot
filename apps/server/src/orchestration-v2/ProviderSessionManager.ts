@@ -492,7 +492,7 @@ export const layerWithOptions = (
                   yield* agentAccessSettings(threadId);
                 const capabilities = new Set<
                   import("../mcp/McpInvocationContext.ts").McpCapability
-                >(["orchestration", "worktree", "pull-requests"]);
+                >(["orchestration"]);
                 if (browserToolsAvailable) capabilities.add("preview");
                 if (deviceToolsAvailable) capabilities.add("device");
                 const existing = yield* mcpSessions.read(threadId);

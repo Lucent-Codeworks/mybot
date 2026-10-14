@@ -1,11 +1,7 @@
 // @effect-diagnostics nodeBuiltinImport:off globalTimers:off globalDate:off - This host-side fixture creates an isolated local T3 environment.
-import * as NodeChildProcess from "node:child_process";
 import * as NodeFSP from "node:fs/promises";
 import * as NodePath from "node:path";
 import * as NodeSqlite from "node:sqlite";
-import * as NodeUtil from "node:util";
-
-const execFile = NodeUtil.promisify(NodeChildProcess.execFile);
 
 export const SHOWCASE_PROJECT_ID = "t3code";
 export const SHOWCASE_THREAD_ID = "remote-command-center";
@@ -15,7 +11,6 @@ export const SHOWCASE_SCENES = [
   "threads",
   "thread",
   "terminal",
-  "review",
   "environments",
   "agent-activity",
 ] as const;
@@ -40,19 +35,16 @@ const PROJECT_SCRIPTS = JSON.stringify([
     name: "Dev",
     command: "pnpm dev",
     icon: "play",
-    runOnWorktreeCreate: false,
   },
   {
     id: "test",
     name: "Tests",
     command: "pnpm test",
     icon: "test",
-    runOnWorktreeCreate: false,
   },
 ]);
 
-const SHOWCASE_TERMINAL_PROMPT =
-  "\u001b[1;32m→\u001b[0m \u001b[1;36mt3code\u001b[0m \u001b[1;34mgit:(\u001b[1;31mfeat/remote-command-center\u001b[1;34m)\u001b[0m \u001b[1;33m✗\u001b[0m ";
+const SHOWCASE_TERMINAL_PROMPT = "\u001b[1;32m→\u001b[0m \u001b[1;36mt3code\u001b[0m ";
 
 // A dev-server startup mirroring the web settings' terminal font preview:
 // zsh-style prompt, brand line, addresses, the thread's 612-test summary,
@@ -73,11 +65,6 @@ export const SHOWCASE_TERMINAL_BUFFER = [
   "",
   SHOWCASE_TERMINAL_PROMPT,
 ].join("\r\n");
-
-const BASE_ENVIRONMENT_PRESENCE = `export function environmentLabel(count: number): string {
-  return \`${"${count}"} environments\`;
-}
-`;
 
 const UPDATED_ENVIRONMENT_PRESENCE = `const PULSE = ["✦", "✧", "·", "✧"] as const;
 
@@ -124,21 +111,18 @@ export const SHOWCASE_PROJECTS = [
     id: "t3code",
     title: "T3 Code",
     directory: "t3code",
-    repositoryUrl: "https://github.com/pingdotgg/t3code.git",
     favicon: PROJECT_FAVICONS.t3code,
   },
   {
     id: "react",
     title: "React",
     directory: "react",
-    repositoryUrl: "https://github.com/facebook/react.git",
     favicon: PROJECT_FAVICONS.react,
   },
   {
     id: "linux",
     title: "Linux",
     directory: "linux",
-    repositoryUrl: "https://github.com/torvalds/linux.git",
     favicon: PROJECT_FAVICONS.linux,
   },
 ] as const;
@@ -166,7 +150,6 @@ export const SHOWCASE_THREADS = [
     id: SHOWCASE_THREAD_ID,
     projectId: "t3code",
     title: "Make remote coding feel local ✦",
-    branch: "feat/remote-command-center",
     minutesAgo: 3,
     request:
       "Give T3 Code a remote-first command center. Make three machines feel one tap away, keep agent work in sync, and make every handoff feel instant.",
@@ -177,7 +160,6 @@ export const SHOWCASE_THREADS = [
     id: "pocket-command-center",
     projectId: "t3code",
     title: "Put the command center in your pocket",
-    branch: "feat/pocket-command-center",
     minutesAgo: 21,
     state: "approval" as const,
     request: "Make switching between desktop, phone, and tablet feel like one continuous session.",
@@ -188,7 +170,6 @@ export const SHOWCASE_THREADS = [
     id: "buttery-suspense",
     projectId: "react",
     title: "Make Suspense transitions buttery",
-    branch: "perf/buttery-suspense",
     minutesAgo: 12,
     state: "working" as const,
     request:
@@ -199,7 +180,6 @@ export const SHOWCASE_THREADS = [
     id: "hydration-haikus",
     projectId: "react",
     title: "Turn hydration warnings into haikus",
-    branch: "dev/hydration-haikus",
     minutesAgo: 44,
     request:
       "Keep hydration errors precise, but make the development copy unexpectedly delightful.",
@@ -211,7 +191,6 @@ export const SHOWCASE_THREADS = [
     id: "beautiful-boot",
     projectId: "linux",
     title: "Make boot logs oddly beautiful",
-    branch: "feat/beautiful-boot",
     minutesAgo: 34,
     state: "plan" as const,
     request:
@@ -223,7 +202,6 @@ export const SHOWCASE_THREADS = [
     id: "patient-penguins",
     projectId: "linux",
     title: "Teach penguins to wait patiently",
-    branch: "feat/patient-penguins",
     minutesAgo: 52,
     request: "Make delayed work easier to follow without adding noise to the scheduler trace.",
     response:
@@ -238,7 +216,6 @@ export const SHOWCASE_THREADS = [
     id: "handoff-haptics",
     projectId: "t3code",
     title: "Tune the handoff haptics",
-    branch: "feat/handoff-haptics",
     minutesAgo: 5 * 60,
     settled: true,
     request: "Give the desktop-to-phone handoff a haptic that lands with the animation.",
@@ -249,7 +226,6 @@ export const SHOWCASE_THREADS = [
     id: "streaming-shell",
     projectId: "react",
     title: "Stream the shell before the data",
-    branch: "feat/streaming-shell",
     minutesAgo: 28 * 60,
     settled: true,
     request: "Get the app shell painted before any data request resolves.",
@@ -260,7 +236,6 @@ export const SHOWCASE_THREADS = [
     id: "quieter-oom",
     projectId: "linux",
     title: "Make the OOM killer explain itself",
-    branch: "feat/quieter-oom",
     minutesAgo: 2 * 24 * 60,
     settled: true,
     request: "Make out-of-memory kills legible without adding a single allocation to the hot path.",
@@ -271,30 +246,6 @@ export const SHOWCASE_THREADS = [
 
 function minutesBefore(now: number, minutes: number): string {
   return new Date(now - minutes * 60_000).toISOString();
-}
-
-async function runGit(workspaceRoot: string, args: ReadonlyArray<string>): Promise<void> {
-  await execFile("git", [...args], {
-    cwd: workspaceRoot,
-    env: {
-      ...process.env,
-      GIT_AUTHOR_NAME: "Alex Rivera",
-      GIT_AUTHOR_EMAIL: "alex@lumen.test",
-      GIT_COMMITTER_NAME: "Alex Rivera",
-      GIT_COMMITTER_EMAIL: "alex@lumen.test",
-    },
-  });
-}
-
-async function initializeRepository(input: {
-  readonly workspaceRoot: string;
-  readonly repositoryUrl: string;
-  readonly commitMessage: string;
-}): Promise<void> {
-  await runGit(input.workspaceRoot, ["init", "-b", "main"]);
-  await runGit(input.workspaceRoot, ["remote", "add", "origin", input.repositoryUrl]);
-  await runGit(input.workspaceRoot, ["add", "."]);
-  await runGit(input.workspaceRoot, ["commit", "-m", input.commitMessage]);
 }
 
 async function seedT3CodeWorkspace(workspaceRoot: string): Promise<void> {
@@ -308,16 +259,6 @@ async function seedT3CodeWorkspace(workspaceRoot: string): Promise<void> {
   await NodeFSP.writeFile(NodePath.join(workspaceRoot, "favicon.svg"), PROJECT_FAVICONS.t3code);
   await NodeFSP.writeFile(
     NodePath.join(workspaceRoot, "apps/mobile/src/features/home/environmentPresence.ts"),
-    BASE_ENVIRONMENT_PRESENCE,
-  );
-  await initializeRepository({
-    workspaceRoot,
-    repositoryUrl: "https://github.com/pingdotgg/t3code.git",
-    commitMessage: "Show connected environments",
-  });
-  await runGit(workspaceRoot, ["checkout", "-b", "feat/remote-command-center"]);
-  await NodeFSP.writeFile(
-    NodePath.join(workspaceRoot, "apps/mobile/src/features/home/environmentPresence.ts"),
     UPDATED_ENVIRONMENT_PRESENCE,
   );
   await NodeFSP.writeFile(
@@ -329,7 +270,6 @@ async function seedT3CodeWorkspace(workspaceRoot: string): Promise<void> {
 async function seedCompanionWorkspace(input: {
   readonly workspaceRoot: string;
   readonly title: string;
-  readonly repositoryUrl: string;
   readonly favicon: string;
 }): Promise<void> {
   await NodeFSP.mkdir(input.workspaceRoot, { recursive: true });
@@ -338,11 +278,6 @@ async function seedCompanionWorkspace(input: {
     NodePath.join(input.workspaceRoot, "README.md"),
     `# ${input.title}\n\nSeeded by the T3 Code mobile screenshot harness.\n`,
   );
-  await initializeRepository({
-    workspaceRoot: input.workspaceRoot,
-    repositoryUrl: input.repositoryUrl,
-    commitMessage: `Seed ${input.title} workspace`,
-  });
 }
 
 function insertThread(
@@ -352,12 +287,10 @@ function insertThread(
     readonly id: string;
     readonly projectId: string;
     readonly title: string;
-    readonly branch: string;
     readonly minutesAgo: number;
     readonly state?: "working" | "approval" | "plan";
     readonly settled?: boolean;
     readonly snoozeMinutes?: number;
-    readonly workspaceRoot: string;
   },
 ): void {
   const turnId = `${input.id}-turn`;
@@ -375,10 +308,10 @@ function insertThread(
     .prepare(
       `INSERT INTO projection_threads (
         thread_id, project_id, title, model_selection_json, runtime_mode, interaction_mode,
-        branch, worktree_path, latest_turn_id, latest_user_message_at, pending_approval_count,
+        latest_turn_id, latest_user_message_at, pending_approval_count,
         pending_user_input_count, has_actionable_proposed_plan, created_at, updated_at,
         archived_at, deleted_at, settled_override, settled_at, snoozed_until, snoozed_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, NULL, NULL, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, NULL, NULL, ?, ?, ?, ?)`,
     )
     .run(
       input.id,
@@ -387,8 +320,6 @@ function insertThread(
       MODEL_SELECTION,
       "full-access",
       input.state === "plan" ? "plan" : "default",
-      input.branch,
-      input.workspaceRoot,
       turnId,
       minutesBefore(now, input.minutesAgo + 1),
       input.state === "approval" ? 1 : 0,
@@ -525,12 +456,9 @@ function seedDatabase(
     }
 
     for (const thread of threads) {
-      const workspaceRoot = workspaceRoots.get(thread.projectId);
-      if (!workspaceRoot) throw new Error(`Missing workspace root for ${thread.projectId}.`);
       insertThread(database, now, {
         ...thread,
         ...("state" in thread ? { state: thread.state } : {}),
-        workspaceRoot,
       });
     }
 
@@ -674,7 +602,6 @@ export async function seedShowcaseEnvironment(input: {
         await seedCompanionWorkspace({
           workspaceRoot: projectWorkspaceRoot,
           title: project.title,
-          repositoryUrl: project.repositoryUrl,
           favicon: project.favicon,
         });
       }),

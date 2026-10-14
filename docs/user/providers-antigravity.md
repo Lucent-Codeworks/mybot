@@ -77,7 +77,7 @@ is unavailable. Tool approvals follow [Permission modes](./permission-modes.md).
 Questions with fixed choices still need one of the offered answers, even in
 **Full access**.
 
-T3 Code keeps conversation history and file diffs, but Antigravity cannot rewind
+T3 Code keeps conversation history, but Antigravity cannot rewind
 its conversation. Reverting a thread or editing and resubmitting an earlier turn
 is unavailable. Continue with a follow-up message or start a new thread.
 

@@ -89,10 +89,6 @@ export interface NewProjectScriptInput {
   name: string;
   command: string;
   icon: ProjectScriptIcon;
-  runOnWorktreeCreate: boolean;
-  /** Setup scripts only: hold the agent until the script exits. */
-  waitForSetup: boolean;
-  runOnSettle: boolean;
   /** Omit to preserve the current shortcut when the form did not edit it. */
   keybinding?: string | null;
   /** Optional URL to open in the in-app preview when this script runs. */
@@ -107,9 +103,6 @@ export const EMPTY_PROJECT_SCRIPT_INPUT: NewProjectScriptInput = {
   name: "",
   command: "",
   icon: "play",
-  runOnWorktreeCreate: false,
-  waitForSetup: false,
-  runOnSettle: false,
   keybinding: null,
   previewUrl: null,
   autoOpenPreview: false,
@@ -133,9 +126,6 @@ export function editorRequestForScript(
       name: script.name,
       command: script.command,
       icon: script.icon,
-      runOnWorktreeCreate: script.runOnWorktreeCreate,
-      waitForSetup: script.runOnWorktreeCreate && script.async === false,
-      runOnSettle: script.runOnSettle ?? false,
       keybinding: keybindingValueForCommand(keybindings, commandForProjectScript(script.id)),
       previewUrl: script.previewUrl ?? null,
       autoOpenPreview: script.autoOpenPreview ?? false,
@@ -176,9 +166,6 @@ export function ProjectScriptEditorDialog({
   const [command, setCommand] = useState("");
   const [icon, setIcon] = useState<ProjectScriptIcon>("play");
   const [iconPickerOpen, setIconPickerOpen] = useComposerMenuState(!canEditActions);
-  const [runOnWorktreeCreate, setRunOnWorktreeCreate] = useState(false);
-  const [waitForSetup, setWaitForSetup] = useState(false);
-  const [runOnSettle, setRunOnSettle] = useState(false);
   const [keybinding, setKeybinding] = useState("");
   const [previewUrl, setPreviewUrl] = useState("");
   const [autoOpenPreview, setAutoOpenPreview] = useState(false);
@@ -208,9 +195,6 @@ export function ProjectScriptEditorDialog({
     setCommand(request.initial.command);
     setIcon(request.initial.icon);
     setIconPickerOpen(false);
-    setRunOnWorktreeCreate(request.initial.runOnWorktreeCreate);
-    setWaitForSetup(request.initial.waitForSetup);
-    setRunOnSettle(request.initial.runOnSettle);
     setKeybinding(request.initial.keybinding ?? "");
     setPreviewUrl(request.initial.previewUrl ?? "");
     setAutoOpenPreview(request.initial.autoOpenPreview);
@@ -282,9 +266,6 @@ export function ProjectScriptEditorDialog({
         name: trimmedName,
         command: trimmedCommand,
         icon,
-        runOnWorktreeCreate,
-        waitForSetup: runOnWorktreeCreate && waitForSetup,
-        runOnSettle,
         ...((request.scriptId === null && canChangeKeybinding) || changesKeybinding
           ? { keybinding: keybindingRule?.key ?? null }
           : {}),
@@ -430,32 +411,6 @@ export function ProjectScriptEditorDialog({
                     Open this URL in the in-app preview when this action runs.
                   </p>
                 </div>
-                <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm dark:border-transparent dark:bg-white/[0.035]">
-                  <span>Run automatically on worktree creation</span>
-                  <Switch
-                    checked={runOnWorktreeCreate}
-                    onCheckedChange={(checked) => setRunOnWorktreeCreate(Boolean(checked))}
-                  />
-                </label>
-                <label
-                  className={`flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm dark:border-transparent dark:bg-white/[0.035] ${
-                    runOnWorktreeCreate ? "" : "opacity-60"
-                  }`}
-                >
-                  <span>Wait for it to finish before the agent starts</span>
-                  <Switch
-                    checked={waitForSetup}
-                    disabled={!runOnWorktreeCreate}
-                    onCheckedChange={(checked) => setWaitForSetup(Boolean(checked))}
-                  />
-                </label>
-                <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm dark:border-transparent dark:bg-white/[0.035]">
-                  <span>Run in the thread's worktree when the thread settles</span>
-                  <Switch
-                    checked={runOnSettle}
-                    onCheckedChange={(checked) => setRunOnSettle(Boolean(checked))}
-                  />
-                </label>
                 <label
                   className={`flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm dark:border-transparent dark:bg-white/[0.035] ${
                     previewUrl.trim().length === 0 ? "opacity-60" : ""

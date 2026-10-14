@@ -60,9 +60,7 @@ const isClosedViewEntry = (entry: unknown): entry is ClosedViewEntry => {
   const surface = view.surface;
   if (!surface || typeof surface.id !== "string") return false;
   switch (surface.kind) {
-    case "diff":
     case "files":
-    case "pull-requests":
       return surface.id === surface.kind;
     case "preview":
       return surface.resourceId === null || typeof surface.resourceId === "string";
@@ -82,16 +80,6 @@ const isClosedViewEntry = (entry: unknown): entry is ClosedViewEntry => {
             typeof surface.target.deviceId === "string" &&
             typeof surface.target.name === "string" &&
             (surface.target.platform === "ios" || surface.target.platform === "android")))
-      );
-    case "pull-request":
-      return (
-        typeof surface.projectId === "string" &&
-        typeof surface.repository === "string" &&
-        Number.isSafeInteger(surface.number) &&
-        surface.number > 0 &&
-        (surface.environmentId === undefined || typeof surface.environmentId === "string") &&
-        (surface.host === undefined || typeof surface.host === "string") &&
-        (surface.url === undefined || typeof surface.url === "string")
       );
     default:
       return false;

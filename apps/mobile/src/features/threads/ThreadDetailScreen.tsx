@@ -2,7 +2,6 @@ import { useAtomValue } from "@effect/atom-react";
 import { useChildThreadInputs, useThreadReportedModelSelection } from "../../state/entities";
 import { UsageLimitRecoveryCard } from "./UsageLimitRecoveryCard";
 import { useNavigation } from "@react-navigation/native";
-import type { WorktreeSetupCardProps } from "./worktree-setup-card";
 import type { ComposerTextPaste } from "../../native/T3ComposerEditor.types";
 import { type EnvironmentConnectionPhase } from "@t3tools/client-runtime/connection";
 import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
@@ -152,8 +151,6 @@ import { resolveThreadFeedSubmissionAnchor } from "./thread-feed-live-follow";
 import { useGlobalVoiceInput } from "../voice-input/VoiceInputProvider";
 
 export interface ThreadDetailScreenProps {
-  readonly worktreeSetup?: WorktreeSetupCardProps | null;
-  readonly setupWorkingStartedAt?: string | null;
   readonly canOperateThread: boolean;
   readonly selectedThread: EnvironmentThreadShell;
   readonly contentPresentation: ThreadContentPresentation;
@@ -173,15 +170,14 @@ export interface ThreadDetailScreenProps {
   readonly isCompacting: boolean;
   /**
    * The server has not created this thread yet. "preparing" runs while the
-   * queued creation is delivered (a worktree may be checking out); "failed"
-   * is a rejected creation whose content went back to the project draft.
-   * `serverOwned` marks a thread the server already created that is still
-   * setting up its worktree; follow-ups queue on the server behind that setup.
+   * queued creation is delivered; "failed" is a rejected creation whose
+   * content went back to the project draft. `serverOwned` marks a thread the
+   * server already created that is still preparing its first run; follow-ups
+   * queue on the server behind it.
    */
   readonly creationState:
     | {
         readonly kind: "preparing";
-        readonly preparingWorktree: boolean;
         readonly serverOwned: boolean;
       }
     | { readonly kind: "failed"; readonly reason: string; readonly onEditTask: () => void }
@@ -506,12 +502,7 @@ export const ThreadDetailScreen = memo(function ThreadDetailScreen(props: Thread
       return null;
     }
     if (props.creationState?.kind === "preparing") {
-      // The setup header already reports progress in the feed.
-      if (props.worktreeSetup) return null;
-      return {
-        kind: "preparing",
-        label: props.creationState.preparingWorktree ? "Setting up worktree…" : "Starting…",
-      };
+      return { kind: "preparing", label: "Starting…" };
     }
     if (props.creationState?.kind === "failed") {
       return null;
@@ -1162,8 +1153,6 @@ export const ThreadDetailScreen = memo(function ThreadDetailScreen(props: Thread
               workspaceRoot={props.threadCwd}
               feed={props.selectedThreadFeed}
               pendingHandoff={props.pendingHandoff}
-              worktreeSetup={props.worktreeSetup}
-              setupWorkingStartedAt={props.setupWorkingStartedAt}
               queuedMessages={props.queuedMessages}
               dispatchingMessageId={props.dispatchingMessageId}
               // A native subagent has no composer to edit a pending message in;

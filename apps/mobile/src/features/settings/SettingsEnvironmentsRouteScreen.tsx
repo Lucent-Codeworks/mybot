@@ -12,7 +12,6 @@ import { AndroidAnchoredMenu } from "../../components/AndroidAnchoredMenu";
 import { AndroidHeaderIconButton } from "../../components/AndroidScreenHeader";
 import { CloudEnvironmentRows } from "../connection/CloudEnvironmentRows";
 import { LocalEnvironmentList } from "../connection/LocalEnvironmentList";
-import { GitHubRoutingSettings } from "../connection/GitHubRoutingSettings";
 import { splitEnvironmentSections } from "../connection/environmentSections";
 import { useUniwindTheme } from "../../lib/useUniwindTheme";
 import { useRemoteConnections } from "../../state/use-remote-environment-registry";
@@ -188,7 +187,6 @@ export function SettingsEnvironmentsRouteScreen() {
               }
             : {})}
         />
-        <GitHubRoutingSettings />
       </ScrollView>
     </SettingsScreen>
   );

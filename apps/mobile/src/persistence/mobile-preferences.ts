@@ -5,15 +5,7 @@ import * as Option from "effect/Option";
 import * as Ref from "effect/Ref";
 import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
-import {
-  EnvironmentId,
-  PullRequestInvolvement,
-  PullRequestListFilters,
-  PullRequestListState,
-  type ProviderInstanceId,
-  type PullRequestMergeMethod,
-  type SidebarProjectGroupingMode,
-} from "@t3tools/contracts";
+import { EnvironmentId, type ProviderInstanceId } from "@t3tools/contracts";
 import type { ComposerEnterBehavior } from "../lib/composerEnterBehavior";
 import type { FollowUpBehavior } from "../lib/followUpBehavior";
 import { isMicrophoneKind, type MicrophoneEntry } from "../lib/microphonePriority";
@@ -25,36 +17,15 @@ import { MobileStorageDecodeError, MobileStorageEncodeError } from "./mobile-sto
 const PREFERENCES_KEY = "t3code.preferences";
 const PREFERENCES_FALLBACK_KEY = "t3code.preferences.fallback";
 
-/** The pull request list's filters and sort for one environment scope. */
-export const PullRequestListControls = Schema.Struct({
-  state: PullRequestListState,
-  involvement: PullRequestInvolvement,
-  filters: PullRequestListFilters,
-  projectId: Schema.optional(Schema.String),
-  projectEnvironmentId: Schema.optional(Schema.String),
-  sort: Schema.Literals(["updated", "created", "oldest"]),
-});
-export type PullRequestListControls = typeof PullRequestListControls.Type;
-
 const ThreadListFilters = Schema.Struct({
   environmentId: Schema.NullOr(EnvironmentId),
   projectKey: Schema.NullOr(Schema.String),
 });
 export type ThreadListFilters = typeof ThreadListFilters.Type;
 
-/** Controls are keyed by environment id, with "" for all environments. */
-const PullRequestListPreferences = Schema.Struct({
-  environmentId: Schema.NullOr(Schema.String),
-  controls: Schema.Record(Schema.String, PullRequestListControls),
-});
-export type PullRequestListPreferences = typeof PullRequestListPreferences.Type;
-
 const isThreadListFilters = Schema.is(ThreadListFilters);
-const isPullRequestListPreferences = Schema.is(PullRequestListPreferences);
 
 export interface Preferences {
-  readonly pullRequestHideTestFiles?: boolean;
-  readonly pullRequestMergeMethod?: PullRequestMergeMethod;
   readonly liveActivitiesEnabled?: boolean;
   readonly themeId?: MobileThemeId;
   readonly lightThemeId?: MobileThemeId;
@@ -77,8 +48,6 @@ export interface Preferences {
   /** Microphone kinds and remembered devices, most preferred first. iOS only. */
   readonly microphones?: ReadonlyArray<MicrophoneEntry>;
   /** @deprecated Kept temporarily so older OTA bundles retain the selected mode. */
-  readonly projectGroupingEnabled?: boolean;
-  readonly projectGroupingMode?: SidebarProjectGroupingMode;
   /** Device-local counterpart of desktop's `planModeEnabled` legacy flag. */
   readonly planModeEnabled?: boolean;
   /** Device-local counterpart of web's `sidebarWorkingShelfEnabled` beta. */
@@ -94,7 +63,6 @@ export interface Preferences {
   readonly threadListWorkingShelfExpanded?: boolean;
   /** Home list filters, restored on the next launch. */
   readonly threadListFilters?: ThreadListFilters;
-  readonly pullRequestListFilters?: PullRequestListPreferences;
 }
 
 export class MobilePreferencesLoadError extends Schema.TaggedError<MobilePreferencesLoadError>()(
@@ -136,8 +104,6 @@ export class MobilePreferencesStore extends Context.Service<
 
 function sanitizePreferences(parsed: Preferences): Preferences {
   const preferences: {
-    pullRequestHideTestFiles?: boolean;
-    pullRequestMergeMethod?: PullRequestMergeMethod;
     liveActivitiesEnabled?: boolean;
     themeId?: MobileThemeId;
     lightThemeId?: MobileThemeId;
@@ -153,8 +119,6 @@ function sanitizePreferences(parsed: Preferences): Preferences {
     composerEnterBehavior?: ComposerEnterBehavior;
     followUpBehavior?: FollowUpBehavior;
     microphones?: ReadonlyArray<MicrophoneEntry>;
-    projectGroupingEnabled?: boolean;
-    projectGroupingMode?: SidebarProjectGroupingMode;
     planModeEnabled?: boolean;
     workingShelfEnabled?: boolean;
     modelFavorites?: Preferences["modelFavorites"];
@@ -162,20 +126,7 @@ function sanitizePreferences(parsed: Preferences): Preferences {
     threadListSnoozedShelfExpanded?: boolean;
     threadListWorkingShelfExpanded?: boolean;
     threadListFilters?: ThreadListFilters;
-    pullRequestListFilters?: PullRequestListPreferences;
   } = {};
-
-  if (typeof parsed.pullRequestHideTestFiles === "boolean") {
-    preferences.pullRequestHideTestFiles = parsed.pullRequestHideTestFiles;
-  }
-
-  if (
-    parsed.pullRequestMergeMethod === "squash" ||
-    parsed.pullRequestMergeMethod === "merge" ||
-    parsed.pullRequestMergeMethod === "rebase"
-  ) {
-    preferences.pullRequestMergeMethod = parsed.pullRequestMergeMethod;
-  }
 
   if (typeof parsed.liveActivitiesEnabled === "boolean") {
     preferences.liveActivitiesEnabled = parsed.liveActivitiesEnabled;
@@ -241,16 +192,6 @@ function sanitizePreferences(parsed: Preferences): Preferences {
         : [];
     });
   }
-  if (typeof parsed.projectGroupingEnabled === "boolean") {
-    preferences.projectGroupingEnabled = parsed.projectGroupingEnabled;
-  }
-  if (
-    parsed.projectGroupingMode === "repository" ||
-    parsed.projectGroupingMode === "repository_path" ||
-    parsed.projectGroupingMode === "separate"
-  ) {
-    preferences.projectGroupingMode = parsed.projectGroupingMode;
-  }
   if (typeof parsed.planModeEnabled === "boolean") {
     preferences.planModeEnabled = parsed.planModeEnabled;
   }
@@ -279,9 +220,6 @@ function sanitizePreferences(parsed: Preferences): Preferences {
   }
   if (isThreadListFilters(parsed.threadListFilters)) {
     preferences.threadListFilters = parsed.threadListFilters;
-  }
-  if (isPullRequestListPreferences(parsed.pullRequestListFilters)) {
-    preferences.pullRequestListFilters = parsed.pullRequestListFilters;
   }
   return preferences;
 }

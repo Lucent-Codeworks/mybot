@@ -725,8 +725,6 @@ describe("orchestrator MCP toolkit", () => {
               modelSelection: codexSelection,
               runtimeMode: "full-access",
               interactionMode: "default",
-              branch: null,
-              worktreePath: cwd,
             });
             yield* orchestrator.dispatch({
               type: "message.dispatch",
@@ -1442,7 +1440,6 @@ describe("orchestrator MCP toolkit", () => {
               properties: {
                 action: expect.any(Object),
                 title: expect.any(Object),
-                pullRequest: expect.any(Object),
               },
             });
             const deniedThreadUpdate = yield* invokeAs(
@@ -2167,7 +2164,6 @@ describe("orchestrator MCP toolkit", () => {
               threadId: emptyThread.threadId,
               action: "rename",
               title: "Metadata-managed thread",
-              linkedPullRequest: null,
             });
             const repeatedRenameCall = yield* invoke("t3_thread_update", {
               threadId: emptyThread.threadId,
@@ -2181,25 +2177,6 @@ describe("orchestrator MCP toolkit", () => {
             expect(repeatedRename.commandId).toBe(renamed.commandId);
             expect(repeatedRename.sequence).toBe(renamed.sequence);
 
-            const linkedCall = yield* invoke("t3_thread_update", {
-              threadId: emptyThread.threadId,
-              action: "link_pull_request",
-              pullRequest: {
-                repository: "pingdotgg/t3code",
-                number: 8689,
-                url: "https://github.com/pingdotgg/t3code/pull/8689",
-              },
-              clientRequestId: "metadata-link-1",
-            });
-            const linked = yield* decodeThreadUpdateResult(linkedCall.structuredContent).pipe(
-              Effect.orDie,
-            );
-            expect(linked.linkedPullRequest).toEqual({
-              projectId,
-              repository: "pingdotgg/t3code",
-              number: 8689,
-              url: "https://github.com/pingdotgg/t3code/pull/8689",
-            });
             const metadataReadCall = yield* invoke("t3_thread_read", {
               threadId: emptyThread.threadId,
             });
@@ -2208,7 +2185,6 @@ describe("orchestrator MCP toolkit", () => {
             ).pipe(Effect.orDie);
             expect(metadataRead.thread).toMatchObject({
               title: "Metadata-managed thread",
-              linkedPullRequest: linked.linkedPullRequest,
             });
             const metadataListCall = yield* invoke("t3_thread_list", { limit: 100 });
             const metadataList = yield* decodeThreadListResult(
@@ -2218,7 +2194,6 @@ describe("orchestrator MCP toolkit", () => {
               metadataList.threads.find((thread) => thread.threadId === emptyThread.threadId),
             ).toMatchObject({
               title: "Metadata-managed thread",
-              linkedPullRequest: linked.linkedPullRequest,
               settled: false,
               settledAt: null,
             });
@@ -2299,16 +2274,6 @@ describe("orchestrator MCP toolkit", () => {
               threadId: emptyThread.threadId,
               reason: "user",
             });
-
-            const unlinkedCall = yield* invoke("t3_thread_update", {
-              threadId: emptyThread.threadId,
-              action: "unlink_pull_request",
-              clientRequestId: "metadata-unlink-1",
-            });
-            const unlinked = yield* decodeThreadUpdateResult(unlinkedCall.structuredContent).pipe(
-              Effect.orDie,
-            );
-            expect(unlinked.linkedPullRequest).toBeNull();
 
             const regenerateCall = yield* invoke("t3_thread_update", {
               threadId: emptyThread.threadId,
@@ -2608,8 +2573,6 @@ describe("orchestrator MCP toolkit", () => {
               modelSelection: codexSelection,
               runtimeMode: "full-access",
               interactionMode: "default",
-              branch: null,
-              worktreePath: cwd,
             });
             // Targets reach the whole environment; the caller's modes still cap writes.
             const foreignOrganizeCall = yield* invoke("t3_thread_organize", {
@@ -2964,8 +2927,6 @@ describe("orchestrator MCP toolkit", () => {
               modelSelection: codexSelection,
               runtimeMode: "full-access",
               interactionMode: "default",
-              branch: null,
-              worktreePath: cwd,
             });
             yield* orchestrator.dispatch({
               type: "message.dispatch",
@@ -3516,8 +3477,6 @@ describe("orchestrator MCP toolkit", () => {
               modelSelection: codexSelection,
               runtimeMode: "full-access",
               interactionMode: "default",
-              branch: null,
-              worktreePath: cwd,
             });
             yield* orchestrator.dispatch({
               type: "message.dispatch",
@@ -3873,8 +3832,6 @@ describe("orchestrator MCP toolkit", () => {
             modelSelection: codexSelection,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: cwd,
           });
           yield* orchestrator.dispatch({
             type: "message.dispatch",

@@ -38,7 +38,6 @@ import * as Stream from "effect/Stream";
 import * as McpSessionRegistry from "../mcp/McpSessionRegistry.ts";
 import * as McpAppModelContext from "../mcpApps/McpAppModelContext.ts";
 import * as ServerSettings from "../serverSettings.ts";
-import * as CheckpointService from "./CheckpointService.ts";
 import * as EventSink from "./EventSink.ts";
 import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
 import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
@@ -48,7 +47,6 @@ import {
   makeProviderFailure,
   makeProviderFailureTurnItem,
 } from "@t3tools/provider-core/server/failure";
-import * as RunFinalizationService from "./RunFinalizationService.ts";
 
 export interface ProviderEventRoutingState {
   readonly ownedThreadIds: ReadonlySet<ThreadId>;
@@ -563,7 +561,6 @@ export class RunExecutionServiceV2 extends Context.Service<
 export const layer: Layer.Layer<
   RunExecutionServiceV2,
   never,
-  | CheckpointService.CheckpointServiceV2
   | EventSink.EventSinkV2
   | IdAllocator.IdAllocatorV2
   | ProviderEventIngestor.ProviderEventIngestorV2
@@ -572,13 +569,11 @@ export const layer: Layer.Layer<
 > = Layer.effect(
   RunExecutionServiceV2,
   Effect.gen(function* () {
-    const checkpointService = yield* CheckpointService.CheckpointServiceV2;
     const eventSink = yield* EventSink.EventSinkV2;
     const idAllocator = yield* IdAllocator.IdAllocatorV2;
     const providerEventIngestor = yield* ProviderEventIngestor.ProviderEventIngestorV2;
     const serverSettings = yield* ServerSettings.ServerSettingsService;
     const mcpAppModelContext = yield* McpAppModelContext.McpAppModelContext;
-    const finalizationObserver = yield* RunFinalizationService.RunFinalizationObserver;
 
     const writeFinalRunEvents = (input: {
       readonly run: OrchestrationV2Run;
@@ -591,7 +586,6 @@ export const layer: Layer.Layer<
       readonly openRunOwnedSubagents?: OpenRunOwnedSubagentProjection;
       readonly terminal: ProviderTerminalEvent;
       readonly failureItemPersisted: boolean;
-      readonly refreshAfterTurn: Effect.Effect<void>;
       readonly writeIfRunCurrent?: {
         readonly activeAttemptId: RunAttemptId;
         readonly expectedStatus: OrchestrationV2Run["status"];
@@ -637,7 +631,6 @@ export const layer: Layer.Layer<
                   },
                 ],
               });
-              yield* input.refreshAfterTurn;
             }
           }
           return;
@@ -816,24 +809,11 @@ export const layer: Layer.Layer<
         } else {
           yield* eventSink.writeWithEffects(finalization);
         }
-        yield* input.refreshAfterTurn;
       });
 
     return RunExecutionServiceV2.of({
       startRootRun: (input) =>
         Effect.gen(function* () {
-          // Startup failure and stream shutdown can report the same attempt.
-          const refreshAfterTurn = yield* Effect.cached(
-            finalizationObserver.refreshAfterTurn(input.appThread.projectId).pipe(
-              Effect.catchCause((cause) =>
-                Effect.logWarning("failed to refresh pull requests after run termination", {
-                  threadId: input.run.threadId,
-                  runId: input.run.id,
-                  cause,
-                }),
-              ),
-            ),
-          );
           const makeFailedTerminalEvent = (
             failure: OrchestrationV2ProviderFailure,
             failureItemOrdinal: number,
@@ -861,21 +841,6 @@ export const layer: Layer.Layer<
                     .responseStreamingMode,
               ),
             );
-            yield* checkpointService
-              .captureBaseline({
-                scope: input.checkpointScope,
-                ordinalWithinScope: Math.max(0, input.run.ordinal - 1),
-              })
-              .pipe(
-                Effect.catchCause((cause) =>
-                  Cause.hasInterruptsOnly(cause)
-                    ? Effect.failCause(cause)
-                    : Effect.logWarning(
-                        "orchestration V2 checkpoint baseline capture failed; starting provider without a baseline",
-                        { runId: input.run.id },
-                      ),
-                ),
-              );
             if (
               input.shouldStartProviderTurn !== undefined &&
               !(yield* input.shouldStartProviderTurn())
@@ -910,7 +875,6 @@ export const layer: Layer.Layer<
                     input.providerTurnOrdinal * 100 + 1,
                   ),
                   failureItemPersisted: false,
-                  refreshAfterTurn,
                   writeIfRunCurrent: {
                     activeAttemptId: input.attemptId,
                     expectedStatus: "running",
@@ -1014,7 +978,6 @@ export const layer: Layer.Layer<
                 openRunOwnedSubagents: openSubagents,
                 terminal,
                 failureItemPersisted: terminal.status === "failed",
-                refreshAfterTurn,
               }).pipe(
                 Effect.mapError(
                   (cause) => new RunExecutionIngestError({ runId: input.run.id, cause }),
@@ -1358,7 +1321,6 @@ export const layer: Layer.Layer<
                                           latestItemOrdinal + 1,
                                         ),
                                         failureItemPersisted: false,
-                                        refreshAfterTurn,
                                       }),
                                     ),
                                   ),
@@ -1486,7 +1448,6 @@ export const layer: Layer.Layer<
                               latestItemOrdinal + 1,
                             ),
                             failureItemPersisted: false,
-                            refreshAfterTurn,
                           }),
                         ),
                       ),

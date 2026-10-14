@@ -1,65 +1,10 @@
-import {
-  repositoryGroupingKeyOf,
-  type ModelSelection,
-  type RepositoryIdentity,
-  type ServerProvider,
-  type ThreadLinkedPullRequest,
-  type ThreadPullRequestLink,
-} from "@t3tools/contracts";
+import type { ModelSelection, ServerProvider } from "@t3tools/contracts";
 import { resolveSelectableModel, type SelectableModelOption } from "@t3tools/shared/model";
-import type { PromptLinkPullRequest, PromptLinkRepository } from "@t3tools/shared/promptLinks";
-import {
-  threadPullRequestKeyOf,
-  threadPullRequestsOf,
-  visibleThreadPullRequests,
-} from "@t3tools/shared/threadPullRequests";
 
 /**
- * How web and mobile resolve a prompt link against what this client knows. Both read the same
- * shells, so a link lands in the same project and thread on every surface.
+ * How web and mobile resolve a prompt link against what this client knows, so a link picks the
+ * same model on every surface.
  */
-
-const repositoryKey = (repository: PromptLinkRepository) =>
-  `github.com/${repository.owner}/${repository.name}`.toLowerCase();
-
-/**
- * The project a link's repository names. Callers pass projects most recently active first, so
- * the user lands where they last worked. A fork only matches its own owner, not its upstream.
- */
-export function findPromptLinkProject<
-  P extends { readonly repositoryIdentity?: RepositoryIdentity | null | undefined },
->(projects: ReadonlyArray<P>, repository: PromptLinkRepository): P | undefined {
-  const key = repositoryKey(repository);
-  return projects.find(
-    (project) =>
-      project.repositoryIdentity != null &&
-      repositoryGroupingKeyOf(project.repositoryIdentity).toLowerCase() === key,
-  );
-}
-
-/** The most recently updated thread linked to the pull request, across every environment given. */
-export function findPromptLinkPullRequestThread<
-  T extends {
-    readonly updatedAt: string;
-    readonly pullRequests?: ReadonlyArray<ThreadPullRequestLink> | undefined;
-    readonly linkedPullRequest?: ThreadLinkedPullRequest | null | undefined;
-  },
->(threads: ReadonlyArray<T>, pullRequest: PromptLinkPullRequest): T | undefined {
-  const key = threadPullRequestKeyOf({
-    host: "github.com",
-    repository: `${pullRequest.owner}/${pullRequest.name}`,
-    number: pullRequest.number,
-  });
-  let latest: T | undefined;
-  for (const thread of threads) {
-    if (latest !== undefined && thread.updatedAt <= latest.updatedAt) continue;
-    const linked = visibleThreadPullRequests(threadPullRequestsOf(thread)).some(
-      (link) => threadPullRequestKeyOf(link) === key,
-    );
-    if (linked) latest = thread;
-  }
-  return latest;
-}
 
 // People write the name they know. Driver kinds are what the server reports.
 const PROVIDER_ALIASES: Record<string, string> = { claude: "claudeagent" };

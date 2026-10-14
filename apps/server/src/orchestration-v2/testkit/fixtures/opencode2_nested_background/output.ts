@@ -19,9 +19,9 @@ const texts = (projection: OrchestrationV2ThreadProjection | undefined) =>
 /**
  * A foreground subagent starts a background one and returns, so the
  * thread's turn ends while that grandchild runs. Ending the foreground call
- * leaves the grandchild running: the run waits on it, its report reaches
- * the subagent that started it, and that subagent's answer is a second turn
- * on its own thread. Only then does the run complete.
+ * leaves the grandchild running: the run completes with it listed as
+ * background work, its report reaches the subagent that started it, and that
+ * subagent's answer is a second turn on its own thread.
  */
 export function assertOpenCode2NestedBackgroundOutput(
   result: OrchestratorV2ScenarioResult,
@@ -47,7 +47,7 @@ export function assertOpenCode2NestedBackgroundOutput(
   // The middle subagent answered the report in a turn of its own.
   assert.deepEqual(texts(middleThread), ["MIDDLE_OK", "GRANDCHILD_OK"]);
 
-  // The run waited on the grandchild: it completed after the grandchild did.
+  // The run completed while the grandchild still ran, and the grandchild kept going.
   const indexOf = (predicate: (event: (typeof result.domainEvents)[number]) => boolean) =>
     result.domainEvents.findIndex(predicate);
   const rootTurnEnded = indexOf(
@@ -69,8 +69,8 @@ export function assertOpenCode2NestedBackgroundOutput(
       event.payload.status === "completed",
   );
   assert.isAtLeast(rootTurnEnded, 0);
-  assert.isAbove(grandchildDone, rootTurnEnded, "the thread's turn ends before the grandchild");
-  assert.isAbove(runCompleted, grandchildDone, "the run waits for the grandchild");
+  assert.isAbove(runCompleted, rootTurnEnded);
+  assert.isAbove(grandchildDone, runCompleted, "the grandchild outlives the run");
 
   const shell = result.shellSnapshot.threads.find((thread) => thread.id === projection.thread.id);
   assert.deepEqual(shell?.pendingBackgroundTasks ?? [], []);

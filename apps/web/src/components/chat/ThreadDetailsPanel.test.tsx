@@ -12,8 +12,8 @@ vi.mock("../../hooks/useT3ProjectFileScripts", () => ({
   useT3ProjectFileScripts: (...args: ReadonlyArray<unknown>) =>
     testState.useT3ProjectFileScripts(...args),
 }));
-vi.mock("../BranchToolbar", () => ({
-  BranchToolbar: () => null,
+vi.mock("../ComposerContextStrip", () => ({
+  ComposerContextStrip: () => null,
 }));
 vi.mock("../ProjectScriptsControl", () => ({
   default: (props: unknown) => {
@@ -42,7 +42,7 @@ describe("ThreadDetailsPanel", () => {
 
   it("passes checked-in t3.json scripts to the project scripts control", () => {
     const environmentId = "environment:thread-details" as EnvironmentId;
-    const gitCwd = "/tmp/thread-details-project";
+    const workspaceRoot = "/tmp/thread-details-project";
     const fileScripts = [
       {
         name: "Check project",
@@ -58,22 +58,15 @@ describe("ThreadDetailsPanel", () => {
       onPresentationChange: vi.fn(),
       environmentId,
       threadId: "thread:thread-details" as ThreadId,
-      activeProjectName: undefined,
       activeProjectScripts: [],
       preferredScriptId: null,
       keybindings: [],
       availableEditors: [],
       showOpenInPicker: false,
-      gitCwd,
-      isGitRepo: false,
+      workspaceRoot,
       envLocked: false,
       availableEnvironments: [],
       onEnvironmentChange: vi.fn(),
-      onEnvModeChange: vi.fn(),
-      envMode: "local",
-      startFromOrigin: false,
-      onStartFromOriginChange: vi.fn(),
-      onComposerFocusRequest: vi.fn(),
       onRunProjectScript: vi.fn(),
       onAddProjectScript: vi.fn() as ThreadDetailsPanelProps["onAddProjectScript"],
       onUpdateProjectScript: vi.fn() as ThreadDetailsPanelProps["onUpdateProjectScript"],
@@ -82,7 +75,7 @@ describe("ThreadDetailsPanel", () => {
 
     renderToStaticMarkup(<ThreadDetailsPanel {...props} />);
 
-    expect(testState.useT3ProjectFileScripts).toHaveBeenCalledWith(environmentId, gitCwd);
+    expect(testState.useT3ProjectFileScripts).toHaveBeenCalledWith(environmentId, workspaceRoot);
     expect(testState.projectScriptsControl).toHaveBeenCalledWith(
       expect.objectContaining({
         displayMode: "panel",

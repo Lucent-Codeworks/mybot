@@ -35,7 +35,6 @@ import {
 } from "@t3tools/client-runtime/environment";
 import * as Schema from "effect/Schema";
 import * as Equal from "effect/Equal";
-import * as Effect from "effect/Effect";
 import { DeepMutable } from "effect/Types";
 import { createModelSelection, normalizeModelSlug } from "@t3tools/shared/model";
 import { useMemo } from "react";
@@ -89,8 +88,6 @@ const isPreviewAnnotationPayload = Schema.is(PreviewAnnotationPayloadSchema);
 
 export const COMPOSER_DRAFT_STORAGE_KEY = "t3code:composer-drafts:v1";
 const COMPOSER_DRAFT_STORAGE_VERSION = 9;
-const DraftThreadEnvModeSchema = Schema.Literals(["local", "worktree"]);
-export type DraftThreadEnvMode = typeof DraftThreadEnvModeSchema.Type;
 
 export const DraftId = Schema.String.pipe(Schema.brand("DraftId"));
 export type DraftId = typeof DraftId.Type;
@@ -326,10 +323,6 @@ const PersistedDraftThreadState = Schema.Struct({
   createdAt: Schema.String,
   runtimeMode: RuntimeMode,
   interactionMode: ProviderInteractionMode,
-  branch: Schema.NullOr(Schema.String),
-  worktreePath: Schema.NullOr(Schema.String),
-  envMode: DraftThreadEnvModeSchema,
-  startFromOrigin: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   promotedTo: Schema.optionalKey(
     Schema.NullOr(
       Schema.Struct({
@@ -375,7 +368,7 @@ export interface ComposerContextAddOptions {
 }
 
 /**
- * A mounted composer registers itself here so context produced by other panels (diff
+ * A mounted composer registers itself here so context produced by other panels (file
  * comments, preview picks) lands at its caret. Without a handler the store appends the
  * reference to the prompt, which is where a draft with no composer open would show it.
  * Runtime-only: never persisted.
@@ -446,7 +439,7 @@ export function composerDraftHasUserContent(
  * Mutable routing and execution context for a pre-thread draft session.
  *
  * Unlike a real server thread, a draft session can still change target
- * environment/worktree configuration before the first send.
+ * environment configuration before the first send.
  */
 export interface DraftSessionState {
   threadId: ThreadId;
@@ -458,10 +451,6 @@ export interface DraftSessionState {
   createdAt: string;
   runtimeMode: RuntimeMode;
   interactionMode: ProviderInteractionMode;
-  branch: string | null;
-  worktreePath: string | null;
-  envMode: DraftThreadEnvMode;
-  startFromOrigin: boolean;
   promotedTo?: ScopedThreadRef | null;
 }
 
@@ -535,11 +524,7 @@ interface ComposerDraftStoreState {
     draftId: DraftId,
     options?: {
       threadId?: ThreadId;
-      branch?: string | null;
-      worktreePath?: string | null;
       createdAt?: string;
-      envMode?: DraftThreadEnvMode;
-      startFromOrigin?: boolean;
       runtimeMode?: RuntimeMode;
       interactionMode?: ProviderInteractionMode;
       environmentSelection?: "auto" | "manual";
@@ -552,11 +537,7 @@ interface ComposerDraftStoreState {
     draftId: DraftId,
     options?: {
       threadId?: ThreadId;
-      branch?: string | null;
-      worktreePath?: string | null;
       createdAt?: string;
-      envMode?: DraftThreadEnvMode;
-      startFromOrigin?: boolean;
       runtimeMode?: RuntimeMode;
       interactionMode?: ProviderInteractionMode;
       environmentSelection?: "auto" | "manual";
@@ -567,12 +548,8 @@ interface ComposerDraftStoreState {
   setDraftThreadContext: (
     threadRef: ComposerThreadTarget,
     options: {
-      branch?: string | null;
-      worktreePath?: string | null;
       projectRef?: ScopedProjectRef;
       createdAt?: string;
-      envMode?: DraftThreadEnvMode;
-      startFromOrigin?: boolean;
       runtimeMode?: RuntimeMode;
       interactionMode?: ProviderInteractionMode;
       environmentSelection?: "auto" | "manual";
@@ -1433,16 +1410,6 @@ function normalizePersistedTerminalContextDraft(
   };
 }
 
-function normalizeDraftThreadEnvMode(
-  value: unknown,
-  fallbackWorktreePath: string | null,
-): DraftThreadEnvMode {
-  if (value === "local" || value === "worktree") {
-    return value;
-  }
-  return fallbackWorktreePath ? "worktree" : "local";
-}
-
 function projectDraftKey(projectRef: ScopedProjectRef): string {
   return scopedProjectKey(projectRef);
 }
@@ -1588,11 +1555,7 @@ function createDraftThreadState(
   existingThread: DraftThreadState | undefined,
   options?: {
     threadId?: ThreadId;
-    branch?: string | null;
-    worktreePath?: string | null;
     createdAt?: string;
-    envMode?: DraftThreadEnvMode;
-    startFromOrigin?: boolean;
     runtimeMode?: RuntimeMode;
     interactionMode?: ProviderInteractionMode;
     environmentSelection?: "auto" | "manual";
@@ -1600,29 +1563,11 @@ function createDraftThreadState(
   },
 ): DraftThreadState {
   // A project change (including switching environments within a logical
-  // project) invalidates machine-specific context: the branch may not exist
-  // there and the worktree path certainly doesn't. The user's *intent* —
-  // env mode and start-from-origin — is machine-independent and carries.
+  // project) invalidates the load-balanced environment pick.
   const projectChanged =
     existingThread !== undefined &&
     (existingThread.environmentId !== projectRef.environmentId ||
       existingThread.projectId !== projectRef.projectId);
-  const nextWorktreePath =
-    options?.worktreePath === undefined
-      ? projectChanged
-        ? null
-        : (existingThread?.worktreePath ?? null)
-      : (options.worktreePath ?? null);
-  const nextBranch =
-    options?.branch === undefined
-      ? projectChanged
-        ? null
-        : (existingThread?.branch ?? null)
-      : (options.branch ?? null);
-  const nextStartFromOrigin =
-    options?.startFromOrigin === undefined
-      ? (existingThread?.startFromOrigin ?? false)
-      : options.startFromOrigin;
   const environmentSelection =
     options?.environmentSelection ?? existingThread?.environmentSelection;
   return {
@@ -1644,11 +1589,6 @@ function createDraftThreadState(
     runtimeMode: options?.runtimeMode ?? existingThread?.runtimeMode ?? DEFAULT_RUNTIME_MODE,
     interactionMode:
       options?.interactionMode ?? existingThread?.interactionMode ?? DEFAULT_INTERACTION_MODE,
-    branch: nextBranch,
-    worktreePath: nextWorktreePath,
-    envMode:
-      options?.envMode ?? (nextWorktreePath ? "worktree" : (existingThread?.envMode ?? "local")),
-    startFromOrigin: nextStartFromOrigin,
     promotedTo: null,
   };
 }
@@ -1679,10 +1619,6 @@ function draftThreadsEqual(left: DraftThreadState | undefined, right: DraftThrea
     left.createdAt === right.createdAt &&
     left.runtimeMode === right.runtimeMode &&
     left.interactionMode === right.interactionMode &&
-    left.branch === right.branch &&
-    left.worktreePath === right.worktreePath &&
-    left.envMode === right.envMode &&
-    left.startFromOrigin === right.startFromOrigin &&
     scopedThreadRefsEqual(left.promotedTo, right.promotedTo)
   );
 }
@@ -1780,10 +1716,6 @@ function normalizePersistedDraftThreads(
           : environmentIdByThreadId.get(threadKeyOrId as ThreadId));
       const projectId = candidateDraftThread.projectId;
       const createdAt = candidateDraftThread.createdAt;
-      const branch = candidateDraftThread.branch;
-      const worktreePath = candidateDraftThread.worktreePath;
-      const startFromOrigin = candidateDraftThread.startFromOrigin === true;
-      const normalizedWorktreePath = typeof worktreePath === "string" ? worktreePath : null;
       const promotedToCandidate = candidateDraftThread.promotedTo;
       const promotedToRecord =
         promotedToCandidate && typeof promotedToCandidate === "object"
@@ -1827,10 +1759,6 @@ function normalizePersistedDraftThreads(
           candidateDraftThread.interactionMode === "default"
             ? candidateDraftThread.interactionMode
             : DEFAULT_INTERACTION_MODE,
-        branch: typeof branch === "string" ? branch : null,
-        worktreePath: normalizedWorktreePath,
-        envMode: normalizeDraftThreadEnvMode(candidateDraftThread.envMode, normalizedWorktreePath),
-        startFromOrigin,
         ...(candidateDraftThread.environmentSelection === "manual" ||
         candidateDraftThread.environmentSelection === "auto"
           ? { environmentSelection: candidateDraftThread.environmentSelection }
@@ -1889,10 +1817,6 @@ function normalizePersistedDraftThreads(
           createdAt: new Date().toISOString(),
           runtimeMode: DEFAULT_RUNTIME_MODE,
           interactionMode: DEFAULT_INTERACTION_MODE,
-          branch: null,
-          worktreePath: null,
-          envMode: "local",
-          startFromOrigin: false,
           promotedTo: null,
         };
       } else if (
@@ -2590,10 +2514,6 @@ function toHydratedDraftThreadState(
     createdAt: persistedDraftThread.createdAt,
     runtimeMode: persistedDraftThread.runtimeMode,
     interactionMode: persistedDraftThread.interactionMode,
-    branch: persistedDraftThread.branch,
-    worktreePath: persistedDraftThread.worktreePath,
-    envMode: persistedDraftThread.envMode,
-    startFromOrigin: persistedDraftThread.startFromOrigin,
     ...(persistedDraftThread.environmentSelection
       ? { environmentSelection: persistedDraftThread.environmentSelection }
       : {}),
@@ -2850,32 +2770,12 @@ const composerDraftStore = create<ComposerDraftStoreState>()(
               return state;
             }
             // Mirrors createDraftThreadState: a project/environment change
-            // drops machine-specific context (branch, worktree path) but
-            // keeps the user's env mode and start-from-origin intent.
+            // drops the load-balanced environment pick.
             const projectChanged =
               nextProjectRef.environmentId !== existing.environmentId ||
               nextProjectRef.projectId !== existing.projectId;
-            const nextWorktreePath =
-              options.worktreePath === undefined
-                ? projectChanged
-                  ? null
-                  : existing.worktreePath
-                : (options.worktreePath ?? null);
-            const nextBranch =
-              options.branch === undefined
-                ? projectChanged
-                  ? null
-                  : existing.branch
-                : (options.branch ?? null);
-            const nextStartFromOrigin =
-              options.startFromOrigin === undefined
-                ? existing.startFromOrigin
-                : options.startFromOrigin;
             const environmentSelection =
-              options.environmentSelection ??
-              (options.branch != null || options.worktreePath != null
-                ? "manual"
-                : existing.environmentSelection);
+              options.environmentSelection ?? existing.environmentSelection;
             const nextDraftThread: DraftThreadState = {
               threadId: existing.threadId,
               environmentId: nextProjectRef.environmentId,
@@ -2894,11 +2794,6 @@ const composerDraftStore = create<ComposerDraftStoreState>()(
                   : options.createdAt || existing.createdAt,
               runtimeMode: options.runtimeMode ?? existing.runtimeMode,
               interactionMode: options.interactionMode ?? existing.interactionMode,
-              branch: nextBranch,
-              worktreePath: nextWorktreePath,
-              envMode:
-                options.envMode ?? (nextWorktreePath ? "worktree" : (existing.envMode ?? "local")),
-              startFromOrigin: nextStartFromOrigin,
               promotedTo: existing.promotedTo ?? null,
             };
             const isUnchanged =
@@ -2910,10 +2805,6 @@ const composerDraftStore = create<ComposerDraftStoreState>()(
               nextDraftThread.createdAt === existing.createdAt &&
               nextDraftThread.runtimeMode === existing.runtimeMode &&
               nextDraftThread.interactionMode === existing.interactionMode &&
-              nextDraftThread.branch === existing.branch &&
-              nextDraftThread.worktreePath === existing.worktreePath &&
-              nextDraftThread.envMode === existing.envMode &&
-              nextDraftThread.startFromOrigin === existing.startFromOrigin &&
               scopedThreadRefsEqual(nextDraftThread.promotedTo, existing.promotedTo);
             if (isUnchanged) {
               return state;

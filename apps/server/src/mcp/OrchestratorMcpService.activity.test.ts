@@ -71,8 +71,6 @@ function baseThread(input: {
     },
     runtimeMode: "full-access" as const,
     interactionMode: "default" as const,
-    branch: null,
-    worktreePath: null,
     lineage: {
       parentThreadId: null,
       relationshipToParent: null,

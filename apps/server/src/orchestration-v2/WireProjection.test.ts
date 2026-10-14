@@ -125,8 +125,6 @@ describe("orchestration V2 wire projection", () => {
         modelSelection: null,
         runtimeMode: "full-access",
         interactionMode: "default",
-        branch: null,
-        worktreePath: null,
         lineage: {
           parentThreadId: null,
           relationshipToParent: null,

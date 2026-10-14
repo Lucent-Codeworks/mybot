@@ -41,6 +41,8 @@ const connectionMiddleware = (scopes: ReadonlyArray<AuthEnvironmentScope>) =>
   Layer.merge(RpcAuthorization.layer(scopes), rpcInstrumentationLayer);
 const readOnlyConnection = connectionMiddleware([AuthOrchestrationReadScope]);
 const taskId = ScheduledTaskId.make("scheduled-task:instrumented");
+const firstScan = { servers: [], scannedAt: "2026-10-13T00:00:00.000Z" };
+const secondScan = { servers: [], scannedAt: "2026-10-13T00:00:01.000Z" };
 const rpcSpanDefaults = { "rpc.transport": "websocket", "rpc.system": "effect-rpc" };
 
 /** Runs a test with a fresh metric registry and a tracer that keeps every span it ends. */
@@ -109,7 +111,7 @@ describe("WS RPC instrumentation middleware", () => {
           WS_METHODS.serverProbe,
           WS_METHODS.scheduledTasksList,
           WS_METHODS.serverRetryResourceTelemetry,
-          WS_METHODS.pullRequestsSubscribeRefreshes,
+          WS_METHODS.subscribeDiscoveredLocalServers,
           WS_METHODS.scheduledTasksSubscribe,
           WS_METHODS.serverGetSettings,
         );
@@ -127,8 +129,8 @@ describe("WS RPC instrumentation middleware", () => {
               group.toLayerHandler(WS_METHODS.serverRetryResourceTelemetry, () =>
                 Effect.die("authorization let a rejected call through"),
               ),
-              group.toLayerHandler(WS_METHODS.pullRequestsSubscribeRefreshes, () =>
-                Stream.make(1, 2),
+              group.toLayerHandler(WS_METHODS.subscribeDiscoveredLocalServers, () =>
+                Stream.make(firstScan, secondScan),
               ),
               group.toLayerHandler(WS_METHODS.scheduledTasksSubscribe, () =>
                 Stream.concat(
@@ -151,9 +153,9 @@ describe("WS RPC instrumentation middleware", () => {
         );
         assert.equal(rejection._tag, "EnvironmentAuthorizationError");
         const refreshes = yield* Stream.runCollect(
-          client[WS_METHODS.pullRequestsSubscribeRefreshes]({}),
+          client[WS_METHODS.subscribeDiscoveredLocalServers]({}),
         );
-        assert.deepStrictEqual(Array.from(refreshes), [1, 2]);
+        assert.deepStrictEqual(Array.from(refreshes), [firstScan, secondScan]);
         const subscribeError = yield* Stream.runDrain(
           client[WS_METHODS.scheduledTasksSubscribe]({}),
         ).pipe(Effect.flip);
@@ -190,11 +192,11 @@ describe("WS RPC instrumentation middleware", () => {
               },
             ],
             [
-              "ws.rpc.pullRequests.subscribeRefreshes",
+              "ws.rpc.subscribeDiscoveredLocalServers",
               {
                 ...rpcSpanDefaults,
-                "rpc.method": WS_METHODS.pullRequestsSubscribeRefreshes,
-                "rpc.aggregate": "pull-requests",
+                "rpc.method": WS_METHODS.subscribeDiscoveredLocalServers,
+                "rpc.aggregate": "preview",
               },
             ],
             [
@@ -233,7 +235,7 @@ describe("WS RPC instrumentation middleware", () => {
             requestCount(snapshots, WS_METHODS.serverProbe, "success"),
             requestCount(snapshots, WS_METHODS.scheduledTasksList, "failure"),
             requestCount(snapshots, WS_METHODS.serverRetryResourceTelemetry, "failure"),
-            requestCount(snapshots, WS_METHODS.pullRequestsSubscribeRefreshes, "success"),
+            requestCount(snapshots, WS_METHODS.subscribeDiscoveredLocalServers, "success"),
             requestCount(snapshots, WS_METHODS.scheduledTasksSubscribe, "failure"),
             requestCount(snapshots, WS_METHODS.serverGetSettings, "failure"),
           ].map((state) => state?.count),
@@ -250,13 +252,13 @@ describe("WS RPC instrumentation middleware", () => {
     withTelemetry((ended) =>
       Effect.gen(function* () {
         const waiting = yield* Deferred.make<void>();
-        const group = groupOf(WS_METHODS.pullRequestsSubscribeRefreshes);
+        const group = groupOf(WS_METHODS.subscribeDiscoveredLocalServers);
         const client = yield* RpcTest.makeClient(group).pipe(
           Effect.provide(
             Layer.mergeAll(
-              group.toLayerHandler(WS_METHODS.pullRequestsSubscribeRefreshes, () =>
+              group.toLayerHandler(WS_METHODS.subscribeDiscoveredLocalServers, () =>
                 Stream.concat(
-                  Stream.make(1),
+                  Stream.make(firstScan),
                   Stream.fromEffect(
                     Deferred.succeed(waiting, undefined).pipe(
                       Effect.andThen(Effect.never),
@@ -275,7 +277,7 @@ describe("WS RPC instrumentation middleware", () => {
         yield* TestClock.adjust(Duration.seconds(1));
         yield* TestClock.setTime(0);
         const consumer = yield* Stream.runDrain(
-          client[WS_METHODS.pullRequestsSubscribeRefreshes]({}),
+          client[WS_METHODS.subscribeDiscoveredLocalServers]({}),
         ).pipe(Effect.forkChild);
         yield* Deferred.await(waiting);
         yield* TestClock.adjust(Duration.millis(250));
@@ -287,17 +289,17 @@ describe("WS RPC instrumentation middleware", () => {
         yield* Fiber.interrupt(consumer);
 
         const [rpcSpan] = rpcSpans(ended);
-        assert.equal(rpcSpan?.name, "ws.rpc.pullRequests.subscribeRefreshes");
+        assert.equal(rpcSpan?.name, "ws.rpc.subscribeDiscoveredLocalServers");
         assert.equal(exitTag(rpcSpan), "Failure");
         const waitSpan = ended.find((span) => span.name === "refreshes.wait");
         assert.equal(parentSpanId(waitSpan), rpcSpan?.spanId);
 
         const snapshots = yield* Metric.snapshot;
         assert.equal(
-          requestCount(snapshots, WS_METHODS.pullRequestsSubscribeRefreshes, "interrupt")?.count,
+          requestCount(snapshots, WS_METHODS.subscribeDiscoveredLocalServers, "interrupt")?.count,
           1,
         );
-        const duration = requestDuration(snapshots, WS_METHODS.pullRequestsSubscribeRefreshes);
+        const duration = requestDuration(snapshots, WS_METHODS.subscribeDiscoveredLocalServers);
         assert.equal(duration?.count, 1);
         assert.equal(duration?.sum, 250);
       }),

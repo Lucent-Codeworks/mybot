@@ -1,6 +1,5 @@
 import * as Schema from "effect/Schema";
 import * as SchemaTransformation from "effect/SchemaTransformation";
-import { RepositoryIdentity, ThreadEnvMode } from "./environment.ts";
 import { ModelSelection } from "./modelSelection.ts";
 import {
   CommandId,
@@ -35,11 +34,6 @@ export const ProjectScript = Schema.Struct({
   name: TrimmedNonEmptyString,
   command: TrimmedNonEmptyString,
   icon: ProjectScriptIcon,
-  runOnWorktreeCreate: Schema.Boolean,
-  /** Run in the thread's worktree each time the thread settles. */
-  runOnSettle: Schema.optional(Schema.Boolean),
-  /** Start the agent while setup runs unless explicitly disabled. */
-  async: Schema.optional(Schema.Boolean),
   previewUrl: Schema.optional(TrimmedNonEmptyString),
   autoOpenPreview: Schema.optional(Schema.Boolean),
 });
@@ -166,13 +160,9 @@ export const Project = Schema.Struct({
   id: ProjectId,
   title: TrimmedNonEmptyString,
   workspaceRoot: TrimmedNonEmptyString,
-  repositoryIdentity: Schema.optional(Schema.NullOr(RepositoryIdentity)),
   faviconPath: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   projectIcon: Schema.optional(Schema.NullOr(ReceivedProjectIcon)),
   defaultModelSelection: Schema.NullOr(ModelSelection),
-  defaultThreadEnvMode: Schema.optional(Schema.NullOr(ThreadEnvMode)),
-  // Opt-in because background sync performs network I/O and may move the checkout.
-  autoPull: Schema.optional(Schema.Boolean),
   scripts: Schema.Array(ProjectScript),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
@@ -209,10 +199,8 @@ export const ProjectUpdatePayload = Schema.Struct({
   title: Schema.optional(TrimmedNonEmptyString),
   workspaceRoot: Schema.optional(TrimmedNonEmptyString),
   defaultModelSelection: Schema.optional(Schema.NullOr(ModelSelection)),
-  autoPull: Schema.optional(Schema.Boolean),
   projectIcon: Schema.optional(Schema.NullOr(ProjectIconOverride)),
   faviconPath: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
-  defaultThreadEnvMode: Schema.optional(Schema.NullOr(ThreadEnvMode)),
   scripts: Schema.optional(Schema.Array(ProjectScript)),
 });
 export type ProjectUpdatePayload = typeof ProjectUpdatePayload.Type;
@@ -533,8 +521,6 @@ export type ProjectCreateNewInput = typeof ProjectCreateNewInput.Type;
 export const ProjectCreateNewResult = Schema.Struct({
   projectId: ProjectId,
   workspaceRoot: TrimmedNonEmptyString,
-  /** Why the first commit failed. The project and its files exist either way. */
-  commitError: Schema.optionalKey(TrimmedNonEmptyString),
 });
 export type ProjectCreateNewResult = typeof ProjectCreateNewResult.Type;
 

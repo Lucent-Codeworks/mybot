@@ -37,7 +37,7 @@ vi.mock("../rpc/atomRegistry", () => ({
   },
 }));
 vi.mock("../state/entities", () => ({
-  readThreadShell: () => ({ projectId: "project-1", worktreePath: null }),
+  readThreadShell: () => ({ projectId: "project-1" }),
   readProject: () => (state.workspaceAvailable ? { workspaceRoot: "/work/project" } : null),
 }));
 vi.mock("../composerDraftStore", () => {
@@ -113,7 +113,7 @@ beforeEach(() => {
   state.navigate.mockResolvedValue(undefined);
   state.openPreview.mockReset();
   useClosedViewStore.setState({ entries: [] });
-  useRightPanelStore.setState({ byThreadKey: {}, userActionRevisionByThreadKey: {} });
+  useRightPanelStore.setState({ byThreadKey: {} });
   useTerminalUiStateStore.setState({
     terminalUiStateByThreadKey: {},
     suppressedTerminalIdsByThreadKey: {},
@@ -147,14 +147,14 @@ describe("root reopen shortcut", () => {
   it("restores a tab from settings to its owning remote thread", async () => {
     useClosedViewStore
       .getState()
-      .remember({ kind: "panel-tab", threadRef: ref, surface: { kind: "diff", id: "diff" } });
+      .remember({ kind: "panel-tab", threadRef: ref, surface: { kind: "device", id: "device" } });
     await render();
     await act(() => {
       expect(press().defaultPrevented).toBe(true);
     });
     expect(
       selectThreadRightPanelState(useRightPanelStore.getState().byThreadKey, ref).activeSurfaceId,
-    ).toBe("diff");
+    ).toBe("device");
     expect(state.navigate).toHaveBeenCalledWith({ to: "/$environmentId/$threadId", params: ref });
     expect(useClosedViewStore.getState().entries).toEqual([]);
   });
@@ -165,7 +165,7 @@ describe("root reopen shortcut", () => {
     await act(() => {
       useClosedViewStore
         .getState()
-        .remember({ kind: "panel-tab", threadRef: ref, surface: { kind: "diff", id: "diff" } });
+        .remember({ kind: "panel-tab", threadRef: ref, surface: { kind: "device", id: "device" } });
     });
     state.paletteOpen = true;
     expect(press().defaultPrevented).toBe(false);
@@ -176,7 +176,7 @@ describe("root reopen shortcut", () => {
   it("lets the keybinding recorder capture the chord", async () => {
     useClosedViewStore
       .getState()
-      .remember({ kind: "panel-tab", threadRef: ref, surface: { kind: "diff", id: "diff" } });
+      .remember({ kind: "panel-tab", threadRef: ref, surface: { kind: "device", id: "device" } });
     await render();
     const recorder = new TestElement();
     const event = Object.assign(new Event("keydown", { bubbles: true, cancelable: true }), {
@@ -223,7 +223,7 @@ describe("root reopen shortcut", () => {
     const older = store.remember({
       kind: "panel-tab",
       threadRef: ref,
-      surface: { kind: "diff", id: "diff" },
+      surface: { kind: "device", id: "device" },
     });
     store.remember({ kind: "browser", threadRef: ref, snapshot });
     state.openPreview.mockResolvedValue(AsyncResult.success({ tabId: "new-tab" }));
@@ -245,7 +245,7 @@ describe("root reopen shortcut", () => {
     expect(state.openPreview).toHaveBeenCalledOnce();
     expect(
       selectThreadRightPanelState(useRightPanelStore.getState().byThreadKey, ref).activeSurfaceId,
-    ).toBe("diff");
+    ).toBe("device");
     expect(useClosedViewStore.getState().entries).toEqual([]);
   });
 
@@ -256,7 +256,7 @@ describe("root reopen shortcut", () => {
       const older = store.remember({
         kind: "panel-tab",
         threadRef: ref,
-        surface: { kind: "diff", id: "diff" },
+        surface: { kind: "device", id: "device" },
       });
       const failed = store.remember(
         kind === "browser"
@@ -292,7 +292,7 @@ describe("root reopen shortcut", () => {
       });
       expect(
         selectThreadRightPanelState(useRightPanelStore.getState().byThreadKey, ref).activeSurfaceId,
-      ).toBe("diff");
+      ).toBe("device");
       expect(useClosedViewStore.getState().entries.map((entry) => entry.id)).toEqual([failed]);
       state.workspaceAvailable = true;
       state.openPreview.mockResolvedValue(AsyncResult.success({ ...snapshot, tabId: "new-tab" }));
@@ -315,7 +315,7 @@ describe("root reopen shortcut", () => {
       );
     useClosedViewStore
       .getState()
-      .remember({ kind: "panel-tab", threadRef: ref, surface: { kind: "diff", id: "diff" } });
+      .remember({ kind: "panel-tab", threadRef: ref, surface: { kind: "device", id: "device" } });
     await render();
     expect(forwardedCommands()).toContain("view.reopenClosed");
     await act(() => {

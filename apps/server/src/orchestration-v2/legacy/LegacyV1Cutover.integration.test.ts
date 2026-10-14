@@ -151,16 +151,14 @@ const seedV1Database = (fixturePath: string, workspace: string) =>
         readonly pinnedAt?: string;
         readonly pinOrderKey?: string;
         readonly deletedAt?: string;
-        readonly worktreePath?: string;
-        readonly linkedPullRequestJson?: string;
       }) =>
         sql`
           INSERT INTO projection_threads (
             thread_id, project_id, title, model_selection_json, runtime_mode,
-            interaction_mode, branch, worktree_path, latest_turn_id,
+            interaction_mode, latest_turn_id,
             created_at, updated_at, archived_at, settled_override, settled_at,
             unsettled_at, snoozed_until, snoozed_at, pinned_at, pin_order_key,
-            linked_pull_request_json, deleted_at
+            deleted_at
           ) VALUES (
             ${input.threadId},
             ${PROJECT_ID},
@@ -168,8 +166,6 @@ const seedV1Database = (fixturePath: string, workspace: string) =>
             ${modelSelectionJson},
             'full-access',
             'default',
-            'main',
-            ${input.worktreePath ?? null},
             NULL,
             ${input.createdAt},
             ${input.updatedAt},
@@ -181,7 +177,6 @@ const seedV1Database = (fixturePath: string, workspace: string) =>
             ${input.snoozedAt ?? null},
             ${input.pinnedAt ?? null},
             ${input.pinOrderKey ?? null},
-            ${input.linkedPullRequestJson ?? null},
             ${input.deletedAt ?? null}
           )
         `;
@@ -217,8 +212,6 @@ const seedV1Database = (fixturePath: string, workspace: string) =>
         title: "Active conversation",
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-05T00:00:00.000Z",
-        linkedPullRequestJson:
-          '{"projectId":"project:cutover","repository":"pingdotgg/t3code","number":9100,"url":"https://github.com/pingdotgg/t3code/pull/9100"}',
       });
       yield* insertMessage({
         messageId: "message:cutover:active:1",
@@ -375,7 +368,6 @@ const seedV1Database = (fixturePath: string, workspace: string) =>
         title: "Long conversation",
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-10T00:00:00.000Z",
-        worktreePath: workspace,
       });
       const filler = "history detail ".repeat(800); // ~12k chars per message
       yield* insertMessage({
@@ -781,11 +773,6 @@ describe("orchestration v2 legacy v1 cutover", () => {
                     sizeBytes: 1234,
                   },
                 ],
-              );
-              assert.equal(active.thread.linkedPullRequest?.number, 9100);
-              assert.deepStrictEqual(
-                active.thread.pullRequests?.map((pullRequest) => pullRequest.number),
-                [9100],
               );
 
               const archived = yield* projections.getThreadProjection(

@@ -10,7 +10,7 @@ it.effect("decodes a dispatch error after its bootstrap thread was deleted", () 
   Effect.gen(function* () {
     const error = yield* decodeDispatchCommandError({
       _tag: "OrchestrationDispatchCommandError",
-      message: "Failed to create worktree.",
+      message: "Failed to create thread.",
       bootstrapThreadDisposition: "deleted",
     });
 
@@ -22,7 +22,7 @@ it.effect("decodes a dispatch error before its bootstrap thread was created", ()
   Effect.gen(function* () {
     const error = yield* decodeDispatchCommandError({
       _tag: "OrchestrationDispatchCommandError",
-      message: "A separate worktree requires a base commit.",
+      message: "Project not found.",
       bootstrapThreadDisposition: "not-created",
     });
 

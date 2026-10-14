@@ -17,7 +17,6 @@ import * as Fiber from "effect/Fiber";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
-import * as PubSub from "effect/PubSub";
 import * as Queue from "effect/Queue";
 import * as Stream from "effect/Stream";
 import * as TestClock from "effect/testing/TestClock";
@@ -29,7 +28,6 @@ import * as ProjectStore from "./orchestration-v2/ProjectStore.ts";
 import * as OrchestrationEventStore from "./persistence/OrchestrationEventStore.ts";
 import * as SqlitePersistence from "./persistence/Sqlite.ts";
 import * as ExternalLauncher from "./process/externalLauncher.ts";
-import * as ProjectEnrichment from "./project/ProjectEnrichmentService.ts";
 import * as ProjectService from "./project/ProjectService.ts";
 import {
   hasCompatibleOrchestrationProtocol,
@@ -290,7 +288,6 @@ it.live.each(["thread", "shell"] as const)(
       yield* insert(1, true);
       const [after] = yield* insert(2);
       const [highWater] = yield* insert(3, true);
-      const updates = yield* PubSub.unbounded();
       let liveSequence = 0;
       const consume = <A extends { readonly kind: string; readonly sequence?: number }, E, R>(
         stream: Stream.Stream<A, E, R>,
@@ -348,9 +345,6 @@ it.live.each(["thread", "shell"] as const)(
         Effect.provideService(ProjectService.ProjectService, {
           getShell: () => Effect.succeedSome(project),
         } as unknown as ProjectService.ProjectService["Service"]),
-        Effect.provideService(ProjectEnrichment.ProjectEnrichmentService, {
-          subscribeChanges: PubSub.subscribe(updates),
-        } as ProjectEnrichment.ProjectEnrichmentService["Service"]),
       );
       assert.deepEqual(
         items.map((item) => item.kind),

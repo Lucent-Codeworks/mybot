@@ -53,8 +53,6 @@ export class ThreadLifecycleService extends Context.Service<
       readonly commandId: CommandId;
       readonly threadId: ThreadId;
       readonly title?: string;
-      readonly branch?: string | null;
-      readonly worktreePath?: string | null;
     }) => Effect.Effect<Pick<OrchestrationV2ThreadProjection, "thread">, ThreadLifecycleError>;
     readonly setRuntimeMode: (input: {
       readonly commandId: CommandId;
@@ -112,8 +110,6 @@ const make = Effect.gen(function* () {
         commandId: input.commandId,
         threadId: input.threadId,
         ...(input.title === undefined ? {} : { title: input.title }),
-        ...(input.branch === undefined ? {} : { branch: input.branch }),
-        ...(input.worktreePath === undefined ? {} : { worktreePath: input.worktreePath }),
       }),
     setRuntimeMode: (input) =>
       dispatch("set-runtime-mode", input.threadId, {

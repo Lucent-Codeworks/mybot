@@ -109,9 +109,10 @@ export function assertClaudeBackgroundSubagentAfterRootOutput(
   // The subagent works while the root is idle, so its steps and progress are
   // stored as they happen. Its end starts continuation run 2, which drains
   // the wake buffer; none of the subagent's work may wait there for it.
+  // The root is idle, so run 2 is created already starting rather than queued.
   const continuationStartIndex = result.domainEvents.findIndex(
     (event) =>
-      event.type === "run.updated" &&
+      (event.type === "run.created" || event.type === "run.updated") &&
       event.payload.id === projection.runs[1]?.id &&
       event.payload.status === "starting",
   );

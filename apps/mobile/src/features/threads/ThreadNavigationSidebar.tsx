@@ -91,7 +91,6 @@ interface ThreadNavigationSidebarProps {
   readonly selectedThreadKey: string | null;
   readonly onOpenSettings: () => void;
   readonly onOpenEnvironmentSettings: () => void;
-  readonly onNewThreadOnBranch: (thread: EnvironmentThreadShell) => void;
   readonly onNewThreadInProject: (project: EnvironmentProject) => void;
   readonly onSearchQueryChange: (query: string) => void;
   readonly onSelectThread: (thread: EnvironmentThreadShell) => void;
@@ -208,10 +207,7 @@ function ThreadNavigationSidebarPane(
     [threadSearch.matches],
   );
   const projectScopeKey = options.selectedProjectKey;
-  const resolvedProjectKey = resolveScratchProjectScopeKey(projectScopeKey, projects, {
-    sidebarProjectGroupingMode: options.projectGroupingMode,
-    sidebarProjectGroupingOverrides: {},
-  });
+  const resolvedProjectKey = resolveScratchProjectScopeKey(projectScopeKey, projects);
   useEffect(() => {
     if (resolvedProjectKey !== projectScopeKey) {
       setSelectedProjectKey(resolvedProjectKey);
@@ -222,9 +218,8 @@ function ThreadNavigationSidebarPane(
       buildHomeProjectScopes({
         projects,
         environmentId: options.selectedEnvironmentId,
-        projectGroupingMode: options.projectGroupingMode,
       }),
-    [options.projectGroupingMode, options.selectedEnvironmentId, projects],
+    [options.selectedEnvironmentId, projects],
   );
   const projectFilterOptions = useMemo(
     () =>
@@ -692,7 +687,6 @@ function ThreadNavigationSidebarPane(
           // which re-renders identically.
           return (
             <ThreadListV2Row
-              onNewThreadOnBranch={props.onNewThreadOnBranch}
               thread={thread}
               variant={item.item.variant}
               hasQueuedMessages={item.hasQueuedMessages}
@@ -815,7 +809,6 @@ function ThreadNavigationSidebarPane(
       projectTitleByProjectKey,
       regenerateThreadTitle,
       renameThread,
-      props.onNewThreadOnBranch,
       props.searchQuery,
       props.selectedThreadKey,
       props.width,

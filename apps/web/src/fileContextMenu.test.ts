@@ -17,33 +17,17 @@ const EMPTY_CAPABILITIES = {
 };
 
 describe("resolveFileContextMenuAbsolutePath", () => {
-  it("joins workspace-relative diff paths onto the workspace root", () => {
+  it("joins workspace-relative paths onto the workspace root", () => {
     expect(resolveFileContextMenuAbsolutePath(BASE_TARGET)).toBe("/workspace/project/src/index.ts");
   });
 
-  it("strips the repository prefix when the repo root is nested in the workspace", () => {
+  it("rejects paths that escape the workspace", () => {
     expect(
-      resolveFileContextMenuAbsolutePath({
-        ...BASE_TARGET,
-        workspaceRoot: "/workspace/project/packages/app",
-        repositoryRoot: "/workspace/project",
-        filePath: "packages/app/src/index.ts",
-      }),
-    ).toBe("/workspace/project/packages/app/src/index.ts");
-  });
-
-  it("returns null for paths outside the workspace when a repository root is set", () => {
-    expect(
-      resolveFileContextMenuAbsolutePath({
-        ...BASE_TARGET,
-        workspaceRoot: "/workspace/project/packages/app",
-        repositoryRoot: "/workspace/project",
-        filePath: "other/src/index.ts",
-      }),
+      resolveFileContextMenuAbsolutePath({ ...BASE_TARGET, filePath: "../other/index.ts" }),
     ).toBeNull();
   });
 
-  it("rejects absolute paths without a workspace root, matching diff path resolution", () => {
+  it("rejects absolute paths without a workspace root", () => {
     expect(
       resolveFileContextMenuAbsolutePath({
         ...BASE_TARGET,

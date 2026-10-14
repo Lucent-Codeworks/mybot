@@ -25,8 +25,6 @@ const row = (overrides: Partial<ProjectRow> = {}): ProjectRow => ({
   title: "Scripts",
   workspaceRoot: "/tmp/scripts",
   defaultModelSelection: null,
-  defaultThreadEnvMode: null,
-  autoPull: false,
   faviconPath: null,
   projectIcon: null,
   scripts: [],
@@ -41,7 +39,6 @@ const script = (id: string): ProjectScript => ({
   name: "Install dependencies",
   command: "vp i",
   icon: "configure",
-  runOnWorktreeCreate: false,
 });
 
 const plan = (command: ProjectCommand, state: Partial<ProjectCommandState> = {}) =>
@@ -110,22 +107,17 @@ describe("planProjectCommand", () => {
     const payload = payloadOf(
       update({
         scripts,
-        defaultThreadEnvMode: "worktree",
-        autoPull: true,
         faviconPath: "brand/icon.svg",
         projectIcon: { kind: "lucide", name: "alarm-clock", color: "violet" },
       }),
     );
     assert.deepInclude(payload, {
       scripts,
-      defaultThreadEnvMode: "worktree",
-      autoPull: true,
       faviconPath: "brand/icon.svg",
       projectIcon: { kind: "lucide", name: "alarm-clock", color: "violet" },
     });
     const renamed = payloadOf(update({ title: "Renamed" }));
-    assert.isFalse("defaultThreadEnvMode" in renamed);
-    assert.isNull(payloadOf(update({ defaultThreadEnvMode: null })).defaultThreadEnvMode);
+    assert.isFalse("scripts" in renamed);
   });
 
   it.each(["install-javascript-dependencies", "A", "a.b", "a b", "-a", "a".repeat(25)])(

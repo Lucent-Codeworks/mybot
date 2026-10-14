@@ -1,4 +1,4 @@
-import { EnvironmentHttpCommonError } from "@t3tools/contracts";
+import { EnvironmentHttpCommonError, OrchestrationV2ShellSnapshot } from "@t3tools/contracts";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -14,10 +14,6 @@ import {
   executeAuthenticatedEnvironmentHttpRequest,
   withOrchestrationProtocolHeader,
 } from "./environmentHttpAuth.ts";
-import {
-  decodeShellSnapshotDeferringPullRequests,
-  type DeferredShellSnapshot,
-} from "./shellPullRequests.ts";
 
 // Long enough for a slow but alive server to finish. On timeout the socket asks
 // the same server for the same full snapshot, so a short deadline only throws
@@ -49,8 +45,7 @@ export const fetchEnvironmentShellSnapshot = Effect.fn(
     method: "GET",
     url: (urls) => urls.shellSnapshot(),
     timeoutMs: input.timeoutMs ?? DEFAULT_SHELL_SNAPSHOT_TIMEOUT_MS,
-    // The body is decoded here so each thread's pull request links can decode after its
-    // rows. Every declared error is an `EnvironmentHttpCommonError`, so decoding one keeps
+    // The body is decoded here. Every declared error is an `EnvironmentHttpCommonError`, so decoding one keeps
     // the error the credential retry checks for.
     request: ({ client, headers }) =>
       client
@@ -62,6 +57,10 @@ export const fetchEnvironmentShellSnapshot = Effect.fn(
   });
 });
 
+const decodeShellSnapshotJson = Schema.decodeUnknownEffect(
+  Schema.toCodecJson(OrchestrationV2ShellSnapshot),
+);
+
 const decodeEnvironmentHttpCommonError = Schema.decodeUnknownEffect(
   Schema.toCodecJson(EnvironmentHttpCommonError),
 );
@@ -69,11 +68,11 @@ const decodeEnvironmentHttpCommonError = Schema.decodeUnknownEffect(
 const decodeShellSnapshotResponse = (
   response: HttpClientResponse.HttpClientResponse,
 ): Effect.Effect<
-  DeferredShellSnapshot,
+  OrchestrationV2ShellSnapshot,
   HttpClientError.HttpClientError | Schema.SchemaError | EnvironmentHttpCommonError
 > => {
   if (response.status === 200) {
-    return response.json.pipe(Effect.flatMap(decodeShellSnapshotDeferringPullRequests));
+    return response.json.pipe(Effect.flatMap(decodeShellSnapshotJson));
   }
   // A body that is not a declared error keeps its status, as the generated decoder reported.
   const statusError = new HttpClientError.HttpClientError({
@@ -99,7 +98,7 @@ export class ShellSnapshotLoader extends Context.Service<
   {
     readonly load: (
       prepared: PreparedConnection,
-    ) => Effect.Effect<Option.Option<DeferredShellSnapshot>>;
+    ) => Effect.Effect<Option.Option<OrchestrationV2ShellSnapshot>>;
   }
 >()("@t3tools/client-runtime/state/shellSnapshotHttp/ShellSnapshotLoader") {}
 
@@ -116,14 +115,14 @@ export const layer: Layer.Layer<ShellSnapshotLoader, never, HttpClient.HttpClien
     return ShellSnapshotLoader.of({
       load: (prepared: PreparedConnection) =>
         fetchEnvironmentShellSnapshot({ prepared, signer, remoteAuthorization }).pipe(
-          Effect.map(Option.some<DeferredShellSnapshot>),
+          Effect.map(Option.some<OrchestrationV2ShellSnapshot>),
           Effect.provideService(HttpClient.HttpClient, httpClient),
           Effect.catchCause((cause) =>
             Effect.logWarning(
               "Could not load the environment shell snapshot over HTTP; using the socket snapshot instead.",
             ).pipe(
               Effect.annotateLogs({ cause: Cause.pretty(cause) }),
-              Effect.as(Option.none<DeferredShellSnapshot>()),
+              Effect.as(Option.none<OrchestrationV2ShellSnapshot>()),
             ),
           ),
         ),

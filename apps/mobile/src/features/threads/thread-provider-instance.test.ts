@@ -33,8 +33,6 @@ function makeThread(environmentId: EnvironmentId, instanceId: string): Environme
     modelSelection: { instanceId: ProviderInstanceId.make(instanceId), model: "gpt-5.4" },
     runtimeMode: "full-access",
     interactionMode: "default",
-    branch: null,
-    worktreePath: null,
     latestRun: null,
     createdAt: "2026-06-01T00:00:00.000Z",
     updatedAt: "2026-06-01T00:00:00.000Z",

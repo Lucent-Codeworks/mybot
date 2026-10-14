@@ -3,9 +3,8 @@ import type { ComponentProps } from "react";
 import { cn } from "~/lib/utils";
 
 /**
- * Truncates in the middle, the way Finder does, for strings that carry meaning at both ends:
- * branch names, paths, worktree names, shas. A tail-cut `fix/cache-main-20260918-180825` loses
- * the date that tells two branches apart; a path loses its file name.
+ * Truncates in the middle, the way Finder does, for strings that carry meaning at both ends,
+ * such as paths and ids. A tail-cut path loses its file name.
  *
  * CSS has no middle ellipsis, so the string is split into a head that truncates and a tail
  * that does not. No measuring and no observers, so it costs the same as `truncate` in a long

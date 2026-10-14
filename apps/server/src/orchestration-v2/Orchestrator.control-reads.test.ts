@@ -67,8 +67,6 @@ it.effect(
         modelSelection,
         runtimeMode: "full-access",
         interactionMode: "default",
-        branch: null,
-        worktreePath: null,
         createdBy: "user",
         creationSource: "web",
       });
@@ -226,20 +224,10 @@ it.effect(
         assert.equal(response.node?.status, mode === "live" ? "completed" : "cancelled");
         assert.equal(response.item?.status, mode === "live" ? "completed" : "cancelled");
       }
-      yield* orchestrator.dispatch({
-        type: "thread.metadata.update",
-        commandId: CommandId.make("workspace-control"),
-        threadId,
-        worktreePath: "/new-repo",
-      });
       const thread = yield* projections.getThread(threadId);
       assert.equal(thread.title, "After");
       assert.equal(thread.modelSelection.model, "gpt-6");
       assert.equal(thread.runtimeMode, "approval-required");
-      assert.deepEqual(
-        (yield* projections.getThreadProviderContext(threadId)).providerSessions,
-        [],
-      );
       yield* sql`INSERT INTO orchestration_v2_projection_turn_items
         (turn_item_id, thread_id, run_id, node_id, provider_thread_id, provider_turn_id,
           type, status, ordinal, updated_at, payload_json)
@@ -296,8 +284,6 @@ it.effect("implements a proposed plan that the command projection leaves out", (
       modelSelection,
       runtimeMode: "full-access",
       interactionMode: "plan",
-      branch: null,
-      worktreePath: null,
       createdBy: "user",
       creationSource: "web",
     });
@@ -353,8 +339,6 @@ it.effect("settles only the stopped run's background work, once", () =>
       modelSelection,
       runtimeMode: "full-access",
       interactionMode: "default",
-      branch: null,
-      worktreePath: null,
       createdBy: "user",
       creationSource: "web",
     });
@@ -532,95 +516,5 @@ it.effect("settles only the stopped run's background work, once", () =>
       `${commandItem(2)}:running`,
       `${commandItem(3)}:running`,
     ]);
-  }).pipe(Effect.provide(layerTest)),
-);
-
-it.effect("keeps delegated child pull-request links independent of the parent", () =>
-  Effect.gen(function* () {
-    const orchestrator = yield* Orchestrator.OrchestratorV2;
-    const projections = yield* ProjectionStore.ProjectionStoreV2;
-    const parentThreadId = ThreadId.make("thread:parent-pr");
-    const projectId = ProjectId.make("project:parent-pr");
-    const parentPullRequest = {
-      projectId,
-      repository: "pingdotgg/t3code",
-      number: 123,
-      url: "https://github.com/pingdotgg/t3code/pull/123",
-    };
-    yield* orchestrator.dispatch({
-      type: "thread.create",
-      commandId: CommandId.make("create-parent-pr"),
-      threadId: parentThreadId,
-      projectId,
-      title: "Parent with a linked PR",
-      modelSelection,
-      runtimeMode: "full-access",
-      interactionMode: "default",
-      branch: "feature/parent-pr",
-      worktreePath: "/repo-worktree",
-      createdBy: "user",
-      creationSource: "web",
-    });
-    yield* orchestrator.dispatch({
-      type: "thread.metadata.update",
-      commandId: CommandId.make("link-parent-pr"),
-      threadId: parentThreadId,
-      linkedPullRequest: parentPullRequest,
-    });
-    yield* orchestrator.dispatch({
-      type: "message.dispatch",
-      commandId: CommandId.make("start-parent-pr"),
-      threadId: parentThreadId,
-      messageId: MessageId.make("message:parent-pr"),
-      text: "Delegate a review",
-      attachments: [],
-      dispatchMode: { type: "start_immediately" },
-      createdBy: "user",
-      creationSource: "web",
-    });
-    const parent = yield* projections.getThreadProjection(parentThreadId);
-    const parentRun = parent.runs[0]!;
-    yield* orchestrator.dispatch({
-      type: "delegated_task.request",
-      commandId: CommandId.make("delegate-parent-pr"),
-      parentThreadId,
-      parentRunId: parentRun.id,
-      parentNodeId: parentRun.rootNodeId!,
-      task: "Review the changes",
-      modelSelection,
-      runtimeMode: "full-access",
-      interactionMode: "default",
-      createdBy: "agent",
-      creationSource: "mcp",
-    });
-    const updatedParent = yield* projections.getThreadProjection(parentThreadId);
-    const childThreadId = updatedParent.subagents[0]!.childThreadId!;
-    const child = yield* projections.getThreadProjection(childThreadId);
-    assert.isNull(child.thread.linkedPullRequest);
-    assert.deepEqual(child.thread.pullRequests, []);
-    assert.equal(child.thread.branch, parent.thread.branch);
-    assert.equal(child.thread.worktreePath, parent.thread.worktreePath);
-    assert.equal(child.thread.lineage.parentThreadId, parentThreadId);
-
-    const childPullRequest = {
-      ...parentPullRequest,
-      number: 456,
-      url: "https://github.com/pingdotgg/t3code/pull/456",
-    };
-    yield* orchestrator.dispatch({
-      type: "thread.metadata.update",
-      commandId: CommandId.make("link-child-pr"),
-      threadId: childThreadId,
-      linkedPullRequest: childPullRequest,
-    });
-    const linkedChild = yield* projections.getThreadProjection(childThreadId);
-    assert.deepEqual(linkedChild.thread.linkedPullRequest, childPullRequest);
-    assert.deepEqual(
-      linkedChild.thread.pullRequests?.map((link) => link.number),
-      [456],
-    );
-    const parentAfterChildLink = yield* projections.getThreadProjection(parentThreadId);
-    assert.deepEqual(parentAfterChildLink.thread.linkedPullRequest, parentPullRequest);
-    assert.deepEqual(parentAfterChildLink.thread.pullRequests, parent.thread.pullRequests);
   }).pipe(Effect.provide(layerTest)),
 );

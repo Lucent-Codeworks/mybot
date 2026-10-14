@@ -56,8 +56,6 @@ function makeParentThread(): OrchestrationV2AppThread {
     modelSelection: parentModelSelection,
     runtimeMode: "full-access",
     interactionMode: "plan",
-    branch: "feature/source",
-    worktreePath: "/tmp/source-worktree",
     activeProviderThreadId: ProviderThreadId.make("provider-thread:subagent-snoozed-parent"),
     lineage: {
       parentThreadId: null,
@@ -100,8 +98,6 @@ it("keeps a subagent child awake when its parent thread is snoozed", () => {
   assert.equal(childThread.projectId, parentThread.projectId);
   assert.equal(childThread.runtimeMode, parentThread.runtimeMode);
   assert.equal(childThread.interactionMode, parentThread.interactionMode);
-  assert.equal(childThread.branch, parentThread.branch);
-  assert.equal(childThread.worktreePath, parentThread.worktreePath);
   assert.equal(childThread.providerInstanceId, childProviderInstanceId);
   assert.deepEqual(childThread.modelSelection, childModelSelection);
   assert.equal(childThread.activeProviderThreadId, childProviderThreadId);

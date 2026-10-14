@@ -3,10 +3,9 @@ import { NativePrimaryColumnContext } from "../../native/v5-workspace-context";
 import * as Arr from "effect/Array";
 import * as Order from "effect/Order";
 import { useNavigation } from "@react-navigation/native";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Platform, useWindowDimensions } from "react-native";
 
-import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
 import { resolveScratchProjectScopeKey } from "@t3tools/client-runtime/state/project-grouping";
 
 import { NativeHeaderToolbar, NativeStackScreenOptions } from "../../native/StackHeader";
@@ -64,20 +63,6 @@ export function HomeRouteScreen() {
     else setLocalSearchQuery(query);
   };
   const handleSelectThread = useHomeThreadSelection();
-  const handleNewThreadOnBranch = useCallback(
-    (thread: EnvironmentThreadShell) => {
-      navigation.navigate("NewTaskSheet", {
-        screen: "NewTaskDraft",
-        params: {
-          environmentId: String(thread.environmentId),
-          projectId: String(thread.projectId),
-          branch: thread.branch,
-          worktreePath: thread.worktreePath,
-        },
-      });
-    },
-    [navigation],
-  );
 
   useEffect(() => {
     void checkForAppUpdateOnLaunch();
@@ -127,10 +112,7 @@ export function HomeRouteScreen() {
   } = useHomeListOptions(availableEnvironmentIds);
   const selectedEnvironmentId = listOptions.selectedEnvironmentId;
   const projectScopeKey = listOptions.selectedProjectKey;
-  const resolvedProjectKey = resolveScratchProjectScopeKey(projectScopeKey, projects, {
-    sidebarProjectGroupingMode: listOptions.projectGroupingMode,
-    sidebarProjectGroupingOverrides: {},
-  });
+  const resolvedProjectKey = resolveScratchProjectScopeKey(projectScopeKey, projects);
   useEffect(() => {
     if (resolvedProjectKey !== projectScopeKey) {
       setSelectedProjectKey(resolvedProjectKey);
@@ -141,12 +123,11 @@ export function HomeRouteScreen() {
       buildHomeProjectScopes({
         projects,
         environmentId: selectedEnvironmentId,
-        projectGroupingMode: listOptions.projectGroupingMode,
       }).map((scope) => ({
         key: scope.key,
         label: scope.title,
       })),
-    [listOptions.projectGroupingMode, projects, selectedEnvironmentId],
+    [projects, selectedEnvironmentId],
   );
   // A saved project stays selected while its environment is offline or filtered out.
   const selectedProjectKey = projectFilterOptions.some(
@@ -290,7 +271,6 @@ export function HomeRouteScreen() {
           onSelectThread={handleSelectThread}
           onSelectPendingTask={openPendingTask}
           onDeletePendingTask={confirmDeletePendingTask}
-          onNewThreadOnBranch={handleNewThreadOnBranch}
           onNewThreadInProject={(project) => {
             navigation.navigate("NewTaskSheet", {
               screen: "NewTaskDraft",
@@ -303,7 +283,6 @@ export function HomeRouteScreen() {
           }}
           onStartNewTask={() => navigation.navigate("NewTaskSheet", { screen: "NewTask" })}
           pendingTasks={pendingTasks}
-          projectGroupingMode={listOptions.projectGroupingMode}
           projects={projects}
           projectSortOrder={listOptions.projectSortOrder}
           savedConnectionsById={savedConnectionsById}

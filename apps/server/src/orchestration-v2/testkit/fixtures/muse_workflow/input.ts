@@ -13,6 +13,26 @@ export function museWorkflowInput(): OrchestratorFixtureInput {
   return {
     steps: [
       { type: "message", text: MUSE_WORKFLOW_PROMPT },
+      // Muse starts its report turn once the workflow has settled. Replay
+      // holds that turn until the settlement is stored.
+      {
+        type: "await_threads",
+        label: "workflow settled",
+        until: (threads) =>
+          threads.some(
+            (thread) =>
+              thread.turnItems.some(
+                (item) =>
+                  item.type === "dynamic_tool" &&
+                  item.toolName === "workflow" &&
+                  item.status === "completed",
+              ) &&
+              thread.providerThreads.every(
+                (providerThread) => (providerThread.pendingBackgroundTasks?.length ?? 0) === 0,
+              ),
+          ),
+      },
+      { type: "release_replay_gate", label: "session/statusChanged:report-turn" },
       { type: "await_run_status", targetRunIndex: 2, status: "completed" },
     ],
   };

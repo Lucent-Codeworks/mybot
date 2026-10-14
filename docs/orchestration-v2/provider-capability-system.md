@@ -194,7 +194,7 @@ type CheckpointCapabilities = {
 };
 ```
 
-If provider rollback is unsupported, filesystem rollback can still happen, but provider conversation state must be restarted or marked divergent. Nested checkpoint scopes are app-owned; providers only affect whether their nested provider conversations can be rolled back to match restored filesystem state.
+Checkpoints are conversation positions only; rollback never restores project files. If provider rollback is unsupported, the provider conversation must be restarted from app context or the rollback rejected. Nested checkpoint scopes are app-owned; providers only affect whether their nested provider conversations can be rolled back.
 
 ## Identity Capabilities
 
@@ -230,10 +230,10 @@ fork unsupported
   -> synthetic fork from app projection if policy allows
 
 rollback unsupported
-  -> restore filesystem checkpoint, restart provider context, mark provider state divergent
+  -> restart provider context from the app thread, or reject the rollback
 
 nested checkpoint unsupported
-  -> capture only root-run checkpoint and record child filesystem activity as uncheckpointed
+  -> capture only the root-run checkpoint
 
 provider switch return unsupported
   -> create fresh provider thread with full app-thread summary

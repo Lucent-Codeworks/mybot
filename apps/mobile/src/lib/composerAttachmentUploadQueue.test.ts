@@ -274,7 +274,7 @@ describe("draft upload scope and offline submission", () => {
       composerDraftEnvironmentId("pending-task:message", [{ messageId: "message", environmentId }]),
     ).toBe(environmentId);
     expect(composerDraftEnvironmentId("pending-task:missing", [])).toBeNull();
-    const colonEnvironment = EnvironmentId.make("a:vcs-status:b");
+    const colonEnvironment = EnvironmentId.make("a:thread:b");
     expect(composerDraftEnvironmentId(`${colonEnvironment}:thread`, [])).toBe(colonEnvironment);
     expect(composerDraftEnvironmentId(`new-task:${colonEnvironment}:project`, [])).toBe(
       colonEnvironment,

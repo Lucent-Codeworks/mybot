@@ -1,6 +1,5 @@
 import { resolveThreadWorkingStartedAt } from "@t3tools/client-runtime/state/models";
 import { backgroundWorkHoldsCompletion } from "@t3tools/shared/orchestrationV2PendingBackgroundWork";
-import { threadPullRequestSearchTerms } from "@t3tools/shared/threadPullRequests";
 import * as React from "react";
 import {
   isAtomCommandInterrupted,
@@ -23,7 +22,7 @@ import {
   type ThreadSortInput,
 } from "../lib/threadSort";
 import type { SidebarThreadSummary, Thread } from "../types";
-import { cn, normalizeSearchText } from "../lib/utils";
+import { cn } from "../lib/utils";
 import { isLatestRunSettled } from "../session-logic";
 import { resolveServerBackedAppStageLabel } from "../branding.logic";
 
@@ -67,58 +66,6 @@ export function resolveSidebarRowAccessibility(input: {
 // so this limit is a direct renderer-heap and server-load multiplier — keep
 // it small; cold opens still render instantly from the cached snapshot.
 const SIDEBAR_THREAD_PREWARM_LIMIT = 3;
-// A small buffer keeps the next few rows warm without leasing every row that
-// content-visibility leaves mounted below the scroll viewport.
-const SIDEBAR_ROW_SUBSCRIPTION_OVERSCAN_PX = 160;
-
-export function useSidebarRowSubscriptionLease(isActive: boolean): {
-  readonly leaseLiveStatus: boolean;
-  readonly rowRef: React.Dispatch<React.SetStateAction<HTMLElement | null>>;
-} {
-  const [row, setRow] = React.useState<HTMLElement | null>(null);
-  const [isNearViewport, setIsNearViewport] = React.useState(isActive);
-
-  React.useEffect(() => {
-    if (isActive) {
-      setIsNearViewport(true);
-      return;
-    }
-    if (row === null) return;
-    if (typeof IntersectionObserver === "undefined") {
-      setIsNearViewport(true);
-      return;
-    }
-
-    const scrollRoot = row.closest<HTMLElement>('[data-slot="scroll-area-viewport"]');
-    const observer = new IntersectionObserver(
-      ([entry]) => setIsNearViewport(entry?.isIntersecting === true),
-      {
-        root: scrollRoot,
-        rootMargin: `${SIDEBAR_ROW_SUBSCRIPTION_OVERSCAN_PX}px 0px`,
-      },
-    );
-    observer.observe(row);
-    return () => observer.disconnect();
-  }, [isActive, row]);
-
-  return {
-    leaseLiveStatus: isActive || isNearViewport,
-    rowRef: setRow,
-  };
-}
-
-// A row keeps the last live value it rendered so a released lease never
-// blanks its badge. The value is bound to `key`, so a different worktree or
-// linked pull request cannot reuse the previous one.
-export function useRetainedValue<T>(key: string | null, value: T | null): T | null {
-  const retained = React.useRef<{ readonly key: string; readonly value: T } | null>(null);
-  if (key !== null && value !== null) {
-    retained.current = { key, value };
-  }
-  if (value !== null) return value;
-  return key !== null && retained.current?.key === key ? retained.current.value : null;
-}
-
 // Sidebar.motion handles ordinary section changes. Sortable transforms own
 // dragging; replaying their committed DOM order would animate the drop twice.
 export const animateSidebarLayoutChanges: AnimateLayoutChanges = (args) =>
@@ -487,7 +434,7 @@ type LogicalSidebarProject = SidebarProject & {
 export type ThreadTraversalDirection = "previous" | "next";
 
 /**
- * Shared-worktree checks must exclude only successful deletions, never the
+ * Fallback selection must exclude only successful deletions, never the
  * whole batch. A null result skips an entry that the caller can no longer find.
  */
 export async function deleteSelectedThreadEntries<
@@ -1072,8 +1019,7 @@ export { sortPinnedThreadsByOrderKey as sortPinnedThreadsForSidebar } from "@t3t
 const EMPTY_CONTENT_MATCH_KEYS: ReadonlySet<string> = new Set<string>();
 
 /**
- * Search the already-ordered sidebar thread collection by title or linked PR,
- * plus any thread whose messages the server matched (`contentMatchKeys`, keyed
+ * Search the already-ordered sidebar thread collection by title, plus any thread whose messages the server matched (`contentMatchKeys`, keyed
  * by `threadSearchMatchKey`). Keeping the input order means lifecycle ordering
  * (active, snoozed, settled) remains stable while the user narrows the list.
  */
@@ -1082,7 +1028,7 @@ export function searchSidebarThreads<
     readonly environmentId: EnvironmentId;
     readonly id: ThreadId;
     readonly title: string;
-  } & Parameters<typeof threadPullRequestSearchTerms>[0],
+  },
 >(
   threads: readonly T[],
   query: string,
@@ -1093,10 +1039,7 @@ export function searchSidebarThreads<
   const titleMatches: T[] = [];
   const contentMatches: T[] = [];
   for (const thread of threads) {
-    const matchesTitle = [thread.title, ...threadPullRequestSearchTerms(thread)].some((term) =>
-      term.toLowerCase().includes(normalizedQuery),
-    );
-    if (matchesTitle) {
+    if (thread.title.toLowerCase().includes(normalizedQuery)) {
       titleMatches.push(thread);
     } else if (
       contentMatchKeys.size > 0 &&
@@ -1108,21 +1051,6 @@ export function searchSidebarThreads<
     }
   }
   return [...titleMatches, ...contentMatches];
-}
-
-/**
- * Whether a PR's search terms contain every whitespace-separated token of the
- * query. Search results use this to pick the PR number to show, so it has to
- * accept the multi-token queries the command palette matches on.
- */
-export function pullRequestMatchesSearchQuery(
-  pullRequest: Parameters<typeof threadPullRequestSearchTerms>[0],
-  query: string,
-): boolean {
-  const normalizedQuery = normalizeSearchText(query);
-  if (normalizedQuery.length === 0) return false;
-  const haystack = normalizeSearchText(threadPullRequestSearchTerms(pullRequest).join(" "));
-  return normalizedQuery.split(" ").every((token) => haystack.includes(token));
 }
 
 export function filterSidebarProjectScopeItems<TItem extends { readonly value: string }>(input: {

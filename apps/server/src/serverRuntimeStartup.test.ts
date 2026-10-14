@@ -1,17 +1,10 @@
 import { assert, it } from "@effect/vitest";
-import {
-  DEFAULT_SERVER_SETTINGS,
-  DEFAULT_MODEL,
-  ProjectId,
-  ProviderInstanceId,
-} from "@t3tools/contracts";
+import { DEFAULT_MODEL, ProviderInstanceId } from "@t3tools/contracts";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as Fiber from "effect/Fiber";
 import * as Ref from "effect/Ref";
-
-import * as GitVcsDriver from "./vcs/GitVcsDriver.ts";
 
 import * as ServerConfig from "./config.ts";
 import * as ServerRuntimeStartup from "./serverRuntimeStartup.ts";
@@ -127,70 +120,5 @@ it.effect("resolveWelcomeBase derives cwd and project name from server config", 
       cwd: "/tmp/startup-project",
       projectName: "startup-project",
     });
-  }),
-);
-
-it.effect("automatic pull only updates enabled, behind, clean default-branch checkouts", () =>
-  Effect.gen(function* () {
-    const pulled: string[] = [];
-    const git = {
-      statusDetails: (cwd: string) =>
-        Effect.succeed({
-          isRepo: true,
-          isDefaultBranch: cwd !== "/feature",
-          hasUpstream: true,
-          hasWorkingTreeChanges: cwd === "/dirty",
-          aheadCount: cwd === "/ahead" ? 1 : 0,
-          behindCount: cwd === "/current" ? 0 : 1,
-        } as never),
-      pullCurrentBranch: (cwd: string) =>
-        Effect.sync(() => {
-          pulled.push(cwd);
-          return {
-            status: "pulled" as const,
-            refName: "main",
-            upstreamRef: "origin/main",
-          };
-        }),
-    } as unknown as GitVcsDriver.GitVcsDriver["Service"];
-    const project = (workspaceRoot: string) =>
-      ({ id: ProjectId.make(workspaceRoot), workspaceRoot }) as never;
-    const overrides = (entries: Record<string, boolean>) => ({
-      ...DEFAULT_SERVER_SETTINGS,
-      projectSettingsOverrides: Object.fromEntries(
-        Object.entries(entries).map(([root, defaultAutoPull]) => [
-          ProjectId.make(root),
-          { defaultAutoPull },
-        ]),
-      ),
-    });
-
-    yield* ServerRuntimeStartup.autoPullProjects(
-      [
-        project("/clean"),
-        project("/current"),
-        project("/dirty"),
-        project("/ahead"),
-        project("/feature"),
-        project("/disabled"),
-      ],
-      overrides({
-        "/clean": true,
-        "/current": true,
-        "/dirty": true,
-        "/ahead": true,
-        "/feature": true,
-        "/disabled": false,
-      }),
-    ).pipe(Effect.provideService(GitVcsDriver.GitVcsDriver, git));
-
-    assert.deepStrictEqual(pulled, ["/clean"]);
-
-    pulled.length = 0;
-    yield* ServerRuntimeStartup.autoPullProjects(
-      [project("/inherited"), project("/opted-out"), project("/dirty")],
-      { ...overrides({ "/opted-out": false }), defaultAutoPull: true },
-    ).pipe(Effect.provideService(GitVcsDriver.GitVcsDriver, git));
-    assert.deepStrictEqual(pulled, ["/inherited"]);
   }),
 );

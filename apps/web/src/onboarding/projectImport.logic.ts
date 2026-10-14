@@ -7,10 +7,8 @@ const DEFAULT_SELECTION_MIN_THREADS = 3;
 
 /**
  * Existing projects still need their agent history imported, so every scan
- * candidate is offered. The default selection is narrower: git repositories
- * active in the last 30 days with enough threads to look like real work.
- * Servers that predate the git scan omit `git`; their candidates are treated
- * as repositories so old computers still get a useful default selection.
+ * candidate is offered. The default selection is narrower: folders active in
+ * the last 30 days with enough threads to look like real work.
  */
 export function partitionOnboardingProjects<T extends AgentSessionProjectCandidate>(
   candidates: ReadonlyArray<T>,
@@ -21,7 +19,6 @@ export function partitionOnboardingProjects<T extends AgentSessionProjectCandida
   return {
     available: candidates,
     recent: candidates.filter((candidate) => {
-      if (candidate.git === null) return false;
       if (candidate.threadCount < DEFAULT_SELECTION_MIN_THREADS) return false;
       if (candidate.lastActiveAt === null) return false;
       const lastActiveAt = Date.parse(candidate.lastActiveAt);
@@ -30,75 +27,16 @@ export function partitionOnboardingProjects<T extends AgentSessionProjectCandida
   };
 }
 
-export interface OnboardingProjectGroup<T> {
-  /** Stable identity for collapse state and React keys. */
-  readonly key: string;
-  /** GitHub `owner/name`, or the checkout's folder name when the origin is elsewhere. */
-  readonly label: string;
-  readonly repository: string | null;
-  readonly candidates: ReadonlyArray<T>;
-  readonly threadCount: number;
-  readonly lastActiveAt: string | null;
-}
-
-function latestActivity(left: string | null, right: string | null): string | null {
-  if (left === null) return right;
-  if (right === null) return left;
-  return left > right ? left : right;
-}
-
-/**
- * Group scan candidates for the onboarding picker. Clones of one repository
- * share a group keyed by their normalized origin URL. Repositories without an
- * origin get a group each, as do candidates from servers that do not report
- * git identity. Directories that are not git repositories are returned
- * separately so the UI can fold them away by default. Groups sort by most
- * recent activity, newest first.
- */
-export function groupOnboardingProjects<
-  T extends Pick<
-    AgentSessionProjectCandidate,
-    "path" | "title" | "git" | "threadCount" | "lastActiveAt"
-  >,
->(candidates: ReadonlyArray<T>) {
-  const groups = new Map<string, OnboardingProjectGroup<T> & { candidates: Array<T> }>();
-  const other: Array<T> = [];
-
-  for (const candidate of candidates) {
-    if (candidate.git === null) {
-      other.push(candidate);
-      continue;
-    }
-    const git = candidate.git ?? { remoteKey: null, repository: null };
-    const key = git.remoteKey === null ? `path:${candidate.path}` : `remote:${git.remoteKey}`;
-    const existing = groups.get(key);
-    if (existing === undefined) {
-      groups.set(key, {
-        key,
-        label: git.repository ?? candidate.title,
-        repository: git.repository,
-        candidates: [candidate],
-        threadCount: candidate.threadCount,
-        lastActiveAt: candidate.lastActiveAt,
-      });
-      continue;
-    }
-    existing.candidates.push(candidate);
-    groups.set(key, {
-      ...existing,
-      threadCount: existing.threadCount + candidate.threadCount,
-      lastActiveAt: latestActivity(existing.lastActiveAt, candidate.lastActiveAt),
-    });
-  }
-
-  const repositories = [...groups.values()].sort((left, right) => {
-    if (left.lastActiveAt === right.lastActiveAt) return left.label.localeCompare(right.label);
+/** Order scan candidates for the onboarding picker: newest activity first, then by title. */
+export function sortOnboardingProjects<
+  T extends Pick<AgentSessionProjectCandidate, "title" | "lastActiveAt">,
+>(candidates: ReadonlyArray<T>): T[] {
+  return [...candidates].sort((left, right) => {
+    if (left.lastActiveAt === right.lastActiveAt) return left.title.localeCompare(right.title);
     if (left.lastActiveAt === null) return 1;
     if (right.lastActiveAt === null) return -1;
     return right.lastActiveAt.localeCompare(left.lastActiveAt);
   });
-
-  return { repositories, other };
 }
 
 /** Use the server's project match before the client snapshot, which can lag behind the scan. */

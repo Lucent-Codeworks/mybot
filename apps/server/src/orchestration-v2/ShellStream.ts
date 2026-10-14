@@ -8,10 +8,7 @@ import type {
   OrchestrationV2ShellStreamItem,
   OrchestrationV2StoredEvent,
 } from "@t3tools/contracts";
-import {
-  OrchestrationProjectShell as ProjectShellSchema,
-  OrchestrationV2ThreadShell as ThreadShellSchema,
-} from "@t3tools/contracts";
+import { OrchestrationV2ThreadShell as ThreadShellSchema } from "@t3tools/contracts";
 import * as Clock from "effect/Clock";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
@@ -96,128 +93,6 @@ export function coalesceShellApplicationEvents<A extends ShellApplicationEvent>(
   }
   return Array.from(latestByAggregate.values()).sort(
     (left, right) => left.sequence - right.sequence,
-  );
-}
-
-/**
- * Emit the initial shell prefix strictly first, then merge the post-prefix
- * tail with enrichment refreshes. Prevents a newer marked enrichment from
- * landing before the unmarked authoritative initial snapshot.
- */
-export function composeShellStreamWithEnrichment<A, E, R, A2, E2, R2, A3, E3, R3>(input: {
-  readonly initial: Stream.Stream<A, E, R>;
-  readonly tail: Stream.Stream<A2, E2, R2>;
-  readonly enrichment: Stream.Stream<A3, E3, R3>;
-}): Stream.Stream<A | A2 | A3, E | E2 | E3, R | R2 | R3> {
-  return Stream.concat(input.initial, Stream.merge(input.tail, input.enrichment));
-}
-
-const sameProjects = Schema.toEquivalence(Schema.Array(ProjectShellSchema));
-
-/** Drop repeated metadata refreshes within one subscription, preserving resolution progress. */
-export function dedupeShellEnrichment<E, R>(
-  stream: Stream.Stream<OrchestrationV2ShellStreamItem, E, R>,
-): Stream.Stream<OrchestrationV2ShellStreamItem, E, R> {
-  return Stream.suspend(() => {
-    let previous:
-      | {
-          readonly projects: ReadonlyArray<OrchestrationProjectShell>;
-          readonly roots: ReadonlySet<string>;
-        }
-      | undefined;
-    return stream.pipe(
-      Stream.filter((item) => {
-        if (item.kind !== "snapshot") {
-          // A project delta may change which projects/identities a later refresh repairs.
-          if (item.kind === "project.updated" || item.kind === "project.removed")
-            previous = undefined;
-          return true;
-        }
-        if (
-          item.resolvedRepositoryIdentityRoots === undefined ||
-          item.snapshot.threads.length > 0 ||
-          item.snapshot.archivedThreads.length > 0
-        ) {
-          previous = undefined;
-          return true;
-        }
-        const roots = new Set(item.resolvedRepositoryIdentityRoots);
-        const prior = previous;
-        if (
-          prior !== undefined &&
-          roots.size === prior.roots.size &&
-          [...roots].every((root) => prior.roots.has(root)) &&
-          sameProjects(prior.projects, item.snapshot.projects)
-        )
-          return false;
-        previous = { projects: item.snapshot.projects, roots };
-        return true;
-      }),
-    );
-  });
-}
-
-/** Build a shell snapshot stream item for a batched enrichment completion. */
-export function shellStreamItemFromEnrichmentRefresh(input: {
-  readonly snapshot: OrchestrationV2ShellSnapshot;
-  readonly changes: ReadonlyArray<{ readonly workspaceRoot: string }>;
-}): Extract<OrchestrationV2ShellStreamItem, { readonly kind: "snapshot" }> {
-  const resolvedRepositoryIdentityRoots = [
-    ...new Set(input.changes.map((change) => change.workspaceRoot)),
-  ];
-  return {
-    kind: "snapshot",
-    snapshot: {
-      ...input.snapshot,
-      projects: input.snapshot.projects.filter((project) =>
-        resolvedRepositoryIdentityRoots.includes(project.workspaceRoot),
-      ),
-      threads: [],
-      archivedThreads: [],
-    },
-    resolvedRepositoryIdentityRoots,
-  };
-}
-
-/**
- * Initial subscribe frames: always emit the unmarked authoritative snapshot,
- * then a same-sequence enrichment frame only when some roots already resolved.
- */
-export function shellStreamItemsFromInitialSnapshot(input: {
-  readonly snapshot: OrchestrationV2ShellSnapshot;
-  readonly resolvedRepositoryIdentityRoots: ReadonlyArray<string>;
-}): ReadonlyArray<Extract<OrchestrationV2ShellStreamItem, { readonly kind: "snapshot" }>> {
-  const authoritative = {
-    kind: "snapshot" as const,
-    snapshot: input.snapshot,
-  };
-  if (input.resolvedRepositoryIdentityRoots.length === 0) {
-    return [authoritative];
-  }
-  return [
-    authoritative,
-    {
-      kind: "snapshot" as const,
-      snapshot: {
-        ...input.snapshot,
-        projects: input.snapshot.projects.filter((project) =>
-          input.resolvedRepositoryIdentityRoots.includes(project.workspaceRoot),
-        ),
-        threads: [],
-        archivedThreads: [],
-      },
-      resolvedRepositoryIdentityRoots: [...new Set(input.resolvedRepositoryIdentityRoots)],
-    },
-  ];
-}
-
-/** Resume after HTTP/cache hydration with metadata only, never another full shell body. */
-export function shellStreamItemsFromResumeSnapshot(input: {
-  readonly snapshot: OrchestrationV2ShellSnapshot;
-  readonly resolvedRepositoryIdentityRoots: ReadonlyArray<string>;
-}): ReadonlyArray<Extract<OrchestrationV2ShellStreamItem, { readonly kind: "snapshot" }>> {
-  return shellStreamItemsFromInitialSnapshot(input).filter(
-    (item) => item.resolvedRepositoryIdentityRoots !== undefined,
   );
 }
 

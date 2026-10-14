@@ -101,15 +101,14 @@ export function clearPendingThreadCreationOutcome(threadKey: string): void {
 /**
  * Whether the queued prompt still has to stand in for the real message.
  *
- * The server creates the thread, then builds the worktree, and only then
- * starts the turn, so the thread shell and an empty detail arrive seconds
- * ahead of the prompt. Keying this on the shell's arrival left the thread
+ * The server creates the thread and only then starts the turn, so the thread
+ * shell and an empty detail can arrive ahead of the prompt. Keying this on the shell's arrival left the thread
  * showing "No conversation yet" for that whole window. The queued message id
  * is reused as the delivered message id, so its presence is the exact signal.
  */
 export function isPendingThreadCreationVisible(input: {
   readonly creationMessageId: string;
-  /** Null while no detail has loaded; empty during a worktree checkout. */
+  /** Null while no detail has loaded; empty until the turn starts. */
   readonly loadedMessageIds: ReadonlyArray<string> | null;
 }): boolean {
   return !input.loadedMessageIds?.includes(input.creationMessageId);
@@ -151,11 +150,6 @@ export function pendingThreadCreationShell(
     modelSelection: message.modelSelection,
     runtimeMode: message.runtimeMode ?? DEFAULT_RUNTIME_MODE,
     interactionMode: message.interactionMode ?? DEFAULT_PROVIDER_INTERACTION_MODE,
-    branch: creation.branch,
-    pullRequests: [],
-    worktreePath: creation.workspaceMode === "worktree" ? null : creation.worktreePath,
-    linkedPullRequest: null,
-    branchPullRequest: null,
     lineage: { rootThreadId: message.threadId, parentThreadId: null, relationshipToParent: null },
     forkedFrom: null,
     createdBy: "user",

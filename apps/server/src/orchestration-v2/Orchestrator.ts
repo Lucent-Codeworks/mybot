@@ -9,13 +9,6 @@ import {
   runRanAfter,
   usageLimitBlockedRun,
 } from "@t3tools/shared/orchestrationV2ThreadError";
-import { threadPullRequestsOf } from "@t3tools/shared/threadPullRequests";
-import {
-  normalizeThreadPullRequestKey,
-  visibleThreadPullRequests,
-  threadPullRequestKeysEqual,
-  legacyThreadPullRequestKey,
-} from "@t3tools/shared/threadPullRequests";
 import {
   ORCHESTRATION_V2_WORKSPACE_PREPARATION_FAILURE_CODE,
   type ChatAttachment,
@@ -27,8 +20,6 @@ import {
   OrchestrationV2Command,
   type OrchestrationV2InternalCommand,
   type OrchestrationV2ServerCommand,
-  type ThreadPullRequestLink,
-  type ThreadPullRequestWatch,
   type OrchestrationV2AppThread,
   type OrchestrationV2ContextHandoff,
   type OrchestrationV2ContextSourcePoint,
@@ -57,7 +48,6 @@ import {
   type ProviderSessionId,
   RunId,
   RuntimeMode,
-  ThreadLinkedPullRequest,
   ThreadId,
   type TurnItemId,
 } from "@t3tools/contracts";
@@ -70,19 +60,12 @@ import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
-import * as FileSystem from "effect/FileSystem";
-import * as Path from "effect/Path";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Ref from "effect/Ref";
 import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
 
-import * as ProjectStore from "./ProjectStore.ts";
-import {
-  isCheckpointRestoreIsolated,
-  SHARED_WORKSPACE_RESTORE_MESSAGE,
-} from "./CheckpointRestoreSafety.ts";
 import { CheckpointServiceV2 } from "./CheckpointService.ts";
 import { CommandPolicyV2, resolveMessageDispatchIntent } from "./CommandPolicy.ts";
 import { CommandReceiptStoreV2 } from "./CommandReceiptStore.ts";
@@ -432,8 +415,6 @@ function isGoalCommand(message: {
   return message.attachments.length === 0 && /^\/goal(?:\s|$)/u.test(message.text.trim());
 }
 
-const threadPullRequestLinksEqual = Schema.toEquivalence(Schema.NullOr(ThreadLinkedPullRequest));
-
 function commandThreadId(command: OrchestrationV2ServerCommand): ThreadId {
   switch (command.type) {
     case "thread.create":
@@ -453,12 +434,6 @@ function commandThreadId(command: OrchestrationV2ServerCommand): ThreadId {
     case "thread.visit":
     case "thread.mark-unread":
     case "thread.metadata.update":
-    case "thread.pull-request.link":
-    case "thread.pull-request.unlink":
-    case "thread.pull-request-link.sync":
-    case "thread.pull-request.watch":
-    case "thread.pull-request-watch.sync":
-    case "thread.pull-request.sync":
     case "thread.title.regeneration.complete":
     case "thread.runtime-mode.set":
     case "thread.interaction-mode.set":
@@ -541,35 +516,6 @@ function isBlockingRun(run: OrchestrationV2Run): boolean {
 function hasLiveRun(projection: Pick<OrchestrationV2ThreadProjection, "runs">): boolean {
   return projection.runs.some(
     (run) => run.status === "preparing" || run.status === "starting" || run.status === "running",
-  );
-}
-
-/** The link with its watch replaced, or removed when `watch` is undefined. */
-function withPullRequestWatch(
-  link: ThreadPullRequestLink,
-  watch: ThreadPullRequestWatch | undefined,
-): ThreadPullRequestLink {
-  const { watch: _previous, ...rest } = link;
-  return watch === undefined ? rest : { ...rest, watch };
-}
-
-/** A legacy single-PR link as a link entry. Re-linking a pull request keeps its watch. */
-function legacyPullRequestLink(
-  thread: OrchestrationV2AppThread,
-  linked: ThreadLinkedPullRequest,
-  now: DateTime.Utc,
-): ThreadPullRequestLink {
-  const key = legacyThreadPullRequestKey(linked);
-  return withPullRequestWatch(
-    {
-      ...key,
-      url: linked.url,
-      source: "manual",
-      linkedAt: DateTime.formatIso(now),
-      snapshot: null,
-      stack: null,
-    },
-    threadPullRequestsOf(thread).find((link) => threadPullRequestKeysEqual(link, key))?.watch,
   );
 }
 
@@ -812,7 +758,6 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
   const eventSink = yield* EventSinkV2;
   const commandReceipts = yield* CommandReceiptStoreV2;
   const idAllocator = yield* IdAllocator.IdAllocatorV2;
-  const projects = yield* ProjectStore.ProjectStoreV2;
   const projectionStore = yield* ProjectionStoreV2;
   const effectOutbox = yield* EffectOutbox.EffectOutboxV2;
   const nextTurnItemOrdinal = (
@@ -831,8 +776,6 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
       ),
     );
 
-  const fileSystem = yield* FileSystem.FileSystem;
-  const path = yield* Path.Path;
   const providerAdapters = yield* ProviderAdapterRegistryV2;
   const continuationRequests = yield* ProviderContinuationRequests.ProviderContinuationRequests;
   const providerSessions = yield* ProviderSessionManagerV2;
@@ -1275,10 +1218,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
       ]);
     });
 
-  const startNextQueuedRun = (
-    threadId: ThreadId,
-    options?: { readonly failedRunId?: RunId; readonly endedRunId?: RunId },
-  ) =>
+  const startNextQueuedRun = (threadId: ThreadId, options?: { readonly failedRunId?: RunId }) =>
     Effect.gen(function* () {
       // Every terminal run checks the queue. Only a deliverable queued run
       // needs the transcript for provider handoff and legacy import context.
@@ -1313,17 +1253,11 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
       // Hold the queue so the user decides when to resume it. Validation
       // failures (setup, unsupported handoff) belong to that message alone,
       // and a message queued for another provider is how users recover.
-      // A message queued behind a worktree that was cancelled or never created
-      // would run in the project checkout instead, so it waits for the user.
       const failedRun = latestExecutedRun(projection.runs);
       const failureClass =
         failedRun?.id === options?.failedRunId
           ? latestRootProviderFailure(failedRun, projection.turnItems)?.class
           : undefined;
-      const worktreeMissing =
-        failedRun?.id === options?.endedRunId &&
-        failedRun?.workspacePreparation?.type === "worktree" &&
-        projection.thread.worktreePath === null;
       // A project can turn a provider off while a message waits in the queue,
       // including between a run ending and this check, or while the queue is
       // held and someone clicks resume. Neither path may start that run. Only
@@ -1345,7 +1279,6 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           ? !projectOverride
           : machineInstance !== undefined && !resolveProviderInstanceEnabled(machineInstance);
       if (
-        worktreeMissing ||
         instanceDisabledForProject ||
         (failureClass !== undefined &&
           failureClass !== "validation_error" &&
@@ -1599,7 +1532,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
                 runId: queuedRun.id,
                 rootNodeId: rootNode.id,
                 providerThreadId: queuedProviderThread.id,
-                cwd: resolvedRuntimePolicy.cwd ?? projection.thread.worktreePath ?? process.cwd(),
+                cwd: resolvedRuntimePolicy.cwd ?? process.cwd(),
                 createdAt: now,
               }),
             ),
@@ -2246,8 +2179,6 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
       modelSelection: command.modelSelection,
       runtimeMode: command.runtimeMode,
       interactionMode: command.interactionMode,
-      branch: command.branch,
-      worktreePath: command.worktreePath,
       activeProviderThreadId: null,
       lineage: {
         parentThreadId: null,
@@ -2350,63 +2281,6 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
     });
   });
 
-  // Checked under the thread lock: the watch or the thread can change while the host is read.
-  // The watch is recorded first so the wake's own thread events carry it.
-  const dispatchPullRequestWatchSync = Effect.fn("orchestrationV2.dispatch.pullRequestWatchSync")(
-    function* (
-      command: Extract<
-        OrchestrationV2ServerCommand,
-        { readonly type: "thread.pull-request-watch.sync" }
-      >,
-      events: Ref.Ref<Array<OrchestrationV2DomainEvent>>,
-      effects: Ref.Ref<Array<PendingOrchestrationEffectV2>>,
-    ) {
-      const thread = yield* projectionStore
-        .getThread(command.threadId)
-        .pipe(
-          Effect.mapError(
-            (cause) => new OrchestratorProjectionError({ threadId: command.threadId, cause }),
-          ),
-        );
-      const key = normalizeThreadPullRequestKey(command);
-      const link = threadPullRequestsOf(thread).find(
-        (candidate) =>
-          candidate.source !== "stack-dismissed" && threadPullRequestKeysEqual(candidate, key),
-      );
-      // Same rule as a direct message.dispatch: a provider-native subagent takes no messages.
-      const inactive =
-        thread.archivedAt !== null ||
-        thread.settledOverride === "settled" ||
-        thread.settledAt !== null ||
-        isProviderNativeSubagentThread(thread);
-      if (link?.watch?.startedAt !== command.startedAt || (command.wake && inactive)) {
-        return yield* new OrchestratorDispatchError({
-          commandId: command.commandId,
-          commandType: command.type,
-          cause: "The pull request watch ended or its thread settled while it was read.",
-        });
-      }
-      yield* dispatchThreadMutation(command, events, effects);
-      if (command.wake === undefined) return;
-      yield* dispatchMessage(
-        {
-          type: "message.dispatch",
-          commandId: command.commandId,
-          threadId: command.threadId,
-          messageId: command.wake.messageId,
-          text: command.wake.text,
-          notification: command.wake.notification,
-          attachments: [],
-          dispatchMode: { type: "queue_after_active" },
-          createdBy: "agent",
-          creationSource: "server",
-        },
-        events,
-        effects,
-      );
-    },
-  );
-
   const dispatchThreadMutation = Effect.fn("orchestrationV2.dispatch.threadMutation")(function* (
     command: Extract<
       OrchestrationV2ServerCommand,
@@ -2425,12 +2299,6 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           | "thread.active.reorder"
           | "thread.mark-unread"
           | "thread.metadata.update"
-          | "thread.pull-request.link"
-          | "thread.pull-request.unlink"
-          | "thread.pull-request-link.sync"
-          | "thread.pull-request.watch"
-          | "thread.pull-request-watch.sync"
-          | "thread.pull-request.sync"
           | "thread.title.regeneration.complete"
           | "thread.runtime-mode.set"
           | "thread.interaction-mode.set"
@@ -2455,72 +2323,6 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
         commandId: command.commandId,
         commandType: command.type,
         cause: `Thread ${command.threadId} is deleted.`,
-      });
-    }
-    if (
-      command.type === "thread.pull-request.watch" &&
-      command.watching &&
-      isProviderNativeSubagentThread(thread)
-    ) {
-      return yield* new OrchestratorSubagentThreadReadOnlyError({
-        commandId: command.commandId,
-        threadId: command.threadId,
-      });
-    }
-    if (
-      command.type === "thread.pull-request.watch" &&
-      command.watching &&
-      (thread.settledOverride === "settled" ||
-        thread.settledAt !== null ||
-        thread.archivedAt !== null)
-    ) {
-      return yield* new OrchestratorDispatchError({
-        commandId: command.commandId,
-        commandType: command.type,
-        cause: `Thread ${command.threadId} is settled or archived and cannot watch pull requests.`,
-      });
-    }
-    // A subagent or delegated task reports to its parent thread, which owns the pull request.
-    // Its own watch would wake it on every change of a PR it was not asked to babysit.
-    if (
-      command.type === "thread.pull-request.watch" &&
-      command.watching &&
-      thread.lineage.relationshipToParent === "subagent"
-    ) {
-      return yield* new OrchestratorDispatchError({
-        commandId: command.commandId,
-        commandType: command.type,
-        cause: `Thread ${command.threadId} is a subagent; its parent thread watches pull requests.`,
-      });
-    }
-    // Only the agent's watch_pull_request links as "agent". A call that raced a Stop may land
-    // after its run ended, so the latest run that executed decides. A user can still watch.
-    if (
-      command.type === "thread.pull-request.watch" &&
-      command.watching &&
-      command.link?.source === "agent"
-    ) {
-      const { runs } = yield* projectionStore
-        .getThreadRecords(command.threadId, ["runs"])
-        .pipe(mapDispatchError(command));
-      const latest = latestExecutedRun(runs);
-      if (latest !== null && (yield* stopReachedRun(command, command.threadId, latest.id))) {
-        return yield* new OrchestratorDispatchError({
-          commandId: command.commandId,
-          commandType: command.type,
-          cause: `Thread ${command.threadId} was stopped.`,
-        });
-      }
-    }
-    if (
-      command.type === "thread.metadata.update" &&
-      command.expectedWorktreePath !== undefined &&
-      command.expectedWorktreePath !== thread.worktreePath
-    ) {
-      return yield* new OrchestratorDispatchError({
-        commandId: command.commandId,
-        commandType: command.type,
-        cause: `Thread ${command.threadId} worktree changed before the metadata update could be applied.`,
       });
     }
     if (command.type === "thread.metadata.update" && command.expectedEmpty === true) {
@@ -2560,8 +2362,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
         command.type === "thread.pin" ||
         command.type === "thread.unpin" ||
         command.type === "thread.pin.reorder" ||
-        command.type === "thread.active.reorder" ||
-        command.type === "thread.pull-request.sync") &&
+        command.type === "thread.active.reorder") &&
       thread.archivedAt !== null
     ) {
       return yield* new OrchestratorDispatchError({
@@ -2589,41 +2390,6 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
         commandType: command.type,
         cause: `Thread ${command.threadId} is not active and cannot be reordered.`,
       });
-    }
-    if (command.type === "thread.pull-request.sync") {
-      const project = yield* projects.get(command.projectId).pipe(mapDispatchError(command));
-      const currentSequence = yield* eventSink.latestSequence({ threadId: command.threadId }).pipe(
-        Effect.mapError(
-          (cause) =>
-            new OrchestratorProjectionError({
-              threadId: command.threadId,
-              cause,
-            }),
-        ),
-      );
-      if (
-        Option.isNone(project) ||
-        project.value.deletedAt !== null ||
-        project.value.workspaceRoot !== command.expected.workspaceRoot ||
-        currentSequence > command.snapshotSequence ||
-        thread.projectId !== command.projectId ||
-        thread.branch !== command.expected.branch ||
-        thread.worktreePath !== command.expected.worktreePath ||
-        !threadPullRequestLinksEqual(
-          thread.linkedPullRequest ?? null,
-          command.expected.linkedPullRequest,
-        ) ||
-        !threadPullRequestLinksEqual(
-          thread.branchPullRequest ?? null,
-          command.expected.branchPullRequest,
-        )
-      ) {
-        return yield* new OrchestratorDispatchError({
-          commandId: command.commandId,
-          commandType: command.type,
-          cause: `Thread ${command.threadId} changed before pull request discovery.`,
-        });
-      }
     }
     if (command.type === "thread.settle") {
       const projection = yield* loadProjectionForCommand(
@@ -2708,10 +2474,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
       command.type === "thread.model-selection.set" ||
       command.type === "provider.switch" ||
       command.type === "thread.archive" ||
-      command.type === "thread.settle" ||
-      (command.type === "thread.metadata.update" &&
-        command.worktreePath !== undefined &&
-        command.worktreePath !== thread.worktreePath);
+      command.type === "thread.settle";
     const providerContext = needsProviderState
       ? yield* projectionStore
           .getThreadProviderContext(
@@ -2843,12 +2606,10 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
     const updatedThread: OrchestrationV2AppThread = (() => {
       switch (command.type) {
         case "thread.archive":
-          // An archived thread takes no wakes, so its watches end like a settled thread's.
           return {
             ...thread,
             archivedAt: now,
             titleRegeneration: null,
-            pullRequests: thread.pullRequests?.map((link) => withPullRequestWatch(link, undefined)),
             updatedAt: now,
           };
         case "thread.unarchive":
@@ -2863,7 +2624,6 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
             ...thread,
             settledOverride: "settled",
             settledAt: alreadySettled ? thread.settledAt : (command.settledAt ?? now),
-            pullRequests: thread.pullRequests?.map((link) => withPullRequestWatch(link, undefined)),
             unsettledAt: null,
             pinnedAt: null,
             pinOrderKey: null,
@@ -3007,35 +2767,6 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
                     Date.parse(thread.limitRecovery.resetAt)
                 ? { snoozedUntil: null, snoozedAt: null, lastSnoozeWakeAt: now }
                 : {}),
-            ...(command.branch === undefined ? {} : { branch: command.branch }),
-            ...(command.worktreePath === undefined ? {} : { worktreePath: command.worktreePath }),
-            ...(command.linkedPullRequest === undefined
-              ? {}
-              : {
-                  linkedPullRequest: command.linkedPullRequest,
-                  pullRequests: [
-                    ...threadPullRequestsOf(thread).filter(
-                      (link) =>
-                        !(
-                          thread.linkedPullRequest &&
-                          threadPullRequestKeysEqual(
-                            link,
-                            legacyThreadPullRequestKey(thread.linkedPullRequest),
-                          )
-                        ) &&
-                        !(
-                          command.linkedPullRequest &&
-                          threadPullRequestKeysEqual(
-                            link,
-                            legacyThreadPullRequestKey(command.linkedPullRequest),
-                          )
-                        ),
-                    ),
-                    ...(command.linkedPullRequest
-                      ? [legacyPullRequestLink(thread, command.linkedPullRequest, now)]
-                      : []),
-                  ],
-                }),
             // regenerateTitle: true arms the in-flight marker; a landing title
             // or an explicit false (generation failed/abandoned) clears it.
             ...(command.regenerateTitle === true
@@ -3046,188 +2777,6 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
             updatedAt: now,
           };
         }
-        case "thread.pull-request.link":
-        case "thread.pull-request.unlink":
-        case "thread.pull-request-link.sync": {
-          const key = normalizeThreadPullRequestKey(command);
-          const links = threadPullRequestsOf(thread);
-          const existing = links.find((link) => threadPullRequestKeysEqual(link, key));
-          let pullRequests = links;
-          if (command.type === "thread.pull-request.link") {
-            const undismisses =
-              existing?.source === "stack-dismissed" &&
-              command.source !== "stack" &&
-              command.source !== "stack-dismissed";
-            if (existing && !undismisses) return thread;
-            const link = existing
-              ? { ...existing, source: command.source, url: command.url }
-              : {
-                  ...key,
-                  url: command.url,
-                  source: command.source,
-                  linkedAt: DateTime.formatIso(now),
-                  snapshot: null,
-                  stack: null,
-                };
-            const branch = thread.branchPullRequest;
-            const branchKey = branch ? legacyThreadPullRequestKey(branch) : null;
-            pullRequests = [
-              ...(command.source === "manual" &&
-              branch &&
-              branchKey &&
-              visibleThreadPullRequests(links).length === 0 &&
-              !threadPullRequestKeysEqual(branchKey, key) &&
-              !links.some((entry) => threadPullRequestKeysEqual(entry, branchKey))
-                ? [
-                    {
-                      ...branchKey,
-                      url: branch.url,
-                      source: "manual" as const,
-                      linkedAt: DateTime.formatIso(now),
-                      snapshot: null,
-                      stack: null,
-                    },
-                  ]
-                : []),
-              ...links.filter((entry) => !threadPullRequestKeysEqual(entry, key)),
-              link,
-            ];
-          } else if (command.type === "thread.pull-request.unlink") {
-            if (!existing) return thread;
-            const belongsToStack =
-              existing.source === "stack" ||
-              existing.stack !== null ||
-              links.some(
-                (link) =>
-                  link.host.toLowerCase() === key.host &&
-                  link.repository.toLowerCase() === key.repository &&
-                  link.stack?.layers.some((layer) => layer.number === key.number),
-              );
-            pullRequests = belongsToStack
-              ? links.map((link) =>
-                  link === existing
-                    ? {
-                        ...withPullRequestWatch(link, undefined),
-                        source: "stack-dismissed" as const,
-                      }
-                    : link,
-                )
-              : links.filter((link) => link !== existing);
-          } else {
-            if (!existing) return thread;
-            pullRequests = links.map((link) =>
-              link === existing
-                ? { ...link, snapshot: command.snapshot, stack: command.stack }
-                : link,
-            );
-          }
-          return {
-            ...thread,
-            pullRequests,
-            linkedPullRequest:
-              thread.linkedPullRequest &&
-              pullRequests.some(
-                (link) =>
-                  link.source !== "stack-dismissed" &&
-                  threadPullRequestKeysEqual(
-                    link,
-                    legacyThreadPullRequestKey(thread.linkedPullRequest!),
-                  ),
-              )
-                ? thread.linkedPullRequest
-                : null,
-            updatedAt: command.type === "thread.pull-request-link.sync" ? thread.updatedAt : now,
-          };
-        }
-        case "thread.pull-request.watch":
-        case "thread.pull-request-watch.sync": {
-          const key = normalizeThreadPullRequestKey(command);
-          const startedAt = DateTime.formatIso(now);
-          const linked = threadPullRequestsOf(thread);
-          const visible = (link: ThreadPullRequestLink) =>
-            link.source !== "stack-dismissed" && threadPullRequestKeysEqual(link, key);
-          // A watch started on an unlinked (or dismissed) pull request links it in the same step.
-          const links =
-            command.type === "thread.pull-request.watch" &&
-            command.watching &&
-            command.link !== undefined &&
-            !linked.some(visible)
-              ? [
-                  ...linked.filter((link) => !threadPullRequestKeysEqual(link, key)),
-                  {
-                    ...key,
-                    url: command.link.url,
-                    source: command.link.source,
-                    linkedAt: startedAt,
-                    snapshot: null,
-                    stack: null,
-                  },
-                ]
-              : linked;
-          const existing = links.find(visible);
-          if (existing === undefined) return thread;
-          const watch =
-            command.type === "thread.pull-request-watch.sync"
-              ? // Progress read before a stop or restart must not bring the old watch back.
-                existing.watch?.startedAt === command.startedAt
-                ? (command.watch ?? undefined)
-                : existing.watch
-              : !command.watching
-                ? undefined
-                : (existing.watch ?? {
-                    startedAt,
-                    headSha: null,
-                    failedChecks: [],
-                    passed: false,
-                    passedChecks: [],
-                    remarksThrough: startedAt,
-                    remarkIds: [],
-                    conflicting: false,
-                    wakes: 0,
-                  });
-          if (watch === existing.watch && links === linked) return thread;
-          return {
-            ...thread,
-            pullRequests: links.map((link) =>
-              link === existing ? withPullRequestWatch(link, watch) : link,
-            ),
-            // A user or agent starting or stopping a watch is activity; recorded progress is not.
-            updatedAt: command.type === "thread.pull-request.watch" ? now : thread.updatedAt,
-          };
-        }
-        case "thread.pull-request.sync":
-          return {
-            ...thread,
-            branchPullRequest: command.branchPullRequest,
-            ...(command.linkedPullRequest === undefined
-              ? {}
-              : {
-                  linkedPullRequest: command.linkedPullRequest,
-                  pullRequests: [
-                    ...threadPullRequestsOf(thread).filter(
-                      (link) =>
-                        !(
-                          thread.linkedPullRequest &&
-                          threadPullRequestKeysEqual(
-                            link,
-                            legacyThreadPullRequestKey(thread.linkedPullRequest),
-                          )
-                        ) &&
-                        !(
-                          command.linkedPullRequest &&
-                          threadPullRequestKeysEqual(
-                            link,
-                            legacyThreadPullRequestKey(command.linkedPullRequest),
-                          )
-                        ),
-                    ),
-                    ...(command.linkedPullRequest
-                      ? [legacyPullRequestLink(thread, command.linkedPullRequest, now)]
-                      : []),
-                  ],
-                }),
-            updatedAt: thread.updatedAt,
-          };
         case "thread.title.regeneration.complete":
           return thread.titleRegeneration?.requestId === command.requestId
             ? {
@@ -3280,13 +2829,6 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
         case "thread.metadata.update":
         case "thread.title.regeneration.complete":
           return "thread.metadata-updated" as const;
-        case "thread.pull-request.link":
-        case "thread.pull-request.unlink":
-        case "thread.pull-request-link.sync":
-        case "thread.pull-request.watch":
-        case "thread.pull-request-watch.sync":
-        case "thread.pull-request.sync":
-          return "thread.pull-request-synced" as const;
         case "thread.runtime-mode.set":
           return "thread.runtime-mode-updated" as const;
         case "thread.interaction-mode.set":
@@ -3391,17 +2933,13 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
     const detachSessionIds = new Set(
       command.type === "thread.archive" || command.type === "thread.settle"
         ? (providerContext?.providerSessions ?? []).map((session) => session.id)
-        : command.type === "thread.metadata.update" &&
-            command.worktreePath !== undefined &&
-            command.worktreePath !== thread.worktreePath
-          ? (providerContext?.providerSessions ?? []).map((session) => session.id)
-          : command.type === "thread.runtime-mode.set"
-            ? (providerContext?.providerSessions ?? [])
-                .filter(
-                  (session) => !session.capabilities.sessions.supportsRuntimeModeSwitchInSession,
-                )
-                .map((session) => session.id)
-            : (providerSwitchPlan?.releaseProviderSessionIds ?? []),
+        : command.type === "thread.runtime-mode.set"
+          ? (providerContext?.providerSessions ?? [])
+              .filter(
+                (session) => !session.capabilities.sessions.supportsRuntimeModeSwitchInSession,
+              )
+              .map((session) => session.id)
+          : (providerSwitchPlan?.releaseProviderSessionIds ?? []),
     );
     if (detachSessionIds.size > 0) {
       const liveSessions = (providerContext?.providerSessions ?? []).filter(
@@ -4323,10 +3861,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           runId: targetRun.id,
           rootNodeId: nextRootNodeId,
           providerThreadId: restartProviderThread.id,
-          cwd:
-            resolvedRuntimePolicy.cwd ??
-            input.projection.thread.worktreePath ??
-            session.providerSession.cwd,
+          cwd: resolvedRuntimePolicy.cwd ?? session.providerSession.cwd,
           createdAt: now,
         })
         .pipe(
@@ -4925,22 +4460,9 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
         (candidate) => candidate.id === projection.thread.activeProviderThreadId,
       );
       const activeRun = projection.runs.find(isBlockingRun);
-      // A message queued during worktree setup can arrive after that setup failed
-      // without a worktree. It waits, held, like the messages queued before the
-      // failure, instead of starting in the project checkout.
-      const latestRun = latestExecutedRun(projection.runs);
-      const worktreeMissingRun =
-        activeRun === undefined &&
-        dispatchMode.type === "queue_after_active" &&
-        (latestRun?.status === "failed" || latestRun?.status === "interrupted") &&
-        latestRun.workspacePreparation?.type === "worktree" &&
-        projection.thread.worktreePath === null
-          ? latestRun
-          : undefined;
-      const queueBehindRun = activeRun ?? worktreeMissingRun;
       const pendingMergeBackTransfers = pendingMergeBackTransfersForThread(projection);
       const shouldQueue =
-        queueBehindRun !== undefined &&
+        activeRun !== undefined &&
         (dispatchMode.type === "defer_start" ||
           dispatchMode.type === "start_immediately" ||
           dispatchMode.type === "queue_after_active");
@@ -4955,13 +4477,13 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
         const queueProviderThread =
           activeProviderThread ??
           projection.providerThreads.find(
-            (candidate) => candidate.id === queueBehindRun.providerThreadId,
+            (candidate) => candidate.id === activeRun.providerThreadId,
           );
         if (queueProviderThread === undefined) {
           return yield* new OrchestratorDispatchError({
             commandId: command.commandId,
             commandType: command.type,
-            cause: `Active run ${queueBehindRun.id} has no provider thread for queued dispatch.`,
+            cause: `Active run ${activeRun.id} has no provider thread for queued dispatch.`,
           });
         }
         const now = yield* DateTime.now;
@@ -5015,7 +4537,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
         const attemptId = idAllocator.derive.runAttempt({ runId, attemptOrdinal: 1 });
         const rootNodeId = idAllocator.derive.rootNode({ runId });
         const checkpointScope =
-          queueBehindRun.status === "preparing" || worktreeMissingRun !== undefined
+          activeRun.status === "preparing"
             ? null
             : yield* runtimePolicy.resolve({ thread: projection.thread, modelSelection }).pipe(
                 Effect.flatMap((resolvedRuntimePolicy) =>
@@ -5024,11 +4546,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
                     runId,
                     rootNodeId,
                     providerThreadId: queuedProviderThread.id,
-                    cwd:
-                      resolvedRuntimePolicy.cwd ??
-                      selectedProviderSession?.cwd ??
-                      projection.thread.worktreePath ??
-                      process.cwd(),
+                    cwd: resolvedRuntimePolicy.cwd ?? selectedProviderSession?.cwd ?? process.cwd(),
                     createdAt: now,
                   }),
                 ),
@@ -5052,8 +4570,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           rootNodeId,
           activeAttemptId: attemptId,
           status: "queued",
-          ...(worktreeMissingRun !== undefined ||
-          projection.runs.some(
+          ...(projection.runs.some(
             (candidate) => candidate.status === "queued" && candidate.queueHeld === true,
           )
             ? { queueHeld: true }
@@ -5384,10 +4901,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
                       runId,
                       rootNodeId,
                       providerThreadId,
-                      cwd:
-                        resolvedRuntimePolicy.cwd ??
-                        projection.thread.worktreePath ??
-                        process.cwd(),
+                      cwd: resolvedRuntimePolicy.cwd ?? process.cwd(),
                       createdAt: now,
                     }),
                   ),
@@ -6068,11 +5582,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           runId,
           rootNodeId,
           providerThreadId: providerThread.id,
-          cwd:
-            resolvedRuntimePolicy.cwd ??
-            existingProviderSession?.cwd ??
-            projection.thread.worktreePath ??
-            process.cwd(),
+          cwd: resolvedRuntimePolicy.cwd ?? existingProviderSession?.cwd ?? process.cwd(),
           createdAt: now,
         })
         .pipe(
@@ -8085,7 +7595,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
         occurredAt: now,
         payload: {
           ...state.preparationItem,
-          title: command.phase === "worktree" ? "Preparing worktree" : "Starting setup script",
+          title: "Starting setup script",
           updatedAt: now,
         },
       });
@@ -8120,7 +7630,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           runId: state.run.id,
           rootNodeId: state.rootNode.id,
           providerThreadId: state.providerThread.id,
-          cwd: resolvedRuntimePolicy.cwd ?? projection.thread.worktreePath ?? process.cwd(),
+          cwd: resolvedRuntimePolicy.cwd ?? process.cwd(),
           createdAt: now,
         })
         .pipe(mapDispatchError(command));
@@ -8818,7 +8328,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
 
   /**
    * What Stop holds besides the run it interrupts: durable queued messages wait for the
-   * user, buffered provider wakes are cancelled, and the thread's pull request watches end.
+   * user and buffered provider wakes are cancelled.
    * Every wake its delegated tasks still owe is dropped, since Stop stops those tasks too.
    * `cohortRunIds` are dropped even when they owe nothing, like a plain interrupt's.
    */
@@ -8882,19 +8392,6 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           providerInstanceId: run.providerInstanceId,
           occurredAt: input.now,
           payload: { ...run, queueHeld: true },
-        });
-      }
-      const pullRequests = thread.pullRequests ?? [];
-      if (pullRequests.some((link) => link.watch !== undefined)) {
-        yield* emitEvent({
-          type: "thread.pull-request-synced",
-          threadId: thread.id,
-          providerInstanceId: thread.providerInstanceId,
-          occurredAt: input.now,
-          payload: {
-            ...thread,
-            pullRequests: pullRequests.map((link) => withPullRequestWatch(link, undefined)),
-          },
         });
       }
       const cohortRunIds = new Set(input.cohortRunIds);
@@ -9710,30 +9207,6 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           cause: `Checkpoint ${command.checkpointId} belongs to scope ${targetScope.id}, not ${command.scopeId}.`,
         });
       }
-      if (command.restoreFiles !== false) {
-        const isolated = yield* isCheckpointRestoreIsolated(projection.thread, targetScope, {
-          projects,
-          path,
-          fileSystem,
-          projections: projectionStore,
-        }).pipe(
-          Effect.mapError(
-            (cause) =>
-              new OrchestratorDispatchError({
-                commandId: command.commandId,
-                commandType: command.type,
-                cause,
-              }),
-          ),
-        );
-        if (!isolated)
-          return yield* new OrchestratorDispatchError({
-            commandId: command.commandId,
-            commandType: command.type,
-            cause: SHARED_WORKSPACE_RESTORE_MESSAGE,
-          });
-      }
-
       const targetOrdinal = targetCheckpoint.appRunOrdinal ?? 0;
       if (targetOrdinal > 0) {
         const targetRun = projection.runs.find((run) => run.ordinal === targetOrdinal);
@@ -9794,7 +9267,6 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           threadId: command.threadId,
           request: {
             type: "provider-thread.rollback",
-            ...(command.restoreFiles === undefined ? {} : { restoreFiles: command.restoreFiles }),
             providerThreadId: providerThread.id,
             checkpointId: targetCheckpoint.id,
             scopeId: targetScope.id,
@@ -10796,20 +10268,12 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
       case "thread.active.reorder":
       case "thread.mark-unread":
       case "thread.metadata.update":
-      case "thread.pull-request.link":
-      case "thread.pull-request.unlink":
-      case "thread.pull-request-link.sync":
-      case "thread.pull-request.watch":
-      case "thread.pull-request.sync":
       case "thread.title.regeneration.complete":
       case "thread.runtime-mode.set":
       case "thread.interaction-mode.set":
       case "thread.model-selection.set":
       case "provider.switch":
         yield* dispatchThreadMutation(command, events, effects);
-        break;
-      case "thread.pull-request-watch.sync":
-        yield* dispatchPullRequestWatchSync(command, events, effects);
         break;
       case "provider-session.detach":
         yield* dispatchProviderSessionDetach(command, events, effects);
@@ -11239,13 +10703,8 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           threadId,
           startNextQueuedRun(
             threadId,
-            stored.event.type === "run.updated"
-              ? {
-                  endedRunId: stored.event.payload.id,
-                  ...(stored.event.payload.status === "failed"
-                    ? { failedRunId: stored.event.payload.id }
-                    : {}),
-                }
+            stored.event.type === "run.updated" && stored.event.payload.status === "failed"
+              ? { failedRunId: stored.event.payload.id }
               : undefined,
           ),
         )
@@ -11551,15 +11010,12 @@ export const layer: Layer.Layer<
   OrchestratorV2,
   never,
   | CheckpointServiceV2
-  | FileSystem.FileSystem
-  | Path.Path
   | CommandPolicyV2
   | CommandReceiptStoreV2
   | ContextHandoffServiceV2
   | EffectOutbox.EffectOutboxV2
   | EventSinkV2
   | IdAllocator.IdAllocatorV2
-  | ProjectStore.ProjectStoreV2
   | ProviderAdapterRegistryV2
   | ProviderSessionManagerV2
   | ProviderSwitchServiceV2

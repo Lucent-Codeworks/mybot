@@ -1,5 +1,4 @@
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
-import * as SourceControlProviderRegistry from "../sourceControl/SourceControlProviderRegistry.ts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
 import {
@@ -19,7 +18,6 @@ import * as ResetCreditCoordinator from "../provider/resetCreditCoordinator.ts";
 import { FetchHttpClient } from "effect/http";
 import { describe } from "vite-plus/test";
 
-import * as CheckpointStore from "../checkpointing/CheckpointStore.ts";
 import * as BackgroundPolicy from "../background/BackgroundPolicy.ts";
 import * as HostPowerMonitor from "../background/HostPowerMonitor.ts";
 import * as ServerConfig from "../config.ts";
@@ -35,32 +33,16 @@ import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEve
 import * as OpenCodeRuntime from "@t3tools/provider-opencode/server/OpenCodeRuntime";
 import * as OpenCodeServerLedger from "@t3tools/provider-opencode/server/OpenCodeServerLedger";
 import * as ServerSettings from "../serverSettings.ts";
-import * as VcsDriverRegistry from "../vcs/VcsDriverRegistry.ts";
-import * as VcsProcess from "../vcs/VcsProcess.ts";
 import * as Orchestrator from "./Orchestrator.ts";
-import * as ProviderTurnStartServiceTestkit from "./ProviderTurnStartService.testkit.ts";
 import * as RuntimeLayer from "./runtimeLayer.ts";
 import * as McpSessionRegistryTestkit from "../mcp/McpSessionRegistry.testkit.ts";
 import { GROK_MODEL_SELECTION } from "./testkit/fixtures/shared.ts";
 
-const layerPlatformTest = Layer.merge(
-  NodeServices.layer,
-  Layer.mock(SourceControlProviderRegistry.SourceControlProviderRegistry)({
-    resolveLink: () => Effect.die("unused title link"),
-  }),
-);
+const layerPlatformTest = NodeServices.layer;
 
 const layerServerConfig = ServerConfig.layerTest(process.cwd(), {
   prefix: "t3-grok-v2-live-",
 });
-
-const layerVcsDriverRegistry = VcsDriverRegistry.layer.pipe(
-  Layer.provide(VcsProcess.layer),
-  Layer.provide(layerServerConfig),
-  Layer.provide(layerPlatformTest),
-);
-
-const layerCheckpointStore = CheckpointStore.layer.pipe(Layer.provide(layerVcsDriverRegistry));
 
 const layerServerSettings = ServerSettings.layerTest({
   providerInstances: {
@@ -114,10 +96,8 @@ const layerProviderInstanceRegistry = ProviderInstanceRegistryHydration.layer.pi
 );
 
 const layerLive = RuntimeLayer.layer.pipe(
-  Layer.provide(ProviderTurnStartServiceTestkit.layer),
   Layer.provide(McpSessionRegistryTestkit.layer),
   Layer.provide(SqlitePersistence.layerMemory),
-  Layer.provide(layerCheckpointStore),
   Layer.provide(layerServerConfig),
   Layer.provide(layerServerSettings),
   Layer.provide(layerProviderInstanceRegistry),
@@ -166,8 +146,6 @@ describe.runIf(process.env.T3_GROK_LIVE_ORCHESTRATOR === "1")("Grok V2 live orch
           modelSelection: GROK_MODEL_SELECTION,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: null,
         });
         yield* Console.log("Grok live source thread created; dispatching source prompt.");
         yield* orchestrator.dispatch({

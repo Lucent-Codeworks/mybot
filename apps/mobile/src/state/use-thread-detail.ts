@@ -75,17 +75,7 @@ export function useSelectedThreadVisibleTurnItems(): OrchestrationV2ThreadProjec
   });
 }
 
-const EMPTY_WORKTREE_PATH_ATOM = Atom.make<string | null>(null);
 const EMPTY_PENDING_REQUESTS_ATOM = Atom.make<PendingThreadRequests | null>(null);
-
-export function useSelectedThreadWorktreePath() {
-  const { selectedThreadDetailRef } = useThreadSelection();
-  return useAtomValue(
-    selectedThreadDetailRef === null
-      ? EMPTY_WORKTREE_PATH_ATOM
-      : environmentThreadDetails.worktreePathAtom(selectedThreadDetailRef),
-  );
-}
 
 export function useSelectedThreadPendingRequests() {
   const { selectedThreadDetailRef } = useThreadSelection();

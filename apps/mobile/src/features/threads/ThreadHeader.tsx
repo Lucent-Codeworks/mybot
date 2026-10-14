@@ -14,13 +14,12 @@ export function ThreadHeader(
     readonly fileInspectorSupported: boolean;
     readonly inspectorMode: ThreadInspectorMode | null;
     readonly onToggleInspector: () => void;
-    readonly onOpenGitInspector: () => void;
     readonly onOpenFilesInspector: () => void;
   },
 ) {
   const returnToList = useWorkspaceListNavigation("threads");
   const { layout, panes, toggleAuxiliaryPane } = useAdaptiveWorkspaceLayout();
-  const { onOpenTerminal, onMergeBack } = props.gitControls;
+  const { onOpenTerminal, onMergeBack } = props.controls;
   const native = useThreadHeaderOptions(props);
   const androidHeaderActions = useMemo<ReadonlyArray<ScreenHeaderAction>>(() => {
     const actions: ScreenHeaderAction[] = [];
@@ -40,18 +39,13 @@ export function ThreadHeader(
         onPress: filesVisible ? toggleAuxiliaryPane : props.onOpenFilesInspector,
       });
     }
-    if (props.hasWorkspaceRoot && props.gitControls.canOpenTerminal) {
+    if (props.hasWorkspaceRoot && props.controls.canOpenTerminal) {
       actions.push({
         accessibilityLabel: "Open terminal",
         icon: "terminal",
         onPress: () => onOpenTerminal(null),
       });
     }
-    actions.push({
-      accessibilityLabel: "Open git controls",
-      icon: "point.topleft.down.curvedto.point.bottomright.up",
-      onPress: props.onOpenGitInspector,
-    });
     if (onMergeBack) {
       actions.push({
         accessibilityLabel: "Merge back to source",
@@ -66,12 +60,11 @@ export function ThreadHeader(
     props.onOpenFilesInspector,
     onOpenTerminal,
     onMergeBack,
-    props.onOpenGitInspector,
     toggleAuxiliaryPane,
     props.onReturnToThread,
     props.hasThreadCwd,
     props.hasWorkspaceRoot,
-    props.gitControls.canOpenTerminal,
+    props.controls.canOpenTerminal,
   ]);
 
   return (

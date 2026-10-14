@@ -1,11 +1,9 @@
 import {
   AuthOrchestrationOperateScope,
   EnvironmentId,
-  ProjectId,
   ThreadId,
   type AuthEnvironmentScope,
   type EditorId,
-  type ThreadLinkedPullRequest,
 } from "@t3tools/contracts";
 import { DEFAULT_CLIENT_SETTINGS } from "@t3tools/contracts/settings";
 import { AsyncResult } from "effect/reactivity";
@@ -17,14 +15,12 @@ const state = vi.hoisted(() => ({
   allowed: true,
   listeners: new Set<() => void>(),
   openEditor: vi.fn(),
-  updateMetadata: vi.fn(),
   search: vi.fn(),
   choose: vi.fn(),
   openFile: vi.fn(),
   openExternal: vi.fn(),
   copy: vi.fn(),
   toast: vi.fn(),
-  linkedPullRequest: null as ThreadLinkedPullRequest | null,
 }));
 
 vi.mock("@effect/atom-react", () => ({ useAtomValue: () => serverConfig }));
@@ -48,8 +44,7 @@ vi.mock("./ui/toast", () => ({
 }));
 vi.mock("../state/use-atom-query-runner", () => ({ useAtomQueryRunner: () => state.search }));
 vi.mock("../state/use-atom-command", () => ({
-  useAtomCommand: (command: string) =>
-    command === "updateMetadata" ? state.updateMetadata : state.openEditor,
+  useAtomCommand: () => state.openEditor,
 }));
 vi.mock("../state/session", async () => {
   const { useSyncExternalStore } = await import("react");
@@ -78,14 +73,9 @@ vi.mock("../state/session", async () => {
 vi.mock("../state/server", () => ({
   serverEnvironment: { configValueAtom: () => "config" },
 }));
-vi.mock("../state/threads", () => ({
-  threadEnvironment: { updateMetadata: "updateMetadata" },
-}));
 vi.mock("../state/entities", () => ({
   readEnvironmentSupportsServerBrowser: () => false,
   useServerConfigs: () => new Map([[threadRef.environmentId, serverConfig]]),
-  readThreadShell: () => ({ linkedPullRequest: state.linkedPullRequest }),
-  useProjects: () => [{ id: linkedPullRequest.projectId, environmentId: threadRef.environmentId }],
 }));
 vi.mock("../rightPanelStore", () => ({
   useRightPanelStore: { getState: () => ({ openFile: state.openFile }) },
@@ -108,48 +98,24 @@ vi.mock("../localApi", () => ({
     shell: { openExternal: state.openExternal },
   }),
 }));
-vi.mock("~/lib/openPullRequestLink", () => ({
-  resolvePullRequestPreviewTarget: () => null,
-  findProjectForChangeRequest: (projects: readonly { id: ProjectId }[]) => projects[0],
-  matchesLinkedPullRequestUrl: (candidate: ThreadLinkedPullRequest, href: string) =>
-    candidate.url === href,
-  parseChangeRequestUrl: (href: string) =>
-    href === linkedPullRequest.url
-      ? {
-          host: "github.com",
-          repository: linkedPullRequest.repository,
-          number: linkedPullRequest.number,
-        }
-      : null,
-  useOpenChangeRequestLink: () => vi.fn(),
-}));
-
 import ChatMarkdown from "./ChatMarkdown";
 
 const threadRef = {
   environmentId: EnvironmentId.make("selected"),
   threadId: ThreadId.make("thread"),
 };
-const linkedPullRequest: ThreadLinkedPullRequest = {
-  projectId: ProjectId.make("project"),
-  repository: "example/repo",
-  number: 42,
-  url: "https://github.com/example/repo/pull/42",
-};
 const serverConfig = {
   availableEditors: ["vscode", "file-manager"] as readonly EditorId[],
   shellRevealInFileManager: true,
   shellRevealInFileManagerKind: "xdg-open",
-  environment: { platform: { os: "linux" }, capabilities: { threadPullRequestLinking: true } },
+  environment: { platform: { os: "linux" }, capabilities: {} },
 };
 let renderer: ReactTestRenderer | undefined;
 
 beforeEach(() => {
   state.allowed = true;
   state.listeners.clear();
-  state.linkedPullRequest = null;
   state.openEditor.mockReset().mockResolvedValue(AsyncResult.success(undefined));
-  state.updateMetadata.mockReset().mockResolvedValue(AsyncResult.success(undefined));
   state.search.mockReset().mockResolvedValue(AsyncResult.success({ entries: [] }));
   state.choose.mockReset().mockResolvedValue(null);
   state.openFile.mockReset();
@@ -247,54 +213,12 @@ it("does not reveal a file after revocation during its workspace lookup", async 
   expect(state.openEditor).not.toHaveBeenCalled();
 });
 
-it.each([false, true])(
-  "keeps PR links usable without offering metadata edits (linked=%s)",
-  async (linked) => {
-    state.allowed = false;
-    state.linkedPullRequest = linked ? linkedPullRequest : null;
-    state.choose.mockResolvedValue("open-external");
-    await renderMarkdown(`[Review](${linkedPullRequest.url})`);
-    await openContextMenu();
-    expect(offeredActions()).toEqual(["open-external", "copy-link"]);
-    expect(state.openExternal).toHaveBeenCalledWith(linkedPullRequest.url);
-    expect(state.updateMetadata).not.toHaveBeenCalled();
-  },
-);
-
-it.each(["link-to-thread", "unlink-from-thread"])(
-  "rechecks %s after a native context menu returns",
-  async (action) => {
-    state.linkedPullRequest = action === "unlink-from-thread" ? linkedPullRequest : null;
-    let choose: (action: string) => void = () => {
-      throw new Error("Menu not opened");
-    };
-    state.choose.mockImplementationOnce(
-      () =>
-        new Promise<string>((resolve) => {
-          choose = resolve;
-        }),
-    );
-    await renderMarkdown(`[Review](${linkedPullRequest.url})`);
-    await openContextMenu();
-    expect(offeredActions()).toContain(action);
-    await act(async () => {
-      state.allowed = false;
-      choose(action);
-    });
-    expect(state.updateMetadata).not.toHaveBeenCalled();
-
-    await act(async () => {
-      state.allowed = true;
-      for (const listener of state.listeners) listener();
-    });
-    state.choose.mockResolvedValue(action);
-    await openContextMenu();
-    expect(state.updateMetadata).toHaveBeenCalledExactlyOnceWith({
-      environmentId: threadRef.environmentId,
-      input: {
-        threadId: threadRef.threadId,
-        linkedPullRequest: action === "link-to-thread" ? linkedPullRequest : null,
-      },
-    });
-  },
-);
+it("keeps web links usable after revocation", async () => {
+  const url = "https://example.com/docs";
+  state.allowed = false;
+  state.choose.mockResolvedValue("open-external");
+  await renderMarkdown(`[Docs](${url})`);
+  await openContextMenu();
+  expect(offeredActions()).toEqual(["open-external", "copy-link"]);
+  expect(state.openExternal).toHaveBeenCalledWith(url);
+});

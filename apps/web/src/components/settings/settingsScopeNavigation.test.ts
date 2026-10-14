@@ -35,7 +35,7 @@ function createSettingsRouter(initialEntry = "/settings/general") {
   const general = createRoute({ getParentRoute: () => settings, path: "general" });
   const projects = createRoute({ getParentRoute: () => settings, path: "projects" });
   const integrations = createRoute({ getParentRoute: () => settings, path: "integrations" });
-  const sourceControl = createRoute({ getParentRoute: () => settings, path: "source-control" });
+  const storage = createRoute({ getParentRoute: () => settings, path: "storage" });
   const providers = createRoute({
     getParentRoute: () => settings,
     path: "providers",
@@ -66,14 +66,7 @@ function createSettingsRouter(initialEntry = "/settings/general") {
   });
   return createRouter({
     routeTree: root.addChildren([
-      settings.addChildren([
-        general,
-        projects,
-        integrations,
-        sourceControl,
-        providers,
-        scheduledTasks,
-      ]),
+      settings.addChildren([general, projects, integrations, storage, providers, scheduledTasks]),
       legacyProject,
     ]),
     history: createMemoryHistory({ initialEntries: [initialEntry] }),
@@ -109,13 +102,17 @@ describe("settings scope navigation", () => {
 
   it("preserves the checkout through category and settings-search navigation", async () => {
     const router = createSettingsRouter();
-    await router.navigate({ to: "/settings/general", search: checkoutSearch, hash: "new-threads" });
+    await router.navigate({
+      to: "/settings/general",
+      search: checkoutSearch,
+      hash: "default-model",
+    });
     await router.navigate({ to: "/settings/integrations", hash: "", replace: true });
     expect(router.state.location.search).toEqual(checkoutSearch);
     expect(router.state.location.hash).toBe("");
-    await router.navigate({ to: "/settings/source-control", hash: "source-control-writing-style" });
+    await router.navigate({ to: "/settings/storage", hash: "storage-delete-now" });
     expect(router.state.location.search).toEqual(checkoutSearch);
-    expect(router.state.location.hash).toBe("source-control-writing-style");
+    expect(router.state.location.hash).toBe("storage-delete-now");
     await router.navigate({ to: "/settings/projects", hash: "project-defaults" });
     expect(router.state.location.search).toEqual(checkoutSearch);
   });
@@ -123,7 +120,7 @@ describe("settings scope navigation", () => {
   it.each([
     "/settings/projects",
     "/settings/integrations",
-    "/settings/source-control",
+    "/settings/storage",
     "/settings/scheduled-tasks",
   ] as const)(
     "keeps %s when regrouping or selecting a target from the shared settings layout",

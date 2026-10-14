@@ -70,8 +70,6 @@ const emptyProjection = {
     modelSelection: { instanceId: ProviderInstanceId.make("codex"), model: "gpt-5.4" },
     runtimeMode: "full-access",
     interactionMode: "default",
-    branch: null,
-    worktreePath: null,
     activeProviderThreadId: null,
     lineage: { rootThreadId: threadId, parentThreadId: null, relationshipToParent: null },
     forkedFrom: null,

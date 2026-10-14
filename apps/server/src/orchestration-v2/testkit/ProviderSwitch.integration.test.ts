@@ -577,8 +577,6 @@ describe("orchestration v2 provider switching", () => {
             modelSelection: CODEX_MODEL_SELECTION,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: null,
           });
           yield* dispatch(1, "Original request with constraints", CODEX_MODEL_SELECTION);
           yield* wait(1);
@@ -986,8 +984,6 @@ describe("orchestration v2 provider switching", () => {
               modelSelection: CODEX_MODEL_SELECTION,
               runtimeMode: "full-access",
               interactionMode: "default",
-              branch: null,
-              worktreePath: null,
             });
             yield* dispatch(1, "Original request with constraints", CODEX_MODEL_SELECTION);
             yield* wait(1, "completed");
@@ -1132,8 +1128,6 @@ describe("orchestration v2 provider switching", () => {
               modelSelection: CLAUDE_MODEL_SELECTION,
               runtimeMode: "full-access",
               interactionMode: "default",
-              branch: null,
-              worktreePath: null,
             });
             yield* runToCompletion(1);
             // A detached session resumes on the next turn, as after a restart.
@@ -1256,8 +1250,6 @@ describe("orchestration v2 provider switching", () => {
             modelSelection: CLAUDE_MODEL_SELECTION,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: null,
           });
           assert.equal(yield* run(1), "completed");
           // Run 3 carries run 2's missed request as a handoff and is refused too.
@@ -1398,8 +1390,6 @@ describe("orchestration v2 provider switching", () => {
             modelSelection: CODEX_MODEL_SELECTION,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: null,
           });
           if (returning) {
             yield* dispatch("initial", "Earlier successful request.", CODEX_MODEL_SELECTION);
@@ -1537,8 +1527,6 @@ describe("orchestration v2 provider switching", () => {
               modelSelection: CODEX_MODEL_SELECTION,
               runtimeMode: "full-access",
               interactionMode: "default",
-              branch: null,
-              worktreePath: cwd,
             });
             yield* orchestrator.dispatch({
               type: "message.dispatch",
@@ -1673,8 +1661,6 @@ describe("orchestration v2 provider switching", () => {
             modelSelection: CODEX_MODEL_SELECTION,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: cwd,
           });
           yield* dispatch("first", CODEX_MODEL_SELECTION, { type: "start_immediately" });
           yield* Deferred.await(started);
@@ -1895,8 +1881,6 @@ describe("orchestration v2 provider switching", () => {
             modelSelection: CODEX_MODEL_SELECTION,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: cwd,
           });
           yield* orchestrator.dispatch({
             type: "message.dispatch",
@@ -2062,8 +2046,6 @@ describe("orchestration v2 provider switching", () => {
             modelSelection: CODEX_MODEL_SELECTION,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: cwd,
           });
           yield* dispatch(1, CODEX_MODEL_SELECTION);
           yield* Deferred.await(started);
@@ -2289,8 +2271,6 @@ describe("orchestration v2 provider switching", () => {
             modelSelection: CODEX_MODEL_SELECTION,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: cwd,
           });
           yield* orchestrator.dispatch({
             type: "message.dispatch",
@@ -2559,8 +2539,6 @@ describe("orchestration v2 provider switching", () => {
           model_selection_json,
           runtime_mode,
           interaction_mode,
-          branch,
-          worktree_path,
           latest_turn_id,
           created_at,
           updated_at,
@@ -2575,8 +2553,6 @@ describe("orchestration v2 provider switching", () => {
           '{"instanceId":"codex","model":"gpt-5.4"}',
           'full-access',
           'default',
-          'main',
-          ${cwd},
           NULL,
           '2026-01-01T00:00:00.000Z',
           '2026-01-01T00:00:00.000Z',
@@ -2786,8 +2762,6 @@ describe("orchestration v2 provider switching", () => {
             modelSelection: CODEX_MODEL_SELECTION,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: null,
           },
           {
             type: "message.dispatch",
@@ -2993,8 +2967,6 @@ describe("orchestration v2 provider switching", () => {
             modelSelection: CLAUDE_MODEL_SELECTION,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: null,
           },
           {
             type: "message.dispatch",
@@ -3129,8 +3101,6 @@ describe("orchestration v2 provider switching", () => {
             modelSelection: CURSOR_MODEL_SELECTION,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: null,
           },
           {
             type: "message.dispatch",
@@ -3278,8 +3248,6 @@ describe("orchestration v2 provider switching", () => {
               modelSelection: CODEX_MODEL_SELECTION,
               runtimeMode: "full-access",
               interactionMode: "default",
-              branch: null,
-              worktreePath: null,
             },
             {
               type: "message.dispatch",
@@ -3497,8 +3465,6 @@ describe("orchestration v2 provider switching", () => {
               modelSelection: selection,
               runtimeMode: "full-access",
               interactionMode: "default",
-              branch: null,
-              worktreePath: null,
             });
             yield* orchestrator.dispatch({
               type: "message.dispatch",

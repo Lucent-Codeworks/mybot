@@ -110,7 +110,6 @@ const makeSupervisor = Effect.fn("TestEnvironmentCommands.makeSupervisor")(funct
           title: mutation.type === "project.create" ? mutation.title : "Project",
           workspaceRoot:
             mutation.type === "project.create" ? mutation.workspaceRoot : "/workspace/project",
-          repositoryIdentity: null,
           faviconPath: null,
           defaultModelSelection: null,
           scripts: [],
@@ -125,7 +124,6 @@ const makeSupervisor = Effect.fn("TestEnvironmentCommands.makeSupervisor")(funct
     initialConfig: Effect.succeed({
       environment: {
         capabilities: {
-          repositoryIdentity: true,
           ...(input.advertiseServerResolvedCommandContext === false
             ? {}
             : { serverResolvedCommandContext: true }),
@@ -182,17 +180,13 @@ describe("V2 environment commands", () => {
       const projectIcon = { kind: "emoji", emoji: "🌲" } as const;
       yield* updateProject({
         projectId,
-        autoPull: true,
         projectIcon,
         faviconPath: "/workspace/project/icon.png",
-        defaultThreadEnvMode: "worktree",
       }).pipe(Effect.provideService(EnvironmentSupervisor.EnvironmentSupervisor, supervisor));
       yield* updateProject({
         projectId,
-        autoPull: false,
         projectIcon: null,
         faviconPath: null,
-        defaultThreadEnvMode: null,
       }).pipe(Effect.provideService(EnvironmentSupervisor.EnvironmentSupervisor, supervisor));
 
       expect(projects).toEqual([
@@ -200,19 +194,15 @@ describe("V2 environment commands", () => {
           type: "project.update",
           commandId: "00000000-0000-4000-8000-000000000000",
           projectId,
-          autoPull: true,
           projectIcon,
           faviconPath: "/workspace/project/icon.png",
-          defaultThreadEnvMode: "worktree",
         },
         {
           type: "project.update",
           commandId: "00000000-0000-4000-8000-000000000000",
           projectId,
-          autoPull: false,
           projectIcon: null,
           faviconPath: null,
-          defaultThreadEnvMode: null,
         },
       ]);
     }).pipe(Effect.provide(layerTestCrypto)),
@@ -318,90 +308,6 @@ describe("V2 environment commands", () => {
     }).pipe(Effect.provide(layerTestCrypto)),
   );
 
-  it.effect("preserves an existing worktree and branch during first-message launch", () =>
-    Effect.gen(function* () {
-      const launches: OrchestrationV2ThreadLaunchInput[] = [];
-      const supervisor = yield* makeSupervisor({ commands: [], projects: [], launches });
-
-      yield* startThreadTurn({
-        commandId: CommandId.make("launch-existing-worktree"),
-        threadId: v2ThreadId,
-        message: {
-          messageId: MessageId.make("message-existing-worktree"),
-          role: "user",
-          text: "Continue here",
-          attachments: [],
-        },
-        runtimeMode: "full-access",
-        interactionMode: "default",
-        titleSeed: "Continue here",
-        bootstrap: {
-          createThread: {
-            projectId: ProjectId.make("project-1"),
-            title: "Thread",
-            modelSelection: v2Projection.thread.modelSelection,
-            runtimeMode: "full-access",
-            interactionMode: "default",
-            branch: "feature",
-            worktreePath: "/workspace/project-worktrees/feature",
-            createdAt: "2026-06-20T00:00:00.000Z",
-          },
-        },
-      }).pipe(Effect.provideService(EnvironmentSupervisor.EnvironmentSupervisor, supervisor));
-
-      expect(launches[0]).toMatchObject({
-        threadId: v2ThreadId,
-        title: "Continue here",
-        generateTitle: true,
-        workspaceStrategy: {
-          type: "existing_worktree",
-          worktreePath: "/workspace/project-worktrees/feature",
-          branch: "feature",
-        },
-      });
-    }).pipe(Effect.provide(layerTestCrypto)),
-  );
-
-  it.effect("provisions an origin-based worktree for an existing empty thread", () =>
-    Effect.gen(function* () {
-      const launches: OrchestrationV2ThreadLaunchInput[] = [];
-      const supervisor = yield* makeSupervisor({ commands: [], projects: [], launches });
-
-      yield* startThreadTurn({
-        commandId: CommandId.make("launch-existing-thread-worktree"),
-        threadId: v2ThreadId,
-        message: {
-          messageId: MessageId.make("message-existing-thread-worktree"),
-          role: "user",
-          text: "Move to a worktree",
-          attachments: [],
-        },
-        runtimeMode: "full-access",
-        interactionMode: "default",
-        bootstrap: {
-          prepareWorktree: {
-            projectCwd: "/workspace/project",
-            baseBranch: "main",
-            branch: "feature",
-            startFromOrigin: true,
-          },
-        },
-      }).pipe(Effect.provideService(EnvironmentSupervisor.EnvironmentSupervisor, supervisor));
-
-      expect(launches[0]).toMatchObject({
-        threadId: v2ThreadId,
-        reuseExistingThread: true,
-        projectId: v2Projection.thread.projectId,
-        workspaceStrategy: {
-          type: "worktree",
-          baseRef: "main",
-          branch: "feature",
-          startFromOrigin: true,
-        },
-      });
-    }).pipe(Effect.provide(layerTestCrypto)),
-  );
-
   it.effect("uses server-resolved delivery intent without fetching the full projection", () =>
     Effect.gen(function* () {
       const commands: OrchestrationV2Command[] = [];
@@ -500,60 +406,6 @@ describe("V2 environment commands", () => {
         expect(commands.at(-1)).not.toHaveProperty("deliveryIntent");
       }
       expect(projectionRequests).toEqual([v2ThreadId, v2ThreadId, v2ThreadId, v2ThreadId]);
-    }).pipe(Effect.provide(layerTestCrypto)),
-  );
-
-  it.effect("Stop with no run left ends the thread's pull request watches", () =>
-    Effect.gen(function* () {
-      const link = {
-        host: "github.com",
-        repository: "pingdotgg/t3code",
-        url: "https://github.com/pingdotgg/t3code/pull/7",
-        source: "agent" as const,
-        linkedAt: "2026-10-05T00:00:00.000Z",
-        snapshot: null,
-        stack: null,
-      };
-      const watch = {
-        startedAt: "2026-10-05T00:00:00.000Z",
-        headSha: null,
-        failedChecks: [],
-        passed: false,
-        passedChecks: [],
-        remarksThrough: "2026-10-05T00:00:00.000Z",
-        remarkIds: [],
-        conflicting: false,
-        wakes: 0,
-      };
-      const projection: OrchestrationV2ThreadProjection = {
-        ...v2Projection,
-        thread: {
-          ...v2Projection.thread,
-          pullRequests: [
-            { ...link, number: 7, watch },
-            { ...link, number: 8 },
-            { ...link, number: 9, source: "stack-dismissed", watch },
-          ],
-        },
-      };
-      const commands: OrchestrationV2Command[] = [];
-      const supervisor = yield* makeSupervisor({ commands, projects: [], projection });
-
-      yield* interruptThreadTurn({ threadId: v2ThreadId }).pipe(
-        Effect.provideService(EnvironmentSupervisor.EnvironmentSupervisor, supervisor),
-      );
-
-      expect(commands).toEqual([
-        {
-          type: "thread.pull-request.watch",
-          commandId: expect.any(String),
-          threadId: v2ThreadId,
-          host: "github.com",
-          repository: "pingdotgg/t3code",
-          number: 7,
-          watching: false,
-        },
-      ]);
     }).pipe(Effect.provide(layerTestCrypto)),
   );
 

@@ -349,24 +349,4 @@ it.layer(NodeServices.layer)("Muse text generation", (it) => {
       expect(test.host.close).toHaveBeenCalledOnce();
     }),
   );
-
-  it.effect("generates and sanitizes commit content through Muse", () =>
-    Effect.gen(function* () {
-      const test = fixture(
-        finish('{"subject":"Fix login.","body":" Details ","branch":"fix-login"}'),
-      );
-      const service = yield* test.make;
-      const generated = yield* service.generateCommitMessage({
-        cwd: titleInput.cwd,
-        branch: "main",
-        stagedSummary: "login.ts",
-        stagedPatch: "login change",
-        includeBranch: true,
-        modelSelection,
-      });
-      expect(generated.subject).toBe("Fix login");
-      expect(generated.body).toBe("Details");
-      expect(generated.branch).toContain("fix-login");
-    }),
-  );
 });

@@ -37,7 +37,7 @@ function fnv1a64(value: string): string {
 }
 
 /**
- * Producers mint ids in their own grammars (`pull-request-finding:42`,
+ * Producers mint ids in their own grammars (`preview-annotation:42`,
  * `file-comment-<ms>-<n>`). A context id must survive a Markdown link and the wire
  * schema, so anything outside `[a-z0-9_-]` is folded into a readable slug plus a hash of
  * the original. Deterministic, so the same producer id always maps to the same context id.

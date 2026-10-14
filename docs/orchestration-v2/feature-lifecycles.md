@@ -251,9 +251,8 @@ If the provider does not support interruption:
 - best case: stop provider session and mark run interrupted or cancelled by policy.
 - worst case: mark interrupt unsupported and leave run active until provider exits.
 
-The Stop button sends `run.interrupt` with `holdQueue`. A Stop also holds the queue,
-ends the thread's pull request watches, and drops wakes its delegated tasks still
-owe, so nothing automatic restarts the thread. It then stops every delegated task
+The Stop button sends `run.interrupt` with `holdQueue`. A Stop also holds the queue
+and drops wakes its delegated tasks still owe, so nothing automatic restarts the thread. It then stops every delegated task
 under the thread: a `delegated-tasks.stop` effect sends the internal `thread.stop`
 command to each child thread, depth first. This runs after commit, not inside the
 parent's command, because a command holds only its own thread's lock. `task_cancel`
@@ -360,7 +359,7 @@ If the provider cannot fork native threads, V2 may synthesize a fork by creating
 
 ## Checkpointing
 
-Checkpoints attach to checkpoint scopes. Root runs and child execution nodes can both be checkpointed.
+Checkpoints attach to checkpoint scopes. Root runs and child execution nodes can both be checkpointed. A checkpoint marks a conversation position; it captures no filesystem state, so there are no per-run diffs and rollback never touches project files.
 
 Pre-run baseline:
 
@@ -375,7 +374,6 @@ Post-root-run checkpoint:
 root node terminal
   -> drain/finalize streams
   -> capture root checkpoint for app run ordinal
-  -> compute diff from prior root checkpoint
   -> mark run terminal with checkpoint
 ```
 
@@ -387,14 +385,12 @@ child checkpointable node starts
 child node terminal
   -> drain/finalize child streams/items
   -> capture child checkpoint for that scope
-  -> compute diff from parent/previous child checkpoint
   -> mark child node checkpointed
 ```
 
 Interrupted/failed runs:
 
-- If filesystem state is meaningful and safe to capture, capture with status reflecting terminal state.
-- If not, store a missing/error checkpoint summary.
+- Capture the checkpoint with status reflecting the terminal state.
 - Child/subagent checkpoints are allowed, but they do not advance the parent app run count.
 - Root run checkpointing should include or reference child checkpoint summaries so the run has a complete audit trail.
 
@@ -402,7 +398,6 @@ Rollback:
 
 ```text
 rollback.toRun(threadId, targetRunOrdinal)
-  -> restore filesystem checkpoint targetRunOrdinal
   -> compute provider turns to roll back if provider supports rollback
   -> call provider rollback
   -> reconcile returned provider snapshot if available
@@ -416,13 +411,10 @@ Nested rollback:
 
 ```text
 rollback.node(nodeId, checkpointId)
-  -> restore child checkpoint if scope cwd/ref is available
   -> roll back provider thread for that child scope if supported
   -> mark descendant child checkpoints stale/rolled_back
-  -> preserve parent run checkpoint history unless parent filesystem state changed
+  -> preserve parent run checkpoint history
 ```
-
-If a child checkpoint mutates the same workspace as the parent, restoring it may dirty the parent run's workspace state. The UI/API should make that explicit.
 
 ## Approvals
 

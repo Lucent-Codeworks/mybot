@@ -55,13 +55,6 @@ function makeThread(
 
 const NOW = "2026-06-02T00:00:00.000Z";
 
-const linkedPullRequest = {
-  projectId: ProjectId.make("project-1"),
-  repository: "pingdotgg/t3code",
-  number: 42,
-  url: "https://github.com/pingdotgg/t3code/pull/42",
-};
-
 describe("resolveThreadListV2SnoozeMenuSelection", () => {
   it("accepts a displayed evening preset while its wake time is still future", () => {
     const menuOpenedAt = new Date(2026, 4, 8, 16, 59, 30);
@@ -419,9 +412,8 @@ describe("getThreadListV2OrderedSection", () => {
 describe("buildThreadListV2Items", () => {
   it("places a persisted settled thread in the settled shelf", () => {
     const thread = makeThread({
-      id: ThreadId.make("linked-merged"),
-      title: "Linked merged pull request",
-      linkedPullRequest,
+      id: ThreadId.make("settled-thread"),
+      title: "Settled thread",
       settledOverride: "settled",
       settledAt: NOW,
     });
@@ -1129,9 +1121,6 @@ describe("buildThreadListV2Items settled sort reuse", () => {
 function makePendingTask(id: string): PendingNewTask {
   const creation = {
     projectId: ProjectId.make("project-1"),
-    workspaceMode: "worktree" as const,
-    branch: null,
-    worktreePath: null,
   };
   return {
     kind: "pending",
@@ -1140,7 +1129,6 @@ function makePendingTask(id: string): PendingNewTask {
     projectId: creation.projectId,
     projectTitle: undefined,
     projectCwd: undefined,
-    branch: null,
     title: id,
     createdAt: NOW,
     message: {

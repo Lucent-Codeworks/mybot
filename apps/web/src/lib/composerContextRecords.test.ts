@@ -20,10 +20,7 @@ import {
   attachmentContextRecord,
   buildMessageContext,
   composerContextImportLookupIds,
-  isPullRequestSummaryContext,
   isSameComposerContextPayload,
-  pullRequestContextDisplayState,
-  pullRequestContextKindLabel,
   previewAnnotationContextLabel,
   previewAnnotationContextRecord,
   previewAnnotationFromRecord,
@@ -289,12 +286,7 @@ describe("composerContextRecords", () => {
     expect(restored.styleChanges).toEqual(styleChanges);
     expect(restored.elements[0]?.id).toBe("el_1");
   });
-  it.each([
-    ["+181", "a.ts L181"],
-    ["+181 to +183", "a.ts L181 to L183"],
-    ["-63", "a.ts L63 (before)"],
-    ["L4", "a.ts L4"],
-  ])("presents review range %s consistently as %s", (rangeLabel, expected) => {
+  it("presents a file comment by file name and line range", () => {
     expect(
       reviewCommentContextLabel({
         id: "review-1",
@@ -303,54 +295,11 @@ describe("composerContextRecords", () => {
         filePath: "src/a.ts",
         startIndex: 0,
         endIndex: 0,
-        rangeLabel,
+        rangeLabel: "L4",
         text: "",
         diff: "",
       }),
-    ).toBe(expected);
-  });
-
-  it("distinguishes a PR summary from a comment on its diff", () => {
-    const summary = {
-      id: "review-1",
-      sectionId: "pull-request:42",
-      sectionTitle: "PR #42",
-      filePath: "PR #42",
-      startIndex: 0,
-      endIndex: 0,
-      rangeLabel: "Improve context chips",
-      text: "Pull request details",
-      diff: "",
-      pullRequest: {
-        number: 42,
-        title: "Improve context chips",
-        url: "https://github.com/pingdotgg/t3code/pull/42",
-        headBranch: "feat/context-chips",
-        baseBranch: "main",
-        state: "open" as const,
-        isDraft: false,
-      },
-    };
-
-    expect(isPullRequestSummaryContext(summary)).toBe(true);
-    expect(reviewCommentContextLabel(summary)).toBe("#42");
-    expect(pullRequestContextDisplayState(summary)).toBe("open");
-    expect(pullRequestContextKindLabel(summary)).toBe("Open pull request");
-    expect(
-      pullRequestContextDisplayState({
-        ...summary,
-        pullRequest: { ...summary.pullRequest, isDraft: true },
-      }),
-    ).toBe("draft");
-    expect(
-      isPullRequestSummaryContext({
-        ...summary,
-        pullRequest: undefined,
-        filePath: "src/a.ts",
-        rangeLabel: "+12",
-        diff: "+const answer = 42;",
-      }),
-    ).toBe(false);
+    ).toBe("a.ts L4");
   });
 
   it("builds a preview annotation record with element details and readable style changes", () => {
@@ -686,7 +635,7 @@ describe("attachment context records", () => {
 describe("producer ids that do not fit the grammar", () => {
   it("folds review comment ids and keeps the raw id in the draft shape", () => {
     const record = reviewCommentContextRecord({
-      id: "pull-request-finding:42",
+      id: "file-comment:42",
       sectionId: "s",
       sectionTitle: "t",
       filePath: "a/b.ts",
@@ -696,7 +645,7 @@ describe("producer ids that do not fit the grammar", () => {
       text: "",
       diff: "",
     });
-    expect(record.contextId).toMatch(/^review-comment_pull-request-finding-42-[0-9a-f]{16}$/);
+    expect(record.contextId).toMatch(/^review-comment_file-comment-42-[0-9a-f]{16}$/);
     expect(
       resolveUserMessageContext({
         text: `[b.ts L1](t3-context://v1/review-comment/${record.contextId})`,

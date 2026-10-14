@@ -1,4 +1,3 @@
-import { scopeProjectRef } from "@t3tools/client-runtime/environment";
 import { requestCustomSnooze } from "../components/CustomSnoozeDialog";
 import {
   type AtomCommandResult,
@@ -36,15 +35,10 @@ import {
 } from "../state/entities";
 import { usePrimaryEnvironmentId } from "../state/environments";
 import { readLocalApi } from "../localApi";
-import {
-  deriveLogicalProjectKeyFromSettings,
-  derivePhysicalProjectKey,
-  selectProjectGroupingSettings,
-} from "../logicalProject";
+import { deriveLogicalProjectKey, derivePhysicalProjectKey } from "../logicalProject";
 import { buildPhysicalToLogicalProjectKeyMap } from "../sidebarProjectGrouping";
 import { threadRuntimeCanArchive } from "@t3tools/client-runtime/state/models";
 import { useCopyToClipboard } from "./useCopyToClipboard";
-import { useNewThreadHandler } from "./useHandleNewThread";
 import { useClientSettings } from "./useSettings";
 import { useThreadActions } from "./useThreadActions";
 
@@ -70,7 +64,7 @@ function failureToast(title: string, error: unknown) {
  */
 export function useThreadActionMenu(input: {
   readonly threadRef: ScopedThreadRef | null;
-  /** Fallback for "Copy path" when the thread has no worktree. */
+  /** Workspace path for "Copy path". */
   readonly projectCwd: string | null;
   readonly onStartRename: () => void;
 }) {
@@ -78,15 +72,9 @@ export function useThreadActionMenu(input: {
   const router = useRouter();
   const projects = useProjects();
   const primaryEnvironmentId = usePrimaryEnvironmentId();
-  const projectGroupingSettings = useClientSettings(selectProjectGroupingSettings);
   const logicalProjectKeyByPhysicalKey = useMemo(
-    () =>
-      buildPhysicalToLogicalProjectKeyMap({
-        projects,
-        settings: projectGroupingSettings,
-        primaryEnvironmentId,
-      }),
-    [primaryEnvironmentId, projectGroupingSettings, projects],
+    () => buildPhysicalToLogicalProjectKeyMap({ projects, primaryEnvironmentId }),
+    [primaryEnvironmentId, projects],
   );
   const {
     settleThread,
@@ -103,7 +91,6 @@ export function useThreadActionMenu(input: {
   const updateThreadMetadata = useOrchestrationCommand(threadEnvironment.updateMetadata, {
     reportFailure: false,
   });
-  const handleNewThread = useNewThreadHandler();
   const confirmThreadDelete = useClientSettings((s) => s.confirmThreadDelete);
   const confirmThreadArchive = useClientSettings((s) => s.confirmThreadArchive);
   const timestampFormat = useClientSettings((s) => s.timestampFormat);
@@ -112,13 +99,6 @@ export function useThreadActionMenu(input: {
       toastManager.add({ type: "success", title: "Path copied", description: path });
     },
     onError: (error) => failureToast("Failed to copy path", error),
-  });
-  const { copyToClipboard: copyBranchToClipboard } = useCopyToClipboard<{ branch: string }>({
-    target: "branch name",
-    onCopy: ({ branch }) => {
-      toastManager.add({ type: "success", title: "Branch copied", description: branch });
-    },
-    onError: (error) => failureToast("Failed to copy branch", error),
   });
   const { copyToClipboard: copyThreadIdToClipboard } = useCopyToClipboard<{ threadId: ThreadId }>({
     onCopy: ({ threadId }) => {
@@ -149,7 +129,6 @@ export function useThreadActionMenu(input: {
         const snoozePresets = resolveSnoozePresets(now, timestampFormat);
         const items = buildThreadActionMenuItems({
           canOperate: readEnvironmentScope(threadRef.environmentId, AuthOrchestrationOperateScope),
-          branch: thread.branch ?? null,
           projectFilter: null,
           isPinned: thread.pinnedAt != null,
           isSettled: supports.settlement && thread.settledOverride === "settled",
@@ -205,27 +184,11 @@ export function useThreadActionMenu(input: {
             if (!project) return;
             const projectKey =
               logicalProjectKeyByPhysicalKey.get(derivePhysicalProjectKey(project)) ??
-              deriveLogicalProjectKeyFromSettings(project, projectGroupingSettings);
+              deriveLogicalProjectKey(project);
             void router.navigate({
               to: "/projects/$projectKey",
               params: { projectKey },
             });
-            return;
-          }
-          case "new-thread-on-branch": {
-            // Explicit branch carry-over: reuse the thread's worktree when it
-            // has one, otherwise its branch on the local checkout.
-            const result = await settlePromise(() =>
-              handleNewThread(scopeProjectRef(threadRef.environmentId, thread.projectId), {
-                branch: thread.branch,
-                worktreePath: thread.worktreePath,
-                envMode: thread.worktreePath ? "worktree" : "local",
-                startFromOrigin: false,
-              }),
-            );
-            if (result._tag === "Failure") {
-              failureToast("Could not create thread", squashAtomCommandFailure(result));
-            }
             return;
           }
           case "settle":
@@ -266,7 +229,7 @@ export function useThreadActionMenu(input: {
             markThreadUnread(threadRef);
             return;
           case "copy-path": {
-            const workspacePath = thread.worktreePath ?? projectCwd;
+            const workspacePath = projectCwd;
             if (!workspacePath) {
               toastManager.add(
                 stackedThreadToast({
@@ -280,11 +243,6 @@ export function useThreadActionMenu(input: {
             copyPathToClipboard(workspacePath, { path: workspacePath });
             return;
           }
-          case "copy-branch":
-            if (thread.branch) {
-              copyBranchToClipboard(thread.branch, { branch: thread.branch });
-            }
-            return;
           case "copy-thread-id":
             copyThreadIdToClipboard(thread.id, { threadId: thread.id });
             return;
@@ -323,14 +281,7 @@ export function useThreadActionMenu(input: {
               if (confirmed._tag === "Failure" || !confirmed.value) return;
             }
             const deleted = await deleteThread(threadRef);
-            if (
-              deleted._tag === "Failure" &&
-              !isAtomCommandInterrupted(deleted) &&
-              // A failure with the thread already gone is worktree cleanup
-              // failing after a successful delete — deleteThread has toasted
-              // that itself, and "Failed to delete thread" would be a lie.
-              readThreadShell(threadRef) !== null
-            ) {
+            if (deleted._tag === "Failure" && !isAtomCommandInterrupted(deleted)) {
               failureToast("Failed to delete thread", squashAtomCommandFailure(deleted));
             }
             return;
@@ -345,17 +296,14 @@ export function useThreadActionMenu(input: {
       confirmThreadArchive,
       confirmThreadDelete,
       confirmAndUnpinThread,
-      copyBranchToClipboard,
       copyPathToClipboard,
       copyThreadIdToClipboard,
       deleteThread,
-      handleNewThread,
       logicalProjectKeyByPhysicalKey,
       markThreadUnread,
       onStartRename,
       pinThread,
       projectCwd,
-      projectGroupingSettings,
       projects,
       router,
       setThreadAutoSettle,

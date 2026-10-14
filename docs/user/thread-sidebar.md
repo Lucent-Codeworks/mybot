@@ -1,14 +1,11 @@
 # Working with threads
 
-Use a new thread for a separate task. Choose **New worktree** when its code changes
-need a separate branch and working directory.
+Use a new thread for a separate task. Threads work directly in their project's folder.
 
 ## Start a thread
 
 On web and desktop, a new thread keeps the current project and carries your model
 and mode selections, unless the destination project has its own model default.
-Its branch and workspace mode come from your configured defaults. To continue in
-an existing worktree, use **New thread in this worktree** from the branch toolbar.
 
 When you change a new thread's project, T3 Code stays in the current environment
 if that project exists there. Otherwise it selects an environment that has it.
@@ -27,21 +24,17 @@ Each thread without a project works in its own folder under `~/.t3/scratch` (the
 `scratch` folder of your T3 data directory), named after its date, the first words
 of its first message, and a short id, like
 `2026-09-25-convert-these-pngs-to-webp-a1b2c3d4`. Deleting a thread keeps its
-folder, so the files the agent wrote stay until you delete them. Branch, worktree, and diff controls stay hidden because
-these folders are not Git repositories. This is unavailable when the data
-directory itself sits inside a Git checkout.
+folder, so the files the agent wrote stay until you delete them.
 
 ### Start in the background
 
 In a desktop browser or the desktop app, press `Cmd+Enter` on macOS or `Ctrl+Enter`
-on Windows and Linux to start a new thread and immediately open another draft. The
-next draft keeps the workspace mode and base branch you selected. With **New
-worktree**, each background submission creates its own worktree.
+on Windows and Linux to start a new thread and immediately open another draft.
 
 To send the same prompt to several models on web or desktop, **Shift-click** models
 in a new thread's model picker to add or remove them. A regular click returns to a
-single model. Choose a base branch and send. Each selection starts a separate thread
-and worktree while you stay in the new thread composer. This requires a Git project.
+single model. Each selection starts a separate thread in the same project folder
+while you stay in the new thread composer.
 
 ## Pin and reorder threads
 
@@ -108,7 +101,7 @@ To generate a fresh title from the conversation, open a thread's menu and choose
 or when the connected environment needs a server update.
 
 Agents connected through T3 Code can use the same server-owned metadata workflow to
-rename a thread, regenerate its title, or link and unlink a pull request. These changes
+rename a thread or regenerate its title. These changes
 appear on web, desktop, and mobile without requiring the originating browser to remain
 open.
 
@@ -134,25 +127,15 @@ sending an answer or restarting the agent. Settling also closes the thread's
 terminals that wait at an idle prompt, and keeps their output. A terminal that
 runs a command, such as a dev server, stays open.
 
-To reclaim disk space from settled work, turn on **Run in the thread's worktree when the
-thread settles** for one of the project's actions, or set `"runOnSettle": true` on a
-`t3.json` script, for example `cargo clean`. It runs each time a thread in its own
-worktree settles, manually or automatically, even if a terminal there still runs a
-command such as a dev server. Threads in the project's main checkout skip it. Its terminal
-closes when the command succeeds and stays open when it fails.
-
 On web and desktop, press a thread's **Settle** button and drag up or down to
 settle every thread in that section between it and the one you release on.
 The **Un-settle** and **Wake** buttons work the same way in their sections.
 Press `Escape` while dragging to cancel.
 
-By default, environments settle inactive threads after three days and settle
-threads whose pull request merged. A closed pull request can also settle an idle
-thread. Work in progress, pending questions or approvals, and live background work
-prevent automatic settlement. An open pull request does not prevent inactivity
-settlement, but an old closed or merged pull request does not settle work you
-resumed after it closed. Only your own messages count as resuming. A turn that
-finished background work or a pull request watch starts on its own does not.
+By default, environments settle threads after three days of inactivity. Work in
+progress, pending questions or approvals, and live background work prevent automatic
+settlement. Only your own messages count as resuming work. A turn started by
+background work finishing does not.
 
 To keep one thread out of the settled shelf no matter how long it sits idle, open its menu,
 choose **Auto-settle behavior**, and pick **Disabled**. The current option is checked. Pick
@@ -167,17 +150,6 @@ rules to connected environments that support shared settings. Offline environmen
 and older servers keep their previous values. Changing a rule does not reopen
 already settled threads.
 
-## Link a pull request
-
-The server finds the PR for each unsettled thread's saved branch, even when your
-apps are closed. Settled threads keep their saved links. Update the server if
-automatic branch links do not appear.
-
-On web and desktop, right-click a pull request link in a thread and choose
-**Link to thread** to select a different PR. Use **Unlink from thread** on the
-same link to return to the branch PR, if one exists.
-The linked pull request participates in automatic settlement.
-
 ## Find and reference work
 
 On web and desktop, open the command palette with `Cmd/Ctrl+K` to search threads
@@ -185,8 +157,7 @@ across connected environments. Message search starts after two characters and
 includes your messages and final agent responses.
 
 Use **Settings → Keybindings** to find or customize shortcuts for searching files
-and copying a thread reference. A copied reference uses the thread's pull request
-link when available, otherwise its thread ID. See [keybindings](./keybindings.md)
+and copying a thread reference. A copied reference uses the thread's ID. See [keybindings](./keybindings.md)
 for custom configuration.
 
 ## Inspect agent work

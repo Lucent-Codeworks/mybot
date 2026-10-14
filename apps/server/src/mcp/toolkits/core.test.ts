@@ -56,7 +56,6 @@ import { ProjectToolkit } from "./project/tools.ts";
 import { AttachmentToolkit } from "./attachment/tools.ts";
 import * as AttachmentHandlers from "./attachment/handlers.ts";
 import { ThreadToolkit } from "./thread/tools.ts";
-import { WorktreeToolkit } from "./worktree/tools.ts";
 import { DeviceToolkit } from "./device/tools.ts";
 
 // Effect returns a declared tool failure as `isError` with its encoded payload
@@ -65,7 +64,6 @@ const declaredFailure = (result: McpSchema.CallToolResult) => {
   const text = result.content[0];
   return result.isError === true && text?.type === "text" ? JSON.parse(text.text) : undefined;
 };
-import { PullRequestsToolkit } from "./pullRequests/tools.ts";
 import { HtmlToolkit } from "./html/tools.ts";
 import {
   resolveT3McpToolDefinition,
@@ -88,14 +86,12 @@ it("publishes unique tool names with reference-free object-root inputs", () => {
   for (const toolkit of [
     OrchestratorToolkit,
     PreviewToolkit,
-    WorktreeToolkit,
     ThreadToolkit,
     AttachmentToolkit,
     ProjectToolkit,
     EnvironmentToolkit,
     PreviewControlsToolkit,
     DeviceToolkit,
-    PullRequestsToolkit,
     HtmlToolkit,
   ]) {
     for (const tool of Object.values(toolkit.tools)) {
@@ -360,21 +356,11 @@ it.effect("keeps unexpected handler defects private through the production regis
   ),
 );
 
-it("keeps MCP preference output allowlisted and Unicode-bounded", () => {
-  const settings = {
-    ...DEFAULT_SERVER_SETTINGS,
-    privateCredential: "must-not-escape",
-    sourceControlWritingStyle: {
-      ...DEFAULT_SERVER_SETTINGS.sourceControlWritingStyle,
-      customInstructions: "🙂".repeat(4001),
-    },
-  };
-  const result = EnvironmentHandlers.preferences(settings);
-  expect(result).not.toHaveProperty("privateCredential");
-  expect(result).not.toHaveProperty("providers");
-  expect(result.sourceControlWritingStyle).toMatchObject({
-    customInstructions: "🙂".repeat(4000),
-    truncated: true,
+it("keeps MCP preference output allowlisted", () => {
+  const settings = { ...DEFAULT_SERVER_SETTINGS, privateCredential: "must-not-escape" };
+  expect(EnvironmentHandlers.preferences(settings)).toEqual({
+    enableProviderUpdateChecks: DEFAULT_SERVER_SETTINGS.enableProviderUpdateChecks,
+    backgroundActivity: { profile: DEFAULT_SERVER_SETTINGS.backgroundActivity.profile },
   });
 });
 
@@ -419,7 +405,7 @@ const clientScope = (
   thread: undefined,
   client: { sessionId: "session-1", label: "Claude Code", access },
   issuedAt: 0,
-  capabilities: new Set(["orchestration", "worktree", "pull-requests"]),
+  capabilities: new Set(["orchestration"]),
 });
 
 it.effect("a client caller targets any thread within its ceiling and cannot act as a thread", () =>
@@ -655,7 +641,7 @@ function scheduledTask(id: string, runtimeMode: "auto" | "full-access"): never {
     projectId: "project-a",
     threadId: null,
     schedule: { type: "interval", everyMs: 3_600_000 },
-    workspaceStrategy: { type: "worktree", baseRef: "main", startFromOrigin: true },
+    workspaceStrategy: { type: "root" },
     modelSelection: { instanceId: "codex", model: "gpt-5" },
     runtimeMode,
     interactionMode: "default",
@@ -788,7 +774,7 @@ it.effect("discovers workflow stop targets and requires orchestration capability
           Effect.provideService(McpInvocationContext.McpInvocationContext, invocation),
           Effect.provideService(McpSchema.McpServerClient, client),
         );
-    const denied = yield* call({ ...scope, capabilities: new Set(["worktree"]) });
+    const denied = yield* call({ ...scope, capabilities: new Set(["preview"]) });
     expect(declaredFailure(denied)).toMatchObject({ code: "capability_denied" });
     expect(stopped).toEqual([]);
     const allowed = yield* call(scope);

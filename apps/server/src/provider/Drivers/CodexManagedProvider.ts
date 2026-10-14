@@ -1,4 +1,5 @@
-import { ProviderDriverKind, TextGenerationError, type CodexSettings } from "@t3tools/contracts";
+import { ProviderDriverKind, type CodexSettings } from "@t3tools/contracts";
+import { TextGenerationError } from "@t3tools/provider-core/server/textGeneration";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
@@ -260,16 +261,8 @@ export const makeManagedCodexProvider = Effect.fn("makeManagedCodexProvider")(fu
       ),
     );
   const textGeneration: ProviderInstance["textGeneration"] = {
-    generateCommitMessage: (value) =>
-      protect("generateCommitMessage", nativeGeneration.generateCommitMessage(value)),
-    generatePrContent: (value) =>
-      protect("generatePrContent", nativeGeneration.generatePrContent(value)),
-    generateBranchName: (value) =>
-      protect("generateBranchName", nativeGeneration.generateBranchName(value)),
     generateThreadTitle: (value) =>
       protect("generateThreadTitle", nativeGeneration.generateThreadTitle(value)),
-    generateReviewGuide: (value) =>
-      protect("generateReviewGuide", nativeGeneration.generateReviewGuide(value)),
   };
   return {
     instanceId,

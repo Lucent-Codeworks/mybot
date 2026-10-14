@@ -39,8 +39,6 @@ it.effect.each(["sqlite", "memory"] as const)(
         modelSelection: { instanceId, model: "test" },
         runtimeMode: "full-access",
         interactionMode: "default",
-        branch: null,
-        worktreePath: null,
         activeProviderThreadId: null,
         lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
         forkedFrom: null,

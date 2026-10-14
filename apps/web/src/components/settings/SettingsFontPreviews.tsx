@@ -10,7 +10,7 @@ import { PREFERRED_HIGHLIGHTER } from "../../lib/syntaxHighlighting";
 import { GhosttyTerminalSurface } from "~/terminal/ghostty/surface";
 
 // The font previews are the real surfaces, not lookalikes: the composer's
-// Tiptap editor, the diff panel's file diff, and the Ghostty canvas
+// Tiptap editor, the app's file diff renderer, and the Ghostty canvas
 // renderer. Each already consumes the appearance font tokens (or, for the
 // terminal, the settings passed down as props), so what the row shows is
 // exactly what the app renders.
@@ -91,7 +91,7 @@ function loadDiffPreviewHtml(theme: DiffThemeName): Promise<readonly string[]> {
 // into the shadow root's @layer rules. These unlayered rules win the cascade
 // without !important and re-point the surfaces at the app's code tokens
 // (custom properties inherit across the shadow boundary), so the preview
-// follows the active theme exactly like the real diff panel does.
+// follows the active theme exactly like the app's code surfaces do.
 const DIFF_PREVIEW_THEME_BRIDGE = `
   :host {
     color: var(--code-foreground);
@@ -121,7 +121,7 @@ function StaticDiffHtml({ html }: { html: string }) {
   return <div ref={hostRef} />;
 }
 
-/** The diff panel's file diff, statically rendered by its real pipeline. */
+/** A file diff, statically rendered by the app's real diff pipeline. */
 export function CodeFontPreview() {
   const { resolvedTheme } = useTheme();
   const themeName = resolveDiffThemeName(resolvedTheme);

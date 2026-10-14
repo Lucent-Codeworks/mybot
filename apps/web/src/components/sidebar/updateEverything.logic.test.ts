@@ -25,7 +25,6 @@ function machine(
         platform: { os: "linux", arch: "x64" },
         serverVersion,
         capabilities: {
-          repositoryIdentity: true,
           ...(selfUpdate ? { serverSelfUpdate: selfUpdate } : {}),
           ...(selfUpdate === "desktop-managed" ? { desktopAppUpdate: true } : {}),
         },

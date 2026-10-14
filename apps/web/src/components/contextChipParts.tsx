@@ -1,32 +1,11 @@
-import type { EnvironmentId, PullRequestContextMetadata } from "@t3tools/contracts";
 import { CircleDashedIcon, FilmIcon, ImageIcon } from "lucide-react";
-import {
-  useState,
-  type ComponentProps,
-  type CSSProperties,
-  type MouseEvent,
-  type ReactNode,
-} from "react";
+import { useState, type ComponentProps, type CSSProperties, type ReactNode } from "react";
 
-import { PULL_REQUEST_STATE_PRESENTATION } from "~/components/pullRequest/pullRequestIcons";
-import type { PullRequestContextDisplayState } from "~/lib/composerContextRecords";
 import { PierreEntryIcon } from "./chat/PierreEntryIcon";
 import { middleTruncateAttachmentName } from "./composerInlineChip";
-import { PullRequestContextDetails } from "./PullRequestContextDetails";
 import { ContextChip, ContextChipLabel, type ContextChipKind } from "./ContextChip";
 import { Popover, PopoverPopup, PopoverTitle, PopoverTrigger } from "./ui/popover";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
-import { PullRequestLinkPreview } from "./pullRequest/PullRequestLinkPreview";
-import { usePullRequestPreviewTarget } from "~/lib/openPullRequestLink";
-
-/** ContextChip kind for a pull request context in each display state. */
-export const PULL_REQUEST_CHIP_KINDS = {
-  open: "pr-open",
-  draft: "pr-draft",
-  merged: "pr-merged",
-  closed: "pr-closed",
-  unknown: "pull-request",
-} as const satisfies Record<PullRequestContextDisplayState | "unknown", ContextChipKind>;
 
 /** A static chip with an optional tooltip; each surface keeps ownership of payload lookup. */
 export function ContextChipShell({
@@ -90,52 +69,6 @@ export function ContextChipPopover(props: {
         {props.children}
       </PopoverPopup>
     </Popover>
-  );
-}
-
-export function PullRequestChip(props: {
-  metadata: PullRequestContextMetadata;
-  environmentId: EnvironmentId | null;
-  label: string;
-  kindLabel: string;
-  kind: ContextChipKind;
-  copyMarkdown?: string;
-  onOpen: (event: MouseEvent<HTMLElement>, url: string) => void;
-}) {
-  const previewTarget = usePullRequestPreviewTarget(props.environmentId, props.metadata.url);
-  const displayState =
-    props.metadata.state === "open" && props.metadata.isDraft ? "draft" : props.metadata.state;
-  const StateIcon = PULL_REQUEST_STATE_PRESENTATION[displayState].Icon;
-  const button = (
-    <ContextChip
-      kind={props.kind}
-      render={<button type="button" />}
-      aria-label={`Open ${props.kindLabel} ${props.label}: ${props.metadata.title}`}
-      data-markdown-copy={props.copyMarkdown}
-      onClick={(event) => props.onOpen(event, props.metadata.url)}
-    >
-      <StateIcon />
-      <ContextChipLabel>{props.label}</ContextChipLabel>
-    </ContextChip>
-  );
-  if (previewTarget !== null) {
-    return (
-      <PullRequestLinkPreview
-        link={button}
-        originalUrl={props.metadata.url}
-        target={previewTarget}
-        confirmBeforeOpen={false}
-        fallback={<PullRequestContextDetails metadata={props.metadata} />}
-      />
-    );
-  }
-  return (
-    <Tooltip>
-      <TooltipTrigger render={button} />
-      <TooltipPopup side="top">
-        <PullRequestContextDetails metadata={props.metadata} />
-      </TooltipPopup>
-    </Tooltip>
   );
 }
 

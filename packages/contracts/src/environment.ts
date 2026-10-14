@@ -1,4 +1,3 @@
-import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 
 import {
@@ -53,20 +52,6 @@ export const ExecutionEnvironmentPlatform = Schema.Struct({
   machine: ForwardCompatibleOptional(EnvironmentMachineKind),
 });
 
-/**
- * Where a new thread runs: the project's current checkout ("local") or a
- * fresh git worktree ("worktree"). Lives here (not settings.ts) so
- * orchestration contracts can reference it without an import cycle.
- */
-export const ThreadEnvMode = Schema.Literals(["local", "worktree"]);
-export type ThreadEnvMode = typeof ThreadEnvMode.Type;
-
-/**
- * How a new worktree populates git submodules: every nested level, only the
- * ones this repository declares, or not at all.
- */
-export const WorktreeSubmodules = Schema.Literals(["recursive", "top-level", "none"]);
-export type WorktreeSubmodules = typeof WorktreeSubmodules.Type;
 export type ExecutionEnvironmentPlatform = typeof ExecutionEnvironmentPlatform.Type;
 
 /** How a server can replace itself with another version when asked over RPC.
@@ -96,7 +81,6 @@ export const ServerSelfUpdateCapability = Schema.Literals([
 export type ServerSelfUpdateCapability = typeof ServerSelfUpdateCapability.Type;
 
 export const ExecutionEnvironmentCapabilities = Schema.Struct({
-  repositoryIdentity: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   connectionProbe: Schema.optionalKey(Schema.Boolean),
   /** Missing on older servers, which still accept inline image attachments. */
   attachmentUploads: Schema.optionalKey(Schema.Boolean),
@@ -108,16 +92,10 @@ export const ExecutionEnvironmentCapabilities = Schema.Struct({
       maxUploadBytes: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
     }),
   ),
-  /** Server exposes the pull-request list, detail, activity, diff, and mutation APIs. Absent on
-      servers from before the pull-request workspace shipped, so clients must not probe them. */
-  pullRequests: Schema.optionalKey(Schema.Boolean),
-  pullRequestChecks: Schema.optionalKey(Schema.Boolean),
   /** Server understands canonical inline context links plus their message context records.
       Absent on servers from before inline context shipped, which drop the records and forward
       the links as literal text -- so a client must serialize context the legacy way for them. */
   inlineMessageContext: Schema.optionalKey(Schema.Boolean),
-  /** Server rejects required worktrees instead of falling back to the project checkout. */
-  requiredWorktreeBootstrap: Schema.optionalKey(Schema.Boolean),
   /** Server understands thread.settle / thread.unsettle commands. Absent on
       pre-settlement servers, so clients treat missing as unsupported and
       never send the commands under version skew. */
@@ -128,9 +106,6 @@ export const ExecutionEnvironmentCapabilities = Schema.Struct({
   storageCleanupRun: Schema.optionalKey(Schema.Boolean),
   /** Server checks OTLP endpoints for the telemetry export settings. */
   otlpEndpointCheck: Schema.optionalKey(Schema.Boolean),
-  projectWorktreeCleanup: Schema.optionalKey(Schema.Boolean),
-  /** Server honors the `worktreesDirectory` setting. */
-  worktreesDirectory: Schema.optionalKey(Schema.Boolean),
   /** Server persists the opt-in for continuing interrupted threads after restarts. */
   threadRestartContinuation: Schema.optionalKey(Schema.Boolean),
   /** Server resolves `projectSettingsOverrides`; older servers ignore the key. */
@@ -174,16 +149,10 @@ export const ExecutionEnvironmentCapabilities = Schema.Struct({
       threadSettlement: clients keep their local visited state against
       servers that lack this. */
   threadVisitedTracking: Schema.optionalKey(Schema.Boolean),
-  /** Server persists a pull request reference on thread.meta.update. */
-  threadPullRequestLinking: Schema.optionalKey(Schema.Boolean),
   /** Server resolves message delivery and model-selection context and validates
       identified rollback readiness. Clients retain projection-based command
       shaping and validation when this is absent. */
   serverResolvedCommandContext: Schema.optionalKey(Schema.Boolean),
-  threadPullRequests: Schema.optionalKey(Schema.Boolean),
-  /** Server understands thread.pull-request.watch and wakes agents on pull request changes. */
-  threadPullRequestWatch: Schema.optionalKey(Schema.Boolean),
-  pullRequestStackActions: Schema.optionalKey(Schema.Boolean),
   /** The update path clients should offer for this server. Absent on
       servers that must be relaunched manually (dev checkouts, Windows
       foreground runs, pre-update servers). */
@@ -202,11 +171,6 @@ export const ExecutionEnvironmentCapabilities = Schema.Struct({
       this is false — no update would ever repaint it. Absent on older
       servers, which may still publish, so only an explicit false skips. */
   agentActivityPublishing: Schema.optionalKey(Schema.Boolean),
-  /** Server runs repository clones for new projects in the background and
-      streams their progress (`projectClone.*`, `subscribeProjectClones`).
-      Absent on older servers, where clients must clone with the blocking
-      `sourceControl.cloneRepository` call instead. */
-  projectCloneTracking: Schema.optionalKey(Schema.Boolean),
   /** Server detects `platform.machine` and persists the `environmentIcon`
       setting. Older servers drop the key on write, so clients show the
       picker inert rather than offering a choice that would never stick. */
@@ -233,50 +197,6 @@ export const ExecutionEnvironmentDescriptor = Schema.Struct({
   capabilities: ExecutionEnvironmentCapabilities,
 });
 export type ExecutionEnvironmentDescriptor = typeof ExecutionEnvironmentDescriptor.Type;
-
-export const RepositoryIdentityLocator = Schema.Struct({
-  source: Schema.Literal("git-remote"),
-  remoteName: TrimmedNonEmptyString,
-  remoteUrl: TrimmedNonEmptyString,
-});
-export type RepositoryIdentityLocator = typeof RepositoryIdentityLocator.Type;
-
-/**
- * The checkout's own remote when it names a different repository than the canonical one, such as
- * a fork that tracks its upstream. Clients group and label by it so a fork stays distinct from the
- * repository it forked, while pull request features keep the canonical identity.
- */
-export const RepositoryOrigin = Schema.Struct({
-  canonicalKey: TrimmedNonEmptyString,
-  displayName: Schema.optionalKey(TrimmedNonEmptyString),
-});
-export type RepositoryOrigin = typeof RepositoryOrigin.Type;
-
-export const RepositoryIdentity = Schema.Struct({
-  canonicalKey: TrimmedNonEmptyString,
-  locator: RepositoryIdentityLocator,
-  /** Repository browser URL resolved from the server's configured hosting account. */
-  webUrl: Schema.optionalKey(TrimmedNonEmptyString),
-  rootPath: Schema.optionalKey(TrimmedNonEmptyString),
-  displayName: Schema.optionalKey(TrimmedNonEmptyString),
-  provider: Schema.optionalKey(TrimmedNonEmptyString),
-  owner: Schema.optionalKey(TrimmedNonEmptyString),
-  name: Schema.optionalKey(TrimmedNonEmptyString),
-  origin: Schema.optionalKey(RepositoryOrigin),
-});
-export type RepositoryIdentity = typeof RepositoryIdentity.Type;
-
-/** Key clients group checkouts by: a fork's own remote, otherwise the canonical repository. */
-export function repositoryGroupingKeyOf(identity: RepositoryIdentity): string {
-  return identity.origin?.canonicalKey ?? identity.canonicalKey;
-}
-
-/** Label clients show for a checkout's repository, matching `repositoryGroupingKeyOf`. */
-export function repositoryGroupingDisplayNameOf(identity: RepositoryIdentity): string | undefined {
-  return identity.origin
-    ? (identity.origin.displayName ?? identity.origin.canonicalKey)
-    : identity.displayName;
-}
 
 export const ScopedProjectRef = Schema.Struct({
   environmentId: EnvironmentId,

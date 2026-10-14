@@ -8,8 +8,6 @@ const reference = {
   settings: {
     ...DEFAULT_SERVER_SETTINGS,
     sidebarAutoSettleAfterDays: 7,
-    sidebarAutoSettleOnMerge: true,
-    newWorktreesStartFromOrigin: false,
     continueThreadsAfterServerUpdate: false,
   },
 };
@@ -21,12 +19,7 @@ describe("auto-settle settings sync", () => {
       label: "Remote",
       settings: {
         ...reference.settings,
-        newWorktreesStartFromOrigin: true,
         continueThreadsAfterServerUpdate: true,
-        sourceControlWritingStyle: {
-          ...reference.settings.sourceControlWritingStyle,
-          customInstructions: "Keep this environment's writing instructions.",
-        },
       },
     };
 
@@ -35,7 +28,6 @@ describe("auto-settle settings sync", () => {
     expect(plan.mismatches).toEqual([]);
     expect(plan.patch).toEqual({
       sidebarAutoSettleAfterDays: 7,
-      sidebarAutoSettleOnMerge: true,
     });
   });
 
@@ -46,13 +38,7 @@ describe("auto-settle settings sync", () => {
       settings: {
         ...reference.settings,
         sidebarAutoSettleAfterDays: null,
-        sidebarAutoSettleOnMerge: false,
-        newWorktreesStartFromOrigin: true,
         continueThreadsAfterServerUpdate: true,
-        sourceControlWritingStyle: {
-          ...reference.settings.sourceControlWritingStyle,
-          customInstructions: "Preserve these instructions.",
-        },
       },
     };
 
@@ -61,10 +47,7 @@ describe("auto-settle settings sync", () => {
 
     expect(plan.mismatches).toEqual([target]);
     expect(updated.sidebarAutoSettleAfterDays).toBe(7);
-    expect(updated.sidebarAutoSettleOnMerge).toBe(true);
-    expect(updated.newWorktreesStartFromOrigin).toBe(true);
     expect(updated.continueThreadsAfterServerUpdate).toBe(true);
-    expect(updated.sourceControlWritingStyle).toEqual(target.settings.sourceControlWritingStyle);
   });
 
   it("does not compare the reference or a target without loaded settings", () => {

@@ -7,8 +7,8 @@ import {
   ProviderDriverKind,
   ProviderInstanceId,
   ThreadId,
-  TextGenerationError,
 } from "@t3tools/contracts";
+import { TextGenerationError } from "@t3tools/provider-core/server/textGeneration";
 import * as Effect from "effect/Effect";
 import * as Deferred from "effect/Deferred";
 import * as Fiber from "effect/Fiber";
@@ -74,8 +74,6 @@ function makeHarness(
               title: "Project",
               workspaceRoot: "/repo",
               defaultModelSelection: modelSelection,
-              defaultThreadEnvMode: null,
-              autoPull: false,
               faviconPath: null,
               projectIcon: null,
               scripts: [],
@@ -120,8 +118,6 @@ function createThread(input: { readonly command: string; readonly thread: string
       modelSelection,
       runtimeMode: "full-access",
       interactionMode: "default",
-      branch: null,
-      worktreePath: null,
       createdBy: "user",
       creationSource: "web",
     });

@@ -9,8 +9,8 @@ import { cn } from "~/lib/utils";
  * The inline pill for one piece of chat context. It lives with the chat components rather than
  * in components/ui because it is one feature's look, not a generic primitive.
  *
- * An inline pill for one piece of context (a file, mention, terminal excerpt, pull request,
- * skill…) that sits in running text, both in the composer and in sent messages.
+ * An inline pill for one piece of context (a file, mention, terminal excerpt, skill…) that
+ * sits in running text, both in the composer and in sent messages.
  *
  * Metrics are in em so the chip scales with the text around it (the composer honors the
  * prompt font-size preference). Each kind keeps one restrained color identity: every accent
@@ -37,11 +37,6 @@ const contextChipVariants = cva(
         element: "[--context-chip-accent:oklch(0.62_0.134_70)]",
         "preview-annotation": "[--context-chip-accent:oklch(0.62_0.134_70)]",
         "review-comment": "[--context-chip-accent:oklch(0.62_0.16_292)]",
-        "pull-request": "[--context-chip-accent:oklch(0.62_0.16_277)]",
-        "pr-open": "[--context-chip-accent:oklch(0.62_0.134_163)]",
-        "pr-draft": "[--context-chip-accent:oklch(0.62_0.02_259)]",
-        "pr-merged": "[--context-chip-accent:oklch(0.62_0.16_292)]",
-        "pr-closed": "[--context-chip-accent:oklch(0.62_0.16_16)]",
         skill: "[--context-chip-accent:oklch(0.62_0.16_322)]",
         thread: "[--context-chip-accent:oklch(0.62_0.12_190)]",
         citation: "[--context-chip-accent:oklch(0.62_0.16_259)]",
@@ -63,11 +58,6 @@ const contextChipVariants = cva(
           "element",
           "preview-annotation",
           "review-comment",
-          "pull-request",
-          "pr-open",
-          "pr-draft",
-          "pr-merged",
-          "pr-closed",
           "skill",
           "thread",
           "citation",

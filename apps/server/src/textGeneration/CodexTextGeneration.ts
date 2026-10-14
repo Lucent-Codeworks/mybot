@@ -11,8 +11,8 @@ import {
   type CodexSettings,
   DEFAULT_TEXT_GENERATION_REASONING_EFFORT,
   type ServerProviderModel,
-  TextGenerationError,
 } from "@t3tools/contracts";
+import { TextGenerationError } from "@t3tools/provider-core/server/textGeneration";
 import { resolveSpawnCommand } from "@t3tools/shared/shell";
 
 import { resolveAttachmentPath } from "../attachmentStore.ts";
@@ -235,7 +235,6 @@ export const makeCodexTextGeneration = Effect.fn("makeCodexTextGeneration")(func
     outputSchema: outputSchemaJson,
     modelSelection,
     attachments,
-    investigate,
   }: TextGenerationOperations.Request<S>): Effect.fn.Return<
     S["Type"],
     TextGenerationError,
@@ -373,8 +372,7 @@ export const makeCodexTextGeneration = Effect.fn("makeCodexTextGeneration")(func
     return yield* Effect.gen(function* () {
       yield* runCodexCommand().pipe(
         Effect.scoped,
-        // The read-only sandbox already holds an investigation to reading; it only needs longer.
-        Effect.timeoutOption(investigate?.timeoutMs ?? CODEX_TIMEOUT_MS),
+        Effect.timeoutOption(CODEX_TIMEOUT_MS),
         Effect.flatMap(
           Option.match({
             onNone: () =>

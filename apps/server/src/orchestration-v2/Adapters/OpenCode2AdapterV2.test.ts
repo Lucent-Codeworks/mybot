@@ -2317,7 +2317,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     }).pipe(Effect.scoped),
   );
 
-  it.effect("moves the session when the thread's worktree changed", () =>
+  it.effect("moves the session when the thread's working directory changed", () =>
     Effect.gen(function* () {
       const runtime = yield* openCode2ReplayRuntimeWithInstructions([
         ...opening,
@@ -2338,7 +2338,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
   );
 
   it.effect(
-    "moves the session when a thread it resumes through ensureThread changed worktree",
+    "moves the session when a thread it resumes through ensureThread changed directory",
     () =>
       Effect.gen(function* () {
         const runtime = yield* openCode2ReplayRuntimeWithInstructions([
@@ -4406,7 +4406,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     }).pipe(Effect.scoped),
   );
 
-  it.effect("moves a fork into its target thread's worktree before the first prompt", () =>
+  it.effect("moves a fork into its target thread's directory before the first prompt", () =>
     Effect.gen(function* () {
       const FORK = "ses_f1484db83ffeLGtrRCFimo1H0e";
       const target = "/work/opencode2-fork-target";

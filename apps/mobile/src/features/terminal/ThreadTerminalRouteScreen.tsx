@@ -58,7 +58,6 @@ import {
   useKnownTerminalSessions,
 } from "../../state/use-terminal-session";
 import { useThreadSelection } from "../../state/use-thread-selection";
-import { useSelectedThreadProjection } from "../../state/use-thread-detail";
 import { EnvironmentConnectionNotice } from "../connection/EnvironmentConnectionNotice";
 import { TerminalSurface } from "./NativeTerminalSurface";
 import { getMobileTerminalTheme } from "./terminalTheme";
@@ -267,9 +266,6 @@ export function ThreadTerminalRouteScreen(props: ThreadTerminalRouteScreenProps)
   const params = props.route.params;
   const { selectedThread, selectedThreadProject, selectedEnvironmentConnection } =
     useThreadSelection();
-  const selectedThreadDetail = useSelectedThreadProjection();
-  const selectedThreadDetailWorktreePath =
-    selectedThreadDetail?.projection.thread.worktreePath ?? null;
   const routeEnvironmentIdRaw = firstRouteParam(params.environmentId);
   const routeThreadIdRaw = firstRouteParam(params.threadId);
   const routeEnvironmentId = routeEnvironmentIdRaw
@@ -395,23 +391,17 @@ export function ThreadTerminalRouteScreen(props: ThreadTerminalRouteScreenProps)
       return null;
     }
     if (pendingLaunch) {
-      return {
-        cwd: pendingLaunch.cwd,
-        worktreePath: pendingLaunch.worktreePath,
-      };
+      return { cwd: pendingLaunch.cwd };
     }
     return resolveTerminalOpenLocation({
       terminalLocation: activeKnownSession?.state.summary ?? null,
       activeSessionLocation: activeKnownSession?.state.summary ?? null,
       workspaceRoot: selectedThreadProject.workspaceRoot,
-      threadShellWorktreePath: selectedThread.worktreePath ?? null,
-      threadDetailWorktreePath: selectedThreadDetailWorktreePath,
     });
   }, [
     activeKnownSession?.state.summary,
     pendingLaunch,
     selectedThread,
-    selectedThreadDetailWorktreePath,
     selectedThreadProject?.workspaceRoot,
   ]);
   const [initialLaunchLocationEntry, setInitialLaunchLocationEntry] = useState(() => ({
@@ -434,7 +424,6 @@ export function ThreadTerminalRouteScreen(props: ThreadTerminalRouteScreenProps)
             threadId: selectedThread.id,
             terminalId,
             cwd: launchLocation.cwd,
-            worktreePath: launchLocation.worktreePath,
             cols: initialAttachGridSize.cols,
             rows: initialAttachGridSize.rows,
             ...(pendingLaunch?.env ? { env: pendingLaunch.env } : {}),
@@ -994,7 +983,6 @@ export function ThreadTerminalRouteScreen(props: ThreadTerminalRouteScreenProps)
           threadId: selectedThread.id,
           terminalId,
           cwd: terminalAttachInput.cwd,
-          worktreePath: terminalAttachInput.worktreePath,
           cols: terminalAttachInput.cols,
           rows: terminalAttachInput.rows,
           ...(terminalAttachInput.env ? { env: terminalAttachInput.env } : {}),

@@ -10,7 +10,7 @@ agent can use this endpoint to:
 - cancel an active delegated task; and
 - create one or more ordinary top-level T3 threads;
 - list a project's threads and incrementally read any thread;
-- rename threads, regenerate titles, and link or unlink pull requests;
+- rename threads and regenerate titles;
 - send or steer follow-up messages; and
 - wait for or interrupt ordinary thread runs.
 
@@ -297,10 +297,9 @@ the published task result.
 
 Stops the child thread with the internal `thread.stop` command, then stops every
 task the child delegated, and disposes automatic parent delivery. Like a user Stop,
-`thread.stop` interrupts the running turn, holds queued turns, and ends pull request
-watches. A nonterminal task with no interruptible run is rejected. A terminal task
-returns its existing status, and its child thread still stops, including later
-runs and watch wakes. Published task results remain available. It accepts an
+`thread.stop` interrupts the running turn and holds queued turns. A nonterminal
+task with no interruptible run is rejected. A terminal task returns its existing
+status, and its child thread still stops, including later runs. Published task results remain available. It accepts an
 optional cancellation reason.
 
 ### `create_threads`
@@ -325,25 +324,19 @@ type CreateThreadsInput = {
 ```
 
 Each entry independently resolves provider, model, and modes. The new threads
-inherit the parent's project, branch, and worktree path, but they have no
-sub-agent lineage. Entries with a prompt immediately dispatch a run; entries
+inherit the parent's project, but they have no sub-agent lineage. Entries with a prompt immediately dispatch a run; entries
 without a prompt remain idle.
 
 ### `t3_thread_launch`
 
-Launches one ordinary top-level thread through the app's launch service. Use an
-explicit `workspaceStrategy` to create a new worktree (`worktree` with `baseRef`),
-attach an existing checkout (`existing_worktree` with `worktreePath`), or use the
-project root (`root`, also the default). The thread is bound to that workspace
-before the agent starts. Creating a worktree in the task prompt does not update
-this binding.
+Launches one ordinary top-level thread through the app's launch service. The
+thread runs in its project's folder.
 
-Pass the task in `message`. Project, model, and modes inherit when omitted;
-workspace does not. `scratch: true` launches without a project, in a folder of
-its own under the environment's Scratch project. For stacked PRs, use the parent branch as `baseRef` with
-`startFromOrigin: false`. The new thread may not run with broader runtime or
+Pass the task in `message`. Project, model, and modes inherit when omitted.
+`scratch: true` launches without a project, in a folder of its own under the
+environment's Scratch project. The new thread may not run with broader runtime or
 interaction modes than the caller. Launch has no retry key, so inspect existing threads after a failed or lost response before
-launching again. `create_threads` remains the batch option for a shared checkout.
+launching again. `create_threads` remains the batch option.
 
 ### `t3_thread_list`
 
@@ -381,16 +374,12 @@ wakes early when it has a pending request, fails, or completes after the snooze.
 ### `t3_thread_update`
 
 Updates metadata for the calling thread or any other thread in the environment.
-The typed actions are `rename`, `regenerate_title`, `link_pull_request`, and
-`unlink_pull_request`. A link input supplies the repository, number, and URL;
-the server records the target thread's project ID. Branch and workspace changes
-are outside this tool.
+The typed actions are `rename` and `regenerate_title`.
 
 The result includes the command ID and durable event sequence together with the
-resultant title, title-regeneration marker, and linked pull request. Reusing a
-`clientRequestId` for the same action and thread replays the same command
-receipt. Thread list and read results expose the linked pull request, and thread
-detail also exposes an in-flight title regeneration.
+resultant title and title-regeneration marker. Reusing a `clientRequestId` for
+the same action and thread replays the same command receipt. Thread detail also
+exposes an in-flight title regeneration.
 
 ### `t3_thread_send`
 

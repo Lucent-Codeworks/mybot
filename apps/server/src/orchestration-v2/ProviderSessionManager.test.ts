@@ -234,8 +234,6 @@ function makeThreadCreatedEvent(input: {
       modelSelection,
       runtimeMode: "full-access",
       interactionMode: "default",
-      branch: null,
-      worktreePath: null,
       activeProviderThreadId: providerThreadId,
       lineage: {
         parentThreadId: null,
@@ -590,12 +588,9 @@ function makeBrowserAccessProject(projectId: ProjectId): Project {
     id: projectId,
     title: "Browser access project",
     workspaceRoot: process.cwd(),
-    repositoryIdentity: null,
     faviconPath: null,
     projectIcon: null,
     defaultModelSelection: null,
-    defaultThreadEnvMode: null,
-    autoPull: false,
     scripts: [],
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
@@ -1831,10 +1826,7 @@ it.effect(
         assert.isDefined(token);
         const resolved = yield* registry.resolve(token!);
         assert.equal(resolved?.thread.threadId, threadId);
-        assert.deepEqual(
-          resolved?.capabilities,
-          new Set(["preview", "orchestration", "worktree", "pull-requests"]),
-        );
+        assert.deepEqual(resolved?.capabilities, new Set(["preview", "orchestration"]));
 
         yield* manager.close(providerSessionId);
         assert.isUndefined(yield* mcpSessions.read(threadId));
@@ -1888,10 +1880,7 @@ it.effect(
         assert.equal(captured?.browserToolsAvailable, false);
         const token = captured?.authorizationHeader.replace(/^Bearer\s+/, "");
         const resolved = yield* registry.resolve(token!);
-        assert.deepEqual(
-          resolved?.capabilities,
-          new Set(["orchestration", "worktree", "pull-requests"]),
-        );
+        assert.deepEqual(resolved?.capabilities, new Set(["orchestration"]));
 
         yield* manager.close(providerSessionId);
       });

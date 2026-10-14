@@ -3,28 +3,18 @@ import { DEFAULT_HOSTED_APP_URL } from "./connectAuth.ts";
 /**
  * Prompt links open T3 Code from outside it with a prompt ready to send. They never send it:
  * a link from a stranger fills a draft, and the user reads it and presses Send. A link also
- * cannot pick a runtime mode, branch, or worktree. Those stay the user's own defaults.
+ * cannot pick a runtime mode. That stays the user's own default.
  *
  * Shared links are https on the hosted app, because that is what Twitter and GitHub make
  * clickable. The `t3code://` scheme carries the same paths into desktop and mobile:
  *
- *   https://app.t3.codes/new?prompt=…&repo=owner/name&provider=codex&model=gpt-5
- *   https://app.t3.codes/new?pr=owner/name/123&prompt=…
+ *   https://app.t3.codes/new?prompt=…&provider=codex&model=gpt-5
  *   https://app.t3.codes/<environmentId>/<threadId>?prompt=…
  *   t3code://new?…   t3code://threads/<environmentId>/<threadId>?…
  */
 
 /** URLs stay well under the limits browsers and link shorteners apply. */
 export const PROMPT_LINK_MAX_PROMPT_LENGTH = 8_000;
-
-export interface PromptLinkRepository {
-  readonly owner: string;
-  readonly name: string;
-}
-
-export interface PromptLinkPullRequest extends PromptLinkRepository {
-  readonly number: number;
-}
 
 /** A prompt as it arrived, after hidden characters were removed. */
 export interface LinkedPrompt {
@@ -33,20 +23,13 @@ export interface LinkedPrompt {
   readonly hiddenCharacters: number;
 }
 
-export type NewThreadLink =
-  | {
-      readonly kind: "new";
-      readonly prompt: LinkedPrompt;
-      readonly repository: PromptLinkRepository | null;
-      /** A provider driver kind such as `codex`. Users map it to one of their own instances. */
-      readonly provider: string | null;
-      readonly model: string | null;
-    }
-  | {
-      readonly kind: "pull-request";
-      readonly pullRequest: PromptLinkPullRequest;
-      readonly prompt: LinkedPrompt | null;
-    };
+export interface NewThreadLink {
+  readonly kind: "new";
+  readonly prompt: LinkedPrompt;
+  /** A provider driver kind such as `codex`. Users map it to one of their own instances. */
+  readonly provider: string | null;
+  readonly model: string | null;
+}
 
 export type PromptLinkResult<T> =
   | { readonly ok: true; readonly value: T }
@@ -90,44 +73,6 @@ export function sanitizeLinkedPrompt(raw: string): LinkedPrompt {
   return { text: text.trim(), hiddenCharacters };
 }
 
-const OWNER = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
-const NAME = /^[A-Za-z0-9._-]{1,100}$/;
-
-function repositoryOf(owner: string, name: string): PromptLinkRepository | null {
-  const trimmedName = name.replace(/\.git$/i, "");
-  if (!OWNER.test(owner) || !NAME.test(trimmedName) || /^\.+$/.test(trimmedName)) return null;
-  return { owner, name: trimmedName };
-}
-
-/** `owner/name`, or a GitHub repository URL. */
-export function parsePromptLinkRepository(value: string): PromptLinkRepository | null {
-  const trimmed = value.trim();
-  const url = /^https?:\/\/(?:www\.)?github\.com\/([^/?#]+)\/([^/?#]+)\/?$/i.exec(trimmed);
-  const short = /^([^/\s]+)\/([^/\s]+)$/.exec(trimmed);
-  const match = url ?? short;
-  return match?.[1] && match[2] ? repositoryOf(match[1], match[2]) : null;
-}
-
-/** `owner/name/123`, `owner/name#123`, or a GitHub pull request URL. */
-function parsePromptLinkPullRequest(value: string): PromptLinkPullRequest | null {
-  const trimmed = value.trim();
-  const match =
-    /^https?:\/\/(?:www\.)?github\.com\/([^/?#]+)\/([^/?#]+)\/pull\/(\d+)(?:[/?#].*)?$/i.exec(
-      trimmed,
-    ) ?? /^([^/\s#]+)\/([^/\s#]+)(?:\/|#)(\d+)$/.exec(trimmed);
-  if (!match?.[1] || !match[2] || !match[3]) return null;
-  const repository = repositoryOf(match[1], match[2]);
-  const number = Number(match[3]);
-  return repository && Number.isSafeInteger(number) && number > 0
-    ? { ...repository, number }
-    : null;
-}
-
-/** The pull request's page on GitHub, the reference `preparePullRequestThread` takes. */
-export function promptLinkPullRequestUrl(pullRequest: PromptLinkPullRequest): string {
-  return `https://github.com/${pullRequest.owner}/${pullRequest.name}/pull/${pullRequest.number}`;
-}
-
 function readPrompt(params: URLSearchParams): PromptLinkResult<LinkedPrompt | null> {
   const raw = params.get("prompt");
   if (raw === null) return { ok: true, value: null };
@@ -155,26 +100,12 @@ export function parseNewThreadLink(search: string): PromptLinkResult<NewThreadLi
   const params = new URLSearchParams(search);
   const prompt = readPrompt(params);
   if (!prompt.ok) return prompt;
-  const pr = params.get("pr");
-  if (pr !== null) {
-    const pullRequest = parsePromptLinkPullRequest(pr);
-    if (pullRequest === null) {
-      return { ok: false, error: "This link names a pull request T3 Code cannot read." };
-    }
-    return { ok: true, value: { kind: "pull-request", pullRequest, prompt: prompt.value } };
-  }
   if (prompt.value === null) return { ok: false, error: "This link has no prompt." };
-  const repo = params.get("repo");
-  const repository = repo === null ? null : parsePromptLinkRepository(repo);
-  if (repo !== null && repository === null) {
-    return { ok: false, error: "This link names a repository T3 Code cannot read." };
-  }
   return {
     ok: true,
     value: {
       kind: "new",
       prompt: prompt.value,
-      repository,
       provider: optionalParam(params, "provider")?.toLowerCase() ?? null,
       model: optionalParam(params, "model"),
     },
@@ -189,7 +120,7 @@ export function parseThreadLinkPrompt(search: string): PromptLinkResult<LinkedPr
 /** Drops the link's own parameters from a query, keeping anything else the route uses. */
 export function withoutPromptLinkParams(search: string): string {
   const params = new URLSearchParams(search);
-  for (const key of ["prompt", "repo", "pr", "provider", "model"]) params.delete(key);
+  for (const key of ["prompt", "provider", "model"]) params.delete(key);
   const rest = params.toString();
   return rest ? `?${rest}` : "";
 }
@@ -197,16 +128,12 @@ export function withoutPromptLinkParams(search: string): string {
 /** A shareable `/new` link on the hosted app. */
 export function buildNewThreadLink(input: {
   readonly prompt: string;
-  readonly repository?: PromptLinkRepository | null;
   readonly provider?: string | null;
   readonly model?: string | null;
   readonly origin?: string;
 }): string {
   const url = new URL("/new", input.origin ?? DEFAULT_HOSTED_APP_URL);
   url.searchParams.set("prompt", input.prompt);
-  if (input.repository) {
-    url.searchParams.set("repo", `${input.repository.owner}/${input.repository.name}`);
-  }
   if (input.provider) url.searchParams.set("provider", input.provider);
   if (input.provider && input.model) url.searchParams.set("model", input.model);
   return url.toString();

@@ -4,7 +4,6 @@ import { isMacPlatform, isWindowsPlatform, normalizeSearchText } from "~/lib/uti
 import { STATIC_KEYBINDING_COMMANDS, type KeybindingCommand } from "@t3tools/contracts";
 import type { EnvironmentId } from "@t3tools/contracts";
 import type { EnvironmentConnectionPhase } from "@t3tools/client-runtime/connection";
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
 import { DEFAULT_KEYBINDINGS } from "@t3tools/shared/keybindings";
 import { commandLabel } from "./KeybindingsSettings.logic";
 import {
@@ -23,7 +22,6 @@ export type SettingsPath =
   | "/settings/providers"
   | "/settings/integrations"
   | "/settings/scheduled-tasks"
-  | "/settings/source-control"
   | "/settings/storage"
   | "/settings/connections"
   | "/settings/archived";
@@ -102,7 +100,6 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/providers": "Providers",
   "/settings/integrations": "Integrations",
   "/settings/scheduled-tasks": "Scheduled Tasks",
-  "/settings/source-control": "Source Control",
   "/settings/storage": "Storage",
   "/settings/connections": "Connections",
   "/settings/archived": "Archive",
@@ -135,29 +132,6 @@ const KEYBINDING_SEARCH_ITEMS = STATIC_KEYBINDING_COMMANDS.toSorted((left, right
   };
 });
 
-/** Anchor id of a source control host's settings form on the Source Control page. */
-export function sourceControlHostSettingsSearchId(kind: string) {
-  return `source-control-host-${kind}` as const;
-}
-
-/** One result per host whose definition declares settings, searchable by its field titles. */
-const SOURCE_CONTROL_HOST_SEARCH_ITEMS = sourceControlClients.definitions.flatMap((definition) =>
-  definition.settings && definition.kind !== "github"
-    ? [
-        {
-          id: sourceControlHostSettingsSearchId(definition.kind),
-          title: `${definition.label} credentials`,
-          to: "/settings/source-control" as const,
-          searchTerms: [
-            `${definition.label} ${Object.keys(definition.settings.fields).join(" ")} token credentials sign in`,
-          ],
-          environmentOnly: true,
-          scope: "environment-defaults" as const,
-        },
-      ]
-    : [],
-);
-
 /**
  * Searchable settings and stable destinations, in result order. Rows with a
  * dedicated anchor render their id and title via `searchableSetting`; items
@@ -165,37 +139,11 @@ const SOURCE_CONTROL_HOST_SEARCH_ITEMS = sourceControlClients.definitions.flatMa
  */
 export const SETTINGS_SEARCH_ITEMS = [
   {
-    id: "storage-worktree-keep-when",
-    targetId: "storage-worktrees",
-    title: "Keep worktrees with local changes",
-    to: "/settings/storage",
-    scope: "project-defaults",
-    searchTerms: [
-      "any local files uncommitted changes edited tracked files ignored env build output cleanup",
-    ],
-  },
-  {
     id: "storage-delete-now",
     title: "Delete now",
     to: "/settings/storage",
     scope: "environment-defaults",
     searchTerms: ["storage cleanup run now results report removed kept failed"],
-  },
-  {
-    id: "storage-worktrees",
-    title: "Worktree cleanup",
-    to: "/settings/storage",
-    scope: "project-defaults",
-    searchTerms: [
-      "disk storage delete deleted archived threads old inactive merged unchanged worktrees retention days project inherit off custom",
-    ],
-  },
-  {
-    id: "storage-worktrees-location",
-    title: "Worktree location",
-    to: "/settings/storage",
-    scope: "environment-defaults",
-    searchTerms: ["worktree location folder directory path drive external disk"],
   },
   {
     id: "storage-artifacts",
@@ -305,7 +253,7 @@ export const SETTINGS_SEARCH_ITEMS = [
     id: "code-font",
     title: "Code font",
     to: "/settings/appearance",
-    searchTerms: ["typography family size monospace code blocks diffs file previews"],
+    searchTerms: ["typography family size monospace code blocks file previews"],
   },
   {
     id: "terminal-font",
@@ -324,18 +272,12 @@ export const SETTINGS_SEARCH_ITEMS = [
     id: "word-wrap",
     title: "Word wrap",
     to: "/settings/appearance",
-    searchTerms: ["long lines code blocks tables diffs file previews"],
+    searchTerms: ["long lines code blocks tables file previews"],
   },
   {
     id: "composer-context",
     title: "Composer context",
     to: "/settings/appearance",
-  },
-  {
-    id: "project-grouping",
-    title: "Project grouping",
-    to: "/settings/general",
-    searchTerms: ["combine matching repositories environments sidebar"],
   },
   {
     id: "project-order",
@@ -366,14 +308,6 @@ export const SETTINGS_SEARCH_ITEMS = [
     title: "Auto-settle inactive threads",
     to: "/settings/general",
     searchTerms: ["sidebar inactivity days no activity automatically"],
-    requiresThreadAutoSettlement: true,
-    scope: "project-defaults",
-  },
-  {
-    id: "auto-settle-merged-threads",
-    title: "Auto-settle merged threads",
-    to: "/settings/general",
-    searchTerms: ["pull request merge closed automatically sidebar"],
     requiresThreadAutoSettlement: true,
     scope: "project-defaults",
   },
@@ -410,30 +344,6 @@ export const SETTINGS_SEARCH_ITEMS = [
     to: "/settings/general",
     scope: "project-defaults",
     searchTerms: ["output token paragraph buffered wait turn legacy"],
-  },
-  {
-    id: "hide-whitespace-changes",
-    title: "Hide whitespace changes",
-    to: "/settings/general",
-    searchTerms: ["diff ignore spaces edits default"],
-  },
-  {
-    id: "default-diff-file-state",
-    title: "Default diff file state",
-    to: "/settings/general",
-    searchTerms: ["collapsed expanded collapse expand files pull request pr code tab"],
-  },
-  {
-    id: "diff-layout",
-    title: "Diff layout",
-    to: "/settings/general",
-    searchTerms: ["stacked split side by side unified inline view"],
-  },
-  {
-    id: "proactive-panels",
-    title: "Proactive panels",
-    to: "/settings/general",
-    searchTerms: ["automatically open diff pull request pr right panel agent completion"],
   },
   {
     id: "skills-in-slash-menu",
@@ -487,29 +397,8 @@ export const SETTINGS_SEARCH_ITEMS = [
     to: "/settings/general",
     scope: "environment-defaults",
     searchTerms: [
-      "balanced performance battery saver advanced git fetch provider health refresh host power monitor idle policy",
+      "balanced performance battery saver advanced provider health refresh host power monitor idle policy",
     ],
-  },
-  {
-    id: "new-threads",
-    title: "New threads",
-    to: "/settings/general",
-    scope: "project-defaults",
-    searchTerms: ["default workspace mode draft local worktree"],
-  },
-  {
-    id: "worktree-submodules",
-    title: "Submodules",
-    to: "/settings/general",
-    scope: "project-defaults",
-    searchTerms: ["git submodule init recursive top-level none worktree t3.json"],
-  },
-  {
-    id: "start-from-origin",
-    title: "Start from origin",
-    to: "/settings/general",
-    scope: "project-defaults",
-    searchTerms: ["new worktrees latest matching remote branch local"],
   },
   {
     id: "add-project-starts-in",
@@ -548,7 +437,7 @@ export const SETTINGS_SEARCH_ITEMS = [
     title: "Text generation model",
     to: "/settings/general",
     scope: "project-defaults",
-    searchTerms: ["generated thread titles source control content default provider"],
+    searchTerms: ["generated thread titles content default provider"],
   },
   {
     id: "app-version",
@@ -785,121 +674,10 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["agent opens browser device simulator pop into view hide"],
   },
   {
-    id: "automatic-pull",
-    title: "Automatically pull",
-    to: "/settings/source-control",
-    scope: "project-defaults",
-    searchTerms: ["auto pull default branch current checkout fast forward upstream"],
-  },
-  {
-    id: "remove-agent-credits-on-merge",
-    title: "Remove agent credits when merging",
-    to: "/settings/source-control",
-    scope: "project-defaults",
-    searchTerms: ["pull request github squash co-authored-by attribution claude codex generated"],
-  },
-  {
-    id: "pull-request-merge-method",
-    title: "Default merge method",
-    to: "/settings/source-control",
-    scope: "project-defaults",
-    searchTerms: ["pull request merge squash rebase last selected"],
-  },
-  {
-    id: "source-control",
-    title: "Source control",
-    to: "/settings/source-control",
-    scope: "environment-defaults",
-    searchTerms: [
-      "version control git github hosting integrations credentials scan server environment",
-    ],
-  },
-  {
-    id: "git-fetch-interval",
-    title: "Git fetch interval",
-    to: "/settings/source-control",
-    searchTerms: [
-      "automatic remote branch refresh background credentials security keys seconds off",
-    ],
-    environmentOnly: true,
-    scope: "environment-defaults",
-  },
-  {
-    id: "worktree-branch-naming",
-    title: "Worktree branch naming",
-    to: "/settings/source-control",
-    searchTerms: ["static semantic prefix custom prompt instructions feat fix refactor chore"],
-    environmentOnly: true,
-    scope: "project-defaults",
-  },
-  {
-    id: "github-accounts",
-    title: "GitHub accounts and token",
-    to: "/settings/source-control",
-    searchTerms: [
-      "github gh account login user host enterprise ghes switch multiple accounts disable sign in token personal access token pat api key credential",
-    ],
-    environmentOnly: true,
-    scope: "environment-defaults",
-  },
-  ...SOURCE_CONTROL_HOST_SEARCH_ITEMS,
-  {
-    id: "source-control-writing-style",
-    title: "Source control writing style",
-    to: "/settings/source-control",
-    searchTerms: [
-      "repository conventions conventional commits custom instructions change descriptions request titles",
-    ],
-    environmentOnly: true,
-  },
-  {
-    id: "follow-change-request-templates",
-    title: "Follow change request templates",
-    to: "/settings/source-control",
-    searchTerms: ["repository pr pull request description structure"],
-    environmentOnly: true,
-  },
-  {
-    id: "source-control-writer-model",
-    title: "Source control writer model",
-    to: "/settings/source-control",
-    searchTerms: [
-      "override generated commit change request pr titles descriptions branch bookmark",
-    ],
-    environmentOnly: true,
-    scope: "project-defaults",
-  },
-  {
-    id: "review-guides",
-    title: "Review guides (beta)",
-    to: "/settings/source-control",
-    searchTerms: ["pull request pr guided review guide tour beta experimental"],
-    environmentOnly: true,
-  },
-  {
-    id: "review-guide-model",
-    title: "Review guide model",
-    to: "/settings/source-control",
-    // Hidden until review guides are on, so a search lands on the switch that shows it.
-    targetId: "review-guides",
-    searchTerms: ["pull request pr guided review guide brief maintainer"],
-    environmentOnly: true,
-    scope: "project-defaults",
-  },
-  {
-    id: "review-guide-instructions",
-    title: "Review guide instructions",
-    to: "/settings/source-control",
-    targetId: "review-guides",
-    searchTerms: ["pull request pr guided review guide preferences taste prompt custom"],
-    environmentOnly: true,
-    scope: "project-defaults",
-  },
-  {
     id: "project-actions",
     title: "Actions",
     to: "/settings/projects",
-    searchTerms: ["commands scripts setup run dev server checkout worktree t3.json import"],
+    searchTerms: ["commands scripts setup run dev server import"],
   },
   {
     id: "environment-icon",
@@ -997,12 +775,6 @@ export const SETTINGS_SEARCH_ITEMS = [
     ],
   },
   {
-    id: "github-routing",
-    title: "GitHub sharing",
-    to: "/settings/connections",
-    searchTerms: ["pull request trusted environments shared credentials permissions read actions"],
-  },
-  {
     id: "archive",
     title: "Archived threads",
     to: "/settings/archived",
@@ -1025,8 +797,7 @@ const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScop
   "/settings/keybindings": null,
   "/settings/providers": null,
   "/settings/integrations": null,
-  "/settings/source-control": "environment-defaults",
-  "/settings/storage": "project-defaults",
+  "/settings/storage": "environment-defaults",
   "/settings/connections": "connections",
   "/settings/scheduled-tasks": null,
   "/settings/archived": "project-defaults",

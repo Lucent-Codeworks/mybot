@@ -7,12 +7,7 @@ import {
   getThreadSortTimestamp,
   toSortableTimestamp,
 } from "@t3tools/client-runtime/state/thread-sort";
-import type {
-  EnvironmentId,
-  ScopedProjectRef,
-  SidebarProjectGroupingMode,
-  SidebarProjectSortOrder,
-} from "@t3tools/contracts";
+import type { EnvironmentId, ScopedProjectRef, SidebarProjectSortOrder } from "@t3tools/contracts";
 import * as Arr from "effect/Array";
 import * as Order from "effect/Order";
 
@@ -43,7 +38,6 @@ function getProjectSortTimestamp(
 export function buildHomeProjectScopes(input: {
   readonly projects: ReadonlyArray<EnvironmentProject>;
   readonly environmentId: EnvironmentId | null;
-  readonly projectGroupingMode: SidebarProjectGroupingMode;
 }): ReadonlyArray<HomeProjectScope> {
   const projects = input.projects.filter(
     (project) => input.environmentId === null || project.environmentId === input.environmentId,
@@ -51,10 +45,6 @@ export function buildHomeProjectScopes(input: {
   return buildProjectGroups({
     projects,
     groupScratchProjects: true,
-    settings: {
-      sidebarProjectGroupingMode: input.projectGroupingMode,
-      sidebarProjectGroupingOverrides: {},
-    },
   }).map((group) => {
     return {
       key: group.key,

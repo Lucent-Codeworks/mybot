@@ -19,9 +19,6 @@ function queuedCreation(id: string, createdAt: string): QueuedThreadMessage {
     createdAt,
     creation: {
       projectId,
-      workspaceMode: "local",
-      branch: "main",
-      worktreePath: null,
     },
   };
 }
@@ -44,17 +41,15 @@ describe("buildPendingNewTasks", () => {
     const tasks = buildPendingNewTasks({
       queuedMessages: [queuedCreation("a", "2026-09-05T10:00:00.000Z")],
       drafts: {
-        "new-task:draft-old": draft("first idea", "2026-09-05T09:00:00.000Z", {
-          workspaceSelection: { mode: "worktree", branch: "main", worktreePath: null },
-        }),
+        "new-task:draft-old": draft("first idea", "2026-09-05T09:00:00.000Z"),
         "new-task:draft-new": draft("second idea", "2026-09-05T11:00:00.000Z"),
       },
     });
 
-    expect(tasks.map((task) => [task.kind, task.title, task.branch])).toEqual([
-      ["draft", "second idea", null],
-      ["draft", "first idea", "main"],
-      ["pending", "queued a", "main"],
+    expect(tasks.map((task) => [task.kind, task.title])).toEqual([
+      ["draft", "second idea"],
+      ["draft", "first idea"],
+      ["pending", "queued a"],
     ]);
     expect(tasks[1]).toMatchObject({
       key: "draft-task:new-task:draft-old",

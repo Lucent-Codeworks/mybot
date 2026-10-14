@@ -2,7 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import { use, useCallback, useMemo } from "react";
 import { Platform, View, useWindowDimensions } from "react-native";
 import { useKeyboardState } from "react-native-keyboard-controller";
-import { SafeAreaInsetsContext, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CompactBrandTitle } from "../../components/CompactBrandTitle";
 import { AndroidScreenHeader } from "../../components/AndroidScreenHeader";
@@ -16,7 +16,6 @@ import { HomeRouteScreen } from "../home/HomeRouteScreen";
 import { dispatchHardwareKeyboardCommand } from "../keyboard/hardwareKeyboardCommands";
 import { WorkspaceConnectionTitle } from "../home/WorkspaceConnectionTitle";
 import { useAdaptiveWorkspaceLayout } from "../layout/AdaptiveWorkspaceLayout";
-import { PullRequestsScreen } from "../pull-requests/PullRequestsScreen";
 import {
   WorkspaceTabsContext,
   WorkspaceTabsProvider,
@@ -24,26 +23,17 @@ import {
 } from "./WorkspaceTabsContext";
 import { WorkspaceToolbar } from "./WorkspaceToolbar";
 import { WORKSPACE_DOCK, workspaceToolbarHeight } from "./workspace-tabs-state";
-import { WorkspaceSidebarTabs } from "./WorkspaceSidebarTabs";
 import { useSidebarWorkspaceTabs, useSystemWorkspaceTabBar } from "./useSystemWorkspaceTabBar";
-
-const TAB_TITLES = {
-  threads: "Threads",
-  pullRequests: "Pull requests",
-};
 
 /** Brand and connection status occupy the same leading slot in both roots. */
 function WorkspaceRootTitle(props: {
   readonly maxWidth: number;
   readonly onOpenEnvironments: () => void;
 }) {
-  const { state } = useWorkspaceTabs()!;
   return (
     <View style={{ width: props.maxWidth, minHeight: 32, justifyContent: "center" }}>
       <WorkspaceConnectionTitle
-        brand={
-          <CompactBrandTitle accessibilityLabel={`T3 Code, ${TAB_TITLES[state.selectedTab]}`} />
-        }
+        brand={<CompactBrandTitle accessibilityLabel="T3 Code, Threads" />}
         maxWidth={props.maxWidth}
         onPress={props.onOpenEnvironments}
       />
@@ -98,15 +88,12 @@ function WorkspaceRootContent() {
 
   return (
     <WorkspaceTabsContext value={context}>
-      <View
-        className="flex-1 bg-screen"
-        style={sidebarTabs ? { paddingTop: insets.top } : undefined}
-      >
+      <View className="flex-1 bg-screen">
         {Platform.OS === "ios" ? (
           <NativeStackScreenOptions
             optionsVersion={[state.selectedTab, state.selectionRevision, width, sidebarNavigation]}
             options={{
-              title: TAB_TITLES[state.selectedTab],
+              title: "Threads",
               headerShown: true,
               unstable_headerLeftItems: () => [],
               headerTitle: renderHeaderTitle,
@@ -118,8 +105,7 @@ function WorkspaceRootContent() {
             titleContent={renderHeaderTitle()}
             actions={[
               {
-                accessibilityLabel:
-                  state.selectedTab === "threads" ? "Search threads" : "Search pull requests",
+                accessibilityLabel: "Search threads",
                 icon: "magnifyingglass",
                 onPress: () => {
                   dispatchHardwareKeyboardCommand("focusSearch");
@@ -137,11 +123,7 @@ function WorkspaceRootContent() {
             ]}
           />
         )}
-        {sidebarTabs ? <WorkspaceSidebarTabs /> : null}
-        {/* The pinned picker already clears the navigation bar; lists must not inset it again. */}
-        <SafeAreaInsetsContext value={sidebarTabs ? { ...insets, top: 0 } : insets}>
-          {state.selectedTab === "threads" ? <HomeRouteScreen /> : <PullRequestsScreen />}
-        </SafeAreaInsetsContext>
+        <HomeRouteScreen />
         <WorkspaceToolbar
           sidebar={sidebarNavigation}
           onNewTask={() => navigation.navigate("NewTaskSheet", { screen: "NewTask" })}

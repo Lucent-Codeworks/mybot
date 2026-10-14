@@ -78,7 +78,6 @@ import { PreviewControlsToolkit } from "../../mcp/toolkits/previewControls/tools
 import { HtmlToolkit } from "../../mcp/toolkits/html/tools.ts";
 import { EnvironmentToolkit } from "../../mcp/toolkits/environment/tools.ts";
 import { ProjectToolkit } from "../../mcp/toolkits/project/tools.ts";
-import { WorktreeToolkit } from "../../mcp/toolkits/worktree/tools.ts";
 import { ThreadToolkit } from "../../mcp/toolkits/thread/tools.ts";
 import { OrchestratorToolkit } from "../../mcp/toolkits/orchestrator/tools.ts";
 import { ClaudeExecutableFileCheck } from "../../provider/Drivers/ClaudeExecutable.ts";
@@ -153,8 +152,6 @@ function makeClaudeTestAppThread(input: {
     modelSelection: CLAUDE_TEST_MODEL_SELECTION,
     runtimeMode: "full-access",
     interactionMode: "default",
-    branch: null,
-    worktreePath: null,
     activeProviderThreadId: input.providerThread.id,
     lineage: {
       parentThreadId: null,
@@ -688,7 +685,6 @@ describe("ClaudeAdapterV2 MCP query overrides", () => {
     const readOnlyToolNames = [
       ...Object.values(OrchestratorToolkit.tools),
       ...Object.values(ThreadToolkit.tools),
-      ...Object.values(WorktreeToolkit.tools),
       ...Object.values(ProjectToolkit.tools),
       ...Object.values(EnvironmentToolkit.tools),
       ...Object.values(PreviewControlsToolkit.tools),
@@ -1870,8 +1866,6 @@ describe("ClaudeAdapterV2 native fork", () => {
             },
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: null,
             activeProviderThreadId: forkedProviderThread.id,
             lineage: {
               parentThreadId: sourceThreadId,

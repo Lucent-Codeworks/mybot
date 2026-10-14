@@ -107,8 +107,6 @@ function threadCreated(id: ThreadId, at: DateTime.Utc, forkOf?: RunId): Orchestr
       modelSelection,
       runtimeMode: "full-access",
       interactionMode: "default",
-      branch: null,
-      worktreePath: null,
       activeProviderThreadId: null,
       lineage:
         forkOf === undefined

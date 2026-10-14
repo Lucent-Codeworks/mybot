@@ -131,14 +131,11 @@ export class ProjectService extends Context.Service<
       options?: { readonly includeDeleted?: boolean },
     ) => Effect.Effect<Option.Option<Project>, ProjectOperationError>;
     readonly snapshot: Effect.Effect<ProjectSnapshot, ProjectOperationError>;
-    /**
-     * An active project's shell with its immediately available repository
-     * identity; missing identity resolves in the background.
-     */
+    /** An active project's shell. */
     readonly getShell: (
       projectId: ProjectId,
     ) => Effect.Effect<Option.Option<OrchestrationProjectShell>, ProjectOperationError>;
-    /** Active project shells, enriched like `getShell`, in creation order. */
+    /** Active project shells in creation order. */
     readonly listShells: (options?: {
       readonly projectIds?: ReadonlyArray<ProjectId>;
     }) => Effect.Effect<ReadonlyArray<OrchestrationProjectShell>, ProjectOperationError>;
@@ -167,11 +164,8 @@ export const make = Effect.gen(function* () {
     id: row.projectId,
     title: row.title,
     workspaceRoot: row.workspaceRoot,
-    repositoryIdentity: enrichment?.repositoryIdentity ?? null,
     faviconPath: row.faviconPath ?? enrichment?.faviconPath ?? null,
     defaultModelSelection: row.defaultModelSelection,
-    defaultThreadEnvMode: row.defaultThreadEnvMode,
-    autoPull: row.autoPull,
     projectIcon: row.projectIcon,
     scripts: row.scripts,
     createdAt: row.createdAt,
@@ -379,12 +373,8 @@ export const make = Effect.gen(function* () {
         ...(input.defaultModelSelection === undefined
           ? {}
           : { defaultModelSelection: input.defaultModelSelection }),
-        ...(input.autoPull === undefined ? {} : { autoPull: input.autoPull }),
         ...(input.projectIcon === undefined ? {} : { projectIcon: input.projectIcon }),
         ...(input.faviconPath === undefined ? {} : { faviconPath: input.faviconPath }),
-        ...(input.defaultThreadEnvMode === undefined
-          ? {}
-          : { defaultThreadEnvMode: input.defaultThreadEnvMode }),
         ...(input.scripts === undefined ? {} : { scripts: input.scripts }),
       });
       if (workspaceRoot !== previousRoot) {
@@ -527,14 +517,6 @@ export const make = Effect.gen(function* () {
     },
   );
 
-  const enrichShell = (shell: OrchestrationProjectShell) =>
-    projectEnrichment.getAvailable(shell.workspaceRoot).pipe(
-      Effect.map((enrichment) => ({
-        ...shell,
-        repositoryIdentity: enrichment.repositoryIdentity,
-      })),
-    );
-
   const getShell: ProjectService["Service"]["getShell"] = Effect.fn("ProjectService.getShell")(
     function* (projectId) {
       const shell = yield* projects
@@ -544,21 +526,20 @@ export const make = Effect.gen(function* () {
             (cause) => new ProjectOperationError({ operation: "read-project", projectId, cause }),
           ),
         );
-      return Option.isNone(shell) ? shell : Option.some(yield* enrichShell(shell.value));
+      return shell;
     },
   );
 
   const listShells: ProjectService["Service"]["listShells"] = Effect.fn(
     "ProjectService.listShells",
   )(function* (options) {
-    const shells = yield* projects
+    return yield* projects
       .listShells(options)
       .pipe(
         Effect.mapError(
           (cause) => new ProjectOperationError({ operation: "list-projects", cause }),
         ),
       );
-    return yield* Effect.forEach(shells, enrichShell, { concurrency: 16 });
   });
 
   const snapshot = Effect.gen(function* () {

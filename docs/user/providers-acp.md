@@ -2,7 +2,7 @@
 
 T3 Code can run installed ACP commands or coding agents from the official
 [ACP Registry](https://agentclientprotocol.com/get-started/registry). Registry agents bring their
-own models, tools, and sign-in, while T3 Code provides projects, threads, checkpoints, and task
+own models, tools, and sign-in, while T3 Code provides projects, threads, and task
 delegation.
 
 Google Antigravity is available through its official `antigravity-acp` Registry entry. Add it like
@@ -119,14 +119,12 @@ Registry agents can schedule work and use T3's MCP tools. Child-task presentatio
 the agent exposes: ACP has no portable native subagent-lineage contract, so richer delegation views
 remain agent-specific.
 
-## Checkpoints
+## Rewinding
 
-Checkpoint rollback restores your files as usual. ACP agents cannot rewind their own conversation,
-so the next turn after a rollback starts a fresh agent session that no longer remembers the
-conversation from before the checkpoint.
+ACP agents cannot rewind their own conversation, so the next turn after you rewind a thread starts
+a fresh agent session that no longer remembers the conversation from before that point.
 
-Registry instances are not used for T3's app-owned text generation, such as thread titles, commit
-messages, branch names, or pull request descriptions. Configure a text-generation-capable provider
+Registry instances are not used for T3's app-owned text generation, such as thread titles. Configure a text-generation-capable provider
 for those actions.
 
 ## Advanced configuration

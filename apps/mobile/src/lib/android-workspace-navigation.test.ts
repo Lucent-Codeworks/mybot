@@ -19,17 +19,7 @@ const { CommonActions, StackActions, StackRouter } = requireFromCore(
 };
 const router = StackRouter({});
 const options = {
-  routeNames: [
-    "Home",
-    "Thread",
-    "ThreadFiles",
-    "ThreadTerminal",
-    "GitOverview",
-    "PullRequest",
-    "PullRequestFile",
-    "PullRequestReviewers",
-    "SettingsSheet",
-  ],
+  routeNames: ["Home", "Thread", "ThreadFiles", "ThreadTerminal", "SettingsSheet"],
   routeParamList: {},
   routeGetIdList: {},
 };
@@ -37,17 +27,6 @@ const thread = {
   name: "Thread",
   params: { environmentId: "environment-a", threadId: "thread-a" },
 } as const;
-const pullRequest = {
-  name: "PullRequest",
-  params: {
-    environmentId: "environment-a",
-    projectId: "project-a",
-    repository: "owner/repository",
-    number: 42,
-    host: "github.com",
-  },
-} as const;
-
 function apply(
   state: ReturnType<typeof router.getInitialState>,
   action: Parameters<typeof router.getStateForAction>[1],
@@ -60,18 +39,14 @@ function apply(
 function select(
   state: ReturnType<typeof router.getInitialState>,
   destination?: AndroidWorkspaceDestination,
-  reviewers?: ReactNavigation.RootParamList["PullRequestReviewers"],
 ) {
-  return apply(
-    state,
-    CommonActions.reset(androidWorkspaceNavigationState(state, destination, reviewers)),
-  );
+  return apply(state, CommonActions.reset(androidWorkspaceNavigationState(state, destination)));
 }
 
 function legacyHistory() {
   let state = router.getInitialState(options);
   state = apply(state, StackActions.push(thread.name, thread.params));
-  state = apply(state, StackActions.push(pullRequest.name, pullRequest.params));
+  state = apply(state, StackActions.push("ThreadFiles", thread.params));
   return state;
 }
 
@@ -80,15 +55,6 @@ function names(state: ReturnType<typeof router.getInitialState>) {
 }
 
 describe("Android workspace navigation", () => {
-  it("replaces cross-tab history with one detail and returns directly to its list", () => {
-    const previous = legacyHistory();
-    const state = select(previous, pullRequest);
-    expect(names(state)).toEqual(["Home", "PullRequest"]);
-    expect(state.routes[0]?.key).toBe(previous.routes[0]?.key);
-    expect(state.routes[1]?.key).toBe(previous.routes[2]?.key);
-    expect(names(apply(state, StackActions.pop()))).toEqual(["Home"]);
-  });
-
   it("replaces peer thread selections without leaving the previous thread underneath", () => {
     const first = select(router.getInitialState(options), thread);
     const second = select(first, {
@@ -103,10 +69,6 @@ describe("Android workspace navigation", () => {
 
   it("dismisses nested content and overlays when the sidebar selects a peer", () => {
     let state = legacyHistory();
-    state = apply(
-      state,
-      StackActions.push("PullRequestFile", { ...pullRequest.params, path: "src/main.ts" }),
-    );
     state = apply(state, StackActions.push("SettingsSheet"));
     const selected = select(state, thread);
     expect(names(selected)).toEqual(["Home", "Thread"]);
@@ -115,31 +77,12 @@ describe("Android workspace navigation", () => {
 
   it("creates Home beneath cold-linked details and gives direct list escape", () => {
     const initial = router.getInitialState(options);
-    const cold = apply(initial, CommonActions.reset({ index: 0, routes: [pullRequest] }));
-    expect(names(select(cold, pullRequest))).toEqual(["Home", "PullRequest"]);
+    const cold = apply(initial, CommonActions.reset({ index: 0, routes: [thread] }));
+    expect(names(select(cold, thread))).toEqual(["Home", "Thread"]);
     expect(names(select(cold))).toEqual(["Home"]);
   });
 
-  it("keeps a request-review flow above the chosen PR instead of an old chat", () => {
-    const state = select(legacyHistory(), pullRequest, pullRequest.params);
-    expect(names(state)).toEqual(["Home", "PullRequest", "PullRequestReviewers"]);
-    const back = apply(state, StackActions.pop());
-    expect(names(back)).toEqual(["Home", "PullRequest"]);
-    expect(back.routes[back.index]?.params).toEqual(pullRequest.params);
-  });
-
-  it("preserves normal nested PR Back behavior", () => {
-    const detail = select(legacyHistory(), pullRequest);
-    const nested = apply(
-      detail,
-      StackActions.push("PullRequestFile", { ...pullRequest.params, path: "file.ts" }),
-    );
-    const back = apply(nested, StackActions.pop());
-    expect(back.routes[back.index]?.key).toBe(detail.routes[detail.index]?.key);
-    expect(names(back)).toEqual(["Home", "PullRequest"]);
-  });
-
-  it.each(["ThreadFiles", "ThreadTerminal", "GitOverview"])(
+  it.each(["ThreadFiles", "ThreadTerminal"])(
     "returns to chat when its sidebar row is selected from %s",
     (route) => {
       const detail = select(router.getInitialState(options), thread);
@@ -151,22 +94,6 @@ describe("Android workspace navigation", () => {
     },
   );
 
-  it.each([
-    { environmentId: "environment-b" },
-    { projectId: "project-b" },
-    { repository: "owner/other" },
-    { host: "git.example.test" },
-    { number: 43 },
-  ])("does not reuse another PR's key when its scope differs: %o", (change) => {
-    const previous = select(router.getInitialState(options), pullRequest);
-    const state = select(previous, {
-      name: "PullRequest",
-      params: { ...pullRequest.params, ...change },
-    });
-    expect(state.routes[1]?.key).not.toBe(previous.routes[1]?.key);
-    expect(state.routes[1]?.params).toEqual({ ...pullRequest.params, ...change });
-  });
-
   it("does not reuse a thread key from another environment", () => {
     const previous = select(router.getInitialState(options), thread);
     const state = select(previous, {
@@ -176,7 +103,7 @@ describe("Android workspace navigation", () => {
     expect(state.routes[1]?.key).not.toBe(previous.routes[1]?.key);
   });
 
-  it("drops stale detail history on a tab switch while retaining Home", () => {
+  it("drops stale detail history when returning to the list while retaining Home", () => {
     const previous = legacyHistory();
     const state = select(previous);
     expect(names(state)).toEqual(["Home"]);

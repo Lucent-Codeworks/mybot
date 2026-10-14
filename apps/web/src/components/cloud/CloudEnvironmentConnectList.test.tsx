@@ -227,7 +227,7 @@ describe("cloud onboarding discovery", () => {
           platform: { os: "linux" as const, arch: "x64" as const },
           serverVersion: "1.0.0",
           orchestrationProtocolVersion: protocolVersion,
-          capabilities: { repositoryIdentity: true },
+          capabilities: {},
         },
       }),
     });

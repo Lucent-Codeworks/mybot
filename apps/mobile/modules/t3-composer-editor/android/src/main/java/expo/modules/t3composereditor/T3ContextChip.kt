@@ -141,16 +141,6 @@ class T3ContextChip(
           line(3f, 7f, 12f, 12f, 21f, 7f)
           line(12f, 12f, 12f, 22f)
         }
-        // lucide `git-pull-request`, the glyph web draws: two nodes, an elbow, and a stem.
-        "git-pull-request" -> {
-          addCircle(18f, 18f, 3f, Path.Direction.CW)
-          addCircle(6f, 6f, 3f, Path.Direction.CW)
-          moveTo(13f, 6f)
-          lineTo(16f, 6f)
-          cubicTo(17.1f, 6f, 18f, 6.9f, 18f, 8f)
-          lineTo(18f, 15f)
-          line(6f, 9f, 6f, 21f)
-        }
         "cursorarrow.click" -> {
           line(4f, 3f, 19f, 12f, 12f, 14f, 9f, 21f, 4f, 3f)
           line(13f, 15f, 18f, 21f)

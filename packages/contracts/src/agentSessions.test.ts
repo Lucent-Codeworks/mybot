@@ -15,22 +15,12 @@ const candidate = {
 } as const;
 
 describe("AgentSessionScanResult", () => {
-  it("decodes candidates from servers that predate the git scan", () => {
+  it("decodes candidates and ignores a git identity from older servers", () => {
     const result = decodeScanResult({
-      candidates: [candidate],
+      candidates: [{ ...candidate, git: { remoteKey: null, repository: null } }],
       scannedAt: "2026-08-22T12:00:00.000Z",
     });
 
-    expect(result.candidates[0]?.git).toBeUndefined();
-  });
-
-  it("preserves reported git identity", () => {
-    const git = { remoteKey: "github.com/pingdotgg/t3code", repository: "pingdotgg/t3code" };
-    const result = decodeScanResult({
-      candidates: [{ ...candidate, git }],
-      scannedAt: "2026-08-22T12:00:00.000Z",
-    });
-
-    expect(result.candidates[0]?.git).toEqual(git);
+    expect(result.candidates[0]).toEqual(candidate);
   });
 });

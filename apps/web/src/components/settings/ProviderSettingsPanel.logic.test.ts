@@ -240,10 +240,10 @@ describe("buildProviderInstanceOverridePatch", () => {
   const otherInstanceId = ProviderInstanceId.make("claudeAgent_personal");
 
   it("writes the same choice to every checkout of the project", () => {
-    const siblingId = ProjectId.make("project-a-worktree");
+    const siblingId = ProjectId.make("project-a-remote");
     const settings: Pick<ServerSettings, "projectSettingsOverrides"> = {
       projectSettingsOverrides: {
-        [siblingId]: { newWorktreesStartFromOrigin: true },
+        [siblingId]: { enableAgentDeviceAccess: true },
       },
     };
 
@@ -252,7 +252,7 @@ describe("buildProviderInstanceOverridePatch", () => {
     ).toEqual({
       [projectId]: { providerInstances: { [instanceId]: { enabled: false } } },
       [siblingId]: {
-        newWorktreesStartFromOrigin: true,
+        enableAgentDeviceAccess: true,
         providerInstances: { [instanceId]: { enabled: false } },
       },
     });
@@ -272,7 +272,7 @@ describe("buildProviderInstanceOverridePatch", () => {
     const settings: Pick<ServerSettings, "projectSettingsOverrides"> = {
       projectSettingsOverrides: {
         [projectId]: {
-          newWorktreesStartFromOrigin: true,
+          enableAgentDeviceAccess: true,
           providerInstances: { [otherInstanceId]: { enabled: false } },
         },
       },
@@ -280,7 +280,7 @@ describe("buildProviderInstanceOverridePatch", () => {
 
     expect(buildProviderInstanceOverridePatch(settings, [projectId], instanceId, true)).toEqual({
       [projectId]: {
-        newWorktreesStartFromOrigin: true,
+        enableAgentDeviceAccess: true,
         providerInstances: {
           [otherInstanceId]: { enabled: false },
           [instanceId]: { enabled: true },
@@ -305,7 +305,7 @@ describe("buildProviderInstanceOverridePatch", () => {
     const settings: Pick<ServerSettings, "projectSettingsOverrides"> = {
       projectSettingsOverrides: {
         [projectId]: {
-          newWorktreesStartFromOrigin: true,
+          enableAgentDeviceAccess: true,
           providerInstances: {
             [instanceId]: { enabled: true },
             [otherInstanceId]: { enabled: false },
@@ -318,7 +318,7 @@ describe("buildProviderInstanceOverridePatch", () => {
       buildProviderInstanceOverridePatch(settings, [projectId], instanceId, undefined),
     ).toEqual({
       [projectId]: {
-        newWorktreesStartFromOrigin: true,
+        enableAgentDeviceAccess: true,
         providerInstances: { [otherInstanceId]: { enabled: false } },
       },
     });
@@ -332,7 +332,7 @@ describe("buildProviderInstanceOverridePatch", () => {
     const settings: Pick<ServerSettings, "projectSettingsOverrides"> = {
       projectSettingsOverrides: {
         [projectId]: {
-          newWorktreesStartFromOrigin: true,
+          enableAgentDeviceAccess: true,
           providerInstances: { [instanceId]: { enabled: true } },
         },
       },
@@ -341,7 +341,7 @@ describe("buildProviderInstanceOverridePatch", () => {
     expect(
       buildProviderInstanceOverridePatch(settings, [projectId], instanceId, undefined),
     ).toEqual({
-      [projectId]: { newWorktreesStartFromOrigin: true, providerInstances: {} },
+      [projectId]: { enableAgentDeviceAccess: true, providerInstances: {} },
     });
   });
 });

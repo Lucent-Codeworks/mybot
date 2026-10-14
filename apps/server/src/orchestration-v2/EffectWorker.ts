@@ -421,9 +421,6 @@ export const layerExecutor: Layer.Layer<
                 providerThreadId: effect.request.providerThreadId,
                 checkpointId: effect.request.checkpointId,
                 scopeId: effect.request.scopeId,
-                ...(effect.request.restoreFiles === undefined
-                  ? {}
-                  : { restoreFiles: effect.request.restoreFiles }),
               })
               .pipe(
                 // The last failed attempt tells waiting clients it failed,

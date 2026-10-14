@@ -81,6 +81,15 @@ export type OrchestratorV2ScenarioStep =
       readonly itemType: OrchestrationV2TurnItem["type"];
     }
   | {
+      /**
+       * Waits until `until` holds for the projections of every thread,
+       * subagent threads included. `label` names the wait when it times out.
+       */
+      readonly type: "await_threads";
+      readonly label: string;
+      readonly until: (threads: ReadonlyArray<OrchestrationV2ThreadProjection>) => boolean;
+    }
+  | {
       readonly type: "release_replay_gate_after_waiting";
       readonly label: string;
       readonly threadId: ThreadId;
@@ -150,11 +159,6 @@ function commandThreadIds(command: OrchestrationV2Command): ReadonlyArray<Thread
     case "thread.visit":
     case "thread.mark-unread":
     case "thread.metadata.update":
-    case "thread.pull-request.link":
-    case "thread.pull-request.unlink":
-    case "thread.pull-request-link.sync":
-    case "thread.pull-request.watch":
-    case "thread.pull-request.sync":
     case "thread.title.regeneration.complete":
     case "thread.runtime-mode.set":
     case "thread.interaction-mode.set":
@@ -218,7 +222,7 @@ const hasActiveRun = (projection: OrchestrationV2ThreadProjection) =>
   );
 
 const SCENARIO_WAIT_ATTEMPTS = 10_000;
-// Iterations count event-loop turns, not time: while async work (git
+// Iterations count event-loop turns, not time: while async work (child
 // subprocesses, fixture IO) is in flight the loop is idle and the counter
 // burns at full speed on slow runners. A wait is exhausted only once BOTH
 // the iteration budget and this wall-clock deadline are spent.
@@ -480,6 +484,33 @@ export function runOrchestratorV2Scenario(
           );
         });
 
+      const waitForThreads = (
+        step: Extract<OrchestratorV2ScenarioStep, { readonly type: "await_threads" }>,
+        attemptsRemaining = SCENARIO_WAIT_ATTEMPTS,
+        deadlineAt = scenarioWaitDeadline(),
+      ): Effect.Effect<
+        void,
+        Orchestrator.OrchestratorV2Error | OrchestratorV2ScenarioStepError,
+        never
+      > =>
+        Effect.gen(function* () {
+          const threads: Array<OrchestrationV2ThreadProjection> = [];
+          for (const thread of (yield* orchestrator.getShellSnapshot()).threads) {
+            threads.push(yield* orchestrator.getThreadProjection(thread.id));
+          }
+          if (step.until(threads)) {
+            return;
+          }
+          if (scenarioWaitExhausted(attemptsRemaining, deadlineAt)) {
+            return yield* new OrchestratorV2ScenarioStepError({
+              scenario: scenario.name,
+              step: `await_threads:${step.label}`,
+            });
+          }
+          yield* yieldToRuntime;
+          return yield* waitForThreads(step, attemptsRemaining - 1, deadlineAt);
+        });
+
       const releaseReplayGateAfterWaiting = (
         label: string,
         threadId: ThreadId,
@@ -669,6 +700,9 @@ export function runOrchestratorV2Scenario(
             break;
           case "await_run_turn_item":
             yield* waitForRunTurnItem(step.threadId, step.runId, step.itemType);
+            break;
+          case "await_threads":
+            yield* waitForThreads(step);
             break;
           case "release_replay_gate_after_waiting":
             yield* releaseReplayGateAfterWaiting(step.label, step.threadId, step.runId);

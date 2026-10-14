@@ -30,29 +30,6 @@ const RESTRICTED_UI_VARIANT_PATTERNS = [
   },
 ];
 
-/** Lucide's pull-request glyphs, which only `pullRequestIcons.tsx` may name. */
-const RESTRICTED_PULL_REQUEST_GLYPH_IMPORTS = {
-  name: "lucide-react",
-  importNames: [
-    "GitMerge",
-    "GitMergeIcon",
-    "GitPullRequest",
-    "GitPullRequestIcon",
-    "GitPullRequestArrow",
-    "GitPullRequestArrowIcon",
-    "GitPullRequestClosed",
-    "GitPullRequestClosedIcon",
-    "GitPullRequestDraft",
-    "GitPullRequestDraftIcon",
-    "GitPullRequestCreate",
-    "GitPullRequestCreateIcon",
-    "GitPullRequestCreateArrow",
-    "GitPullRequestCreateArrowIcon",
-  ],
-  message:
-    "Pick a glyph by meaning from PullRequestGlyph in apps/web/src/components/pullRequest/pullRequestIcons.tsx so every surface draws the same pull request the same way.",
-};
-
 export default defineConfig({
   resolve: {
     alias: {
@@ -159,10 +136,7 @@ export default defineConfig({
       "typescript/require-array-sort-compare": "off",
       "typescript/restrict-template-expressions": "off",
       "typescript/unbound-method": "off",
-      "eslint/no-restricted-imports": [
-        "error",
-        { paths: [...RESTRICTED_IMPORT_PATHS, RESTRICTED_PULL_REQUEST_GLYPH_IMPORTS] },
-      ],
+      "eslint/no-restricted-imports": ["error", { paths: RESTRICTED_IMPORT_PATHS }],
       "t3code/no-global-process-runtime": "error",
       "t3code/no-inline-schema-compile": "warn",
       "t3code/no-manual-effect-runtime-in-tests": "error",
@@ -183,10 +157,7 @@ export default defineConfig({
       },
       {
         // Only shared command boundaries install the session-backed permission guard.
-        files: [
-          "packages/client-runtime/src/state/runtime.ts",
-          "packages/client-runtime/src/state/vcsAction.ts",
-        ],
+        files: ["packages/client-runtime/src/state/runtime.ts"],
         rules: {
           "t3code/no-rpc-permission-bypass": [
             "error",
@@ -234,17 +205,11 @@ export default defineConfig({
           "eslint/no-restricted-imports": [
             "error",
             {
-              paths: [...RESTRICTED_IMPORT_PATHS, RESTRICTED_PULL_REQUEST_GLYPH_IMPORTS],
+              paths: RESTRICTED_IMPORT_PATHS,
               patterns: RESTRICTED_UI_VARIANT_PATTERNS,
             },
           ],
         },
-      },
-      {
-        // The one module allowed to name lucide's pull-request glyphs; everything else picks
-        // from its vocabulary. The other import restrictions still apply here.
-        files: ["apps/web/src/components/pullRequest/pullRequestIcons.tsx"],
-        rules: { "eslint/no-restricted-imports": ["error", { paths: RESTRICTED_IMPORT_PATHS }] },
       },
       {
         files: ["apps/mobile/src/**"],
@@ -374,10 +339,8 @@ export default defineConfig({
           "apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx",
           "apps/mobile/src/features/files/thread-file-navigator-pane.tsx",
           "apps/mobile/src/features/home/HomeHeader.tsx",
-          "apps/mobile/src/features/review/ReviewSheet.tsx",
-          "apps/mobile/src/features/review/useNativeReviewDiffBridge.ts",
           "apps/mobile/src/features/settings/SettingsEnvironmentsRouteScreen.tsx",
-          "apps/mobile/src/features/threads/GitActionProgressOverlay.tsx",
+          "apps/mobile/src/components/StatusToastOverlay.tsx",
           "apps/mobile/src/features/threads/NewTaskDraftScreen.tsx",
           "apps/mobile/src/features/threads/ThreadComposer.tsx",
           "apps/mobile/src/features/threads/ThreadFeed.tsx",
@@ -387,8 +350,6 @@ export default defineConfig({
           "apps/mobile/src/features/threads/ThreadAgentsSheet.tsx",
           "apps/mobile/src/features/review/ReviewCommentCard.tsx",
           "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
-          "apps/mobile/src/features/threads/git/GitOverviewSheet.tsx",
-          "apps/mobile/src/features/threads/thread-list-items.tsx",
           "apps/mobile/src/features/threads/thread-list-v2-items.tsx",
           "apps/mobile/src/lib/useMobileNavigationTheme.ts",
           "apps/mobile/src/native/T3ComposerEditor.ios.tsx",

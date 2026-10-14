@@ -50,7 +50,7 @@ interface FixtureOutput {
 // Mirrors the classNames the audits flagged: multiple platform utilities per
 // block (only the first one used to keep its guard), a base utility overridden
 // by an `ios:` variant (NewTaskDraftScreen), and opposing `ios:`/`android:`
-// font families (worktree-setup-card).
+// font families.
 const FIXTURE_SOURCE = `export const Probe = () => (
   <div className="android:shrink android:grow-0 ios:flex-1 pt-12 ios:pt-[72px] ios:font-[family-name:Menlo] android:font-mono flex-1 sm:p-6 sm:text-lg" />
 );

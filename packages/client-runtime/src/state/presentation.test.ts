@@ -24,10 +24,10 @@ function entry(environmentId: EnvironmentId, label = environmentId as string) {
     profile: Option.none(),
   };
 }
-function config(pullRequests = false, cwd = "/workspace"): ServerConfig {
+function config(cwd = "/workspace"): ServerConfig {
   return {
     cwd,
-    environment: { capabilities: { pullRequests }, platform: { machine: "desktop" } },
+    environment: { capabilities: {}, platform: { machine: "desktop" } },
   } as ServerConfig;
 }
 function harness() {
@@ -53,62 +53,6 @@ function harness() {
 }
 
 describe("environment summary subscriptions", () => {
-  it("publishes full config updates without notifying membership, labels, connections or capability consumers", () => {
-    const h = harness();
-    h.registry.get(h.full.presentationsAtom);
-    h.registry.get(h.environmentIdsAtom);
-    h.registry.get(h.identitiesAtom);
-    h.registry.get(h.environmentsAtom);
-    h.registry.get(h.pullRequestsSupportedAtom);
-    h.registry.get(h.machineByIdAtom);
-    const counts = { full: 0, ids: 0, labels: 0, connections: 0, capability: 0, machines: 0 };
-    const stops = [
-      h.registry.subscribe(h.machineByIdAtom, () => counts.machines++),
-      h.registry.subscribe(h.full.presentationsAtom, () => counts.full++),
-      h.registry.subscribe(h.environmentIdsAtom, () => counts.ids++),
-      h.registry.subscribe(h.identitiesAtom, () => counts.labels++),
-      h.registry.subscribe(h.environmentsAtom, () => counts.connections++),
-      h.registry.subscribe(h.pullRequestsSupportedAtom, () => counts.capability++),
-    ];
-    const initialIds = h.registry.get(h.environmentIdsAtom);
-    const initialLabels = h.registry.get(h.identitiesAtom);
-    try {
-      for (let i = 0; i < 20; i++) {
-        const next = config(false, `/workspace-${i}`);
-        h.registry.set(h.configs(FIRST), next);
-        expect(h.registry.get(h.full.presentationsAtom).get(FIRST)?.serverConfig).toBe(next);
-        expect(h.registry.get(h.environmentIdsAtom)).toBe(initialIds);
-        expect(h.registry.get(h.identitiesAtom)).toBe(initialLabels);
-        h.registry.get(h.environmentsAtom);
-        expect(h.registry.get(h.machineByIdAtom).get(FIRST)).toBe("desktop");
-        expect(h.registry.get(h.pullRequestsSupportedAtom)).toBe(false);
-      }
-      expect(counts).toEqual({
-        full: 20,
-        ids: 0,
-        labels: 0,
-        connections: 0,
-        capability: 0,
-        machines: 0,
-      });
-      h.registry.set(h.catalog, {
-        isReady: true,
-        entries: new Map([
-          [FIRST, entry(FIRST, "Renamed")],
-          [SECOND, entry(SECOND)],
-        ]),
-      });
-      expect(h.registry.get(h.identitiesAtom)[0]?.label).toBe("Renamed");
-      expect(h.registry.get(h.environmentIdsAtom)).toBe(initialIds);
-      expect(h.registry.get(h.environmentsAtom)[0]?.environmentLabel).toBe("Renamed");
-      expect(counts.labels).toBe(1);
-      expect(counts.ids).toBe(0);
-    } finally {
-      stops.forEach((stop) => stop());
-      h.registry.dispose();
-    }
-  });
-
   it("keeps connected search targets stable through config refreshes and updates them on disconnect", () => {
     const h = harness();
     let changes = 0;
@@ -128,7 +72,7 @@ describe("environment summary subscriptions", () => {
       const connectionChanges = changes;
       expect(connectionChanges).toBeGreaterThan(0);
       for (let index = 0; index < 20; index++) {
-        h.registry.set(h.configs(FIRST), config(false, `/workspace-${index}`));
+        h.registry.set(h.configs(FIRST), config(`/workspace-${index}`));
         expect(h.registry.get(h.connectedEnvironmentIdsAtom)).toBe(connected);
       }
       expect(changes).toBe(connectionChanges);
@@ -162,19 +106,11 @@ describe("environment summary subscriptions", () => {
     }
   });
 
-  it("tracks capabilities across environments, config loss and removal", () => {
+  it("tracks environments across catalog changes and removal", () => {
     const h = harness();
-    const stop = h.registry.subscribe(h.pullRequestsSupportedAtom, () => {});
+    const stop = h.registry.subscribe(h.environmentIdsAtom, () => {});
     try {
-      expect(h.registry.get(h.pullRequestsSupportedAtom)).toBe(false);
-      h.registry.set(h.configs(FIRST), config(true));
-      expect(h.registry.get(h.pullRequestsSupportedAtom)).toBe(true);
-      // The first true result short-circuits: the second must be read when the first stops supporting it.
-      h.registry.set(h.configs(SECOND), config(true));
-      h.registry.set(h.configs(FIRST), null);
-      expect(h.registry.get(h.pullRequestsSupportedAtom)).toBe(true);
       h.registry.set(h.catalog, { isReady: true, entries: new Map([[FIRST, entry(FIRST)]]) });
-      expect(h.registry.get(h.pullRequestsSupportedAtom)).toBe(false);
       expect(h.registry.get(h.environmentIdsAtom)).toEqual([FIRST]);
       expect(h.registry.get(h.identitiesAtom)).toEqual([{ environmentId: FIRST, label: "first" }]);
       h.registry.set(h.catalog, {
@@ -185,9 +121,6 @@ describe("environment summary subscriptions", () => {
         ]),
       });
       expect(h.registry.get(h.environmentIdsAtom)).toEqual([SECOND, FIRST]);
-      expect(h.registry.get(h.pullRequestsSupportedAtom)).toBe(true);
-      h.registry.set(h.configs(SECOND), config(false));
-      expect(h.registry.get(h.pullRequestsSupportedAtom)).toBe(false);
       h.registry.set(h.catalog, { isReady: true, entries: new Map() });
       expect(h.registry.get(h.environmentIdsAtom)).toEqual([]);
       expect(h.registry.get(h.identitiesAtom)).toEqual([]);

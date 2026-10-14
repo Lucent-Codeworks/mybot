@@ -11,17 +11,11 @@ export function useAndroidWorkspaceSelection() {
   const navigation = useNavigation();
   const dispatch = useWorkspaceTabs()?.dispatch;
   return useCallback(
-    (
-      destination: AndroidWorkspaceDestination,
-      reviewers?: ReactNavigation.RootParamList["PullRequestReviewers"],
-    ) => {
+    (destination: AndroidWorkspaceDestination) => {
       Keyboard.dismiss();
-      dispatch?.({
-        type: "select",
-        tab: destination.name === "Thread" ? "threads" : "pullRequests",
-      });
+      dispatch?.({ type: "select", tab: "threads" });
       navigation.dispatch((state) =>
-        CommonActions.reset(androidWorkspaceNavigationState(state, destination, reviewers)),
+        CommonActions.reset(androidWorkspaceNavigationState(state, destination)),
       );
     },
     [navigation, dispatch],

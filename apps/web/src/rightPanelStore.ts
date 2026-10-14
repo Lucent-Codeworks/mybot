@@ -5,14 +5,10 @@
  * surface descriptors and the active surface, while each feature continues to
  * own its durable resource state. Browser surfaces point at preview tab ids,
  * terminal surfaces point at terminal session ids, file surfaces point at
- * workspace paths, and diff/files remain singleton surfaces.
+ * workspace paths, and the file explorer is a singleton surface.
  */
-import {
-  parseScopedThreadKey,
-  scopedThreadKey,
-  scopeThreadRef,
-} from "@t3tools/client-runtime/environment";
-import { EnvironmentId, ThreadId, type ScopedThreadRef } from "@t3tools/contracts";
+import { parseScopedThreadKey, scopedThreadKey } from "@t3tools/client-runtime/environment";
+import type { ScopedThreadRef } from "@t3tools/contracts";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
@@ -21,16 +17,7 @@ import { resolveStorage } from "./lib/storage";
 import type { ThreadPanelPresentation } from "./rightPanelLayout";
 import type { ChatFileAttachment } from "./types";
 
-const RIGHT_PANEL_KINDS = [
-  "diff",
-  "files",
-  "file",
-  "preview",
-  "device",
-  "terminal",
-  "pull-request",
-  "pull-requests",
-] as const;
+const RIGHT_PANEL_KINDS = ["files", "file", "preview", "device", "terminal"] as const;
 export type RightPanelKind = (typeof RIGHT_PANEL_KINDS)[number];
 
 export interface DeviceTabTarget {
@@ -52,7 +39,6 @@ export type RightPanelSurface =
       activeTerminalId: string;
       splitDirection?: "horizontal" | "vertical";
     }
-  | { id: "diff"; kind: "diff" }
   | { id: "files"; kind: "files" }
   | {
       id: `file:${string}` | `attachment:${string}`;
@@ -64,48 +50,14 @@ export type RightPanelSurface =
       /** Present when the file lives in the thread's attachment store rather
           than at a workspace or host path. */
       attachment?: ChatFileAttachment;
-    }
-  | {
-      /**
-       * A change request opened beside a thread or in the pull-request list's shared panel.
-       * The reference lives in the id so several pull requests can remain open as peer tabs.
-       */
-      id: `pull-request:${string}`;
-      kind: "pull-request";
-      /**
-       * Which server the change request was read from. The list spans every connected one, so
-       * two of them can hold the same project id; a panel beside a thread leaves this out and
-       * takes the environment from its own ref.
-       */
-      environmentId?: string;
-      projectId: string;
-      host?: string;
-      repository: string;
-      number: number;
-      url?: string;
-    }
-  /** The thread's linked pull requests, one singleton tab beside any number of `pull-request` tabs. */
-  | { id: "pull-requests"; kind: "pull-requests" };
+    };
 
 const RIGHT_PANEL_STORAGE_KEY = "t3code:right-panel-state:v2";
 // v9 removed the "plan" surface kind (plans render inline in the transcript).
-// v10 keys pull-request surfaces by reference instead of a singleton tab.
-// v11 stops persisting the pull-request list's shared panel, so a restart opens the page fresh.
 // v12 adds the device surface.
 // v14 removes the agents surface; lineage lives in the thread title bar.
-const RIGHT_PANEL_STORAGE_VERSION = 14;
-
-/** A fixed workspace-level ref: each PR surface carries its own real environment. */
-export const PULL_REQUESTS_PANEL_REF = scopeThreadRef(
-  EnvironmentId.make("pull-requests-panel"),
-  ThreadId.make("pull-requests-panel"),
-);
-
-/**
- * The pull-request list's shared panel is session
- * state: reopening the app should show the list, not last session's tabs and detail fetches.
- */
-const isPullRequestsPanelKey = (threadKey: string) => threadKey.endsWith(":pull-requests-panel");
+// v15 removes the diff and pull request surfaces.
+const RIGHT_PANEL_STORAGE_VERSION = 15;
 
 export interface ThreadRightPanelState {
   isOpen: boolean;
@@ -131,39 +83,13 @@ interface RightPanelStoreState {
   requestMaximize: (ref: ScopedThreadRef) => void;
   consumeMaximizeRequest: (ref: ScopedThreadRef) => boolean;
   threadPanelVisibilityByThreadKey: Record<string, ThreadPanelVisibility>;
-  /** Session-only count of user panel choices per thread. Automatic updates do not advance it. */
-  userActionRevisionByThreadKey: Record<string, number>;
   closeRevisionByThreadKey: Record<string, number>;
-  getUserActionRevision: (ref: ScopedThreadRef) => number;
-  /**
-   * Open a surface on behalf of the app, not the user. Refused when the user
-   * made a panel choice after `expectedUserActionRevision` was read.
-   */
-  openProactive: (
-    ref: ScopedThreadRef,
-    surface: Extract<RightPanelSurface, { kind: "diff" | "pull-request" | "pull-requests" }>,
-    expectedUserActionRevision: number,
-  ) => boolean;
-  open: (
-    ref: ScopedThreadRef,
-    kind: Exclude<RightPanelKind, "file" | "terminal" | "pull-request">,
-  ) => void;
+  open: (ref: ScopedThreadRef, kind: Exclude<RightPanelKind, "file" | "terminal">) => void;
   openDevice: (ref: ScopedThreadRef, target: DeviceTabTarget, automatic?: boolean) => void;
   renameDevice: (ref: ScopedThreadRef, surfaceId: string, title: string) => void;
   openBrowser: (ref: ScopedThreadRef, tabId: string | null) => void;
   openFile: (ref: ScopedThreadRef, relativePath: string, line?: number) => void;
   openAttachment: (ref: ScopedThreadRef, attachment: ChatFileAttachment) => void;
-  openPullRequest: (
-    ref: ScopedThreadRef,
-    target: {
-      environmentId?: string;
-      projectId: string;
-      host?: string;
-      repository: string;
-      number: number;
-      url?: string;
-    },
-  ) => void;
   openTerminal: (ref: ScopedThreadRef, terminalId: string) => void;
   splitTerminal: (
     ref: ScopedThreadRef,
@@ -189,10 +115,7 @@ interface RightPanelStoreState {
   close: (ref: ScopedThreadRef) => void;
   setMaximized: (ref: ScopedThreadRef, maximized: boolean) => void;
   toggleVisibility: (ref: ScopedThreadRef) => void;
-  toggle: (
-    ref: ScopedThreadRef,
-    kind: Exclude<RightPanelKind, "file" | "terminal" | "pull-request">,
-  ) => void;
+  toggle: (ref: ScopedThreadRef, kind: Exclude<RightPanelKind, "file" | "terminal">) => void;
   setThreadPanelOpen: (
     ref: ScopedThreadRef,
     presentation: ThreadPanelPresentation,
@@ -214,15 +137,11 @@ const DEFAULT_THREAD_PANEL_VISIBILITY: ThreadPanelVisibility = {
 };
 
 const singletonSurface = (
-  kind: Exclude<RightPanelKind, "file" | "preview" | "terminal" | "pull-request">,
+  kind: Exclude<RightPanelKind, "file" | "preview" | "terminal">,
 ): RightPanelSurface => {
   switch (kind) {
-    case "diff":
-      return { id: "diff", kind };
     case "files":
       return { id: "files", kind };
-    case "pull-requests":
-      return { id: "pull-requests", kind };
     case "device":
       return { id: "device", kind };
   }
@@ -261,43 +180,6 @@ const terminalSurface = (terminalId: string): RightPanelSurface => ({
   terminalIds: [terminalId],
   activeTerminalId: terminalId,
 });
-
-export type PullRequestSurface = Extract<RightPanelSurface, { kind: "pull-request" }>;
-
-export function pullRequestSurfaceId(target: {
-  environmentId?: string;
-  projectId: string;
-  host?: string;
-  repository: string;
-  number: number;
-}): PullRequestSurface["id"] {
-  // The environment leads the id where there is one, so the same change request read from two
-  // servers is two tabs rather than one tab that changes its mind about which server it is on.
-  const scope =
-    target.environmentId === undefined ? "" : `${encodeURIComponent(target.environmentId)}:`;
-  const host = target.host === undefined ? "" : `${encodeURIComponent(target.host.toLowerCase())}:`;
-  return `pull-request:${scope}${encodeURIComponent(target.projectId)}:${host}${encodeURIComponent(target.repository)}:${target.number}`;
-}
-
-export function pullRequestSurface(target: {
-  environmentId?: string;
-  projectId: string;
-  host?: string;
-  repository: string;
-  number: number;
-  url?: string;
-}): PullRequestSurface {
-  return {
-    id: pullRequestSurfaceId(target),
-    kind: "pull-request",
-    ...(target.environmentId === undefined ? {} : { environmentId: target.environmentId }),
-    projectId: target.projectId,
-    ...(typeof target.host === "string" ? { host: target.host.toLowerCase() } : {}),
-    repository: target.repository,
-    number: target.number,
-    ...(typeof target.url === "string" ? { url: target.url } : {}),
-  };
-}
 
 const upsertSurface = (
   current: ThreadRightPanelState,
@@ -390,8 +272,9 @@ const updateThread = (
 };
 
 // Every store action is a user choice unless it goes through `automaticUpdate`.
-// Only `openProactive` and resource reconciliation are automatic, so a new
-// action counts as a user choice by default.
+// Only automatic device opening and resource reconciliation are automatic, so a
+// new action counts as a user choice by default. User choices remember dismissed
+// devices and count closed views.
 const automaticUpdate = (
   state: RightPanelStoreState,
   threadKey: string,
@@ -424,10 +307,6 @@ const userAction = (
       ],
     };
   }),
-  userActionRevisionByThreadKey: {
-    ...state.userActionRevisionByThreadKey,
-    [threadKey]: (state.userActionRevisionByThreadKey[threadKey] ?? 0) + 1,
-  },
   ...(closesView
     ? {
         closeRevisionByThreadKey: {
@@ -461,16 +340,24 @@ export function migratePersistedRightPanelState(persistedState: unknown): {
     persistedState.byThreadKey &&
     typeof persistedState.byThreadKey === "object"
       ? Object.fromEntries(
-          Object.entries(persistedState.byThreadKey as Record<string, ThreadRightPanelState>)
-            .filter(([threadKey]) => !isPullRequestsPanelKey(threadKey))
-            .map(([threadKey, threadState]) => {
+          Object.entries(persistedState.byThreadKey as Record<string, ThreadRightPanelState>).map(
+            ([threadKey, threadState]) => {
               const validThreadState =
                 threadState && typeof threadState === "object" ? threadState : null;
               const surfaces = Array.isArray(validThreadState?.surfaces)
                 ? validThreadState.surfaces.flatMap<RightPanelSurface>((surface) => {
-                    // Removed surfaces: plans render inline, agents in thread lineage.
+                    // Removed surfaces: plans render inline, agents in thread lineage,
+                    // and the diff and pull request views are gone.
                     const kind = (surface as { kind?: string }).kind;
-                    if (kind === "plan" || kind === "agents") return [];
+                    if (
+                      kind === "plan" ||
+                      kind === "agents" ||
+                      kind === "diff" ||
+                      kind === "pull-request" ||
+                      kind === "pull-requests"
+                    ) {
+                      return [];
+                    }
                     if (surface.kind === "file") {
                       const revealLine =
                         typeof surface.revealLine === "number" &&
@@ -484,25 +371,6 @@ export function migratePersistedRightPanelState(persistedState: unknown): {
                           ? surface.revealRequestId
                           : 0;
                       return [{ ...surface, revealLine, revealRequestId }];
-                    }
-                    if (surface.kind === "pull-request") {
-                      if (
-                        typeof surface.projectId !== "string" ||
-                        typeof surface.repository !== "string" ||
-                        typeof surface.number !== "number" ||
-                        !Number.isSafeInteger(surface.number) ||
-                        surface.number < 1
-                      ) {
-                        return [];
-                      }
-                      const { environmentId, ...rest } = surface;
-                      // Anything else stored under that name is not an environment.
-                      return [
-                        pullRequestSurface({
-                          ...rest,
-                          ...(typeof environmentId === "string" ? { environmentId } : {}),
-                        }),
-                      ];
                     }
                     if (surface.kind !== "terminal") return [surface];
                     if (
@@ -543,9 +411,7 @@ export function migratePersistedRightPanelState(persistedState: unknown): {
                 (surface) => surface.id === rawActiveSurfaceId,
               )
                 ? (rawActiveSurfaceId ?? null)
-                : rawActiveSurfaceId === "pull-request"
-                  ? (surfaces.find((surface) => surface.kind === "pull-request")?.id ?? null)
-                  : null;
+                : null;
               // A migration that dropped every surface (e.g. plan-only panels
               // in v9) must not reopen an empty panel.
               const isOpen =
@@ -577,7 +443,8 @@ export function migratePersistedRightPanelState(persistedState: unknown): {
                   ...(validThreadState?.maximized === true ? { maximized: true as const } : {}),
                 },
               ];
-            }),
+            },
+          ),
         )
       : {};
   const threadPanelVisibilityByThreadKey =
@@ -610,33 +477,7 @@ export const useRightPanelStore = create<RightPanelStoreState>()(
         return true;
       },
       threadPanelVisibilityByThreadKey: {},
-      userActionRevisionByThreadKey: {},
       closeRevisionByThreadKey: {},
-      getUserActionRevision: (ref) =>
-        get().userActionRevisionByThreadKey[scopedThreadKey(ref)] ?? 0,
-      openProactive: (ref, surface, expectedUserActionRevision) => {
-        let opened = false;
-        set((state) => {
-          const threadKey = scopedThreadKey(ref);
-          if (
-            (state.userActionRevisionByThreadKey[threadKey] ?? 0) !== expectedUserActionRevision
-          ) {
-            return state;
-          }
-          // A linked PR takes priority over a completed-turn diff. Manual actions
-          // always apply, and later user choices reject both proactive requests.
-          if (
-            surface.kind === "diff" &&
-            (selectActiveRightPanel(state.byThreadKey, ref) === "pull-request" ||
-              selectActiveRightPanel(state.byThreadKey, ref) === "pull-requests")
-          ) {
-            return state;
-          }
-          opened = true;
-          return automaticUpdate(state, threadKey, (current) => upsertSurface(current, surface));
-        });
-        return opened;
-      },
       open: (ref, kind) =>
         set((state) =>
           userAction(state, scopedThreadKey(ref), (current) => {
@@ -689,21 +530,6 @@ export const useRightPanelStore = create<RightPanelStoreState>()(
               ? current.surfaces.filter((entry) => entry.id !== "browser:new")
               : current.surfaces;
             return upsertSurface({ ...current, surfaces: withoutPlaceholder }, surface);
-          }),
-        ),
-      openPullRequest: (ref, target) =>
-        set((state) =>
-          userAction(state, scopedThreadKey(ref), (current) => {
-            const surface = pullRequestSurface(target);
-            const next = upsertSurface(current, surface);
-            return target.url
-              ? {
-                  ...next,
-                  surfaces: next.surfaces.map((entry) =>
-                    entry.id === surface.id ? surface : entry,
-                  ),
-                }
-              : next;
           }),
         ),
       openFile: (ref, requestedPath, line) =>
@@ -1033,7 +859,6 @@ export const useRightPanelStore = create<RightPanelStoreState>()(
           if (
             !(threadKey in state.byThreadKey) &&
             !(threadKey in state.threadPanelVisibilityByThreadKey) &&
-            !(threadKey in state.userActionRevisionByThreadKey) &&
             !(threadKey in state.closeRevisionByThreadKey)
           ) {
             return state;
@@ -1041,14 +866,11 @@ export const useRightPanelStore = create<RightPanelStoreState>()(
           const { [threadKey]: _removed, ...byThreadKey } = state.byThreadKey;
           const { [threadKey]: _visibility, ...threadPanelVisibilityByThreadKey } =
             state.threadPanelVisibilityByThreadKey;
-          const { [threadKey]: _revision, ...userActionRevisionByThreadKey } =
-            state.userActionRevisionByThreadKey;
           const { [threadKey]: _closeRevision, ...closeRevisionByThreadKey } =
             state.closeRevisionByThreadKey;
           return {
             byThreadKey,
             threadPanelVisibilityByThreadKey,
-            userActionRevisionByThreadKey,
             closeRevisionByThreadKey,
           };
         }),
@@ -1060,11 +882,7 @@ export const useRightPanelStore = create<RightPanelStoreState>()(
         resolveStorage(typeof window !== "undefined" ? window.localStorage : undefined),
       ),
       partialize: (state) => ({
-        byThreadKey: Object.fromEntries(
-          Object.entries(state.byThreadKey).filter(
-            ([threadKey]) => !isPullRequestsPanelKey(threadKey),
-          ),
-        ),
+        byThreadKey: state.byThreadKey,
         threadPanelVisibilityByThreadKey: Object.fromEntries(
           Object.entries(state.threadPanelVisibilityByThreadKey).flatMap(
             ([threadKey, visibility]) =>

@@ -100,26 +100,26 @@ describe("serializeLegacyContextMessage", () => {
   });
 
   it.each([" ", "\n", "\n\n"])(
-    "preserves the separator between a skill and a trailing PR through an older server: %j",
+    "preserves the separator between a skill and a trailing review comment through an older server: %j",
     (separator) => {
-      const pullRequest = {
+      const summary = {
         ...review,
-        label: "#11440",
-        sectionId: "pull-request:11440",
-        sectionTitle: "Pull request",
-        filePath: "PR #11440",
+        label: "Summary",
+        sectionId: "summary-1",
+        sectionTitle: "Summary",
+        filePath: "SUMMARY.md",
         rangeLabel: "summary",
         text: "Audit Mobile Photo Import",
         diff: "",
       };
-      const text = `$pr-audit${separator}${formatComposerContextReference(pullRequest)}`;
+      const text = `$audit${separator}${formatComposerContextReference(summary)}`;
       const upgraded = upgradeLegacyContextMessage(
-        serializeLegacyContextMessage({ text, records: [pullRequest] }),
+        serializeLegacyContextMessage({ text, records: [summary] }),
       );
 
       expect(upgraded.records).toHaveLength(1);
       expect(upgraded.text).toBe(
-        `$pr-audit${separator}${formatComposerContextReference(upgraded.records[0]!)}`,
+        `$audit${separator}${formatComposerContextReference(upgraded.records[0]!)}`,
       );
     },
   );

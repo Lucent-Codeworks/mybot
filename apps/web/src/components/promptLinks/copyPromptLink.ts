@@ -1,15 +1,5 @@
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
-import {
-  type ModelSelection,
-  repositoryGroupingKeyOf,
-  type ServerProvider,
-} from "@t3tools/contracts";
-import {
-  buildNewThreadLink,
-  parsePromptLinkRepository,
-  PROMPT_LINK_MAX_PROMPT_LENGTH,
-  type PromptLinkRepository,
-} from "@t3tools/shared/promptLinks";
+import type { ModelSelection, ServerProvider } from "@t3tools/contracts";
+import { buildNewThreadLink, PROMPT_LINK_MAX_PROMPT_LENGTH } from "@t3tools/shared/promptLinks";
 
 import { type ComposerThreadTarget, useComposerDraftStore } from "~/composerDraftStore";
 import { writeTextToClipboard } from "~/hooks/useCopyToClipboard";
@@ -21,7 +11,6 @@ import { stackedThreadToast, toastManager } from "../ui/toast";
 export function promptLinkFor(
   prompt: string,
   context?: {
-    readonly repository: PromptLinkRepository | null;
     readonly provider: string | null;
     readonly model: string | null;
   },
@@ -31,25 +20,12 @@ export function promptLinkFor(
   return buildNewThreadLink({ prompt: trimmed, ...context, origin: configuredHostedAppUrl() });
 }
 
-/** The project's GitHub repository, the only kind a prompt link can name. */
-export function promptLinkRepositoryOf(
-  project: Pick<EnvironmentProject, "repositoryIdentity"> | undefined,
-): PromptLinkRepository | null {
-  const identity = project?.repositoryIdentity;
-  if (identity == null) return null;
-  const key = repositoryGroupingKeyOf(identity);
-  return key.startsWith("github.com/")
-    ? parsePromptLinkRepository(key.slice("github.com/".length))
-    : null;
-}
-
 /**
- * The draft in a composer as a link: its text and, with `withContext`, the project's repository
- * and the model the composer has picked. Null when the composer holds no prompt to share.
+ * The draft in a composer as a link: its text and, with `withContext`, the model the composer
+ * has picked. Null when the composer holds no prompt to share.
  */
 export function composerPromptLink(input: {
   readonly target: ComposerThreadTarget;
-  readonly project: EnvironmentProject | undefined;
   readonly providers: ReadonlyArray<ServerProvider>;
   readonly threadModelSelection: ModelSelection | null;
   readonly withContext: boolean;
@@ -65,7 +41,6 @@ export function composerPromptLink(input: {
       null)
     : null;
   return promptLinkFor(draft.prompt, {
-    repository: promptLinkRepositoryOf(input.project),
     provider,
     model: provider === null ? null : (selection?.model ?? null),
   });

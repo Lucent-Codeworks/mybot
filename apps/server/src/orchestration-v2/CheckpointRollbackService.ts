@@ -9,20 +9,12 @@ import {
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
-import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
-import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 
-import {
-  isCheckpointRestoreIsolated,
-  SHARED_WORKSPACE_RESTORE_MESSAGE,
-} from "./CheckpointRestoreSafety.ts";
-import { CheckpointServiceV2 } from "./CheckpointService.ts";
 import { EventSinkV2 } from "./EventSink.ts";
 import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
 import { ProjectionStoreV2 } from "./ProjectionStore.ts";
-import * as ProjectStore from "./ProjectStore.ts";
 import type * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
 import { ProviderSessionManagerV2 } from "./ProviderSessionManager.ts";
 import { RuntimePolicyV2 } from "./RuntimePolicy.ts";
@@ -39,7 +31,6 @@ export class CheckpointRollbackExecutionError extends Schema.TaggedError<Checkpo
       "active-provider-changed",
       "provider-turn-unavailable",
       "unexpected-failure",
-      "shared-workspace",
     ]),
     threadId: ThreadId,
     providerThreadId: ProviderThreadId,
@@ -55,8 +46,6 @@ export class CheckpointRollbackExecutionError extends Schema.TaggedError<Checkpo
         return `Active provider changed before rollback target ${this.checkpointId} could execute on thread ${this.threadId}.`;
       case "provider-turn-unavailable":
         return `Provider turn for rollback target ${this.checkpointId} is unavailable on provider thread ${this.providerThreadId}.`;
-      case "shared-workspace":
-        return SHARED_WORKSPACE_RESTORE_MESSAGE;
       case "unexpected-failure":
         return ROLLBACK_FAILED_MESSAGE;
     }
@@ -71,7 +60,6 @@ export interface CheckpointRollbackServiceV2Shape {
     readonly providerThreadId: ProviderThreadId;
     readonly checkpointId: CheckpointId;
     readonly scopeId: CheckpointScopeId;
-    readonly restoreFiles?: boolean;
   }) => Effect.Effect<void, CheckpointRollbackExecutionError>;
 }
 
@@ -83,28 +71,20 @@ export class CheckpointRollbackServiceV2 extends Context.Service<
 export const layer: Layer.Layer<
   CheckpointRollbackServiceV2,
   never,
-  | CheckpointServiceV2
   | EventSinkV2
   | IdAllocator.IdAllocatorV2
   | ProjectionStoreV2
   | ProviderSessionManagerV2
   | RuntimePolicyV2
-  | FileSystem.FileSystem
-  | Path.Path
-  | ProjectStore.ProjectStoreV2
   | ThreadCommandExecutor.ThreadCommandExecutor
 > = Layer.effect(
   CheckpointRollbackServiceV2,
   Effect.gen(function* () {
-    const checkpoints = yield* CheckpointServiceV2;
     const eventSink = yield* EventSinkV2;
     const ids = yield* IdAllocator.IdAllocatorV2;
     const projections = yield* ProjectionStoreV2;
     const sessions = yield* ProviderSessionManagerV2;
     const runtimePolicy = yield* RuntimePolicyV2;
-    const fileSystem = yield* FileSystem.FileSystem;
-    const projects = yield* ProjectStore.ProjectStoreV2;
-    const path = yield* Path.Path;
     const threadCommands = yield* ThreadCommandExecutor.ThreadCommandExecutor;
 
     const execute = Effect.fn("orchestrationV2.checkpointRollback.execute")(function* (input: {
@@ -112,7 +92,6 @@ export const layer: Layer.Layer<
       readonly providerThreadId: ProviderThreadId;
       readonly checkpointId: CheckpointId;
       readonly scopeId: CheckpointScopeId;
-      readonly restoreFiles?: boolean;
     }) {
       const projection = yield* projections.getThreadRecords(input.threadId, [
         "providerThreads",
@@ -152,23 +131,6 @@ export const layer: Layer.Layer<
       ) {
         return yield* new CheckpointRollbackExecutionError({
           reason: "active-provider-changed",
-          threadId: input.threadId,
-          providerThreadId: input.providerThreadId,
-          checkpointId: input.checkpointId,
-        });
-      }
-
-      if (
-        input.restoreFiles !== false &&
-        !(yield* isCheckpointRestoreIsolated(projection.thread, scope, {
-          fileSystem,
-          projections,
-          projects,
-          path,
-        }))
-      ) {
-        return yield* new CheckpointRollbackExecutionError({
-          reason: "shared-workspace",
           threadId: input.threadId,
           providerThreadId: input.providerThreadId,
           checkpointId: input.checkpointId,
@@ -265,7 +227,6 @@ export const layer: Layer.Layer<
               target: rollbackTarget,
               providerThreadTurns,
             });
-      if (input.restoreFiles !== false) yield* checkpoints.restore({ scope, checkpoint });
       const staleCheckpoints = projection.checkpoints.filter(
         (candidate) =>
           candidate.scopeId === scope.id &&
@@ -273,9 +234,6 @@ export const layer: Layer.Layer<
           candidate.appRunOrdinal > targetOrdinal &&
           candidate.status === "ready",
       );
-      if (staleCheckpoints.length > 0) {
-        yield* checkpoints.deleteStaleRefs({ scope, checkpoints: staleCheckpoints });
-      }
 
       // Thread commands write full provider thread rows under this lock. Without
       // it, a message sent during the rollback can plan against the old native

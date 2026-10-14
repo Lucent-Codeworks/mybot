@@ -8,7 +8,6 @@ import {
 
 const baseState: ThreadActionMenuState = {
   canOperate: true,
-  branch: null,
   projectFilter: null,
   isPinned: false,
   isSettled: false,
@@ -31,12 +30,6 @@ const baseState: ThreadActionMenuState = {
 
 function ids(state: ThreadActionMenuState): string[] {
   return buildThreadActionMenuItems(state).map((item) => item.id);
-}
-
-function allIds(state: ThreadActionMenuState): string[] {
-  const flatten = (items: ReturnType<typeof buildThreadActionMenuItems>): string[] =>
-    items.flatMap((item) => [item.id, ...(item.children ? flatten(item.children) : [])]);
-  return flatten(buildThreadActionMenuItems(state));
 }
 
 describe("buildThreadActionMenuItems", () => {
@@ -80,9 +73,8 @@ describe("buildThreadActionMenuItems", () => {
   );
 
   it("preserves local actions and restores mutations after a grant", () => {
-    const denied = buildThreadActionMenuItems({ ...baseState, canOperate: false, branch: "main" });
+    const denied = buildThreadActionMenuItems({ ...baseState, canOperate: false });
     expect(denied.filter((item) => !item.disabled).map((item) => item.id)).toEqual([
-      "new-thread-on-branch",
       "mark-unread",
       "copy",
       "project-settings",
@@ -138,14 +130,6 @@ describe("buildThreadActionMenuItems", () => {
     expect(items[filterIndex + 1]?.id).toBe("auto-settle");
   });
 
-  it("includes branch items only for threads with a branch", () => {
-    const withBranch = allIds({ ...baseState, branch: "feat/menu" });
-    expect(withBranch).toContain("new-thread-on-branch");
-    expect(withBranch).toContain("copy-branch");
-    expect(allIds(baseState)).not.toContain("new-thread-on-branch");
-    expect(allIds(baseState)).not.toContain("copy-branch");
-  });
-
   it("flips lifecycle labels with thread state", () => {
     expect(ids({ ...baseState, isPinned: true, isSettled: true, isSnoozed: true })).toEqual(
       expect.arrayContaining(["unpin", "unsettle", "unsnooze"]),
@@ -188,7 +172,7 @@ describe("buildThreadActionMenuItems", () => {
   });
 
   it("marks delete as destructive and keeps it last", () => {
-    const items = buildThreadActionMenuItems({ ...baseState, branch: "main" });
+    const items = buildThreadActionMenuItems(baseState);
     expect(items.at(-1)).toMatchObject({ id: "delete", destructive: true });
   });
   it("offers archive as a non-destructive action right before delete", () => {
@@ -226,20 +210,16 @@ describe("buildThreadActionMenuItems", () => {
 
 describe("buildDraftActionMenuItems", () => {
   it("offers only the copy values the draft has", () => {
-    const items = buildDraftActionMenuItems({ hasPath: false, hasBranch: true, hasProject: true });
+    const items = buildDraftActionMenuItems({ hasPath: true, hasProject: true });
     expect(items[0]).toMatchObject({ id: "copy", disabled: false });
-    expect(items[0]?.children?.map((item) => item.id)).toEqual(["copy-branch"]);
+    expect(items[0]?.children?.map((item) => item.id)).toEqual(["copy-path"]);
 
-    const noCopy = buildDraftActionMenuItems({
-      hasPath: false,
-      hasBranch: false,
-      hasProject: true,
-    });
+    const noCopy = buildDraftActionMenuItems({ hasPath: false, hasProject: true });
     expect(noCopy[0]).toMatchObject({ id: "copy", disabled: true, children: [] });
   });
 
   it("drops project settings without a project and keeps discard last", () => {
-    const items = buildDraftActionMenuItems({ hasPath: true, hasBranch: false, hasProject: false });
+    const items = buildDraftActionMenuItems({ hasPath: true, hasProject: false });
     expect(items.map((item) => item.id)).toEqual(["copy", "discard"]);
     expect(items.at(-1)).toMatchObject({ label: "Discard draft", destructive: true });
   });

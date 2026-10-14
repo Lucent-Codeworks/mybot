@@ -1,5 +1,3 @@
-import { worktreeSetupAgentStarted } from "@t3tools/client-runtime/worktree-setup";
-export { worktreeSetupAgentStarted } from "@t3tools/client-runtime/worktree-setup";
 import { isLiveSubagentTurnItem } from "@t3tools/client-runtime/state/subagentRuntime";
 import * as DateTime from "effect/DateTime";
 import * as Equal from "effect/Equal";
@@ -47,7 +45,6 @@ import {
 } from "../../types";
 import {
   type MessageId,
-  type WorktreeSetupSnapshot,
   type OrchestrationV2ProjectedTurnItem,
   type RunAttemptId,
   RunId,
@@ -520,13 +517,6 @@ export type MessagesTimelineRow = MessagesTimelineRowContent & {
 
 type MessagesTimelineRowContent =
   | {
-      kind: "worktree-setup";
-      id: string;
-      createdAt: string | null;
-      snapshot: WorktreeSetupSnapshot;
-      embedded: boolean;
-    }
-  | {
       kind: "work";
       id: string;
       createdAt: string;
@@ -571,7 +561,7 @@ type MessagesTimelineRowContent =
       summaryKind: ToolGroupSummaryKind;
       toolSurface?: WorkLogEntry["toolSurface"];
       toolIcon?: WorkLogEntry["toolIcon"];
-      summaryToolIcon?: "browser" | "device" | "t3-code" | "pull-request";
+      summaryToolIcon?: "browser" | "device" | "t3-code";
       hasFailure: boolean;
     }
   | {
@@ -608,7 +598,6 @@ type MessagesTimelineRowContent =
       showAssistantMeta: boolean;
       showAssistantCopyButton: boolean;
       assistantCopyStreaming: boolean;
-      assistantTurnDiffSummary?: TurnDiffSummary | undefined;
       revertTurnCount?: number | undefined;
     }
   | {
@@ -1400,16 +1389,8 @@ export function deriveMessagesTimelineRows(input: {
   supportsConversationRollback: boolean;
   /** Task ids of subagents still working, used by the active tool indicator. */
   liveAgentTaskIds?: ReadonlySet<string> | undefined;
-  /** Live bootstrap progress. Renders a stage card under the first user message. */
-  worktreeSetup?: WorktreeSetupSnapshot | null;
 }): MessagesTimelineRow[] {
   const timelineEntries = timelineRowEntries(input.timelineEntries);
-  const turnDiffSummaryByAssistantMessageId = new Map<MessageId, TurnDiffSummary>();
-  for (const summary of input.turnDiffSummaries) {
-    if (summary.assistantMessageId) {
-      turnDiffSummaryByAssistantMessageId.set(summary.assistantMessageId, summary);
-    }
-  }
   const revertTurnCountByUserMessageId = input.supportsConversationRollback
     ? deriveRevertTurnCountByUserMessageId({
         timelineEntries: timelineEntries,
@@ -1886,10 +1867,6 @@ export function deriveMessagesTimelineRows(input: {
       showAssistantMeta,
       showAssistantCopyButton: showAssistantMeta,
       assistantCopyStreaming: timelineEntry.message.streaming || assistantResponseStillInProgress,
-      assistantTurnDiffSummary:
-        timelineEntry.message.role === "assistant"
-          ? turnDiffSummaryByAssistantMessageId.get(timelineEntry.message.id)
-          : undefined,
       revertTurnCount:
         timelineEntry.message.role === "user"
           ? revertTurnCountByUserMessageId.get(timelineEntry.message.id)
@@ -1897,74 +1874,11 @@ export function deriveMessagesTimelineRows(input: {
     });
   }
 
-  // Until the agent's turn is live, the setup card sits under the send with
-  // the working header above it (the header reads "Setting up worktree…" and
-  // later swaps its text in place, so nothing moves at the handoff). "Live"
-  // means the turn is in the timeline, not just that the server dispatched
-  // it: the card must not vanish in the gap between. Once the turn is live
-  // the stage list leaves the timeline; a script that is still running is
-  // surfaced by the working header itself. A failed or cancelled setup stays
-  // under the send so its outcome and actions remain reachable.
-  const setupHandedOff =
-    input.worktreeSetup !== null &&
-    input.worktreeSetup !== undefined &&
-    worktreeSetupAgentStarted(input.worktreeSetup) &&
-    input.latestRun?.startedAt != null;
-  // A finished setup keeps the slot until the turn is live, so the card does
-  // not jump above the working header in the gap before the run starts.
-  const setupOwnsWorkingSlot =
-    !setupHandedOff &&
-    (input.worktreeSetup?.phase === "running" || input.worktreeSetup?.phase === "done");
-  if (input.worktreeSetup && (!setupHandedOff || input.worktreeSetup.phase !== "running")) {
-    const setupRow = {
-      kind: "worktree-setup",
-      id: WORKTREE_SETUP_ROW_ID,
-      createdAt: input.worktreeSetup.startedAt,
-      snapshot: input.worktreeSetup,
-      embedded: setupHandedOff,
-    } as const;
-    const firstUserRowIndex = nextRows.findIndex(
-      (row) => row.kind === "message" && row.message.role === "user",
-    );
-    // While the setup runs, the working header leads the card in the same
-    // slot it keeps once the agent's own turn takes over. The main pass may
-    // already have placed that header (a bootstrap counts as working).
-    const workingRowIndex = setupOwnsWorkingSlot
-      ? nextRows.findIndex((row) => row.kind === "working")
-      : -1;
-    if (workingRowIndex >= 0) {
-      nextRows.splice(workingRowIndex + 1, 0, setupRow);
-    } else {
-      const insertAt = firstUserRowIndex >= 0 ? firstUserRowIndex + 1 : nextRows.length;
-      nextRows.splice(
-        insertAt,
-        0,
-        ...(setupOwnsWorkingSlot
-          ? [
-              {
-                kind: "working",
-                id: "working-indicator-row",
-                createdAt: input.worktreeSetup.startedAt,
-              } as const,
-              setupRow,
-            ]
-          : [setupRow]),
-      );
-    }
-  }
-
-  // A setup that owns the working slot sits under it and shows no activity
-  // row of its own; every other state gets the usual tail.
   const hasWorkingRow = nextRows.some((row) => row.kind === "working");
   if (input.isWorking && !hasWorkingRow && activeTurnHeaderIndex === timelineEntries.length) {
     appendWorkingRow();
   }
-  if (
-    input.isWorking &&
-    !setupOwnsWorkingSlot &&
-    !hasActiveCompaction &&
-    (!hasActivityRow || latestToolFailed)
-  ) {
+  if (input.isWorking && !hasActiveCompaction && (!hasActivityRow || latestToolFailed)) {
     // A failed latest tool hands the row back to thinking, but its group
     // stays reachable through the same disclosure the live row offers.
     const failedGroupAnchor = latestToolFailed ? activeWorkAnchor : undefined;
@@ -2065,8 +1979,6 @@ function attachCreatedThreadSummaries(
     return [row];
   });
 }
-
-const WORKTREE_SETUP_ROW_ID = "worktree-setup-row";
 
 type MessagesTimelineRowsInput = Parameters<typeof deriveMessagesTimelineRows>[0];
 
@@ -2238,9 +2150,6 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
       const bt = b as typeof a;
       return a.createdAt === bt.createdAt && a.groupId === bt.groupId && a.expanded === bt.expanded;
     }
-    case "worktree-setup":
-      return a.snapshot === (b as typeof a).snapshot;
-
     case "assistant-meta": {
       const bm = b as typeof a;
       return (
@@ -2339,7 +2248,6 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
         a.showAssistantMeta === bm.showAssistantMeta &&
         a.showAssistantCopyButton === bm.showAssistantCopyButton &&
         a.assistantCopyStreaming === bm.assistantCopyStreaming &&
-        a.assistantTurnDiffSummary === bm.assistantTurnDiffSummary &&
         a.revertTurnCount === bm.revertTurnCount
       );
     }

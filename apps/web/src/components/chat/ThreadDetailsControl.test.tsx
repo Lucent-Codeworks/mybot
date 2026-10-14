@@ -20,7 +20,7 @@ it("keeps the row label and one chevron when used as a menu trigger", async () =
             Run on this machine
           </MenuTrigger>
           <MenuPopup>
-            <MenuItem>New worktree</MenuItem>
+            <MenuItem>Rename</MenuItem>
           </MenuPopup>
         </Menu>,
       );
@@ -29,7 +29,7 @@ it("keeps the row label and one chevron when used as a menu trigger", async () =
     expect(trigger.textContent).toBe("Run on this machine");
     expect(trigger.querySelectorAll(".lucide-chevron-down")).toHaveLength(1);
     await act(async () => trigger.click());
-    expect(document.querySelector('[role="menuitem"]')?.textContent).toBe("New worktree");
+    expect(document.querySelector('[role="menuitem"]')?.textContent).toBe("Rename");
   } finally {
     await act(async () => root.unmount());
     container.remove();

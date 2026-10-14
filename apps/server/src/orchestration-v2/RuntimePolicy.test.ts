@@ -28,7 +28,6 @@ const modelSelection = {
 
 function makeThread(input: {
   readonly now: DateTime.Utc;
-  readonly worktreePath: string | null;
   readonly runtimeMode?: RuntimeMode;
 }): OrchestrationV2AppThread {
   const threadId = ThreadId.make("thread:runtime-policy");
@@ -42,8 +41,6 @@ function makeThread(input: {
     modelSelection,
     runtimeMode: input.runtimeMode ?? "full-access",
     interactionMode: "default",
-    branch: null,
-    worktreePath: input.worktreePath,
     activeProviderThreadId: null,
     lineage: {
       parentThreadId: null,
@@ -95,8 +92,6 @@ const layerTest = RuntimePolicy.layerFromProjectStore.pipe(
             title: "Project",
             workspaceRoot: "/project-root",
             defaultModelSelection: null,
-            defaultThreadEnvMode: null,
-            autoPull: false,
             faviconPath: null,
             projectIcon: null,
             scripts: [],
@@ -110,27 +105,15 @@ const layerTest = RuntimePolicy.layerFromProjectStore.pipe(
 );
 
 it.layer(layerTest)("RuntimePolicyV2", (it) => {
-  it.effect("uses the project root for local-checkout threads", () =>
+  it.effect("runs threads in the project root", () =>
     Effect.gen(function* () {
       const policy = yield* RuntimePolicy.RuntimePolicyV2;
       const now = yield* DateTime.now;
       const resolved = yield* policy.resolve({
-        thread: makeThread({ now, worktreePath: null }),
+        thread: makeThread({ now }),
         modelSelection,
       });
       assert.equal(resolved.cwd, "/project-root");
-    }),
-  );
-
-  it.effect("prefers a provisioned worktree over the project root", () =>
-    Effect.gen(function* () {
-      const policy = yield* RuntimePolicy.RuntimePolicyV2;
-      const now = yield* DateTime.now;
-      const resolved = yield* policy.resolve({
-        thread: makeThread({ now, worktreePath: "/project-worktree" }),
-        modelSelection,
-      });
-      assert.equal(resolved.cwd, "/project-worktree");
     }),
   );
 
@@ -141,7 +124,7 @@ it.layer(layerTest)("RuntimePolicyV2", (it) => {
       const modeFor = (instanceId: ProviderInstanceId, runtimeMode: RuntimeMode) =>
         policy
           .resolve({
-            thread: makeThread({ now, worktreePath: null, runtimeMode }),
+            thread: makeThread({ now, runtimeMode }),
             modelSelection: { instanceId, model: "test-model" },
           })
           .pipe(Effect.map((resolved) => resolved.runtimeMode));

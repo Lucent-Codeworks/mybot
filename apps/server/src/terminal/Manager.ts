@@ -6,7 +6,6 @@
  *
  * @module TerminalManager
  */
-import { withWorkspaceLease } from "../workspace/workspaceLease.ts";
 import {
   DEFAULT_TERMINAL_ID,
   TerminalCwdError,
@@ -285,7 +284,6 @@ interface TerminalSessionState {
   threadId: string;
   terminalId: string;
   cwd: string;
-  worktreePath: string | null;
   status: TerminalSessionStatus;
   pid: number | null;
   history: BoundedTerminalHistory;
@@ -382,7 +380,6 @@ function snapshot(session: TerminalSessionState): TerminalSessionSnapshot {
     threadId: session.threadId,
     terminalId: session.terminalId,
     cwd: session.cwd,
-    worktreePath: session.worktreePath,
     status: session.status,
     pid: session.pid,
     history: session.history.value(),
@@ -399,7 +396,6 @@ function summary(session: TerminalSessionState): TerminalSummary {
     threadId: session.threadId,
     terminalId: session.terminalId,
     cwd: session.cwd,
-    worktreePath: session.worktreePath,
     status: session.status,
     pid: session.pid,
     exitCode: session.exitCode,
@@ -2240,7 +2236,6 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
     yield* modifyManagerState((state) => {
       session.status = "starting";
       session.cwd = input.cwd;
-      session.worktreePath = input.worktreePath ?? null;
       session.cols = input.cols;
       session.rows = input.rows;
       session.exitCode = null;
@@ -2598,9 +2593,7 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
     }).pipe(Effect.ignoreCause({ log: true })),
   );
 
-  const openWithWorkspaceLease = Effect.fn("terminal.openLocked")(function* (
-    input: TerminalOpenInput,
-  ) {
+  const openLocked = Effect.fn("terminal.openLocked")(function* (input: TerminalOpenInput) {
     const terminalId = input.terminalId;
     yield* assertValidCwd(input.cwd);
 
@@ -2615,7 +2608,6 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
         threadId: input.threadId,
         terminalId,
         cwd: input.cwd,
-        worktreePath: input.worktreePath ?? null,
         status: "starting",
         pid: null,
         history,
@@ -2652,7 +2644,6 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
           threadId: input.threadId,
           terminalId,
           cwd: input.cwd,
-          ...(input.worktreePath !== undefined ? { worktreePath: input.worktreePath } : {}),
           cols,
           rows,
           ...(input.env ? { env: input.env } : {}),
@@ -2668,17 +2659,11 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
     const targetCols = input.cols ?? liveSession.cols;
     const targetRows = input.rows ?? liveSession.rows;
     const runtimeEnvChanged = !Equal.equals(currentRuntimeEnv, nextRuntimeEnv);
-    const nextWorktreePath =
-      input.worktreePath !== undefined ? (input.worktreePath ?? null) : liveSession.worktreePath;
-    const launchContextChanged =
-      liveSession.cwd !== input.cwd ||
-      runtimeEnvChanged ||
-      liveSession.worktreePath !== nextWorktreePath;
+    const launchContextChanged = liveSession.cwd !== input.cwd || runtimeEnvChanged;
 
     if (launchContextChanged) {
       yield* stopProcess(liveSession);
       liveSession.cwd = input.cwd;
-      liveSession.worktreePath = nextWorktreePath;
       liveSession.runtimeEnv = nextRuntimeEnv;
       liveSession.history.clear();
       liveSession.pendingHistoryControlSequence = "";
@@ -2688,7 +2673,6 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
       yield* persistHistory(liveSession.threadId, liveSession.terminalId, liveSession.history);
     } else if (liveSession.status === "exited" || liveSession.status === "error") {
       liveSession.runtimeEnv = nextRuntimeEnv;
-      liveSession.worktreePath = nextWorktreePath;
       liveSession.history.clear();
       liveSession.pendingHistoryControlSequence = "";
       liveSession.pendingProcessEvents = [];
@@ -2704,7 +2688,6 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
           threadId: input.threadId,
           terminalId,
           cwd: input.cwd,
-          worktreePath: liveSession.worktreePath,
           cols: targetCols,
           rows: targetRows,
           ...(input.env ? { env: input.env } : {}),
@@ -2723,12 +2706,6 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
 
     return snapshot(liveSession);
   });
-
-  const openLocked = (input: TerminalOpenInput) =>
-    withWorkspaceLease(
-      path.resolve(input.worktreePath ?? input.cwd),
-      openWithWorkspaceLease(input),
-    );
 
   const open: TerminalManager["Service"]["open"] = (input) =>
     withThreadLock(
@@ -3055,7 +3032,6 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
           threadId: input.threadId,
           terminalId,
           cwd: input.cwd,
-          worktreePath: input.worktreePath ?? null,
           status: "starting",
           pid: null,
           history: new BoundedTerminalHistory(historyLineLimit, "", historyByteLimit),
@@ -3088,7 +3064,6 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
         session = existingSession.value;
         yield* stopProcess(session);
         session.cwd = input.cwd;
-        session.worktreePath = input.worktreePath ?? null;
         session.runtimeEnv = normalizedRuntimeEnv(input.env);
       }
 
@@ -3107,7 +3082,6 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
           threadId: input.threadId,
           terminalId,
           cwd: input.cwd,
-          ...(input.worktreePath !== undefined ? { worktreePath: input.worktreePath } : {}),
           cols,
           rows,
           ...(input.env ? { env: input.env } : {}),
@@ -3120,14 +3094,7 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
   const restart: TerminalManager["Service"]["restart"] = (input) =>
     withThreadLock(
       input.threadId,
-      resolveLaunchInputEnvironment(input).pipe(
-        Effect.flatMap((resolved) =>
-          withWorkspaceLease(
-            path.resolve(resolved.worktreePath ?? resolved.cwd),
-            restartResolved(resolved),
-          ),
-        ),
-      ),
+      resolveLaunchInputEnvironment(input).pipe(Effect.flatMap(restartResolved)),
     );
 
   const close: TerminalManager["Service"]["close"] = (input) =>

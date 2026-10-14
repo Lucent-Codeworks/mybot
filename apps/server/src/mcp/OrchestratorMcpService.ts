@@ -225,19 +225,6 @@ function errorMessage(error: unknown): string {
 }
 
 /**
- * Workspace strategy for a scheduled task created/updated over MCP: bound runs
- * post into the existing thread (the strategy is unused, keep root); unbound
- * runs launch a fresh worktree per run.
- */
-function scheduledTaskWorkspaceStrategy(
-  boundToThread: boolean,
-): ScheduledTask["workspaceStrategy"] {
-  return boundToThread
-    ? { type: "root" }
-    : { type: "worktree", baseRef: "main", startFromOrigin: true };
-}
-
-/**
  * A scheduled task as an agent sees it. `mayRun` says whether the caller may
  * run it: a webhook's URL carries the secret that starts the task's runs, so
  * only such a caller sees it.
@@ -716,7 +703,6 @@ function listItemFromShell(
     model: shell.modelSelection.model,
     runtimeMode: shell.runtimeMode,
     interactionMode: shell.interactionMode,
-    linkedPullRequest: shell.linkedPullRequest ?? null,
     ...threadSettlement(shell),
     ...threadSnooze(shell, nowMs),
     parentThreadId: shell.lineage.parentThreadId,
@@ -748,7 +734,6 @@ function threadDetail(
     model: projection.thread.modelSelection.model,
     runtimeMode: projection.thread.runtimeMode,
     interactionMode: projection.thread.interactionMode,
-    linkedPullRequest: projection.thread.linkedPullRequest ?? null,
     titleRegeneration:
       projection.thread.titleRegeneration === undefined ||
       projection.thread.titleRegeneration === null
@@ -757,8 +742,6 @@ function threadDetail(
             requestId: projection.thread.titleRegeneration.requestId,
             startedAt: DateTime.formatIso(projection.thread.titleRegeneration.startedAt),
           },
-    branch: projection.thread.branch,
-    worktreePath: projection.thread.worktreePath,
     parentThreadId: projection.thread.lineage.parentThreadId,
     relationshipToParent: projection.thread.lineage.relationshipToParent,
     runCount: projection.runs.length,
@@ -1644,7 +1627,7 @@ const make = Effect.gen(function* () {
           schedule: input.schedule,
           projectId,
           threadId: bindToCurrentThread && parent !== undefined ? parent.thread.id : null,
-          workspaceStrategy: scheduledTaskWorkspaceStrategy(bindToCurrentThread),
+          workspaceStrategy: { type: "root" },
           modelSelection,
           runtimeMode: limits.runtimeMode,
           interactionMode: limits.interactionMode,
@@ -1711,13 +1694,6 @@ const make = Effect.gen(function* () {
             : input.bindToCurrentThread && parent !== undefined
               ? parent.thread.id
               : null;
-        // Rebinding changes where runs execute, so the workspace strategy must
-        // follow: unbinding a root-strategy task would otherwise run loose
-        // prompts in the shared project checkout.
-        const workspaceStrategy =
-          input.bindToCurrentThread === undefined
-            ? existing.workspaceStrategy
-            : scheduledTaskWorkspaceStrategy(input.bindToCurrentThread);
         const upsertInput: ScheduledTaskUpsertInput = {
           id: existing.id,
           title: input.title ?? existing.title,
@@ -1726,7 +1702,7 @@ const make = Effect.gen(function* () {
           schedule: input.schedule ?? existing.schedule,
           projectId: existing.projectId,
           threadId,
-          workspaceStrategy,
+          workspaceStrategy: { type: "root" },
           modelSelection: existing.modelSelection,
           runtimeMode: existing.runtimeMode,
           interactionMode: existing.interactionMode,
@@ -2153,8 +2129,7 @@ const make = Effect.gen(function* () {
                   ),
                 );
         // Cancelling stops the child thread the way Stop does, including work that came
-        // after a published result: follow-up runs, pull request watch wakes, and the
-        // tasks it delegated. The published result stays terminal.
+        // after a published result: follow-up runs and the tasks it delegated. The published result stays terminal.
         const stopChild = Effect.gen(function* () {
           const commandId = stableCommandId({ scope, requestKey: key, operation: "cancel-task" });
           const reason = input.reason;
@@ -2311,8 +2286,6 @@ const make = Effect.gen(function* () {
                   modelSelection: target.modelSelection,
                   runtimeMode,
                   interactionMode,
-                  branch: parent.thread.branch,
-                  worktreePath: parent.thread.worktreePath,
                 })
                 .pipe(
                   Effect.mapError((error) =>

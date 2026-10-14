@@ -41,12 +41,11 @@ import { PRIVACY_POLICY_URL } from "../../legalLinks";
 import { useT3ConnectAuthPrompt } from "../clerk/useT3ConnectAuthPrompt";
 import { useCompleteOnboarding } from "../../onboarding/firstRun";
 import {
-  groupOnboardingProjects,
   partitionOnboardingProjects,
   onboardingProjectKey,
   resolveOnboardingLandingProject,
   resolveOnboardingProjectId,
-  type OnboardingProjectGroup,
+  sortOnboardingProjects,
   splitOnboardingProjectPath,
 } from "../../onboarding/projectImport.logic";
 import {
@@ -1561,12 +1560,7 @@ type ImportCandidate = AgentSessionProjectCandidate & {
   readonly key: string;
 };
 
-/**
- * Repositories first, newest activity on top. Clones of one repository share
- * a group with a tri-state checkbox. Folders that are not git repositories
- * sit collapsed at the bottom so they stay reachable without adding noise.
- * Source icons appear only on repository rows so the columns stay still.
- */
+/** One row per folder, newest activity on top. */
 function ImportCandidateList({
   candidates,
   selectedKeys,
@@ -1576,127 +1570,31 @@ function ImportCandidateList({
   readonly selectedKeys: ReadonlySet<string>;
   readonly onSelectionChange: (next: ReadonlySet<string>) => void;
 }) {
-  const { repositories, other } = useMemo(() => groupOnboardingProjects(candidates), [candidates]);
-  const setKeys = (keys: ReadonlyArray<string>, checked: boolean) => {
+  const sorted = useMemo(() => sortOnboardingProjects(candidates), [candidates]);
+  const setChecked = (key: string, checked: boolean) => {
     const next = new Set(selectedKeys);
-    for (const key of keys) {
-      if (checked) next.add(key);
-      else next.delete(key);
-    }
+    if (checked) next.add(key);
+    else next.delete(key);
     onSelectionChange(next);
   };
-  const otherSelected = other.filter((candidate) => selectedKeys.has(candidate.key)).length;
 
   return (
     <>
-      {repositories.map((group) => (
-        <ImportRepositoryGroup
-          key={group.key}
-          group={group}
-          selectedKeys={selectedKeys}
-          onToggle={setKeys}
+      {sorted.map((candidate) => (
+        <ImportCandidateRow
+          key={candidate.key}
+          candidate={candidate}
+          checked={selectedKeys.has(candidate.key)}
+          onCheckedChange={(checked) => setChecked(candidate.key, checked)}
         />
       ))}
-      {other.length > 0 ? (
-        <Collapsible>
-          <div className="flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-muted/40">
-            <Checkbox
-              checked={otherSelected === other.length}
-              indeterminate={otherSelected > 0 && otherSelected < other.length}
-              onCheckedChange={(checked) =>
-                setKeys(
-                  other.map((candidate) => candidate.key),
-                  checked === true,
-                )
-              }
-            />
-            <CollapsibleTrigger className="group flex min-w-0 flex-1 items-center gap-1.5 text-left">
-              <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground transition-transform group-data-panel-open:rotate-90" />
-              <span className="truncate text-sm text-muted-foreground">Other folders</span>
-              <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">
-                {other.length} {other.length === 1 ? "folder" : "folders"}
-              </span>
-            </CollapsibleTrigger>
-          </div>
-          <CollapsiblePanel>
-            {other.map((candidate) => (
-              <ImportCandidateRow
-                key={candidate.key}
-                candidate={candidate}
-                path={candidate.path}
-                nested
-                checked={selectedKeys.has(candidate.key)}
-                onCheckedChange={(checked) => setKeys([candidate.key], checked)}
-              />
-            ))}
-          </CollapsiblePanel>
-        </Collapsible>
-      ) : null}
     </>
   );
 }
 
-function ImportRepositoryGroup({
-  group,
-  selectedKeys,
-  onToggle,
-}: {
-  readonly group: OnboardingProjectGroup<ImportCandidate>;
-  readonly selectedKeys: ReadonlySet<string>;
-  readonly onToggle: (keys: ReadonlyArray<string>, checked: boolean) => void;
-}) {
-  const keys = group.candidates.map((candidate) => candidate.key);
-  const selectedCount = keys.filter((key) => selectedKeys.has(key)).length;
-  const single = group.candidates.length === 1;
-  const only = group.candidates[0];
-  if (single && only !== undefined) {
-    return (
-      <ImportCandidateRow
-        candidate={only}
-        label={group.label}
-        path={only.path}
-        checked={selectedKeys.has(only.key)}
-        onCheckedChange={(checked) => onToggle([only.key], checked)}
-      />
-    );
-  }
-  return (
-    <Collapsible defaultOpen>
-      <div className="flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-muted/40">
-        <Checkbox
-          checked={selectedCount === keys.length}
-          indeterminate={selectedCount > 0 && selectedCount < keys.length}
-          onCheckedChange={(checked) => onToggle(keys, checked === true)}
-        />
-        <CollapsibleTrigger className="group flex min-w-0 flex-1 items-center gap-1.5 text-left">
-          <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground transition-transform group-data-panel-open:rotate-90" />
-          <span className="truncate text-sm font-medium">{group.label}</span>
-          <ImportRowMeta
-            sources={[...new Set(group.candidates.flatMap((c) => c.sources))]}
-            threadCount={group.threadCount}
-            lastActiveAt={group.lastActiveAt}
-          />
-        </CollapsibleTrigger>
-      </div>
-      <CollapsiblePanel>
-        {group.candidates.map((candidate) => (
-          <ImportCandidateRow
-            key={candidate.key}
-            candidate={candidate}
-            path={candidate.path}
-            nested
-            checked={selectedKeys.has(candidate.key)}
-            onCheckedChange={(checked) => onToggle([candidate.key], checked)}
-          />
-        ))}
-      </CollapsiblePanel>
-    </Collapsible>
-  );
-}
-
 /**
- * Clones of one repository and plain folders differ only by folder name, so
- * the name stays visible and the shared parent path truncates first.
+ * Sibling folders often differ only by folder name, so the name stays visible
+ * and the shared parent path truncates first.
  */
 function ProjectPathText({
   path,
@@ -1716,47 +1614,27 @@ function ProjectPathText({
 
 function ImportCandidateRow({
   candidate,
-  label,
-  path,
-  nested = false,
   checked,
   onCheckedChange,
 }: {
   readonly candidate: ImportCandidate;
-  /** Text primary label. Nested rows omit it and are labelled by their path. */
-  readonly label?: string;
-  /** Shown with the folder name kept visible while the parent path truncates. */
-  readonly path?: string;
-  readonly nested?: boolean;
   readonly checked: boolean;
   readonly onCheckedChange: (checked: boolean) => void;
 }) {
   return (
-    <label
-      className={cn(
-        "flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-muted/40 has-disabled:cursor-default",
-        nested && "pl-8",
-      )}
-    >
+    <label className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-muted/40 has-disabled:cursor-default">
       <Checkbox checked={checked} onCheckedChange={(value) => onCheckedChange(value === true)} />
       <Tooltip>
         <TooltipTrigger
           render={<span className="flex min-w-0 flex-1 items-baseline gap-2 truncate" />}
         >
-          {label !== undefined ? (
-            <span className="truncate text-sm font-medium">{label}</span>
-          ) : null}
-          {path !== undefined ? (
-            <ProjectPathText
-              path={path}
-              className={label === undefined ? "text-xs" : "text-2xs text-muted-foreground"}
-            />
-          ) : null}
+          <span className="truncate text-sm font-medium">{candidate.title}</span>
+          <ProjectPathText path={candidate.path} className="text-2xs text-muted-foreground" />
         </TooltipTrigger>
         <TooltipPopup variant="code">{candidate.path}</TooltipPopup>
       </Tooltip>
       <ImportRowMeta
-        sources={nested ? null : candidate.sources}
+        sources={candidate.sources}
         threadCount={candidate.threadCount}
         lastActiveAt={candidate.lastActiveAt}
       />
@@ -1774,7 +1652,7 @@ function ImportRowMeta({
   threadCount,
   lastActiveAt,
 }: {
-  readonly sources: ReadonlyArray<"claudeAgent" | "codex"> | null;
+  readonly sources: ReadonlyArray<"claudeAgent" | "codex">;
   readonly threadCount: number;
   readonly lastActiveAt: string | null;
 }) {
@@ -1784,7 +1662,7 @@ function ImportRowMeta({
   return (
     <span className="ml-auto grid shrink-0 grid-cols-[1rem_1rem_2.5rem_2.25rem] items-center gap-x-1 text-xs text-muted-foreground tabular-nums">
       <span className="flex size-4 items-center justify-center">
-        {sources?.includes("claudeAgent") ? (
+        {sources.includes("claudeAgent") ? (
           <span role="img" aria-label="Claude Code">
             <ProviderInstanceIcon
               driverKind={ProviderDriverKind.make("claudeAgent")}
@@ -1795,7 +1673,7 @@ function ImportRowMeta({
         ) : null}
       </span>
       <span className="flex size-4 items-center justify-center">
-        {sources?.includes("codex") ? (
+        {sources.includes("codex") ? (
           <span role="img" aria-label="Codex">
             <ProviderInstanceIcon
               driverKind={ProviderDriverKind.make("codex")}

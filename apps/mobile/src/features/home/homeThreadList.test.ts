@@ -18,7 +18,6 @@ function makeProject(
 ): EnvironmentProject {
   return {
     workspaceRoot: `/workspaces/${input.id}`,
-    repositoryIdentity: null,
     defaultModelSelection: null,
     scripts: [],
     createdAt: "2026-06-01T00:00:00.000Z",
@@ -35,8 +34,6 @@ function makeThread(
     modelSelection: { instanceId: ProviderInstanceId.make("codex"), model: "gpt-5.4" },
     runtimeMode: "full-access",
     interactionMode: "default",
-    branch: null,
-    worktreePath: null,
     createdAt: "2026-06-01T00:00:00.000Z",
     updatedAt: "2026-06-01T00:00:00.000Z",
     archivedAt: null,
@@ -84,7 +81,6 @@ describe("home project scopes", () => {
     const scopes = buildHomeProjectScopes({
       projects,
       environmentId: null,
-      projectGroupingMode: "separate",
     });
     expect(scopes).toHaveLength(2);
     const scratchScope = scopes.find((scope) => scope.representative.isScratch)!;
@@ -104,7 +100,6 @@ describe("home project scopes", () => {
     const remoteScopes = buildHomeProjectScopes({
       projects,
       environmentId: remoteEnvironmentId,
-      projectGroupingMode: "separate",
     });
     const remoteScratch = remoteScopes.find((scope) => scope.representative.isScratch)!;
     expect(remoteScratch.key).toBe(scratchScope.key);
@@ -122,77 +117,37 @@ describe("home project scopes", () => {
     ).toEqual([threads[1]!.id]);
   });
 
-  it("builds one v2 scope for the same repository across environments", () => {
-    const localEnvironmentId = EnvironmentId.make("environment-local");
-    const remoteEnvironmentId = EnvironmentId.make("environment-remote");
-    const repositoryIdentity = {
-      canonicalKey: "github.com/pingdotgg/t3code",
-      locator: {
-        source: "git-remote" as const,
-        remoteName: "origin",
-        remoteUrl: "git@github.com:pingdotgg/t3code.git",
-      },
-    };
+  it("keeps the same folder name on two environments as separate scopes", () => {
     const projects = [
       makeProject({
-        environmentId: localEnvironmentId,
+        environmentId: EnvironmentId.make("environment-local"),
         id: ProjectId.make("project-local"),
         title: "t3code",
-        repositoryIdentity,
       }),
       makeProject({
-        environmentId: remoteEnvironmentId,
+        environmentId: EnvironmentId.make("environment-remote"),
         id: ProjectId.make("project-remote"),
         title: "t3code",
-        repositoryIdentity,
       }),
     ];
 
-    const scopes = buildHomeProjectScopes({
-      projects,
-      environmentId: null,
-      projectGroupingMode: "repository",
-    });
+    const scopes = buildHomeProjectScopes({ projects, environmentId: null });
 
-    expect(scopes).toHaveLength(1);
-    expect(scopes[0]?.title).toBe("t3code");
-    expect(scopes[0]?.projects).toEqual(projects);
-    expect(scopes[0]?.projectRefs).toEqual(
-      projects.map((project) => ({
-        environmentId: project.environmentId,
-        projectId: project.id,
-      })),
-    );
+    expect(scopes).toHaveLength(2);
   });
 
-  it("keeps repository identity from an older duplicate when the freshness winner lacks it", () => {
-    const localEnvironmentId = EnvironmentId.make("environment-local");
-    const remoteEnvironmentId = EnvironmentId.make("environment-remote");
-    const repositoryIdentity = {
-      canonicalKey: "github.com/pingdotgg/t3code",
-      locator: {
-        source: "git-remote" as const,
-        remoteName: "origin",
-        remoteUrl: "git@github.com:pingdotgg/t3code.git",
-      },
-    };
+  it("collapses duplicate records of one folder into the freshest project", () => {
+    const environmentId = EnvironmentId.make("environment-remote");
     const projects = [
       makeProject({
-        environmentId: localEnvironmentId,
-        id: ProjectId.make("project-local"),
-        title: "t3code",
-        repositoryIdentity,
-      }),
-      makeProject({
-        environmentId: remoteEnvironmentId,
-        id: ProjectId.make("project-remote-with-identity"),
+        environmentId,
+        id: ProjectId.make("project-remote-older"),
         title: "t3code",
         workspaceRoot: "/remote/t3code",
-        repositoryIdentity,
         updatedAt: "2026-06-01T00:00:00.000Z",
       }),
       makeProject({
-        environmentId: remoteEnvironmentId,
+        environmentId,
         id: ProjectId.make("project-remote-fresh"),
         title: "t3code",
         workspaceRoot: "/remote/t3code/",
@@ -200,18 +155,11 @@ describe("home project scopes", () => {
       }),
     ];
 
-    const scopes = buildHomeProjectScopes({
-      projects,
-      environmentId: null,
-      projectGroupingMode: "repository",
-    });
+    const scopes = buildHomeProjectScopes({ projects, environmentId: null });
 
     expect(scopes).toHaveLength(1);
-    expect(scopes[0]?.representative.id).toBe(ProjectId.make("project-local"));
-    expect(scopes[0]?.projects.map((project) => project.id)).toContain(
-      ProjectId.make("project-remote-fresh"),
-    );
-    expect(scopes[0]?.projectRefs).toHaveLength(3);
+    expect(scopes[0]?.representative.id).toBe(ProjectId.make("project-remote-fresh"));
+    expect(scopes[0]?.projectRefs).toHaveLength(2);
   });
 
   it("sorts v2 project scopes by their grouped thread activity", () => {
@@ -229,7 +177,6 @@ describe("home project scopes", () => {
     const scopes = buildHomeProjectScopes({
       projects: [newerProject, olderProject],
       environmentId: null,
-      projectGroupingMode: "separate",
     });
 
     expect(
@@ -274,7 +221,6 @@ describe("home project scopes", () => {
     const scopes = buildHomeProjectScopes({
       projects: [invalidProject, validProject],
       environmentId: null,
-      projectGroupingMode: "separate",
     });
 
     expect(
@@ -287,68 +233,13 @@ describe("home project scopes", () => {
     ).toEqual([validProject.id, invalidProject.id]);
   });
 
-  it("uses the freshest member when a grouped scope has no activity", () => {
-    const localEnvironmentId = EnvironmentId.make("environment-local");
-    const remoteEnvironmentId = EnvironmentId.make("environment-remote");
-    const repositoryIdentity = {
-      canonicalKey: "github.com/pingdotgg/t3code",
-      locator: {
-        source: "git-remote" as const,
-        remoteName: "origin",
-        remoteUrl: "git@github.com:pingdotgg/t3code.git",
-      },
-    };
-    const olderMember = makeProject({
-      environmentId: localEnvironmentId,
-      id: ProjectId.make("project-older-member"),
-      title: "t3code",
-      updatedAt: "2026-06-01T00:00:00.000Z",
-      repositoryIdentity,
-    });
-    const newerMember = makeProject({
-      environmentId: remoteEnvironmentId,
-      id: ProjectId.make("project-newer-member"),
-      title: "t3code",
-      updatedAt: "2026-06-03T00:00:00.000Z",
-      repositoryIdentity,
-    });
-    const otherProject = makeProject({
-      environmentId: localEnvironmentId,
-      id: ProjectId.make("project-other"),
-      title: "other",
-      updatedAt: "2026-06-02T00:00:00.000Z",
-    });
-    const scopes = buildHomeProjectScopes({
-      projects: [olderMember, newerMember, otherProject],
-      environmentId: null,
-      projectGroupingMode: "repository",
-    });
-
-    expect(
-      sortHomeProjectScopes({
-        scopes,
-        threads: [],
-        pendingTasks: [],
-        projectSortOrder: "updated_at",
-      })[0]?.key,
-    ).toBe(scopes.find((scope) => scope.projects.length === 2)?.key);
-  });
-
-  it("does not merge unrelated repositories that share a title", () => {
+  it("does not merge unrelated folders that share a title", () => {
     const environmentId = EnvironmentId.make("environment-1");
     const projects = ["one", "two"].map((name) =>
       makeProject({
         environmentId,
         id: ProjectId.make(`project-${name}`),
         title: "app",
-        repositoryIdentity: {
-          canonicalKey: `github.com/example/${name}`,
-          locator: {
-            source: "git-remote" as const,
-            remoteName: "origin",
-            remoteUrl: `git@github.com:example/${name}.git`,
-          },
-        },
       }),
     );
 
@@ -356,7 +247,6 @@ describe("home project scopes", () => {
       buildHomeProjectScopes({
         projects,
         environmentId: null,
-        projectGroupingMode: "repository",
       }),
     ).toHaveLength(2);
   });
@@ -380,7 +270,6 @@ describe("home project scopes", () => {
     const scopes = buildHomeProjectScopes({
       projects: [collidingProject, targetProject],
       environmentId: null,
-      projectGroupingMode: "separate",
     });
     const targetScope = scopes.find((scope) => scope.title === "Target");
     expect(scopes.map((scope) => scope.title)).toEqual(["Colliding", "Target"]);

@@ -36,7 +36,6 @@ function projection(): OrchestrationV2ThreadProjection {
       modelSelection: { instanceId: currentInstanceId, model: "gpt-5.1-codex" },
       runtimeMode: "full-access",
       interactionMode: "default",
-      worktreePath: "/repo",
     },
     providerSessions: [
       {

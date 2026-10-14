@@ -8,7 +8,6 @@ import { connectionAtomRuntime } from "../connection/runtime";
 import { projectFaviconCache } from "../assets/projectFaviconCache";
 import { isElectron } from "../env";
 import { primaryEnvironmentIdAtom } from "./primaryEnvironment";
-import { environmentProjectClonesAtom } from "./projectClones";
 import { environmentSession } from "./session";
 
 const localMediaEnvironment = Atom.make((get) => {
@@ -32,5 +31,4 @@ export const projectFaviconUrlAtom = createProjectFaviconUrlAtomFamily({
   imageCache: projectFaviconCache,
   createUrl: assetEnvironment.createUrl,
   preparedConnection: environmentSession.preparedConnectionValueAtom,
-  projectClones: environmentProjectClonesAtom,
 });

@@ -75,9 +75,11 @@ describe("searchSettings", () => {
     expect(searchSettings("glass").map((item) => item.id)).toEqual(["setting-glass-opacity"]);
     expect(searchSettings("panel animations").map((item) => item.id)).toEqual(["panel-animations"]);
     expect(searchSettings("thè\u{1ab0}mes")[0]?.id).toBe("theme");
-    const localeLowerCase = vi.spyOn(String.prototype, "toLocaleLowerCase").mockReturnValue("gıt");
+    const localeLowerCase = vi
+      .spyOn(String.prototype, "toLocaleLowerCase")
+      .mockReturnValue("chat wıdth");
     try {
-      expect(searchSettings("GIT")[0]?.id).toBe("git-fetch-interval");
+      expect(searchSettings("CHAT WIDTH")[0]?.id).toBe("chat-width");
       expect(localeLowerCase).not.toHaveBeenCalled();
     } finally {
       localeLowerCase.mockRestore();
@@ -104,8 +106,6 @@ describe("searchSettings", () => {
   });
 
   it("finds settings that used to be reachable only through their section", () => {
-    expect(searchSettings("pull request template")[0]?.id).toBe("follow-change-request-templates");
-    expect(searchSettings("git security keys")[0]?.id).toBe("git-fetch-interval");
     expect(searchSettings("push notifications")[0]?.id).toBe("publish-agent-activity");
     expect(searchSettings("battery saver")[0]?.id).toBe("background-activity");
     expect(searchSettings("binary path")[0]?.id).toBe("providers");
@@ -184,22 +184,15 @@ describe("searchSettings", () => {
     });
 
     const gatedIds = new Set<string>([
-      "follow-change-request-templates",
-      "git-fetch-interval",
       "network-access",
       "publish-agent-activity",
       "provider-health-check-interval",
       "cursor-keychain-usage",
-      "source-control-writer-model",
-      "review-guide-model",
-      "review-guide-instructions",
-      "source-control-writing-style",
       "t3-connect",
       "hold-webhooks-while-offline",
       "tailscale-https",
       "wsl-backend",
       "auto-settle-inactive-threads",
-      "auto-settle-merged-threads",
       "days-before-auto-settle",
     ]);
     expect(available.map((item) => item.id).filter((id) => gatedIds.has(id))).toEqual([]);
@@ -278,7 +271,6 @@ describe("searchSettings", () => {
 
     expect(searchSettings("auto-settle", available).map((item) => item.id)).toEqual([
       "auto-settle-inactive-threads",
-      "auto-settle-merged-threads",
       "days-before-auto-settle",
     ]);
   });
@@ -287,7 +279,7 @@ describe("searchSettings", () => {
     expect(searchSettings("toggle sidebar")[0]?.id).toBe("keybinding-sidebar.toggle");
     expect(searchSettings("sidebar.toggle")[0]?.id).toBe("keybinding-sidebar.toggle");
     expect(searchSettings("mod+b")[0]?.id).toBe("keybinding-sidebar.toggle");
-    expect(searchSettings("copy link")[0]).toMatchObject({
+    expect(searchSettings("copy thread id")[0]).toMatchObject({
       id: "keybinding-thread.copyReference",
       to: "/settings/keybindings",
     });
@@ -387,9 +379,7 @@ describe("searchSettings", () => {
 
   it.each([
     ["default model", "default-model", "/settings/general"],
-    ["new threads", "new-threads", "/settings/general"],
     ["agent browser access", "agent-browser-access", "/settings/integrations"],
-    ["automatically pull", "automatic-pull", "/settings/source-control"],
     ["actions", "project-actions", "/settings/projects"],
     ["project overview", "project-overview", "/settings/projects"],
   ])("routes %s to its owning category", (query, id, to) => {
@@ -406,8 +396,7 @@ describe("searchSettings", () => {
       isWslSettingsRowVisible: false,
       hasThreadAutoSettlement: true,
     });
-    expect(searchSettings("writing style", available)[0]?.id).toBe("source-control-writing-style");
-    expect(searchSettings("auto-settle", available)).toHaveLength(3);
+    expect(searchSettings("auto-settle", available)).toHaveLength(2);
   });
 });
 
@@ -421,16 +410,15 @@ describe("settings search targets", () => {
     expect(isSettingsSearchScopeAvailable(target.scope, "project")).toBe(false);
     expect(isSettingsSearchScopeAvailable(target.scope, "environment")).toBe(true);
   });
-  it.each([
-    "auto-settle-inactive-threads",
-    "auto-settle-merged-threads",
-    "days-before-auto-settle",
-  ])("retains the capability requirement for %s", (targetId) => {
-    expect(getSettingsSearchTargetScope(targetId)).toMatchObject({
-      scope: "project-defaults",
-      requiresThreadAutoSettlement: true,
-    });
-  });
+  it.each(["auto-settle-inactive-threads", "days-before-auto-settle"])(
+    "retains the capability requirement for %s",
+    (targetId) => {
+      expect(getSettingsSearchTargetScope(targetId)).toMatchObject({
+        scope: "project-defaults",
+        requiresThreadAutoSettlement: true,
+      });
+    },
+  );
 
   it("treats device-local rows as reachable from every selection", () => {
     const setting = getSettingsSearchTargetScope("time-format")!;
@@ -455,15 +443,6 @@ describe("settings search targets", () => {
     expect(isSettingsSearchScopeAvailable(model.scope, "all")).toBe(true);
     expect(isSettingsSearchScopeAvailable(model.scope, "environment")).toBe(true);
     expect(isSettingsSearchScopeAvailable(model.scope, "project")).toBe(true);
-  });
-
-  it("reaches source control discovery and git fetch interval from the default scope", () => {
-    for (const id of ["source-control", "git-fetch-interval"]) {
-      const item = getSettingsSearchTargetScope(id)!;
-      expect(isSettingsSearchScopeAvailable(item.scope, "all")).toBe(true);
-      expect(isSettingsSearchScopeAvailable(item.scope, "environment")).toBe(true);
-      expect(isSettingsSearchScopeAvailable(item.scope, "project")).toBe(false);
-    }
   });
 
   it("keeps environment-wide settings out of project scopes", () => {
@@ -512,7 +491,6 @@ describe("auto-settlement search availability", () => {
     });
     expect(searchSettings("auto-settle", items).map((item) => item.id)).toEqual([
       "auto-settle-inactive-threads",
-      "auto-settle-merged-threads",
       "days-before-auto-settle",
     ]);
   });

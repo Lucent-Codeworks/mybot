@@ -24,7 +24,6 @@ import { isExplicitRelativePath, isWindowsAbsolutePath } from "@t3tools/shared/p
 import { normalizeSearchQuery } from "@t3tools/shared/searchRanking";
 
 import { expandHomePath } from "@t3tools/provider-core/server/pathExpansion";
-import * as VcsProcess from "../vcs/VcsProcess.ts";
 import * as WorkspacePaths from "./WorkspacePaths.ts";
 import * as WorkspaceSearchIndex from "./WorkspaceSearchIndex.ts";
 
@@ -139,7 +138,6 @@ export const make = Effect.gen(function* () {
   const path = yield* Path.Path;
   const workspacePaths = yield* WorkspacePaths.WorkspacePaths;
   const workspaceSearchIndexes = yield* WorkspaceSearchIndex.WorkspaceSearchIndexMap;
-  const vcsProcess = yield* VcsProcess.VcsProcess;
 
   const normalizeWorkspaceRoot = Effect.fn("WorkspaceEntries.normalizeWorkspaceRoot")(function* (
     cwd: string,
@@ -318,32 +316,7 @@ export const make = Effect.gen(function* () {
           },
           catch: toError,
         });
-        // Use stdin so large directories cannot exceed the command-line argument limit.
-        // Ignore classification is optional in non-git workspaces or when git is unavailable.
-        const ignored = new Set<string>();
-        for (let offset = 0; offset < entries.length; offset += 1000) {
-          const chunk = entries.slice(offset, offset + 1000);
-          const result = yield* vcsProcess
-            .run({
-              operation: "WorkspaceEntries.list",
-              command: "git",
-              args: ["-c", "core.fsmonitor=false", "check-ignore", "-z", "--stdin"],
-              cwd: normalizedCwd,
-              stdin: `${chunk.map((entry) => entry.path).join("\0")}\0`,
-              allowNonZeroExit: true,
-              timeoutMs: 10_000,
-              maxOutputBytes: 16 * 1024 * 1024,
-            })
-            .pipe(Effect.orElseSucceed(() => undefined));
-          if (!result || (result.exitCode !== 0 && result.exitCode !== 1)) break;
-          for (const ignoredPath of result.stdout.split("\0")) ignored.add(ignoredPath);
-        }
-        return {
-          entries: entries.map((entry) =>
-            ignored.has(entry.path) ? { ...entry, ignored: true } : entry,
-          ),
-          truncated: false,
-        };
+        return { entries, truncated: false };
       }
       return yield* Effect.gen(function* () {
         const searchIndex = yield* WorkspaceSearchIndex.WorkspaceSearchIndex;
@@ -363,5 +336,4 @@ export const make = Effect.gen(function* () {
 
 export const layer = Layer.effect(WorkspaceEntries, make).pipe(
   Layer.provide(WorkspaceSearchIndex.WorkspaceSearchIndexMap.layer),
-  Layer.provide(VcsProcess.layer),
 );

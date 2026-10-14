@@ -73,8 +73,6 @@ function timelineProjection(itemCount: number): OrchestrationV2ThreadProjection 
       modelSelection: null,
       runtimeMode: "full-access",
       interactionMode: "default",
-      branch: null,
-      worktreePath: null,
       activeProviderThreadId: null,
       lineage: {
         parentThreadId: null,

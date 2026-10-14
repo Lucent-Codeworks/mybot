@@ -84,7 +84,7 @@ export function ThreadAgentsSheet({ route }: StaticScreenProps<AgentsTarget>) {
 
   if (Platform.OS === "ios") {
     // A plain formSheet screen never renders a stack header, so it comes from
-    // a nested native stack inside the sheet (same shape as the git sheet).
+    // a nested native stack inside the sheet.
     return (
       <View collapsable={false} className="flex-1 bg-sheet">
         <ScreenStack style={{ flex: 1 }}>

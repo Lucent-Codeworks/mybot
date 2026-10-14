@@ -56,8 +56,6 @@ function fixtureEvents(now: DateTime.Utc): ReadonlyArray<OrchestrationV2DomainEv
         creationSource: "web",
         runtimeMode: "full-access",
         interactionMode: "default",
-        branch: null,
-        worktreePath: "/workspace",
         activeProviderThreadId: providerThreadId,
         lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
         forkedFrom: null,

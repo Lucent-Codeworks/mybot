@@ -1,7 +1,5 @@
 import { backgroundWorkHoldsCompletion } from "@t3tools/shared/orchestrationV2PendingBackgroundWork";
-import { threadPullRequestsOf } from "@t3tools/shared/threadPullRequests";
 import type {
-  ThreadLinkedPullRequest,
   EnvironmentId,
   MessageId,
   OrchestrationProjectShell,
@@ -97,8 +95,6 @@ export interface EnvironmentThreadShell {
   readonly modelSelection: OrchestrationV2ThreadShell["modelSelection"];
   readonly runtimeMode: OrchestrationV2ThreadShell["runtimeMode"];
   readonly interactionMode: OrchestrationV2ThreadShell["interactionMode"];
-  readonly branch: string | null;
-  readonly worktreePath: string | null;
   readonly lineage: OrchestrationV2ThreadShell["lineage"];
   readonly forkedFrom: OrchestrationV2ThreadShell["forkedFrom"];
   readonly activeProviderThreadId: OrchestrationV2ThreadShell["activeProviderThreadId"];
@@ -134,9 +130,6 @@ export interface EnvironmentThreadShell {
   readonly pinOrderKey: string | null;
   /** Slot in the user-arranged active order; null for keyless active threads. */
   readonly activeOrderKey: string | null;
-  readonly pullRequests: ReadonlyArray<import("@t3tools/contracts").ThreadPullRequestLink>;
-  readonly linkedPullRequest?: ThreadLinkedPullRequest | null;
-  readonly branchPullRequest?: ThreadLinkedPullRequest | null;
   /**
    * Server-tracked visited watermark. `undefined` means the environment's
    * server predates visited tracking and clients should fall back to any
@@ -179,7 +172,7 @@ function shellRuntime(thread: OrchestrationV2ThreadShell): ThreadRuntimeSummary 
   const parkAtIdle =
     backgroundWorkHoldsCompletion(thread.pendingBackgroundTasks ?? []) &&
     thread.status !== "failed";
-  // A pull request watch can hold a thread that never ran.
+  // Background work can hold a thread that never ran.
   if (thread.latestRunId === null && thread.activeProviderThreadId === null && !parkAtIdle) {
     return null;
   }
@@ -240,11 +233,6 @@ export function presentThreadShell(
     modelSelection: thread.modelSelection,
     runtimeMode: thread.runtimeMode,
     interactionMode: thread.interactionMode,
-    branch: thread.branch,
-    worktreePath: thread.worktreePath,
-    pullRequests: threadPullRequestsOf(thread),
-    linkedPullRequest: thread.linkedPullRequest ?? null,
-    branchPullRequest: thread.branchPullRequest ?? null,
     lineage: thread.lineage,
     forkedFrom: thread.forkedFrom,
     activeProviderThreadId: thread.activeProviderThreadId,

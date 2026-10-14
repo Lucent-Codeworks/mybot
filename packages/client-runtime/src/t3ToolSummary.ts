@@ -295,19 +295,6 @@ export function summarizeT3ToolCalls(
     case "secret-request":
       label = phrase("Asked for", "ask for", quantity(selected.length, "secret"));
       break;
-    case "worktree-handoff":
-      label = phrase(
-        "Handed off to",
-        "hand off to",
-        quantity(countEntities(entityIds("worktreePath")), "worktree"),
-      );
-      break;
-    case "worktree-list":
-      label = phrase("Listed", "list", `workspace branches ${times}`);
-      break;
-    case "worktree-status":
-      label = phrase("Checked", "check", `worktree status ${times}`);
-      break;
     case "project-list":
       label = phrase("Listed", "list", `projects ${times}`);
       break;
@@ -322,13 +309,6 @@ export function summarizeT3ToolCalls(
       break;
     case "project-delete":
       label = phrase("Deleted", "delete", quantity(countEntities(projectIds), "project"));
-      break;
-    case "project-clone":
-      label = phrase(
-        "Cloned",
-        "clone",
-        quantity(countEntities(entityIds("cwd")), "repository", "repositories"),
-      );
       break;
     case "environment-read":
       label = phrase("Checked", "check", `environment preferences ${times}`);
@@ -376,55 +356,6 @@ export function summarizeT3ToolCalls(
       );
       break;
     }
-    case "link-pr":
-      label = phrase("Linked", "link", quantity(selected.length, "pull request"));
-      break;
-    case "unlink-pr":
-      label = phrase("Unlinked", "unlink", quantity(selected.length, "pull request"));
-      break;
-    case "watch-pr":
-      label = phrase("Watching", "watch", quantity(selected.length, "pull request"));
-      break;
-    case "unwatch-pr":
-      label = phrase(
-        "Stopped watching",
-        "stop watching",
-        quantity(selected.length, "pull request"),
-      );
-      break;
-    case "list-prs":
-      label = phrase(
-        "Checked",
-        "check",
-        `linked pull requests${selected.length === 1 ? "" : ` ${times}`}`,
-      );
-      break;
-    case "write-pr-guides": {
-      // One call writes many guides, and reports a refusal per guide rather than failing.
-      const outcomes = selected.flatMap((call) =>
-        Array.isArray(call.output?.guides)
-          ? call.output.guides.map((guide) => asRecord(guide)?.outcome)
-          : [],
-      );
-      const started = outcomes.filter((outcome) => outcome !== "failed").length;
-      const failed = outcomes.length - started;
-      failedCount += failed;
-      if (outcomes.length > 0 && started === 0) {
-        label = `Could not start ${quantity(failed, "review guide")}`;
-      } else {
-        label = phrase(
-          "Started",
-          "start",
-          outcomes.length === 0
-            ? `review guides ${times}`
-            : `${quantity(started, "review guide")}${failed > 0 ? `, ${failed} failed` : ""}`,
-        );
-      }
-      break;
-    }
-    case "read-pr-guide":
-      label = phrase("Read", "read", quantity(selected.length, "review guide"));
-      break;
     case "browser":
       label = phrase("Used", "use", `browser ${times}`);
       break;

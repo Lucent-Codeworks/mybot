@@ -214,10 +214,10 @@ const KEYBINDING_GROUPS = [
     title: "Navigation",
     prefixes: ["sidebar", "rightPanel", "commandPalette", "filePicker", "projectSearch", "editor"],
   },
-  { id: "threads", title: "Threads", prefixes: ["thread", "chat", "pullRequest"] },
+  { id: "threads", title: "Threads", prefixes: ["thread", "chat"] },
   { id: "composer", title: "Composer", prefixes: ["composer", "modelPicker"] },
   { id: "terminal", title: "Terminal", prefixes: ["terminal"] },
-  { id: "preview", title: "Preview & diff", prefixes: ["preview", "diff"] },
+  { id: "preview", title: "Preview", prefixes: ["preview"] },
   { id: "appearance", title: "Appearance", prefixes: ["theme", "appearance", "themeEditor"] },
   { id: "scripts", title: "Project scripts", prefixes: ["script"] },
 ] as const;
@@ -253,21 +253,23 @@ export function buildKeybindingRows(
   query: string,
 ): ReadonlyArray<KeybindingRow> {
   const normalizedQuery = query.trim().toLowerCase();
-  const rows = keybindings.map((binding, index) => {
+  const rows = keybindings.flatMap((binding, index) => {
     const defaultBinding = defaultBindingForBinding(binding);
     const key = shortcutToKeybindingInput(binding.shortcut);
     const when = whenAstToExpression(binding.whenAst);
-    return {
-      id: `${keybindingRowId(binding.command, key, when)}\u0000${index}`,
-      command: binding.command,
-      key,
-      when,
-      source: sourceForBinding(binding),
-      defaultKey: defaultBinding ? shortcutToKeybindingInput(defaultBinding.shortcut) : null,
-      defaultWhen: whenAstToExpression(defaultBinding?.whenAst),
-      binding,
-      conflicts: [],
-    } satisfies KeybindingRow;
+    return [
+      {
+        id: `${keybindingRowId(binding.command, key, when)}\u0000${index}`,
+        command: binding.command,
+        key,
+        when,
+        source: sourceForBinding(binding),
+        defaultKey: defaultBinding ? shortcutToKeybindingInput(defaultBinding.shortcut) : null,
+        defaultWhen: whenAstToExpression(defaultBinding?.whenAst),
+        binding,
+        conflicts: [],
+      } satisfies KeybindingRow,
+    ];
   });
 
   const rowsWithConflicts = rows.map((row) => {
@@ -364,7 +366,7 @@ export function commandLabel(command: KeybindingCommand): string {
   if (command === "composer.sendAndNewThread") return "Composer: Send and Start New Thread";
   if (command === "thread.steerQueuedMessage") return "Queue: Send First Queued Message as Steer";
   if (command === "thread.editQueuedMessage") return "Queue: Edit Last Queued Message";
-  if (command === "thread.copyReference") return "Pull Request: Copy Link or Thread ID";
+  if (command === "thread.copyReference") return "Thread: Copy Thread ID";
   const usageMetric = METRIC_OPTIONS.find((option) => option.command === command);
   if (usageMetric) return `Usage: ${usageMetric.label}`;
   const usagePeriod = WINDOW_OPTIONS.find((option) => option.command === command);

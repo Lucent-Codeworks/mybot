@@ -340,7 +340,6 @@ describe("resolveWorkEntryToolPresentation", () => {
 
   it.each([
     ["t3_project_list", "Listing projects", "Listed projects"],
-    ["t3_project_clone", "Cloning a repository", "Cloned a repository"],
     ["t3_project_create", "Registering a project", "Registered a project"],
     ["t3_thread_launch", "Launching a project thread", "Launched a project thread"],
     ["t3_queue_edit", "Editing a queued message", "Edited a queued message"],
@@ -405,7 +404,7 @@ describe("resolveWorkEntryToolPresentation", () => {
 
   it("summarizes project tools from MCP arguments and results without claiming failed effects", () => {
     const entry: WorkLogPresentationEntry = {
-      id: "clone",
+      id: "create",
       createdAt: "2026-09-19T00:00:00.000Z",
       tone: "tool",
       label: "Custom title",
@@ -413,22 +412,22 @@ describe("resolveWorkEntryToolPresentation", () => {
       toolLifecycleStatus: "completed",
       toolData: {
         server: "t3-code",
-        tool: "t3_project_clone",
-        arguments: { url: "https://github.com/acme/repo" },
-        result: { cwd: "/tmp/repo" },
+        tool: "t3_project_create",
+        arguments: { workspaceRoot: "/tmp/repo" },
+        result: { projectId: "project-1" },
       },
     };
     const list = { ...entry, toolData: { server: "t3-code", tool: "t3_project_list" } };
     expect(summarizeToolGroup([list, entry])).toEqual({
-      summary: "Listed projects 1 time and cloned 1 repository",
+      summary: "Listed projects 1 time and registered 1 project",
       hasFailure: false,
     });
     const failed = {
       ...entry,
-      toolData: { toolName: "T3-code.t3_project_clone", rawOutput: { isError: true } },
+      toolData: { toolName: "T3-code.t3_project_create", rawOutput: { isError: true } },
     };
     expect(summarizeToolGroup([entry, failed])).toEqual({
-      summary: "Cloned 1 repository",
+      summary: "Registered 1 project",
       hasFailure: true,
     });
   });
@@ -438,25 +437,25 @@ describe("resolveWorkEntryToolPresentation", () => {
       id: "foreign",
       createdAt: "2026-09-19T00:00:00.000Z",
       tone: "tool",
-      label: "t3_project_clone",
+      label: "t3_project_create",
       toolLifecycleStatus: "completed",
-      toolData: { server: "another-server", tool: "t3_project_clone" },
+      toolData: { server: "another-server", tool: "t3_project_create" },
     };
     expect(summarizeToolGroup([entry]).summary).toBe("Used 1 tool");
   });
 
   it("shows returned MCP errors as failures even in the live activity row", () => {
     const entry: WorkLogPresentationEntry = {
-      id: "clone",
+      id: "create",
       createdAt: "2026-09-19T00:00:00.000Z",
       tone: "tool",
-      label: "T3-code.t3_project_clone",
+      label: "T3-code.t3_project_create",
       toolLifecycleStatus: "inProgress",
       itemType: "dynamic_tool",
       toolData: { output: { isError: true } },
     };
     expect(resolveWorkEntryToolPresentation(entry)?.displayName).toBe(
-      "Failed to clone a repository",
+      "Failed to register a project",
     );
     expect(workEntryDisplayIndicatesToolFailure(entry)).toBe(true);
     expect(workEntryIndicatesToolSuccess(entry)).toBe(false);
@@ -560,11 +559,6 @@ describe("resolveWorkEntryToolPresentation", () => {
     ],
     ["t3_thread_read", "Reading a T3 thread", "Read a T3 thread"],
     ["t3_thread_send", "Sending to a T3 thread", "Sent to a T3 thread"],
-    [
-      "t3_worktree_handoff",
-      "Handing off thread to a git worktree",
-      "Handed off thread to a git worktree",
-    ],
   ])("preserves verb forms and the rest of %s's label", (tool, running, completed) => {
     const entry = { label: `t3-code.${tool}` };
     expect(
@@ -899,90 +893,6 @@ describe("resolveViewedImageAsset", () => {
       srcFragment: "#mark",
     });
     expect(resolveViewedImageAsset("https://example.com/logo.png", { threadId })).toBeNull();
-  });
-});
-
-describe("pull request tool presentation", () => {
-  it.each([
-    "mcp__t3-code__link_pull_request",
-    "mcp__t3_code__link_pull_request",
-    "T3-code · link_pull_request",
-    "t3code/link_pull_request",
-    "link_pull_request",
-  ])("recognizes the native linking tool: %s", (label) => {
-    const entry: WorkLogPresentationEntry = {
-      id: "link",
-      createdAt: "2026-09-10T00:00:00.000Z",
-      label,
-      tone: "tool",
-      toolLifecycleStatus: "completed",
-    };
-    expect(resolveWorkEntryToolPresentation(entry)).toMatchObject({
-      displayName: "Linked a pull request",
-      icon: "pull-request",
-    });
-    expect(toolGroupAction(entry)).toBe("link-pr");
-  });
-
-  it.each([
-    ["inProgress", "Linking PR #42"],
-    ["completed", "Linked PR #42"],
-    ["failed", "Failed to link PR #42"],
-    ["declined", "Declined to link PR #42"],
-    ["stopped", "Stopped linking PR #42"],
-  ] as const)("describes the target and %s status", (toolLifecycleStatus, displayName) => {
-    expect(
-      resolveWorkEntryToolPresentation({
-        label: "MCP tool call",
-        toolTitle: "Custom title",
-        toolLifecycleStatus,
-        toolData: {
-          server: "t3-code",
-          tool: "link_pull_request",
-          arguments: { url: "https://github.com/acme/web/pull/42" },
-        },
-      })?.displayName,
-    ).toBe(displayName);
-  });
-
-  it("recognizes unlink targets supplied as repository and number", () => {
-    expect(
-      resolveWorkEntryToolPresentation({
-        label: "MCP tool call",
-        toolLifecycleStatus: "completed",
-        toolData: {
-          toolName: "mcp__t3-code__unlink_pull_request",
-          rawInput: { repository: "acme/web", number: 42 },
-        },
-      }),
-    ).toMatchObject({ displayName: "Unlinked PR #42", icon: "pull-request", action: "unlink-pr" });
-  });
-
-  it("summarizes native PR work separately from ordinary tools and integration metadata", () => {
-    const link: WorkLogPresentationEntry = {
-      id: "link",
-      createdAt: "2026-09-10T00:00:00.000Z",
-      label: "T3-code · link_pull_request",
-      tone: "tool",
-      itemType: "dynamic_tool",
-      toolLifecycleStatus: "completed",
-      toolSource: { key: "t3-code", name: "T3 Code", kind: "integration" },
-    };
-    const list: WorkLogPresentationEntry = {
-      ...link,
-      label: "T3-code · list_thread_pull_requests",
-    };
-    expect(summarizeToolGroup([link, link, list]).summary).toBe(
-      "Linked 2 pull requests and checked linked pull requests",
-    );
-    expect(summarizeToolGroup([{ ...link, label: "T3-code · unlink_pull_request" }]).summary).toBe(
-      "Unlinked 1 pull request",
-    );
-    expect(toolGroupSummaryKind([link, link, list])).toBe("pull-request");
-    expect(summarizeToolGroup([list, list]).summary).toBe("Checked linked pull requests 2 times");
-    expect(
-      resolveWorkEntryToolPresentation({ label: "mcp__another-server__link_pull_request" }),
-    ).toBeNull();
   });
 });
 

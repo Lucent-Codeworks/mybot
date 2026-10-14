@@ -1,9 +1,5 @@
 import type { EnvironmentId, ScopedProjectRef } from "@t3tools/contracts";
-import {
-  buildProjectGroups,
-  derivePhysicalProjectKey,
-  type ProjectGroupingSettings,
-} from "./logicalProject";
+import { buildProjectGroups, derivePhysicalProjectKey } from "./logicalProject";
 import { resolveScratchProjectScopeKey } from "@t3tools/client-runtime/state/project-grouping";
 import type { Project } from "./types";
 
@@ -53,7 +49,6 @@ export interface SidebarProjectPickerEntry {
 /** A merged filter still opens settings for the chosen physical project. */
 export function getSidebarProjectSettingsKey(
   group: SidebarProjectSnapshot,
-  settings: ProjectGroupingSettings,
   projects: ReadonlyArray<Project>,
   projectRef?: ScopedProjectRef,
 ): string {
@@ -66,7 +61,7 @@ export function getSidebarProjectSettingsKey(
     group.memberProjects.find((member) => member.environmentId === projectRef?.environmentId) ??
     group;
   return (
-    buildPhysicalToLogicalProjectKeyMap({ projects, settings, primaryEnvironmentId: null }).get(
+    buildPhysicalToLogicalProjectKeyMap({ projects, primaryEnvironmentId: null }).get(
       derivePhysicalProjectKey(project),
     ) ?? group.projectKey
   );
@@ -76,7 +71,6 @@ export function getSidebarProjectSettingsKey(
 export function resolveSidebarProjectScopeKey(input: {
   readonly groups: ReadonlyArray<SidebarProjectSnapshot>;
   readonly key: string | null;
-  readonly settings?: ProjectGroupingSettings;
   readonly canClearMissingScope?: boolean;
 }): string | null {
   if (input.key === null) return null;
@@ -85,21 +79,18 @@ export function resolveSidebarProjectScopeKey(input: {
     input.groups.find(
       (candidate) =>
         candidate.isScratch &&
-        resolveScratchProjectScopeKey(input.key, candidate.memberProjects, input.settings) ===
-          candidate.projectKey,
+        resolveScratchProjectScopeKey(input.key, candidate.memberProjects) === candidate.projectKey,
     );
   return group?.projectKey ?? (input.canClearMissingScope ? null : input.key);
 }
 
 export function buildPhysicalToLogicalProjectKeyMap(input: {
   projects: ReadonlyArray<Project>;
-  settings: ProjectGroupingSettings;
   primaryEnvironmentId: EnvironmentId | null;
 }): Map<string, string> {
   const mapping = new Map<string, string>();
   const groups = buildProjectGroups({
     projects: input.projects,
-    settings: input.settings,
     preferredEnvironmentId: input.primaryEnvironmentId,
   });
   for (const group of groups) {
@@ -112,7 +103,6 @@ export function buildPhysicalToLogicalProjectKeyMap(input: {
 
 export function buildSidebarProjectSnapshots(input: {
   projects: ReadonlyArray<Project>;
-  settings: ProjectGroupingSettings;
   groupScratchProjects?: boolean;
   primaryEnvironmentId: EnvironmentId | null;
   resolveEnvironmentLabel: (environmentId: EnvironmentId) => string | null;
@@ -126,7 +116,6 @@ export function buildSidebarProjectSnapshots(input: {
   return buildProjectGroups({
     projects: input.projects,
     groupScratchProjects: input.groupScratchProjects ?? false,
-    settings: input.settings,
     preferredEnvironmentId: input.primaryEnvironmentId,
   }).map((group): SidebarProjectSnapshot => {
     const members = group.members.map(

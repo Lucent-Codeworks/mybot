@@ -10,7 +10,6 @@ import {
   THREAD_DETAILS_PANEL_SPLIT_PRIMARY_CLASS,
   THREAD_DETAILS_PANEL_SPLIT_SECONDARY_CLASS,
   THREAD_DETAILS_PANEL_ICON_ACTION_CLASS,
-  THREAD_DETAILS_PANEL_META_ACTION_CLASS,
   THREAD_DETAILS_PANEL_CHEVRON_CLASS,
 } from "./threadDetailsPanelStyles";
 import { ChevronDownIcon } from "lucide-react";
@@ -21,7 +20,6 @@ const parts = {
   primary: THREAD_DETAILS_PANEL_SPLIT_PRIMARY_CLASS,
   secondary: THREAD_DETAILS_PANEL_SPLIT_SECONDARY_CLASS,
   icon: THREAD_DETAILS_PANEL_ICON_ACTION_CLASS,
-  meta: THREAD_DETAILS_PANEL_META_ACTION_CLASS,
 };
 
 /** Panel controls own their fixed density; toolbar controls use the standard Button variants. */

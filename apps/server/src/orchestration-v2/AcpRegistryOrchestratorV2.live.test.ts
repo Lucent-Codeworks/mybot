@@ -1,5 +1,4 @@
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
-import * as SourceControlProviderRegistry from "../sourceControl/SourceControlProviderRegistry.ts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
 import {
@@ -19,7 +18,6 @@ import * as ResetCreditCoordinator from "../provider/resetCreditCoordinator.ts";
 import { FetchHttpClient } from "effect/http";
 import { describe } from "vite-plus/test";
 
-import * as CheckpointStore from "../checkpointing/CheckpointStore.ts";
 import * as BackgroundPolicy from "../background/BackgroundPolicy.ts";
 import * as HostPowerMonitor from "../background/HostPowerMonitor.ts";
 import * as ServerConfig from "../config.ts";
@@ -35,10 +33,7 @@ import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEve
 import * as OpenCodeRuntime from "@t3tools/provider-opencode/server/OpenCodeRuntime";
 import * as OpenCodeServerLedger from "@t3tools/provider-opencode/server/OpenCodeServerLedger";
 import * as ServerSettings from "../serverSettings.ts";
-import * as VcsDriverRegistry from "../vcs/VcsDriverRegistry.ts";
-import * as VcsProcess from "../vcs/VcsProcess.ts";
 import * as Orchestrator from "./Orchestrator.ts";
-import * as ProviderTurnStartServiceTestkit from "./ProviderTurnStartService.testkit.ts";
 import * as RuntimeLayer from "./runtimeLayer.ts";
 import * as McpSessionRegistryTestkit from "../mcp/McpSessionRegistry.testkit.ts";
 
@@ -48,12 +43,7 @@ import * as McpSessionRegistryTestkit from "../mcp/McpSessionRegistry.testkit.ts
 //
 // T3_ACP_ANTIGRAVITY_LIVE=1 ../../node_modules/.bin/vp test run \
 //   src/orchestration-v2/AcpRegistryOrchestratorV2.live.test.ts
-const layerPlatformTest = Layer.merge(
-  NodeServices.layer,
-  Layer.mock(SourceControlProviderRegistry.SourceControlProviderRegistry)({
-    resolveLink: () => Effect.die("unused title link"),
-  }),
-);
+const layerPlatformTest = NodeServices.layer;
 
 const runAntigravityFixture = process.env.T3_ACP_ANTIGRAVITY_LIVE === "1";
 const liveAgentId = runAntigravityFixture
@@ -69,14 +59,6 @@ const liveModelSelection = {
 const layerServerConfig = ServerConfig.layerTest(process.cwd(), {
   prefix: "t3-acp-registry-v2-live-",
 });
-
-const layerVcsDriverRegistry = VcsDriverRegistry.layer.pipe(
-  Layer.provide(VcsProcess.layer),
-  Layer.provide(layerServerConfig),
-  Layer.provide(layerPlatformTest),
-);
-
-const layerCheckpointStore = CheckpointStore.layer.pipe(Layer.provide(layerVcsDriverRegistry));
 
 const layerServerSettings = ServerSettings.layerTest({
   providerInstances: {
@@ -137,13 +119,11 @@ const layerProviderInstanceRegistry = ProviderInstanceRegistryHydration.layer.pi
 const layerLive = RuntimeLayer.layer.pipe(
   Layer.provide(McpSessionRegistryTestkit.layer),
   Layer.provide(SqlitePersistence.layerMemory),
-  Layer.provide(layerCheckpointStore),
   Layer.provide(layerServerConfig),
   Layer.provide(layerServerSettings),
   Layer.provide(layerProviderInstanceRegistry),
   Layer.provide(ResetCreditCoordinator.layer),
   Layer.provide(layerBackgroundPolicy),
-  Layer.provide(ProviderTurnStartServiceTestkit.layer),
   Layer.provide(layerPlatformTest),
   Layer.provide(McpProviderSessions.layer),
 );
@@ -191,8 +171,6 @@ describe.runIf(runAntigravityFixture || process.env.T3_ACP_REGISTRY_LIVE_ORCHEST
             modelSelection: liveModelSelection,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: null,
           });
           yield* Console.log(
             `ACP Registry thread created for '${liveAgentId}'; dispatching first prompt.`,

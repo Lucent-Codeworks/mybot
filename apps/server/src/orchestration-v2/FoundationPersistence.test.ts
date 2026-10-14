@@ -105,8 +105,6 @@ function makeThread(threadId: ThreadId, now: DateTime.Utc): OrchestrationV2AppTh
     modelSelection,
     runtimeMode: "full-access",
     interactionMode: "default",
-    branch: null,
-    worktreePath: null,
     activeProviderThreadId: null,
     lineage: {
       parentThreadId: null,

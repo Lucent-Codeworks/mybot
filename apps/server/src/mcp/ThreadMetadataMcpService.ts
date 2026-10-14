@@ -69,7 +69,6 @@ function commandId(input: {
 function metadataCommand(input: {
   readonly commandId: CommandId;
   readonly threadId: ThreadId;
-  readonly projectId: OrchestrationV2AppThread["projectId"];
   readonly update: ThreadMetadataMcpUpdateInput;
 }): Extract<OrchestrationV2Command, { readonly type: "thread.metadata.update" }> {
   switch (input.update.action) {
@@ -86,23 +85,6 @@ function metadataCommand(input: {
         commandId: input.commandId,
         threadId: input.threadId,
         regenerateTitle: true,
-      };
-    case "link_pull_request":
-      return {
-        type: "thread.metadata.update",
-        commandId: input.commandId,
-        threadId: input.threadId,
-        linkedPullRequest: {
-          projectId: input.projectId,
-          ...input.update.pullRequest!,
-        },
-      };
-    case "unlink_pull_request":
-      return {
-        type: "thread.metadata.update",
-        commandId: input.commandId,
-        threadId: input.threadId,
-        linkedPullRequest: null,
       };
   }
 }
@@ -126,7 +108,6 @@ function resultFromThread(input: {
             requestId: input.thread.titleRegeneration.requestId,
             startedAt: DateTime.formatIso(input.thread.titleRegeneration.startedAt),
           },
-    linkedPullRequest: input.thread.linkedPullRequest ?? null,
     updatedAt: DateTime.formatIso(input.thread.updatedAt),
   };
 }
@@ -166,7 +147,7 @@ const make = Effect.gen(function* () {
     if (shell === null || shell.deletedAt !== null) {
       return yield* failure("thread_not_found", `Thread ${threadId} was not found.`);
     }
-    const target = yield* threadManagement
+    yield* threadManagement
       .getProjectThreadRecords({ projectId: shell.projectId, threadId }, [])
       .pipe(Effect.mapError(threadLookupFailure));
     const requestKey =
@@ -184,7 +165,6 @@ const make = Effect.gen(function* () {
         metadataCommand({
           commandId: updateCommandId,
           threadId,
-          projectId: target.thread.projectId,
           update: input,
         }),
       )

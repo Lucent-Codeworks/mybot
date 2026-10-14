@@ -7,10 +7,10 @@ import { useAdaptiveWorkspaceLayout } from "../layout/AdaptiveWorkspaceLayout";
 import { withNativeGlassHeaderItem } from "../layout/native-glass-header-items";
 import { dispatchHardwareKeyboardCommand } from "../keyboard/hardwareKeyboardCommands";
 import {
-  ThreadGitControls,
-  useThreadGitCenterHeaderItems,
-  useThreadGitRightHeaderItems,
-} from "./ThreadGitControls";
+  ThreadHeaderControls,
+  useThreadCenterHeaderItems,
+  useThreadRightHeaderItems,
+} from "./ThreadHeaderControls";
 
 type NativeHeaderItems = ReadonlyArray<Record<string, unknown>>;
 
@@ -19,15 +19,15 @@ export function useThreadHeaderOptions(props: {
   readonly subtitle: string;
   readonly headerColor: string;
   readonly usesNativeHeaderGlass: boolean;
-  readonly gitControls: Parameters<typeof ThreadGitControls>[0];
+  readonly controls: Parameters<typeof ThreadHeaderControls>[0];
   readonly onReturnToThread?: () => void;
 }) {
   const usesNativeWorkspaceColumns = useNativeWorkspaceColumnsSupported();
   const usesDuoHeader = usesNativeWorkspaceColumns && Platform.OS === "ios" && !Platform.isPad;
   const navigation = useNavigation();
   const { layout, panes, togglePrimarySidebar } = useAdaptiveWorkspaceLayout();
-  const threadCenterHeaderItems = useThreadGitCenterHeaderItems(props.gitControls);
-  const compactRightHeaderItems = useThreadGitRightHeaderItems(props.gitControls);
+  const threadCenterHeaderItems = useThreadCenterHeaderItems(props.controls);
+  const compactRightHeaderItems = useThreadRightHeaderItems(props.controls);
   const splitLeftHeaderItems = useMemo<NativeHeaderItems>(
     () => [
       ...(!usesDuoHeader
@@ -159,7 +159,7 @@ export function useThreadHeaderOptions(props: {
         ? undefined
         : () => compactHomeHeaderItems,
     // Search lives in the persistent sidebar, so the split header keeps
-    // the git controls on the RIGHT (no center items — center space is
+    // the thread controls on the RIGHT (no center items — center space is
     // reserved for future breadcrumbs/status).
     unstable_headerRightItems: () =>
       usesDuoHeader
@@ -171,13 +171,11 @@ export function useThreadHeaderOptions(props: {
     unstable_headerSubtitle: props.usesNativeHeaderGlass ? props.subtitle : undefined,
     contentStyle: undefined,
   };
-  const { environmentId, threadId, gitStatus } = props.gitControls;
+  const { environmentId, threadId } = props.controls;
   return {
     options,
     // Header item factories are stabilized, so the native header only re-reads them when
-    // this version changes. Keying on the items keeps the Git menu status live; the menu
-    // callbacks also read state the items do not display (a "Push" item runs `push` or
-    // `commit_push` depending on the default ref), so that state is keyed too.
+    // this version changes.
     optionsVersion: [
       splitLeftHeaderItems,
       threadCenterHeaderItems,
@@ -186,14 +184,11 @@ export function useThreadHeaderOptions(props: {
       usesDuoHeader,
       environmentId,
       threadId,
-      gitStatus?.isDefaultRef,
-      gitStatus?.refName,
-      gitStatus?.pr?.url,
     ],
     sidebar: false,
     fallback:
       !layout.usesSplitView && !props.usesNativeHeaderGlass ? (
-        <ThreadGitControls {...props.gitControls} showActionControls />
+        <ThreadHeaderControls {...props.controls} showActionControls />
       ) : null,
   };
 }

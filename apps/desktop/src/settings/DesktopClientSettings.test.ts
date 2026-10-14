@@ -58,10 +58,6 @@ const clientSettings: ClientSettings = {
   showSkillsInSlashMenu: false,
   persistComposerContextStrip: true,
   providerModelPreferences: {},
-  sidebarProjectGroupingMode: "repository_path",
-  sidebarProjectGroupingOverrides: {
-    "environment-1:/tmp/project-a": "separate",
-  },
   sidebarProjectSortOrder: "manual",
   sidebarThreadSortOrder: "created_at",
   sidebarThreadPreviewCount: 6,
@@ -69,7 +65,6 @@ const clientSettings: ClientSettings = {
   sidebarWorkingShelfEnabled: false,
   loadBalancingEnabled: false,
   loadBalancingWeights: { "environment-1": 75, "environment-2": 0 },
-  pullRequestMergeMethodOverrides: {},
   timestampFormat: "24-hour",
   wordWrap: true,
 };

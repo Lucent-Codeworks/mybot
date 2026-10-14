@@ -1,7 +1,5 @@
-import type { PromptLinkRepository } from "@t3tools/shared/promptLinks";
-
 /** The query keys a prompt link adds to the `new` and thread routes. */
-export const PROMPT_LINK_PARAM_KEYS = ["prompt", "repo", "pr", "provider", "model"] as const;
+export const PROMPT_LINK_PARAM_KEYS = ["prompt", "provider", "model"] as const;
 
 type RouteParams = Readonly<Record<string, unknown>> | undefined;
 
@@ -34,7 +32,6 @@ export function clearedPromptLinkParams(keys: ReadonlyArray<string> = PROMPT_LIN
 export function promptLinkNotice(input: {
   readonly hiddenCharacters: number;
   readonly modelUnavailable?: boolean;
-  readonly pullRequestUnavailable?: number | null;
 }): string {
   return [
     input.hiddenCharacters > 0
@@ -42,9 +39,6 @@ export function promptLinkNotice(input: {
       : "This prompt came from a link. Read it before you send.",
     input.modelUnavailable
       ? "The requested model is not available, so your default is used."
-      : null,
-    input.pullRequestUnavailable != null
-      ? `Pull request #${input.pullRequestUnavailable} could not be loaded, so this task starts from your default branch.`
       : null,
   ]
     .filter((line) => line !== null)
@@ -86,7 +80,3 @@ export function latestThreadEnvironmentIds<Id extends string>(
     (latest.get(right) ?? "").localeCompare(latest.get(left) ?? ""),
   );
 }
-
-/** `owner/name`, as the user knows the repository. */
-export const promptLinkRepositoryName = (repository: PromptLinkRepository) =>
-  `${repository.owner}/${repository.name}`;

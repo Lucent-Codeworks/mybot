@@ -33,10 +33,6 @@ export function createOrchestrationEnvironmentAtoms<R, E>(
         idleTtlMs: 0,
       }),
     },
-    turnDiff: createEnvironmentRpcQueryAtomFamily(runtime, {
-      label: "environment-data:orchestration:turn-diff",
-      tag: ORCHESTRATION_V2_WS_METHODS.getTurnDiff,
-    }),
     workflowScript: createEnvironmentRpcQueryAtomFamily(runtime, {
       label: "environment-data:orchestration:workflow-script",
       tag: ORCHESTRATION_V2_WS_METHODS.getWorkflowScript,
@@ -54,10 +50,6 @@ export function createOrchestrationEnvironmentAtoms<R, E>(
       tag: ORCHESTRATION_V2_WS_METHODS.getTurnItem,
       staleTimeMs: 60_000,
       idleTtlMs: 60_000,
-    }),
-    fullThreadDiff: createEnvironmentRpcQueryAtomFamily(runtime, {
-      label: "environment-data:orchestration:full-thread-diff",
-      tag: ORCHESTRATION_V2_WS_METHODS.getFullThreadDiff,
     }),
     threadFind: createEnvironmentRpcQueryAtomFamily(runtime, {
       label: "environment-data:orchestration:thread-find",

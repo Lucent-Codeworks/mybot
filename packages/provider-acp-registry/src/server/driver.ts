@@ -2,7 +2,6 @@ import {
   officialAcpRegistryIconUrlForAgentId,
   ProviderDriverKind,
   resolveOfficialAcpRegistryIconUrl,
-  TextGenerationError,
   type AcpRegistryOperationError,
   type ServerProvider,
   type ServerProviderModel,
@@ -23,7 +22,10 @@ import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 
 import * as ProviderHost from "@t3tools/provider-core/server/ProviderHost";
 import { AcpRegistryAdapterV2Driver, type AcpRegistryAdapterV2DriverEnv } from "./adapter.ts";
-import type { ProviderTextGeneration } from "@t3tools/provider-core/server/textGeneration";
+import {
+  type ProviderTextGeneration,
+  TextGenerationError,
+} from "@t3tools/provider-core/server/textGeneration";
 import { ProviderDriverError } from "@t3tools/provider-core/server/errors";
 import { makeManagedServerProvider } from "@t3tools/provider-core/server/managedProvider";
 import { mergeProviderInstanceEnvironment } from "@t3tools/provider-core/server/instanceEnvironment";
@@ -70,22 +72,15 @@ const MAINTENANCE = makeManualOnlyProviderMaintenanceCapabilities({
   packageName: null,
 });
 
-const makeUnsupportedTextGeneration = (): ProviderTextGeneration => {
-  const unsupported = (operation: string) =>
+const makeUnsupportedTextGeneration = (): ProviderTextGeneration => ({
+  generateThreadTitle: () =>
     Effect.fail(
       new TextGenerationError({
-        operation,
+        operation: "generateThreadTitle",
         detail: "ACP Registry instances do not provide application text generation.",
       }),
-    );
-  return {
-    generateCommitMessage: () => unsupported("generateCommitMessage"),
-    generatePrContent: () => unsupported("generatePrContent"),
-    generateBranchName: () => unsupported("generateBranchName"),
-    generateThreadTitle: () => unsupported("generateThreadTitle"),
-    generateReviewGuide: () => unsupported("generateReviewGuide"),
-  };
-};
+    ),
+});
 
 function modelsFromDiscovery(
   discovery:

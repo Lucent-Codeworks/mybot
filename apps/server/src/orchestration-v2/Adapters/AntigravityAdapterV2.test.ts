@@ -359,8 +359,6 @@ describe("AntigravityAdapterV2 workspace changes", () => {
             modelSelection,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: workspaceB,
             activeProviderThreadId: providerThread.id,
             lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
             forkedFrom: null,

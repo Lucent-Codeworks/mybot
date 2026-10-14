@@ -24,7 +24,6 @@ import {
   resolveProviderInstanceEnabled,
   type AgentSessionImportSource,
   type AgentSessionProjectCandidate,
-  type AgentSessionProjectGit,
   type AgentSessionScanResult,
   type ProviderInstanceConfig,
 } from "@t3tools/contracts";
@@ -39,11 +38,6 @@ import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
 import * as Stream from "effect/Stream";
 
-import {
-  normalizeGitRemoteUrl,
-  parseGitHubRepositoryNameWithOwnerFromRemoteUrl,
-  parseOriginUrlFromGitConfig,
-} from "@t3tools/shared/git";
 import * as HostProcess from "@t3tools/shared/HostProcess";
 import { normalizeProjectPathForComparison } from "@t3tools/shared/path";
 
@@ -536,30 +530,12 @@ function shouldRetainDecodedRecord(
 }
 
 /**
- * T3 Code runs its own agent sessions inside disposable worktrees. Their
- * transcripts look exactly like user sessions, but re-importing the app's own
- * sandboxes as projects is never right. Matches this server's configured
- * worktrees directory plus the conventional `.t3/worktrees` layout, which
- * also catches sandboxes from other T3 homes on the same machine. Separators
- * are normalized (and, on Windows, case folded) so the prefix match holds
- * there too. Callers check both the recorded spelling and its realpath so a
- * symlink into the worktrees directory cannot bypass the filter.
+ * Separators are normalized (and, on Windows, case folded) so a path prefix
+ * match holds on every platform.
  */
-function normalizeForWorktreeMatch(value: string, caseFold: boolean): string {
+function normalizeForPathMatch(value: string, caseFold: boolean): string {
   const normalized = `${value.replaceAll("\\", "/")}/`;
   return caseFold ? normalized.toLowerCase() : normalized;
-}
-
-function isT3ManagedWorktree(
-  candidatePath: string,
-  worktreesDir: string,
-  caseFold: boolean,
-): boolean {
-  const normalized = normalizeForWorktreeMatch(candidatePath, caseFold);
-  return (
-    normalized.startsWith(normalizeForWorktreeMatch(worktreesDir, caseFold)) ||
-    normalized.includes("/.t3/worktrees/")
-  );
 }
 
 /** Extract `cwd` from a session-meta record, tolerating the shapes each CLI writes. */
@@ -626,10 +602,9 @@ export const make = Effect.gen(function* () {
   const serverSettings = yield* ServerSettings.ServerSettingsService;
   const projectStore = yield* ProjectStore.ProjectStoreV2;
   const baseDir = path.resolve(serverConfig.baseDir);
-  const worktreesDir = path.resolve(serverConfig.worktreesDir);
   // Windows filesystems are case-insensitive, so path prefix checks there
   // must case fold.
-  const foldWorktreeCase = (yield* HostProcess.Platform) === "win32";
+  const foldPathCase = (yield* HostProcess.Platform) === "win32";
   const hostEnvironment = yield* HostProcess.Environment;
   const homeDir = yield* HostProcess.HomeDirectory;
   // `/private/tmp` is what macOS reports for sessions started in `/tmp`.
@@ -649,14 +624,13 @@ export const make = Effect.gen(function* () {
   const isExcludedProjectPath = (candidatePath: string) =>
     excludedProjectRoots.has(normalizeProjectPathForComparison(candidatePath)) ||
     excludedProjectAncestors.some((ancestor) =>
-      normalizeForWorktreeMatch(candidatePath, foldWorktreeCase).startsWith(
-        normalizeForWorktreeMatch(ancestor, foldWorktreeCase),
+      normalizeForPathMatch(candidatePath, foldPathCase).startsWith(
+        normalizeForPathMatch(ancestor, foldPathCase),
       ),
     ) ||
-    normalizeForWorktreeMatch(candidatePath, foldWorktreeCase).startsWith(
-      normalizeForWorktreeMatch(baseDir, foldWorktreeCase),
-    ) ||
-    isT3ManagedWorktree(candidatePath, worktreesDir, foldWorktreeCase);
+    normalizeForPathMatch(candidatePath, foldPathCase).startsWith(
+      normalizeForPathMatch(baseDir, foldPathCase),
+    );
 
   const listDirectory = (directory: string) =>
     fileSystem.readDirectory(directory).pipe(Effect.orElseSucceed((): ReadonlyArray<string> => []));
@@ -683,48 +657,6 @@ export const make = Effect.gen(function* () {
       .realPath(resolved)
       .pipe(Effect.orElseSucceed(() => resolved));
     return `path:${normalizeProjectPathForComparison(realPath)}`;
-  });
-
-  /**
-   * Git identity of a directory, or the reason it has none. Reads `.git`
-   * directly instead of spawning git so a scan over hundreds of candidates
-   * stays cheap. A `.git` file is a `gitdir:` pointer. When it points into a
-   * `worktrees/` directory the checkout is a linked worktree, which
-   * onboarding skips because its history belongs to the main checkout.
-   * Submodules use the same pointer shape but live under `modules/`, and
-   * are offered like any other repository.
-   */
-  const readGitIdentity = Effect.fn("AgentSessionScanner.readGitIdentity")(function* (
-    directory: string,
-  ): Effect.fn.Return<
-    | { readonly _tag: "Repository"; readonly git: AgentSessionProjectGit | null }
-    | { readonly _tag: "Worktree" }
-    | { readonly _tag: "NotGit" }
-  > {
-    const gitPath = path.join(directory, ".git");
-    const gitStats = yield* statOption(gitPath);
-    if (Option.isNone(gitStats)) return { _tag: "NotGit" } as const;
-    let gitDir = gitPath;
-    if (gitStats.value.type !== "Directory") {
-      const pointer = yield* fileSystem
-        .readFileString(gitPath)
-        .pipe(Effect.orElseSucceed(() => ""));
-      const target = /^gitdir:\s*(.+)$/m.exec(pointer)?.[1]?.trim();
-      if (target === undefined || target.length === 0) return { _tag: "NotGit" } as const;
-      gitDir = path.resolve(directory, target);
-      if (/[\\/]worktrees[\\/][^\\/]+[\\/]?$/.test(gitDir)) return { _tag: "Worktree" } as const;
-    }
-    const configText = yield* fileSystem
-      .readFileString(path.join(gitDir, "config"))
-      .pipe(Effect.orElseSucceed(() => ""));
-    const originUrl = parseOriginUrlFromGitConfig(configText);
-    return {
-      _tag: "Repository",
-      git: {
-        remoteKey: originUrl === null ? null : normalizeGitRemoteUrl(originUrl),
-        repository: parseGitHubRepositoryNameWithOwnerFromRemoteUrl(originUrl),
-      },
-    } as const;
   });
 
   // A large history snapshot can precede session metadata. Read bounded
@@ -1210,11 +1142,9 @@ export const make = Effect.gen(function* () {
         sources: Array<AgentSessionSource>;
         threadCount: number;
         lastActiveAtMs: number | null;
-        git: AgentSessionProjectGit | null;
       }
     >();
     const directoryKeys = new Map<string, string>();
-    const gitIdentities = new Map<string, AgentSessionProjectGit | null>();
 
     for (const candidate of raw) {
       const expanded = expandHomePath(candidate.cwd.trim(), homeDir);
@@ -1232,19 +1162,11 @@ export const make = Effect.gen(function* () {
         const realPath = yield* fileSystem
           .realPath(resolved)
           .pipe(Effect.orElseSucceed(() => resolved));
-        // A symlink can point into the worktrees directory even when its own
+        // A symlink can point into an excluded directory even when its own
         // spelling doesn't; check again with links resolved.
-        if (isExcludedProjectPath(realPath)) {
-          key = "";
-        } else {
-          const gitIdentity = yield* readGitIdentity(resolved);
-          if (gitIdentity._tag === "Worktree") {
-            key = "";
-          } else {
-            key = yield* directoryIdentity(resolved, stats.value);
-            gitIdentities.set(key, gitIdentity._tag === "Repository" ? gitIdentity.git : null);
-          }
-        }
+        key = isExcludedProjectPath(realPath)
+          ? ""
+          : yield* directoryIdentity(resolved, stats.value);
         directoryKeys.set(resolved, key);
       }
       if (key === "") continue;
@@ -1256,7 +1178,6 @@ export const make = Effect.gen(function* () {
           sources: [candidate.source],
           threadCount: candidate.threadCount,
           lastActiveAtMs: candidate.lastActiveAtMs,
-          git: gitIdentities.get(key) ?? null,
         });
         continue;
       }
@@ -1305,7 +1226,6 @@ export const make = Effect.gen(function* () {
             ? null
             : DateTime.formatIso(DateTime.makeUnsafe(entry.lastActiveAtMs)),
         alreadyImported: importedProject !== undefined,
-        git: entry.git,
       });
     }
 

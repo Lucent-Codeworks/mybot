@@ -23,8 +23,6 @@ import * as Ref from "effect/Ref";
 import * as SqlClient from "effect/sql/SqlClient";
 
 import * as SqlitePersistence from "../persistence/Sqlite.ts";
-import * as CheckpointStore from "../checkpointing/CheckpointStore.ts";
-import { VcsProcessTimeoutError } from "@t3tools/contracts";
 import * as CheckpointService from "./CheckpointService.ts";
 import * as CheckpointCaptureService from "./CheckpointCaptureService.ts";
 import * as EventSink from "./EventSink.ts";
@@ -53,8 +51,8 @@ const modelSelection = {
 
 it.layer(layerProjectionStoreTest)("CheckpointCaptureServiceV2", (it) => {
   it.effect.each([false, true])(
-    "captures without decoding history or losing newer delegated completion, ref lookup fails=%s",
-    (refLookupFails) =>
+    "captures without decoding history or losing newer delegated completion, real checkpoint service=%s",
+    (realCheckpointService) =>
       Effect.gen(function* () {
         const projectionStore = yield* ProjectionStore.ProjectionStoreV2;
         const now = yield* DateTime.now;
@@ -184,8 +182,6 @@ it.layer(layerProjectionStoreTest)("CheckpointCaptureServiceV2", (it) => {
             modelSelection,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: null,
             activeProviderThreadId: null,
             lineage: {
               parentThreadId: null,
@@ -270,28 +266,9 @@ it.layer(layerProjectionStoreTest)("CheckpointCaptureServiceV2", (it) => {
           Layer.provide(
             Layer.mergeAll(
               IdAllocator.layer,
-              refLookupFails
+              realCheckpointService
                 ? CheckpointService.layer.pipe(
-                    Layer.provide(
-                      Layer.mergeAll(
-                        IdAllocator.layer,
-                        NodeCrypto.layer,
-                        Layer.mock(CheckpointStore.CheckpointStore)({
-                          listAuthoredPaths: () => Effect.succeed(null),
-                          isGitRepository: () => Effect.succeed(true),
-                          captureCheckpoint: () => Effect.void,
-                          hasCheckpointRef: () =>
-                            Effect.fail(
-                              new VcsProcessTimeoutError({
-                                operation: "test.hasCheckpointRef",
-                                command: "git",
-                                cwd: "/repo",
-                                timeoutMs: 30000,
-                              }),
-                            ),
-                        }),
-                      ),
-                    ),
+                    Layer.provide(Layer.mergeAll(IdAllocator.layer, NodeCrypto.layer)),
                   )
                 : Layer.mock(CheckpointService.CheckpointServiceV2)({
                     materializeBaselineCheckpoint: () =>
@@ -335,9 +312,9 @@ it.layer(layerProjectionStoreTest)("CheckpointCaptureServiceV2", (it) => {
           const capturedEvent = events.find((event) => event.type === "checkpoint.captured");
           assert.equal(
             runUpdated.payload.checkpointId,
-            refLookupFails ? capturedEvent?.payload.id : captured.id,
+            realCheckpointService ? capturedEvent?.payload.id : captured.id,
           );
-          if (refLookupFails && capturedEvent?.type === "checkpoint.captured") {
+          if (realCheckpointService && capturedEvent?.type === "checkpoint.captured") {
             assert.equal(capturedEvent.payload.status, "ready");
             assert.deepEqual(capturedEvent.payload.files, []);
           }
@@ -407,8 +384,6 @@ it.layer(layerProjectionStoreTest)("CheckpointCaptureServiceV2", (it) => {
           modelSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: null,
           activeProviderThreadId: null,
           lineage: {
             parentThreadId: null,
@@ -517,8 +492,6 @@ it.layer(layerProjectionStoreTest)("CheckpointCaptureServiceV2", (it) => {
           modelSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: null,
           activeProviderThreadId: null,
           lineage: {
             parentThreadId: null,

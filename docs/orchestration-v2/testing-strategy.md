@@ -31,7 +31,7 @@ Allowed substitutes:
 - provider runtime transport, backed by deterministic replay transcripts.
 - Effect runtime time, controlled in tests with `TestClock` from `effect/testing`.
 - Effect `Random`, provided with a deterministic test implementation for stable UUIDs/numbers.
-- temporary filesystem/worktree.
+- temporary filesystem.
 - temporary database or in-memory database with the same repository interfaces.
 - fake process supervisor only when it is testing process failure behavior directly.
 

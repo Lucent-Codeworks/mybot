@@ -26,7 +26,7 @@ link on any device, confirm the code matches, and approve. The CLI continues on
 its own, so you do not need to forward an OAuth callback port.
 
 T3 Connect renews access credentials when needed without disconnecting a healthy
-connection. Pull request diffs and provider settings keep working after the
+connection. Provider settings keep working after the
 previous credential expires. A failed renewal affects that request; it does not
 disconnect an otherwise healthy conversation.
 
@@ -114,8 +114,7 @@ Preferences are saved separately in each client.
 
 The composer checks eligible machines when choosing a draft's environment, then keeps
 that choice stable. Choose **Auto balance** again to check current resources, or choose
-a specific machine to override it. Choosing a branch or worktree also keeps the draft
-on that machine. Existing threads stay where they started. If resource checks are
+a specific machine to override it. Existing threads stay where they started. If resource checks are
 unavailable or all eligible machines are full, choose a machine manually to continue.
 Mobile keeps its manual environment selection.
 
@@ -265,16 +264,6 @@ to replace the browser's current grant. For mobile or a saved remote environment
 in web or desktop, use **Add Environment** with the fresh link or code; pairing
 the same environment replaces its saved grant. Reconnecting alone does not change
 permissions.
-
-Grouping checkouts does not combine their permissions. Shared project settings
-require `orchestration:operate` on every member environment; actions on one
-checkout use that checkout's permissions.
-
-`source-control:write` covers direct Git and pull request changes made from the
-client: pushing, switching or creating branches, cloning, and removing
-worktrees. It does not restrict what a task does. Starting a task in a new
-worktree still creates that branch and worktree with `orchestration:operate`,
-and the agent it runs can use Git however the environment allows.
 
 Settings changes, provider management, and environment maintenance can be granted
 separately from access administration. New standard pairings include these

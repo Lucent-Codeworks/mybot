@@ -23,7 +23,6 @@ import { WORKSPACE_TOOLBAR, type WorkspaceTab } from "./workspace-tabs-state";
 
 const TABS: ReadonlyArray<{ id: WorkspaceTab; label: string; icon: AppSymbolName }> = [
   { id: "threads", label: "Threads", icon: "text.bubble" },
-  { id: "pullRequests", label: "PRs", icon: "arrow.triangle.pull" },
 ];
 
 function ToolbarButton(props: {
@@ -64,7 +63,6 @@ export function WorkspaceToolbar(props: {
   const focusSearch = useCallback(() => {
     if (!workspace) return false;
     const tab = workspace.state.selectedTab;
-    if (tab !== "threads" && tab !== "pullRequests") return false;
     workspace.dispatch({ type: "scroll", tab, offset: workspace.getScrollOffset(tab) });
     workspace.dispatch({ type: "search" });
     setFocusRequest((request) => request + 1);
@@ -119,7 +117,7 @@ export function WorkspaceToolbar(props: {
           <View className="flex-row items-center" style={{ gap }}>
             {!keyboardVisible && !expanded ? (
               <ToolbarButton
-                label={`Show tabs, ${activeTab.label} selected`}
+                label="Show toolbar"
                 icon={activeTab.icon}
                 size={48}
                 onPress={() => dispatch({ type: "expand" })}
@@ -135,7 +133,7 @@ export function WorkspaceToolbar(props: {
                 <TextInput
                   ref={input}
                   accessibilityLabel={`Search ${activeTab.label}`}
-                  placeholder={`Search ${activeTab.label === "PRs" ? "pull requests" : "threads"}`}
+                  placeholder="Search threads"
                   placeholderTextColor={placeholderStyle.color}
                   value={tab.query}
                   onChangeText={(query) => dispatch({ type: "query", query })}
@@ -144,7 +142,6 @@ export function WorkspaceToolbar(props: {
                   autoCapitalize="none"
                   autoCorrect={false}
                   returnKeyType="search"
-                  maxLength={state.selectedTab === "pullRequests" ? 200 : undefined}
                   style={[
                     inputStyle,
                     { flex: 1, minWidth: 0, paddingHorizontal: 8, paddingVertical: 0 },

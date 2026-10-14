@@ -10,14 +10,36 @@ export const CLAUDE_BACKGROUND_SUBAGENT_AFTER_ROOT_PROMPT = [
   "3) When its completion is reported, reply with exactly ROOT_WAKE_DONE and stop.",
 ].join("\n");
 
-export function claudeBackgroundSubagentAfterRootInput(): OrchestratorFixtureInput {
+// Labels of the subagent's first frame after the root's result and of its
+// completion notification in the transcript.
+const SUBAGENT_FIRST_FRAME_LABEL = "assistant:background-subagent-after-root";
+const SUBAGENT_NOTIFICATION_LABEL = "task_notification:background-subagent";
+
+/** `lastSubagentText` is the subagent's last narration before its notification. */
+export function claudeBackgroundSubagentAfterRootInput(
+  lastSubagentText = "SUB_FINAL_REPORT",
+): OrchestratorFixtureInput {
   return {
     steps: [
       { type: "message", text: CLAUDE_BACKGROUND_SUBAGENT_AFTER_ROOT_PROMPT },
-      // The subagent's frames all arrive after the root settles. They are
-      // stored as they arrive; its completion starts continuation run 2,
-      // which drains the wake reply. The wake result is held until run 2 has
-      // drained that reply, so the recording cannot end the session first.
+      // The subagent's frames all arrive after the root settles, and are
+      // stored as they arrive. Its completion notification is held until
+      // they are, so its continuation run 2 cannot race their ingestion.
+      // Run 2 drains the wake reply, and the wake result is held until it
+      // has, so the recording cannot end the session first.
+      { type: "await_run_status", targetRunIndex: 1, status: "completed" },
+      { type: "release_replay_gate", label: SUBAGENT_FIRST_FRAME_LABEL },
+      {
+        type: "await_threads",
+        label: `subagent text ${lastSubagentText} stored`,
+        until: (threads) =>
+          threads.some((thread) =>
+            thread.turnItems.some(
+              (item) => item.type === "assistant_message" && item.text.trim() === lastSubagentText,
+            ),
+          ),
+      },
+      { type: "release_replay_gate", label: SUBAGENT_NOTIFICATION_LABEL },
       {
         type: "await_run_status",
         targetRunIndex: 2,

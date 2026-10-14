@@ -259,7 +259,7 @@ export function useThreadComposerState() {
   const selectedThreadNodes = selectedThreadProjection?.projection.nodes;
   // A thread whose creation has not delivered its turn yet: the prompt only
   // exists in the outbox, so it is appended to whatever the server has. The
-  // detail is usually present but empty during a worktree checkout, so this
+  // detail is usually present but empty until the turn starts, so this
   // cannot be an either/or with the loaded messages.
   const pendingCreationMessage = selectedThreadCreation?.message ?? null;
   const selectedThreadFeed = useMemo(() => {
@@ -692,8 +692,8 @@ export function useThreadComposerState() {
         alternateModifier: followUpOverride !== undefined && followUpOverride !== followUpBehavior,
         activeTurnDefault: followUpBehavior,
       });
-      // A send while the worktree is still being set up waits behind that setup,
-      // so the server can hold it if the setup ends without a worktree.
+      // A send while the first run is still being prepared waits behind it,
+      // so the server can hold it until the run starts.
       // Before detail loads, the shell's latest run can be a queued follow-up
       // while its runtime still reports the setup.
       const setupRunning = [selectedThreadActivityRun?.status, selectedThreadRuntime?.status].some(

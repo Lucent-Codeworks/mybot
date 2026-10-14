@@ -13,7 +13,6 @@ import {
   AuthRelayReadScope,
   AuthRelayWriteScope,
   AuthSettingsWriteScope,
-  AuthSourceControlWriteScope,
   AuthTerminalOperateScope,
   AuthTerminalReadScope,
 } from "@t3tools/contracts";
@@ -69,14 +68,9 @@ export const AUTH_SCOPE_OPTIONS: ReadonlyArray<{
     description: "Create terminals and send input to running shells.",
   },
   {
-    scope: AuthSourceControlWriteScope,
-    title: "Change source control",
-    description: "Commit, push, manage branches and repositories, and change pull requests.",
-  },
-  {
     scope: AuthFilesystemReadScope,
     title: "Read files",
-    description: "Browse host files, search workspaces, and inspect local changes.",
+    description: "Browse host files and search workspaces.",
   },
   {
     scope: AuthFilesystemWriteScope,

@@ -802,7 +802,6 @@ export const layer = Layer.effect(
                   modelSelection: active.modelSelection,
                   runtimeMode: active.runtimeMode,
                   interactionMode: active.interactionMode,
-                  workspaceStrategy: active.workspaceStrategy,
                   initialMessage: {
                     messageId,
                     scheduledTaskId: active.id,

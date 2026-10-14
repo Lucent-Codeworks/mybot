@@ -4,7 +4,6 @@ import {
   THREAD_LIST_V2_ROW_CONTENT_CLASS_NAME,
   THREAD_LIST_V2_ROW_DIVIDERS,
   selectedThreadRowColors,
-  getThreadListV2NewBranchMenuTitle,
   getThreadListV2RowAppearance,
 } from "./thread-list-v2-row-appearance";
 import { RowPressable } from "../../components/RowPressable";
@@ -36,7 +35,6 @@ import { copyTextWithHaptic } from "../../lib/copyTextWithHaptic";
 import { useUniwindTheme } from "../../lib/useUniwindTheme";
 import { useEnvironmentScope } from "../../state/session";
 import type { PendingNewTask } from "../../state/use-pending-new-tasks";
-import { useThreadPr } from "../../state/use-thread-pr";
 import { useSwipeRowDormant } from "../home/swipe-row-activation";
 import { ThreadSwipeable } from "../home/thread-swipe-actions";
 import { buildThreadTitleRegenerationMenuItems } from "./thread-title-regeneration-menu";
@@ -335,7 +333,6 @@ export const ThreadListV2PendingRow = memo(function ThreadListV2PendingRow(props
   const sidebarPane = props.pane === "sidebar";
   const isDraft = pendingTask.kind === "draft";
   const projectTitle = props.projectTitle ?? props.project?.title ?? pendingTask.projectTitle ?? "";
-  const branch = pendingTask.branch;
 
   const handleMenuAction = useCallback(
     ({ nativeEvent }: { readonly nativeEvent: { readonly event: string } }) => {
@@ -399,7 +396,7 @@ export const ThreadListV2PendingRow = memo(function ThreadListV2PendingRow(props
       >
         {pendingTask.title}
       </Text>
-      {branch || props.environmentLabel ? (
+      {props.environmentLabel ? (
         <View className="mt-1 flex-row items-center gap-1">
           <Text
             className={cn(
@@ -408,18 +405,6 @@ export const ThreadListV2PendingRow = memo(function ThreadListV2PendingRow(props
             )}
             numberOfLines={1}
           >
-            {branch ? (
-              <Text
-                className={cn(
-                  "text-xs text-foreground-muted",
-                  sidebarPane && "text-drawer-foreground-muted",
-                )}
-                style={{ fontFamily: MONO_FONT }}
-              >
-                {branch}
-              </Text>
-            ) : null}
-            {branch && props.environmentLabel ? "  ·  " : null}
             {props.environmentLabel ? (
               <Text
                 className={cn(
@@ -543,7 +528,6 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
   readonly fullSwipeWidth?: number;
   readonly onSelectThread: (thread: EnvironmentThreadShell) => void;
   readonly onDeleteThread: (thread: EnvironmentThreadShell) => void;
-  readonly onNewThreadOnBranch: (thread: EnvironmentThreadShell) => void;
   readonly onRenameThread: (thread: EnvironmentThreadShell) => void;
   readonly onRegenerateThreadTitle: (thread: EnvironmentThreadShell) => void;
   readonly onSettleThread: (thread: EnvironmentThreadShell) => Promise<boolean>;
@@ -591,7 +575,6 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
     onDeleteThread,
     onRenameThread,
     onRegenerateThreadTitle,
-    onNewThreadOnBranch,
     onSettleThread,
     onSnoozeThread,
     onUnsnoozeThread,
@@ -619,7 +602,6 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
   }, [thread, props.providers]);
 
   const providerInstance = props.providerInstance;
-  const pr = useThreadPr(thread);
 
   const theme = useUniwindTheme();
   const sidebarPane = props.pane === "sidebar";
@@ -851,7 +833,6 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
   );
   const handleMenuAction = useCallback(
     ({ nativeEvent }: { readonly nativeEvent: { readonly event: string } }) => {
-      if (nativeEvent.event === "new-thread-on-branch") onNewThreadOnBranch(thread);
       if (nativeEvent.event === "settle") handleSettle();
       if (nativeEvent.event === "unsettle") handleUnsettle();
       if (nativeEvent.event === "unsnooze") handleUnsnooze();
@@ -885,7 +866,6 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
       }
     },
     [
-      onNewThreadOnBranch,
       thread,
       handleArchive,
       handleDelete,
@@ -1073,13 +1053,10 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
           >
             {thread.runtime.lastError}
           </Text>
-        ) : thread.branch || props.environmentLabel ? (
-          /* "branch · machine" share one truncating line. The machine sits
-             last so a tight fit cuts the repetitive label, not the branch —
-             and machine-only fills the row for non-git projects. The glyph
-             hugs the label (it cannot live inside the Text without breaking
-             truncation), and the wrapper takes the slack so the trailers
-             stay pinned right. */
+        ) : props.environmentLabel ? (
+          /* The glyph hugs the label (it cannot live inside the Text without
+             breaking truncation), and the wrapper takes the slack so the
+             trailers stay pinned right. */
           <View className="min-w-0 flex-1 flex-row items-center gap-1">
             <Text
               className={cn(
@@ -1090,20 +1067,6 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
               )}
               numberOfLines={1}
             >
-              {thread.branch ? (
-                <Text
-                  className={cn(
-                    "text-xs",
-                    selected
-                      ? selectedThreadRowColors.mutedForegroundClassName
-                      : rowAppearance.mutedForegroundClassName,
-                  )}
-                  style={{ fontFamily: MONO_FONT }}
-                >
-                  {thread.branch}
-                </Text>
-              ) : null}
-              {thread.branch && props.environmentLabel ? "  ·  " : null}
               {props.environmentLabel ? (
                 <Text
                   className={cn(
@@ -1132,30 +1095,6 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
         ) : (
           <View className="flex-1" />
         )}
-        {pr ? (
-          <View className="flex-row items-center gap-1" accessibilityLabel={pr.accessibilityLabel}>
-            <SymbolView
-              name={pr.kind === "stack" ? "square.3.layers.3d" : "arrow.triangle.pull"}
-              size={12}
-              tintColorClassName={
-                pr.state === null || pr.isDraft
-                  ? rowAppearance.mutedIconTintClassName
-                  : pr.state === "open"
-                    ? "accent-adaptive-emerald-600-400"
-                    : pr.state === "closed"
-                      ? "accent-adaptive-rose-600-400"
-                      : "accent-adaptive-violet-600-400"
-              }
-            />
-            <Text
-              accessibilityLabel={pr.accessibilityLabel}
-              className={cn("text-xs", pr.textClassName)}
-              style={{ fontFamily: MONO_FONT }}
-            >
-              {pr.label}
-            </Text>
-          </View>
-        ) : null}
         {providerInstance ? (
           // Earlier owners peek out behind the current provider so a
           // handed-off thread shows where it has been. The current owner
@@ -1331,15 +1270,6 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
         {(close) => (
           <ControlPillMenu
             actions={[
-              ...(thread.branch
-                ? [
-                    {
-                      id: "new-thread-on-branch",
-                      title: getThreadListV2NewBranchMenuTitle(thread.branch),
-                      image: "square.and.pencil",
-                    },
-                  ]
-                : []),
               { id: "copy-thread-id", title: "Copy thread ID", image: "doc.on.doc" },
               ...(snoozedRow
                 ? snoozedMenuActions

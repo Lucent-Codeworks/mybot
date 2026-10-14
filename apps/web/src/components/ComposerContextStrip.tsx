@@ -1,0 +1,520 @@
+import { writeTextToClipboard } from "../hooks/useCopyToClipboard";
+import { readLocalApi } from "../localApi";
+import { stackedThreadToast, toastManager } from "./ui/toast";
+import { ComposerContextLabel } from "./ComposerContextLabel";
+import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environment";
+import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import { FolderIcon, ScaleIcon } from "lucide-react";
+import {
+  type MouseEvent as ReactMouseEvent,
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+import { useComposerDraftStore, type DraftId } from "../composerDraftStore";
+import { EnvironmentMachineIcon } from "./EnvironmentMachineIcon";
+import { useProject, useThreadShell } from "../state/entities";
+import {
+  type EnvironmentOption,
+  resolveContextStripLabelsCompact,
+  shouldShowEnvironmentIndicator,
+} from "./ComposerContextStrip.logic";
+import { ComposerEnvironmentSelector } from "./ComposerEnvironmentSelector";
+import { ThreadDetailsControl } from "./chat/ThreadDetailsControl";
+import {
+  THREAD_DETAILS_PANEL_ICON_CLASS,
+  THREAD_DETAILS_PANEL_LOCKED_ROW_CLASS,
+} from "./chat/threadDetailsPanelStyles";
+import {
+  Menu,
+  MenuGroup,
+  MenuGroupLabel,
+  MenuPopup,
+  MenuRadioGroup,
+  MenuRadioItem,
+  MenuTrigger,
+} from "./ui/menu";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
+import { ComposerSurface } from "./chat/ComposerSurface";
+import { measureRestingComposerControls } from "./chat/restingComposerControlsMeasurement";
+import { resolveRestingComposerControlsNaturalWidth } from "./composerFooterLayout";
+import { cn } from "~/lib/utils";
+import { observeResize } from "~/lib/observeResize";
+
+interface ComposerContextStripProps {
+  /** "composer" renders the strip above the composer; "panel" renders the thread details row. */
+  layout?: "composer" | "panel";
+  environmentId: EnvironmentId;
+  threadId: ThreadId;
+  draftId?: DraftId;
+  autoEnvironmentLabel?: string | undefined;
+  onAutoEnvironment?: (() => void) | undefined;
+  envLocked: boolean;
+  availableEnvironments?: readonly EnvironmentOption[];
+  onEnvironmentChange?: (environmentId: EnvironmentId) => void;
+  composerControlsHostRef?: (element: HTMLDivElement | null) => void;
+  contextStripVisible?: boolean;
+}
+
+function showWorkspaceContextMenu(event: ReactMouseEvent, workspacePath: string) {
+  const api = readLocalApi();
+  if (!api) return;
+  event.preventDefault();
+  event.stopPropagation();
+  void api.contextMenu
+    .show([{ id: "copy-path", label: "Copy full path", icon: "copy" }], {
+      x: event.clientX,
+      y: event.clientY,
+    })
+    .then((action) => {
+      if (action !== "copy-path") return;
+      void writeTextToClipboard(workspacePath, "workspace path").then(
+        (didCopy) => {
+          if (didCopy) {
+            toastManager.add({
+              type: "success",
+              title: "Path copied",
+              description: workspacePath,
+            });
+          }
+        },
+        (error: unknown) => {
+          toastManager.add(
+            stackedThreadToast({
+              type: "error",
+              title: "Failed to copy path",
+              description: error instanceof Error ? error.message : "An error occurred.",
+            }),
+          );
+        },
+      );
+    });
+}
+
+interface PanelRunContextProps {
+  workspaceRoot: string;
+  autoEnvironmentLabel?: string | undefined;
+  onAutoEnvironment?: (() => void) | undefined;
+  envLocked: boolean;
+  environmentId: EnvironmentId;
+  availableEnvironments: readonly EnvironmentOption[] | undefined;
+  onEnvironmentChange: ((environmentId: EnvironmentId) => void) | undefined;
+}
+
+/** The thread details row naming the machine and folder a thread runs in. */
+const PanelRunContext = memo(function PanelRunContext({
+  workspaceRoot,
+  autoEnvironmentLabel,
+  onAutoEnvironment,
+  envLocked,
+  environmentId,
+  availableEnvironments,
+  onEnvironmentChange,
+}: PanelRunContextProps) {
+  const activeEnvironment = useMemo(
+    () => availableEnvironments?.find((env) => env.environmentId === environmentId) ?? null,
+    [availableEnvironments, environmentId],
+  );
+  const canPickEnvironment =
+    !envLocked &&
+    availableEnvironments !== undefined &&
+    availableEnvironments.length > 1 &&
+    onEnvironmentChange !== undefined;
+  const handleContextMenu = (event: ReactMouseEvent) => {
+    showWorkspaceContextMenu(event, workspaceRoot);
+  };
+  const triggerContent = (
+    <>
+      <span className="inline-flex shrink-0 items-center gap-0.5">
+        {activeEnvironment || autoEnvironmentLabel ? (
+          <Tooltip>
+            <TooltipTrigger render={<span className="inline-flex shrink-0" />}>
+              {autoEnvironmentLabel ? (
+                <ScaleIcon className={THREAD_DETAILS_PANEL_ICON_CLASS} aria-hidden="true" />
+              ) : (
+                <EnvironmentMachineIcon
+                  kind={activeEnvironment?.machine ?? "server"}
+                  className={THREAD_DETAILS_PANEL_ICON_CLASS}
+                />
+              )}
+            </TooltipTrigger>
+            <TooltipPopup>
+              {autoEnvironmentLabel ?? activeEnvironment?.label ?? "Run on"}
+            </TooltipPopup>
+          </Tooltip>
+        ) : null}
+        <Tooltip>
+          <TooltipTrigger render={<span className="inline-flex shrink-0" />}>
+            <FolderIcon className={THREAD_DETAILS_PANEL_ICON_CLASS} />
+          </TooltipTrigger>
+          <TooltipPopup>{workspaceRoot}</TooltipPopup>
+        </Tooltip>
+      </span>
+      <ComposerContextLabel displayMode="panel">
+        {autoEnvironmentLabel ?? activeEnvironment?.label ?? "Project folder"}
+      </ComposerContextLabel>
+    </>
+  );
+
+  if (!canPickEnvironment) {
+    return (
+      <span
+        className={cn(
+          "inline-flex min-w-0 max-w-full flex-initial items-center gap-1",
+          THREAD_DETAILS_PANEL_LOCKED_ROW_CLASS,
+        )}
+        onContextMenu={handleContextMenu}
+        aria-label="Run context"
+      >
+        {triggerContent}
+      </span>
+    );
+  }
+
+  return (
+    <Menu>
+      <MenuTrigger
+        render={<ThreadDetailsControl part="select" />}
+        onContextMenu={handleContextMenu}
+        onMouseDownCapture={(event) => {
+          if (event.button !== 0 || event.ctrlKey) event.stopPropagation();
+        }}
+        aria-label="Run context"
+      >
+        {triggerContent}
+      </MenuTrigger>
+      <MenuPopup align="start" side="bottom" className="w-(--anchor-width)">
+        <MenuGroup>
+          <MenuGroupLabel>Run on</MenuGroupLabel>
+          <MenuRadioGroup
+            value={autoEnvironmentLabel ? "auto" : environmentId}
+            onValueChange={(value) =>
+              value === "auto" ? onAutoEnvironment?.() : onEnvironmentChange(value as EnvironmentId)
+            }
+          >
+            {onAutoEnvironment && (
+              <MenuRadioItem
+                value="auto"
+                closeOnClick
+                onClick={() => {
+                  if (autoEnvironmentLabel) onAutoEnvironment?.();
+                }}
+              >
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <ScaleIcon className="size-3" aria-hidden="true" />
+                  <span className="min-w-0 truncate">{autoEnvironmentLabel ?? "Auto balance"}</span>
+                </span>
+              </MenuRadioItem>
+            )}
+            {availableEnvironments.map((env) => (
+              <MenuRadioItem key={env.environmentId} value={env.environmentId} closeOnClick>
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <EnvironmentMachineIcon kind={env.machine} className="size-3" />
+                  <span className="min-w-0 truncate">{env.label}</span>
+                </span>
+              </MenuRadioItem>
+            ))}
+          </MenuRadioGroup>
+        </MenuGroup>
+      </MenuPopup>
+    </Menu>
+  );
+});
+
+const COMPOSER_CONTEXT_MOTION_DURATION_MS = 180;
+const COMPOSER_CONTEXT_MOTION_EASING = "cubic-bezier(0.32, 0.72, 0, 1)";
+const COMPOSER_CONTEXT_LABEL_SELECTOR = "[data-composer-label]";
+
+/**
+ * The width a label takes when shown, clipped parts included.
+ *
+ * Text keeps its full width when its box clips it, so each text run measures
+ * whole. A label can hold more than one run, so the runs are added. Reading one element's
+ * scrollWidth drops the tail when the label is hidden or squeezed, and the
+ * strip then flips between labels and icons on every measure.
+ *
+ * A shown label never grows past its motion span's max width, so longer text
+ * reserves only that much.
+ */
+function labelTextWidth(label: HTMLElement, range: Range): number {
+  const walker = document.createTreeWalker(label, NodeFilter.SHOW_TEXT);
+  let width = 0;
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    range.selectNodeContents(node);
+    width += range.getBoundingClientRect().width;
+  }
+  const motion = label.querySelector<HTMLElement>("[data-composer-label-motion]");
+  const maxWidth = motion ? Number.parseFloat(getComputedStyle(motion).maxWidth) : Number.NaN;
+  return Number.isFinite(maxWidth) ? Math.min(width, maxWidth) : width;
+}
+
+/**
+ * Collapse the strip's labels to icons only when the text no longer fits.
+ *
+ * Hidden labels stay measurable because their inner text keeps its natural
+ * width while the outer layout box collapses. This lets every pass recompute
+ * the expanded width without remembered values that could go stale or latch
+ * the strip compact. A small hysteresis keeps the boundary from flapping.
+ */
+function useLabelsOverflow(element: HTMLDivElement | null): boolean {
+  const [overflows, setOverflows] = useState(false);
+  const pendingLabelRectsRef = useRef<Map<HTMLElement, DOMRect> | null>(null);
+  const labelAnimationsRef = useRef(new Map<HTMLElement, Animation>());
+  // A render-synced mirror instead of useEffectEvent: the compiler memoizes
+  // the event callback, which left observers reading the first render's null
+  // element forever.
+  const stateRef = useRef({ element, overflows });
+  stateRef.current = { element, overflows };
+
+  const measure = useCallback(() => {
+    const { element: current, overflows: compact } = stateRef.current;
+    if (!current) return;
+    const available = current.clientWidth;
+    if (available === 0) return;
+    // flex-1 stretches the groups to fill the strip, so their own boxes always
+    // measure "full". Sum the laid-out content instead, skipping hidden form
+    // artifacts and other out-of-flow nodes.
+    const contentWidth = (parent: Element): number => {
+      const gap = Number.parseFloat(getComputedStyle(parent).columnGap) || 0;
+      let width = 0;
+      let counted = 0;
+      for (const child of parent.children) {
+        if (!(child instanceof HTMLElement)) continue;
+        if (child.offsetWidth === 0) continue;
+        const style = getComputedStyle(child);
+        const position = style.position;
+        if (position === "absolute" || position === "fixed") continue;
+        width +=
+          child.offsetWidth +
+          (Number.parseFloat(style.marginInlineStart) || 0) +
+          (Number.parseFloat(style.marginInlineEnd) || 0);
+        counted += 1;
+      }
+      return width + gap * Math.max(0, counted - 1);
+    };
+    const stripGap = Number.parseFloat(getComputedStyle(current).columnGap) || 0;
+    let needed = 0;
+    let groups = 0;
+    for (const child of current.children) {
+      if (!(child instanceof HTMLElement)) continue;
+      // The host itself flexes into all remaining room. Reserve the natural
+      // width of the controls inside it, blocks in overflow included, so the
+      // environment label compacts before squeezing out the model picker. Reserving only
+      // the visible controls would let the labels expand into room the
+      // composer just freed, shrink the host, and hide the controls again.
+      const hostedControls = child.matches('[data-chat-resting-composer-controls-host="true"]')
+        ? child.querySelector<HTMLElement>('[data-chat-composer-resting-controls="true"]')
+        : null;
+      const hostedMeasurement = hostedControls
+        ? measureRestingComposerControls(hostedControls)
+        : null;
+      const width = hostedMeasurement
+        ? resolveRestingComposerControlsNaturalWidth(hostedMeasurement)
+        : contentWidth(hostedControls ?? child);
+      if (width <= 1) continue;
+      groups += 1;
+      needed += width;
+    }
+    needed += stripGap * Math.max(0, groups - 1);
+    const range = document.createRange();
+    for (const label of current.querySelectorAll<HTMLElement>("[data-composer-label]")) {
+      // Subtract the visible width even during an animation. The content
+      // sum already includes it; only the hidden text needs reserving.
+      needed += Math.max(0, labelTextWidth(label, range) - label.getBoundingClientRect().width);
+    }
+    const nextOverflows = resolveContextStripLabelsCompact({
+      compact,
+      neededWidth: needed,
+      availableWidth: available,
+    });
+    if (nextOverflows !== compact) {
+      pendingLabelRectsRef.current = new Map(
+        Array.from(current.querySelectorAll<HTMLElement>(COMPOSER_CONTEXT_LABEL_SELECTOR)).map(
+          (label) => [label, label.getBoundingClientRect()],
+        ),
+      );
+    }
+    setOverflows(nextOverflows);
+  }, []);
+
+  useLayoutEffect(() => {
+    const previousRects = pendingLabelRectsRef.current;
+    if (!previousRects) return;
+    pendingLabelRectsRef.current = null;
+
+    for (const animation of labelAnimationsRef.current.values()) {
+      animation.cancel();
+    }
+    labelAnimationsRef.current.clear();
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    for (const [label, previousRect] of previousRects) {
+      if (!label.isConnected) continue;
+      const nextWidth = label.getBoundingClientRect().width;
+      if (Math.abs(previousRect.width - nextWidth) < 0.5) continue;
+
+      // Animate the space occupied by each label so flex layout keeps the
+      // trailing controls anchored. Translating the whole group after its
+      // width snaps sends expanded text beyond the strip's right edge.
+      const animation = label.animate(
+        [
+          { width: `${previousRect.width}px`, maxWidth: `${previousRect.width}px` },
+          { width: `${nextWidth}px`, maxWidth: `${nextWidth}px` },
+        ],
+        {
+          duration: COMPOSER_CONTEXT_MOTION_DURATION_MS,
+          easing: COMPOSER_CONTEXT_MOTION_EASING,
+          fill: "backwards",
+        },
+      );
+      labelAnimationsRef.current.set(label, animation);
+      animation.addEventListener(
+        "finish",
+        () => {
+          if (labelAnimationsRef.current.get(label) === animation) {
+            labelAnimationsRef.current.delete(label);
+          }
+        },
+        { once: true },
+      );
+    }
+  }, [overflows]);
+
+  useEffect(
+    () => () => {
+      for (const animation of labelAnimationsRef.current.values()) {
+        animation.cancel();
+      }
+    },
+    [],
+  );
+
+  // Label widths can change without the strip box moving (font family or
+  // size preferences), so re-measure on every render as well as on resize
+  // and font loads.
+  useLayoutEffect(() => {
+    measure();
+  });
+
+  useEffect(() => {
+    if (!element) return;
+    const stopObserving = observeResize(element, measure);
+    document.fonts.addEventListener("loadingdone", measure);
+    return () => {
+      stopObserving();
+      document.fonts.removeEventListener("loadingdone", measure);
+    };
+  }, [element, measure]);
+
+  return overflows;
+}
+
+export const ComposerContextStrip = memo(function ComposerContextStrip({
+  layout = "composer",
+  environmentId,
+  threadId,
+  draftId,
+  autoEnvironmentLabel,
+  onAutoEnvironment,
+  envLocked,
+  availableEnvironments,
+  onEnvironmentChange,
+  composerControlsHostRef,
+  contextStripVisible = true,
+}: ComposerContextStripProps) {
+  const threadRef = useMemo(
+    () => scopeThreadRef(environmentId, threadId),
+    [environmentId, threadId],
+  );
+  const draftThread = useComposerDraftStore((store) =>
+    draftId ? store.getDraftSession(draftId) : store.getDraftThreadByRef(threadRef),
+  );
+  const serverThread = useThreadShell(threadRef);
+  const activeProjectRef = serverThread
+    ? scopeProjectRef(serverThread.environmentId, serverThread.projectId)
+    : draftThread
+      ? scopeProjectRef(draftThread.environmentId, draftThread.projectId)
+      : null;
+  const activeProject = useProject(activeProjectRef);
+  const hasActiveThread = serverThread !== null || draftThread !== null;
+
+  const showEnvironmentPicker = Boolean(
+    availableEnvironments && availableEnvironments.length > 1 && onEnvironmentChange,
+  );
+  const activeEnvironmentOption =
+    availableEnvironments?.find((env) => env.environmentId === environmentId) ?? null;
+  const showEnvironmentIndicator = shouldShowEnvironmentIndicator({
+    activeEnvironment: activeEnvironmentOption,
+    canPickEnvironment: showEnvironmentPicker,
+  });
+  const [stripElement, setStripElement] = useState<HTMLDivElement | null>(null);
+  const labelsOverflow = useLabelsOverflow(stripElement);
+
+  if (!hasActiveThread || !activeProject) return null;
+
+  if (layout === "panel") {
+    return (
+      <div className="flex w-full flex-col" data-thread-panel-run-context>
+        <PanelRunContext
+          workspaceRoot={activeProject.workspaceRoot}
+          autoEnvironmentLabel={autoEnvironmentLabel}
+          onAutoEnvironment={onAutoEnvironment}
+          envLocked={envLocked}
+          environmentId={environmentId}
+          availableEnvironments={availableEnvironments}
+          onEnvironmentChange={onEnvironmentChange}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <ComposerSurface.ContextStrip
+      ref={setStripElement}
+      data-compact={labelsOverflow ? "" : undefined}
+      className={cn(
+        "gap-1 text-xs font-normal text-muted-foreground/70",
+        // A strip with no visible composer controls should occupy no space,
+        // but its host must retain a prospective width so controls can become
+        // visible again when the chat view grows.
+        !contextStripVisible && "pointer-events-none invisible absolute inset-x-0 top-full",
+      )}
+    >
+      {showEnvironmentIndicator && availableEnvironments ? (
+        <div
+          className={cn(
+            "flex min-h-7 min-w-10 items-center gap-1 sm:min-h-6",
+            composerControlsHostRef ? "shrink" : "flex-1",
+          )}
+        >
+          <ComposerEnvironmentSelector
+            autoEnvironmentLabel={autoEnvironmentLabel}
+            onAutoEnvironment={onAutoEnvironment}
+            envLocked={envLocked}
+            environmentId={environmentId}
+            availableEnvironments={availableEnvironments}
+            {...(showEnvironmentPicker && onEnvironmentChange ? { onEnvironmentChange } : {})}
+          />
+        </div>
+      ) : null}
+
+      {composerControlsHostRef ? (
+        // The host takes whatever the environment control leaves over, so a
+        // collapsed composer can show its model and mode controls wherever
+        // they fit.
+        <div
+          ref={composerControlsHostRef}
+          data-composer-context-control
+          data-chat-resting-composer-controls-host="true"
+          className="flex min-w-0 flex-1 items-center justify-start overflow-x-clip overflow-y-visible"
+        />
+      ) : null}
+    </ComposerSurface.ContextStrip>
+  );
+});

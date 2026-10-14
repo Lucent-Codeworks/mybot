@@ -4,14 +4,12 @@ import * as Clock from "effect/Clock";
 import * as Random from "effect/Random";
 import * as Semaphore from "effect/Semaphore";
 import * as StorageCleanup from "./storageCleanup.ts";
-import * as PullRequestSyncReactor from "./orchestration-v2/PullRequestSyncReactor.ts";
-import * as PullRequestWatchReactor from "./orchestration-v2/PullRequestWatchReactor.ts";
 // @effect-diagnostics nodeBuiltinImport:off
 import * as NodeHttp from "node:http";
 
 import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { EnvironmentHttpApi, type RepositoryIdentity } from "@t3tools/contracts";
+import { EnvironmentHttpApi } from "@t3tools/contracts";
 import * as Cause from "effect/Cause";
 import * as Duration from "effect/Duration";
 import * as Deferred from "effect/Deferred";
@@ -34,13 +32,7 @@ import * as Ws from "./ws.ts";
 import * as AgentScopeLive from "./process/agentScope.ts";
 import * as ExternalLauncher from "./process/externalLauncher.ts";
 import * as NodePtyAdapter from "./terminal/NodePtyAdapter.ts";
-import * as PullRequestHttp from "./pullRequest/http.ts";
-import * as PullRequestProviderRegistry from "./pullRequest/PullRequestProviderRegistry.ts";
-import * as PullRequestService from "./pullRequest/PullRequestService.ts";
 import * as SqlitePersistence from "./persistence/Sqlite.ts";
-import * as PullRequestFilesViewed from "./persistence/PullRequestFilesViewed.ts";
-import * as PullRequestReviewGuides from "./persistence/PullRequestReviewGuides.ts";
-import * as PullRequestReviewGuideService from "./pullRequest/PullRequestReviewGuideService.ts";
 import * as ServerLifecycleEvents from "./serverLifecycleEvents.ts";
 import * as AnalyticsService from "./telemetry/AnalyticsService.ts";
 import * as ProviderEventIngestor from "./orchestration-v2/ProviderEventIngestor.ts";
@@ -53,10 +45,6 @@ import * as OpenCodeRuntime from "@t3tools/provider-opencode/server/OpenCodeRunt
 import * as OpenCodeServerLedger from "@t3tools/provider-opencode/server/OpenCodeServerLedger";
 import * as ProviderHostLive from "./provider/ProviderHostLive.ts";
 import * as AcpRegistrySupport from "@t3tools/provider-acp-registry/server/AcpRegistrySupport";
-import * as CheckpointDiffQuery from "./checkpointing/CheckpointDiffQuery.ts";
-import * as CheckpointStore from "./checkpointing/CheckpointStore.ts";
-import * as SourceControlBuiltInDrivers from "./sourceControl/builtInDrivers.ts";
-import * as TextGeneration from "./textGeneration/TextGeneration.ts";
 import * as ProviderInstanceRegistryHydration from "./provider/ProviderInstanceRegistryHydration.ts";
 import * as ProjectSettingsOverrideSweep from "./provider/ProjectSettingsOverrideSweep.ts";
 import * as TerminalManager from "./terminal/Manager.ts";
@@ -72,7 +60,6 @@ import * as DesktopBrowserChannel from "./preview/DesktopBrowserChannel.ts";
 import * as ServerBrowserStream from "./preview/ServerBrowserStream.ts";
 import * as PreviewBrowser from "./preview/PreviewBrowser.ts";
 import * as ProcessRunner from "./processRunner.ts";
-import * as GitManager from "./git/GitManager.ts";
 import * as EnvironmentTheme from "./environmentTheme.ts";
 import * as Keybindings from "./keybindings.ts";
 import * as ServerRuntimeStartup from "./serverRuntimeStartup.ts";
@@ -90,24 +77,9 @@ import * as ProviderUsageLimitsIngestion from "./provider/ProviderUsageLimitsIng
 import * as UsageLimitSources from "./usage/UsageLimitSources.ts";
 import * as ProjectFaviconResolver from "./project/ProjectFaviconResolver.ts";
 import * as T3ProjectFileLoader from "./project/T3ProjectFileLoader.ts";
-import * as RepositoryIdentityResolver from "./project/RepositoryIdentityResolver.ts";
 import * as WorkspaceEntries from "./workspace/WorkspaceEntries.ts";
 import * as WorkspaceFileSystem from "./workspace/WorkspaceFileSystem.ts";
 import * as WorkspacePaths from "./workspace/WorkspacePaths.ts";
-import * as GitVcsDriver from "./vcs/GitVcsDriver.ts";
-import * as VcsDriverRegistry from "./vcs/VcsDriverRegistry.ts";
-import * as VcsProjectConfig from "./vcs/VcsProjectConfig.ts";
-import * as VcsProcess from "./vcs/VcsProcess.ts";
-import * as VcsProvisioningService from "./vcs/VcsProvisioningService.ts";
-import * as VcsStatusBroadcaster from "./vcs/VcsStatusBroadcaster.ts";
-import * as ProjectCloneTracker from "./project/ProjectCloneTracker.ts";
-import * as GitWorkflowService from "./git/GitWorkflowService.ts";
-import * as ReviewService from "./review/ReviewService.ts";
-import * as SourceControlProviderRegistry from "./sourceControl/SourceControlProviderRegistry.ts";
-import * as PullRequestReadCache from "./pullRequest/PullRequestReadCache.ts";
-import * as SourceControlRateLimit from "@t3tools/source-control-core/server/SourceControlRateLimit";
-import * as SourceControlRepositoryService from "./sourceControl/SourceControlRepositoryService.ts";
-import * as WorktreeSetupTracker from "./project/WorktreeSetupTracker.ts";
 import * as Observability from "./observability/Observability.ts";
 import * as HeapSnapshot from "./observability/HeapSnapshot.ts";
 import * as EventLoopMonitor from "./observability/EventLoopMonitor.ts";
@@ -167,7 +139,6 @@ import * as ProjectStore from "./orchestration-v2/ProjectStore.ts";
 import * as ThreadSearch from "./orchestration-v2/ThreadSearch.ts";
 import * as ResourceCleanupService from "./orchestration-v2/ResourceCleanupService.ts";
 import * as ThreadSettlementService from "./orchestration-v2/ThreadSettlementService.ts";
-import * as ThreadPullRequestService from "./orchestration-v2/ThreadPullRequestService.ts";
 import * as RunFinalizationService from "./orchestration-v2/RunFinalizationService.ts";
 import * as ProjectionStoreV2 from "./orchestration-v2/ProjectionStore.ts";
 import {
@@ -305,106 +276,6 @@ const layerPlatformServices = NodeServices.layer;
 
 const layerPersistence = Layer.empty.pipe(Layer.provideMerge(SqlitePersistence.layerConfig));
 
-const layerVcsDriverRegistry = VcsDriverRegistry.layer.pipe(Layer.provide(VcsProjectConfig.layer));
-
-const layerSourceControlProviderRegistry = SourceControlProviderRegistry.layer.pipe(
-  Layer.provideMerge(SourceControlBuiltInDrivers.layer),
-  Layer.provideMerge(GitVcsDriver.layer),
-  Layer.provideMerge(layerVcsDriverRegistry),
-);
-
-const layerRepositoryIdentityResolver = Layer.effect(
-  RepositoryIdentityResolver.RepositoryIdentityResolver,
-  Effect.gen(function* () {
-    const registry = yield* SourceControlProviderRegistry.SourceControlProviderRegistry;
-    return yield* RepositoryIdentityResolver.make({
-      // Each host that can refine an identity gets a turn; the first one that changes it wins.
-      refine: Effect.fn(function* (identity: RepositoryIdentity) {
-        for (const kind of SourceControlBuiltInDrivers.BUILT_IN_SOURCE_CONTROL_DRIVERS.map(
-          (driver) => driver.kind,
-        )) {
-          const provider = yield* registry.get(kind);
-          if (provider.refineRepositoryIdentity === undefined) continue;
-          const refined = yield* provider.refineRepositoryIdentity({
-            identity,
-            resolveContext: (input) =>
-              registry.resolveHandle(input).pipe(Effect.map((handle) => handle.context)),
-          });
-          if (refined !== identity) return refined;
-        }
-        return identity;
-      }),
-    });
-  }),
-).pipe(Layer.provide(layerSourceControlProviderRegistry), Layer.provide(ProcessRunner.layer));
-
-const layerPullRequestService = PullRequestService.layer.pipe(
-  Layer.provide(PullRequestProviderRegistry.layer),
-  // Where the viewed-file marks live for a host that keeps none of its own.
-  Layer.provide(PullRequestFilesViewed.layer),
-  Layer.provide(PullRequestReadCache.layer),
-  Layer.provide(layerSourceControlProviderRegistry),
-  Layer.provide(SourceControlRateLimit.layer),
-);
-
-const layerGitManager = GitManager.layer.pipe(
-  // Per-project git settings resolve the acting thread's project.
-  Layer.provide(Layer.merge(ProjectionStoreV2.layer, ProjectStore.layer)),
-  Layer.provideMerge(RuntimeLayer.layerProjectSetupScriptRunner),
-  Layer.provideMerge(WorktreeSetupTracker.layer),
-  Layer.provideMerge(GitVcsDriver.layer),
-  Layer.provideMerge(layerSourceControlProviderRegistry),
-  Layer.provideMerge(TextGeneration.layer.pipe(Layer.provide(layerSourceControlProviderRegistry))),
-);
-
-const layerGit = Layer.empty.pipe(
-  Layer.provideMerge(layerGitManager),
-  Layer.provideMerge(GitVcsDriver.layer),
-);
-
-const layerGitWorkflow = GitWorkflowService.layer.pipe(
-  Layer.provideMerge(layerVcsDriverRegistry),
-  Layer.provideMerge(layerGit),
-);
-
-const layerSourceControlRepositoryService = SourceControlRepositoryService.layer.pipe(
-  Layer.provideMerge(GitVcsDriver.layer),
-  Layer.provideMerge(layerSourceControlProviderRegistry),
-);
-
-const layerProjectCloneTracker = ProjectCloneTracker.layer.pipe(
-  Layer.provide(layerSourceControlRepositoryService),
-);
-
-const layerReview = ReviewService.layer.pipe(
-  Layer.provide(ProjectStore.layer),
-  Layer.provideMerge(GitVcsDriver.layer),
-  Layer.provideMerge(layerVcsDriverRegistry),
-);
-
-const layerVcs = Layer.empty.pipe(
-  Layer.provideMerge(VcsProjectConfig.layer),
-  Layer.provideMerge(layerVcsDriverRegistry),
-  Layer.provideMerge(VcsProvisioningService.layer.pipe(Layer.provide(layerVcsDriverRegistry))),
-  Layer.provideMerge(layerGitWorkflow),
-  Layer.provideMerge(layerReview),
-  Layer.provideMerge(layerSourceControlRepositoryService),
-  Layer.provideMerge(layerProjectCloneTracker),
-  Layer.provideMerge(
-    VcsStatusBroadcaster.layer.pipe(
-      Layer.provide(layerGitWorkflow),
-      // Auto-pull reads the project row. The orchestration runtime also
-      // consumes the broadcaster (run finalization), so the policy cannot read
-      // the store from the runtime's output.
-      Layer.provide(
-        VcsStatusBroadcaster.layerAutoPullPolicy.pipe(Layer.provide(ProjectStore.layer)),
-      ),
-    ),
-  ),
-);
-
-const layerCheckpointStore = CheckpointStore.layer.pipe(Layer.provide(layerVcsDriverRegistry));
-
 const layerPortScanner = PortScanner.layer.pipe(Layer.provide(ProcessRunner.layer));
 
 const layerTerminal = TerminalManager.layer.pipe(
@@ -487,33 +358,16 @@ const layerScheduledTaskWebhookOrigin = Layer.effect(
 const layerOrchestrationV2Runtime = RuntimeLayer.layerProduction.pipe(
   Layer.provide(layerScheduledTaskWebhookOrigin),
   Layer.provide(ProviderEventIngestor.layerAnalytics),
-  Layer.provide(layerCheckpointStore),
-  Layer.provide(layerGitWorkflow),
   Layer.provide(ResourceCleanupService.layer),
-  Layer.provide(
-    RunFinalizationService.layerObserver.pipe(
-      Layer.provide(ProjectionStoreV2.layer),
-      Layer.provide(layerPullRequestService),
-      Layer.provide(RuntimeLayer.layerProjectService),
-    ),
-  ),
-);
-
-const layerOrchestrationApplication = CheckpointDiffQuery.layer.pipe(
-  Layer.provideMerge(layerCheckpointStore),
-  Layer.provideMerge(layerOrchestrationV2Runtime),
+  Layer.provide(RunFinalizationService.layerObserver),
 );
 
 // Automatic thread settlement (#8600): a server-owned sweep evaluates
-// inactivity and merged pull requests, then settles through the orchestrator
+// inactivity, then settles through the orchestrator
 // so every client sees the same shelf.
 const layerThreadSettlementWorker = Layer.effectDiscard(
   ThreadSettlementService.make.pipe(Effect.flatMap((service) => service.start())),
-).pipe(Layer.provide(layerPullRequestService), Layer.provide(ProjectionStoreV2.layer));
-
-const layerThreadPullRequestWorker = Layer.effectDiscard(
-  ThreadPullRequestService.make.pipe(Effect.flatMap((service) => service.start())),
-).pipe(Layer.provide(layerPullRequestService));
+).pipe(Layer.provide(ProjectionStoreV2.layer));
 
 const layerProviderInstallationRefresh = Layer.effectDiscard(
   Effect.gen(function* () {
@@ -552,28 +406,7 @@ const layerRuntimeCoreDependenciesBase = Layer.mergeAll(
   // Asks T3 Connect to deliver webhooks it held while this environment was offline.
   HeldHooksWaker.layer,
   layerThreadSettlementWorker,
-  StorageCleanup.layer.pipe(Layer.provide(ProjectionStoreV2.layer)),
-  layerThreadPullRequestWorker,
-  Layer.effectDiscard(
-    Effect.gen(function* () {
-      const service = yield* PullRequestSyncReactor.PullRequestSyncReactor;
-      yield* service.start();
-    }),
-  ).pipe(
-    Layer.provideMerge(PullRequestSyncReactor.layer),
-    Layer.provide(layerPullRequestService),
-    Layer.provide(ProjectionStoreV2.layer),
-  ),
-  Layer.effectDiscard(
-    Effect.gen(function* () {
-      const service = yield* PullRequestWatchReactor.PullRequestWatchReactor;
-      yield* service.start();
-    }),
-  ).pipe(
-    Layer.provide(PullRequestWatchReactor.layer),
-    Layer.provide(layerPullRequestService),
-    Layer.provide(ProjectionStoreV2.layer),
-  ),
+  StorageCleanup.layer,
   // Subscribes to `account.rate-limits.updated` so usage bars track live
   // telemetry instead of waiting for the next status probe.
   ProviderUsageLimitsIngestion.layer,
@@ -585,15 +418,10 @@ const layerRuntimeCoreDependenciesBase = Layer.mergeAll(
   Layer.effectDiscard(ProjectSettingsOverrideSweep.sweep),
 ).pipe(
   // Core Services
-  Layer.provideMerge(layerOrchestrationApplication),
+  Layer.provideMerge(layerOrchestrationV2Runtime),
   Layer.provideMerge(RuntimeLayer.layerEventInfrastructure),
   Layer.provideMerge(Layer.merge(ProjectStore.layer, ThreadSearch.layer)),
   Layer.provideMerge(layerServerSettings),
-  // The asset route uses the registry's GitHub credential for private PR media, which the
-  // built-in drivers' layer provides alongside the registry.
-  Layer.provideMerge(layerSourceControlProviderRegistry),
-  Layer.provideMerge(layerGit),
-  Layer.provideMerge(layerVcs),
   Layer.provideMerge(Layer.mergeAll(layerTerminal, layerPreview, layerDevice)),
   Layer.provideMerge(layerPersistence),
   // Both read a user-owned file out of the state directory and stream changes
@@ -654,7 +482,6 @@ const layerRuntimeCoreDependencies = layerRuntimeCoreDependenciesBase.pipe(
   Layer.provideMerge(layerWorkspace),
   Layer.provideMerge(ProjectEnrichmentService.layer),
   Layer.provideMerge(Layer.mergeAll(NativeAppIconResolver.layer, layerProjectFaviconResolver)),
-  Layer.provideMerge(layerRepositoryIdentityResolver),
   Layer.provideMerge(layerServerEnvironment),
   Layer.provideMerge(layerAuth),
   Layer.provideMerge(ServerSecretStore.layer),
@@ -700,7 +527,6 @@ const layerMakeRoutes = Layer.mergeAll(
       Layer.provide(McpOAuthHttp.layer.pipe(Layer.provide(McpOAuth.layer))),
       Layer.provide(CloudHttp.layer),
       Layer.provide(OrchestrationHttp.layer),
-      Layer.provide(PullRequestHttp.layer),
       Layer.provide(ProjectHttp.layer),
       Layer.provide(ServerHttp.layerServerEnvironmentHttpApi),
       Layer.provide(WebhookRoute.layer.pipe(Layer.provide(RelayDeliveryProof.layer))),
@@ -724,14 +550,6 @@ const layerMakeRoutes = Layer.mergeAll(
     Layer.provide(McpOAuth.layerMcpClientAuthenticator),
   ),
 ).pipe(
-  // Guides read through the same pull request service as every other surface.
-  Layer.provide(
-    PullRequestReviewGuideService.layer.pipe(Layer.provide(PullRequestReviewGuides.layer)),
-  ),
-  // Both transports consume the same service instance, so caches single-flight across clients
-  // and mutations observed on WebSocket invalidate patches subsequently read over HTTP. Provided
-  // after the guide service so it reaches that too.
-  Layer.provide(layerPullRequestService),
   // The stream route and the WebSocket RPCs share one browser.
   Layer.provide(ServerBrowser.layer.pipe(Layer.provide(DesktopBrowserChannel.layer))),
   // Server browser tabs and HTML render previews install and run the same headless browser.
@@ -1112,8 +930,6 @@ const layerMakeServer = Layer.unwrap(
       Layer.provideMerge(layerHttpServer),
       Layer.provide(layerApplicationObservability),
       Layer.provideMerge(FetchHttpClient.layer),
-      // PR reads, Git operations, and WebSocket discovery share one process limiter.
-      Layer.provide(VcsProcess.layer),
       // Every agent and terminal spawn reads this, so it sits below everything.
       Layer.provideMerge(AgentScopeLive.layer),
       Layer.provideMerge(layerPlatformServices),

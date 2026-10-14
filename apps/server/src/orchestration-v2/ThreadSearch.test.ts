@@ -71,8 +71,6 @@ const thread = (
     modelSelection: { instanceId: providerInstanceId, model: "gpt-5" },
     runtimeMode: "full-access",
     interactionMode: "default",
-    branch: null,
-    worktreePath: null,
     activeProviderThreadId: null,
     lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
     forkedFrom: null,

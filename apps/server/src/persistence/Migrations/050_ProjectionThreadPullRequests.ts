@@ -1,4 +1,3 @@
-import { legacyThreadPullRequestKey } from "@t3tools/shared/threadPullRequests";
 import * as Effect from "effect/Effect";
 import * as SqlClient from "effect/sql/SqlClient";
 
@@ -26,6 +25,27 @@ function parseLegacyLinkedPullRequest(json: string): LegacyLinkedPullRequest | n
   } catch {
     return null;
   }
+}
+
+/**
+ * The key of a legacy linked pull request, which recorded no host of its own.
+ * Inlined when the shared pull request helpers were removed; the table this
+ * migration fills is no longer read.
+ */
+function legacyThreadPullRequestKey(linked: LegacyLinkedPullRequest): {
+  readonly host: string;
+  readonly repository: string;
+} {
+  let host: string;
+  try {
+    host = new URL(linked.url).hostname;
+  } catch {
+    host = "unknown";
+  }
+  return {
+    host: host.trim().toLowerCase() || "unknown",
+    repository: linked.repository.trim().toLowerCase(),
+  };
 }
 
 export default Effect.gen(function* () {

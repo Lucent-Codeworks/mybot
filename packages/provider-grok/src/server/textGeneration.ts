@@ -6,7 +6,7 @@ import * as Schema from "effect/Schema";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 import type * as EffectAcpErrors from "effect-acp/errors";
 
-import { TextGenerationError } from "@t3tools/contracts";
+import { TextGenerationError } from "@t3tools/provider-core/server/textGeneration";
 import type { GrokSettings } from "../settings.ts";
 import { getModelSelectionStringOptionValue } from "@t3tools/shared/model";
 
@@ -129,8 +129,5 @@ export const makeGrokTextGeneration = Effect.fn("makeGrokTextGeneration")(functi
     );
   };
 
-  return TextGenerationOperations.fromRunner(
-    "GrokTextGeneration",
-    TextGenerationOperations.withoutInvestigation("Grok", runGrokJson),
-  );
+  return TextGenerationOperations.fromRunner("GrokTextGeneration", runGrokJson);
 });

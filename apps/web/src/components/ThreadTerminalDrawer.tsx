@@ -63,7 +63,6 @@ import { useOpenInPreferredEditor } from "../editorPreferences";
 import { resolvePathLinkTarget } from "@t3tools/shared/fileLinks";
 import { isTerminalUrl } from "../terminal-links";
 import {
-  isDiffToggleShortcut,
   isTerminalClearShortcut,
   isTerminalNewShortcut,
   isTerminalSplitShortcut,
@@ -388,7 +387,6 @@ interface TerminalViewportProps {
   terminalId: string;
   terminalLabel: string;
   cwd: string;
-  worktreePath?: string | null;
   runtimeEnv?: Record<string, string>;
   providerInstanceId?: ProviderInstanceId;
   onSessionExited: () => void;
@@ -403,7 +401,6 @@ interface TerminalViewportProps {
 
 interface TerminalLaunchLocation {
   readonly cwd: string;
-  readonly worktreePath?: string | null;
   readonly runtimeEnv?: Record<string, string>;
 }
 
@@ -414,7 +411,6 @@ export function TerminalViewport({
   terminalId,
   terminalLabel,
   cwd,
-  worktreePath,
   runtimeEnv,
   providerInstanceId,
   onSessionExited,
@@ -491,7 +487,6 @@ export function TerminalViewport({
       threadId,
       terminalId,
       cwd,
-      ...(worktreePath !== undefined ? { worktreePath } : {}),
       ...(runtimeEnv ? { env: runtimeEnv } : {}),
       ...(providerInstanceId ? { providerInstanceId } : {}),
     },
@@ -875,8 +870,7 @@ export function TerminalViewport({
           isTerminalToggleShortcut(event, currentKeybindings, options) ||
           isTerminalSplitShortcut(event, currentKeybindings, options) ||
           isTerminalSplitVerticalShortcut(event, currentKeybindings, options) ||
-          isTerminalNewShortcut(event, currentKeybindings, options) ||
-          isDiffToggleShortcut(event, currentKeybindings, options)
+          isTerminalNewShortcut(event, currentKeybindings, options)
         ) {
           return false;
         }
@@ -1051,7 +1045,7 @@ export function TerminalViewport({
         mount.focus({ preventScroll: true });
       }
     };
-  }, [cwd, environmentId, runtimeEnvKey, terminalId, threadId, worktreePath]);
+  }, [cwd, environmentId, runtimeEnvKey, terminalId, threadId]);
 
   useEffect(() => {
     const terminal = terminalRef.current;
@@ -1119,7 +1113,6 @@ interface ThreadTerminalDrawerProps {
   threadRef: ScopedThreadRef;
   threadId: ThreadId;
   cwd: string;
-  worktreePath?: string | null;
   runtimeEnv?: Record<string, string>;
   visible?: boolean;
   height: number;
@@ -1195,7 +1188,6 @@ export default function ThreadTerminalDrawer({
   threadRef,
   threadId,
   cwd,
-  worktreePath,
   runtimeEnv,
   visible = true,
   height,
@@ -1389,12 +1381,11 @@ export default function ThreadTerminalDrawer({
       return (
         terminalLaunchLocationsById?.get(terminalId) ?? {
           cwd,
-          ...(worktreePath !== undefined ? { worktreePath } : {}),
           ...(runtimeEnv ? { runtimeEnv } : {}),
         }
       );
     },
-    [cwd, runtimeEnv, terminalLaunchLocationsById, worktreePath],
+    [cwd, runtimeEnv, terminalLaunchLocationsById],
   );
   const splitTerminalActionLabel = hasReachedSplitLimit
     ? `Split Terminal Horizontally (max ${MAX_TERMINALS_PER_GROUP} per group)`
@@ -1714,9 +1705,6 @@ export default function ThreadTerminalDrawer({
                           terminalId={terminalId}
                           terminalLabel={terminalLabelById.get(terminalId) ?? "Terminal"}
                           cwd={terminalLaunchLocation.cwd}
-                          {...(terminalLaunchLocation.worktreePath !== undefined
-                            ? { worktreePath: terminalLaunchLocation.worktreePath }
-                            : {})}
                           {...(terminalLaunchLocation.runtimeEnv
                             ? { runtimeEnv: terminalLaunchLocation.runtimeEnv }
                             : {})}
@@ -1744,9 +1732,6 @@ export default function ThreadTerminalDrawer({
                   terminalId={resolvedActiveTerminalId}
                   terminalLabel={terminalLabelById.get(resolvedActiveTerminalId) ?? "Terminal"}
                   cwd={activeTerminalLaunchLocation.cwd}
-                  {...(activeTerminalLaunchLocation.worktreePath !== undefined
-                    ? { worktreePath: activeTerminalLaunchLocation.worktreePath }
-                    : {})}
                   {...(activeTerminalLaunchLocation.runtimeEnv
                     ? { runtimeEnv: activeTerminalLaunchLocation.runtimeEnv }
                     : {})}

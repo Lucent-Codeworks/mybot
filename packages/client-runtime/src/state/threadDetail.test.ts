@@ -2,8 +2,6 @@ import {
   EnvironmentId,
   NodeId,
   ProviderDriverKind,
-  RuntimeRequestId,
-  TurnItemId,
   type OrchestrationV2ThreadProjection,
   ThreadId,
   RunId,
@@ -238,91 +236,6 @@ it("does not notify the agents pill for unrelated projection updates", () => {
     ),
   );
   expect(registry.get(details.turnSubagentsAtom(ref))).toBe(before);
-  dispose();
-  registry.dispose();
-});
-
-it("keeps worktree and pending requests stable during output updates, then reflects resolution", () => {
-  const projection: OrchestrationV2ThreadProjection = {
-    ...v2Projection,
-    thread: { ...v2Projection.thread, worktreePath: "/workspace/task" },
-    runtimeRequests: [
-      {
-        id: RuntimeRequestId.make("approval"),
-        nodeId: NodeId.make("approval-node"),
-        providerTurnId: null,
-        nativeRequestRef: null,
-        kind: "command",
-        status: "pending",
-        responseCapability: { type: "not_resumable", reason: "Provider exited" },
-        createdAt: v2Now,
-        resolvedAt: null,
-      },
-    ],
-  };
-  const source = Atom.make(
-    AsyncResult.success(
-      threadState({ data: Option.some(projection), status: "live", error: Option.none() }),
-    ),
-  );
-  const details = createEnvironmentThreadDetailAtoms(() => source);
-  const registry = AtomRegistry.make();
-  const dispose = registry.mount(details.pendingRequestsAtom(ref));
-  const before = registry.get(details.pendingRequestsAtom(ref));
-  expect(before?.approvals).toHaveLength(1);
-  const streaming: OrchestrationV2ThreadProjection = {
-    ...projection,
-    turnItems: [
-      {
-        id: TurnItemId.make("output"),
-        threadId: projection.thread.id,
-        runId: null,
-        nodeId: null,
-        providerThreadId: null,
-        providerTurnId: null,
-        nativeItemRef: null,
-        parentItemId: null,
-        ordinal: 1,
-        status: "running",
-        title: null,
-        startedAt: v2Now,
-        completedAt: null,
-        updatedAt: v2Now,
-        type: "command_execution",
-        input: "pwd",
-        output: "new output",
-        exitCode: undefined,
-      },
-    ],
-  };
-  registry.set(
-    source,
-    AsyncResult.success(
-      threadState({ data: Option.some(streaming), status: "live", error: Option.none() }),
-    ),
-  );
-  expect(registry.get(details.pendingRequestsAtom(ref))).toBe(before);
-  expect(registry.get(details.worktreePathAtom(ref))).toBe("/workspace/task");
-  registry.set(
-    source,
-    AsyncResult.success(
-      threadState({
-        data: Option.some({
-          ...streaming,
-          thread: { ...projection.thread, worktreePath: "/workspace/moved" },
-          runtimeRequests: projection.runtimeRequests.map((request) => ({
-            ...request,
-            status: "resolved",
-            resolvedAt: v2Now,
-          })),
-        }),
-        status: "live",
-        error: Option.none(),
-      }),
-    ),
-  );
-  expect(registry.get(details.pendingRequestsAtom(ref))?.approvals).toEqual([]);
-  expect(registry.get(details.worktreePathAtom(ref))).toBe("/workspace/moved");
   dispose();
   registry.dispose();
 });

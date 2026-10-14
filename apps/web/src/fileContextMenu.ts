@@ -13,7 +13,7 @@ import {
 } from "@t3tools/contracts";
 import { useCallback, useMemo } from "react";
 
-import { resolveDiffPathForWorkspace } from "./diffFileActions";
+import { isWindowsAbsolutePath } from "@t3tools/shared/path";
 import {
   revealInFileExplorerLabelForKind,
   revealInFileExplorerLabelForOs,
@@ -35,32 +35,29 @@ export type FileContextMenuAction =
 
 export interface FileContextMenuTarget {
   readonly environmentId: EnvironmentId | null;
-  /** Repo- or workspace-relative file path, as shown in diffs. */
+  /** Workspace-relative file path. */
   readonly filePath: string;
   readonly workspaceRoot: string | undefined;
-  readonly repositoryRoot?: string | undefined;
 }
 
-/** Absolute path on the environment host, or null when it cannot be resolved. */
 /**
- * Absolute path on the environment host for a diff-style target, resolving
- * repo-relative paths through the workspace root like every other diff
- * surface. Returns null when the path cannot be resolved, which callers must
- * treat as "no file actions available".
+ * Absolute path on the environment host for a workspace-relative file. Returns
+ * null when the path cannot be resolved (no workspace root, an absolute path,
+ * or one that escapes the workspace), which callers must treat as "no file
+ * actions available".
  */
 export function resolveFileContextMenuAbsolutePath(target: FileContextMenuTarget): string | null {
-  const workspaceFilePath = resolveDiffPathForWorkspace({
-    filePath: target.filePath,
-    workspaceRoot: target.workspaceRoot,
-    repositoryRoot: target.repositoryRoot,
-  });
-  if (workspaceFilePath === null) return null;
-  if (target.workspaceRoot === undefined) {
-    return workspaceFilePath.startsWith("/") || /^[a-zA-Z]:/.test(workspaceFilePath)
-      ? workspaceFilePath
-      : null;
+  const { filePath, workspaceRoot } = target;
+  if (workspaceRoot === undefined) return null;
+  if (filePath.startsWith("/") || isWindowsAbsolutePath(filePath) || /^[a-zA-Z]:/.test(filePath)) {
+    return null;
   }
-  return resolvePathLinkTarget(workspaceFilePath, target.workspaceRoot);
+  const segments = filePath
+    .replaceAll("\\", "/")
+    .split("/")
+    .filter((segment) => segment.length > 0 && segment !== ".");
+  if (segments.length === 0 || segments.includes("..")) return null;
+  return resolvePathLinkTarget(segments.join("/"), workspaceRoot);
 }
 
 const EDITOR_LABEL_BY_ID = new Map(EDITORS.map((editor) => [editor.id, editor.label]));

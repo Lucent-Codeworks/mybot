@@ -414,8 +414,6 @@ describe("Grok launch permission mode", () => {
             modelSelection,
             runtimeMode: "auto-accept-edits",
             interactionMode: "default",
-            branch: null,
-            worktreePath: process.cwd(),
             activeProviderThreadId: null,
             lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
             forkedFrom: null,
@@ -434,7 +432,7 @@ describe("Grok launch permission mode", () => {
           RuntimePolicy.layerFromProjectStore.pipe(
             Layer.provide(
               Layer.mock(ProjectStore.ProjectStoreV2)({
-                get: () => Effect.die("the thread has a worktree"),
+                get: () => Effect.succeedSome({ workspaceRoot: process.cwd() } as never),
               }),
             ),
             Layer.provide(

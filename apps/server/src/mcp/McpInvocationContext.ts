@@ -11,13 +11,7 @@ import {
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 
-const ALL_MCP_CAPABILITIES = [
-  "preview",
-  "orchestration",
-  "worktree",
-  "device",
-  "pull-requests",
-] as const;
+const ALL_MCP_CAPABILITIES = ["preview", "orchestration", "device"] as const;
 export type McpCapability = (typeof ALL_MCP_CAPABILITIES)[number];
 
 /** A provider session T3 Code launched for one thread. */
@@ -47,7 +41,7 @@ export const clientRuntimeModeCeiling = (client: McpClientCaller | undefined): R
  * Who is calling and what they may do. Tool parameters choose the target
  * (thread, project); the caller sets the limits. A thread caller's omitted
  * target falls back to its own thread; a client caller has no own thread, so
- * tools that act as the caller (delegate_task, preview, worktree handoff)
+ * tools that act as the caller (delegate_task, preview)
  * need `thread`.
  */
 export interface McpInvocationScope {

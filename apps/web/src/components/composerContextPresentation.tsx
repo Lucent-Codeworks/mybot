@@ -4,7 +4,7 @@ import type { PreviewAnnotationPayload, ThreadContextRecord } from "@t3tools/con
 import { formatAttachmentSize } from "@t3tools/client-runtime/state/attachments";
 import { videoMimeType } from "@t3tools/shared/video";
 import { MessageCircleIcon, MousePointerClickIcon } from "lucide-react";
-import { createContext, type MouseEvent, type ReactElement, type ReactNode, use } from "react";
+import { createContext, type ReactElement, type ReactNode, use } from "react";
 import type { EnvironmentId } from "@t3tools/contracts";
 
 import type { ComposerFileAttachment, ComposerImageAttachment } from "~/composerDraftStore";
@@ -14,13 +14,9 @@ import {
   formatAttachmentUploadProgress,
   type AttachmentUploadState,
 } from "~/lib/attachmentUploadState";
-import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
 import {
   fileContextReference,
   imageContextReference,
-  isPullRequestSummaryContext,
-  pullRequestContextDisplayState,
-  pullRequestContextKindLabel,
   previewAnnotationContextId,
   previewAnnotationContextLabel,
   reviewCommentContextId,
@@ -43,8 +39,6 @@ import {
   ContextChipShell,
   FileChip,
   ImageChipButton,
-  PULL_REQUEST_CHIP_KINDS,
-  PullRequestChip,
   UnresolvedChip,
 } from "./contextChipParts";
 
@@ -73,7 +67,6 @@ export interface ComposerContextActions {
   expandVideo: (fileId: string) => void;
   openFile: (fileId: string) => void;
   openMention: (path: string) => void;
-  openPullRequest: (event: MouseEvent<HTMLElement>, url: string) => void;
 }
 
 export const ComposerContextActionsContext = createContext<ComposerContextActions>({
@@ -82,7 +75,6 @@ export const ComposerContextActionsContext = createContext<ComposerContextAction
   expandVideo: () => {},
   openFile: () => {},
   openMention: () => {},
-  openPullRequest: () => {},
 });
 
 export type ComposerDraftContextRecords = ReadonlyMap<string, ComposerDraftContextRecord>;
@@ -250,22 +242,6 @@ function FileContextChip(props: {
   );
 }
 
-function PullRequestContextChip(props: { record: ReviewCommentContext; kind: ContextChipKind }) {
-  const actions = use(ComposerContextActionsContext);
-  const metadata = props.record.pullRequest;
-  if (metadata === undefined) return null;
-  return (
-    <PullRequestChip
-      metadata={metadata}
-      environmentId={actions.environmentId}
-      label={reviewCommentContextLabel(props.record)}
-      kindLabel={pullRequestContextKindLabel(props.record)}
-      kind={props.kind}
-      onOpen={actions.openPullRequest}
-    />
-  );
-}
-
 function previewAnnotationTooltip(annotation: PreviewAnnotationPayload): string {
   const lines = [annotation.pageTitle?.trim() || annotation.pageUrl];
   if (annotation.comment.trim()) lines.push("", annotation.comment.trim());
@@ -293,7 +269,7 @@ function ComposerReviewCommentDetails({ comment }: { comment: ReviewCommentConte
       {comment.text.trim() ? <ChatMarkdown text={comment.text.trim()} cwd={undefined} /> : null}
       {comment.diff.trim() ? (
         <div className="flex h-64 min-h-0 flex-col overflow-hidden rounded-md border border-border">
-          <ReadOnlySourcePreview name="review.diff" text={comment.diff} />
+          <ReadOnlySourcePreview name={comment.filePath} text={comment.diff} />
         </div>
       ) : null}
     </div>
@@ -390,24 +366,14 @@ const composerContextPresentationRegistry = createContextPresentationRegistry<
         if (entry.kind !== "review-comment") {
           return <UnresolvedContextChip label={context.label} />;
         }
-        const isPullRequest = isPullRequestSummaryContext(entry.record);
-        const pullRequestState = pullRequestContextDisplayState(entry.record) ?? "unknown";
-        if (isPullRequest && entry.record.pullRequest !== undefined) {
-          return (
-            <PullRequestContextChip
-              record={entry.record}
-              kind={PULL_REQUEST_CHIP_KINDS[pullRequestState]}
-            />
-          );
-        }
         return (
           <ContextChip
-            icon={isPullRequest ? <PullRequestGlyph.pullRequest /> : <MessageCircleIcon />}
+            icon={<MessageCircleIcon />}
             label={reviewCommentContextLabel(entry.record)}
-            kindLabel={isPullRequest ? pullRequestContextKindLabel(entry.record) : "Review comment"}
+            kindLabel="Review comment"
             details={<ComposerReviewCommentDetails comment={entry.record} />}
             detailsMode={definition.capabilities.details}
-            kind={isPullRequest ? PULL_REQUEST_CHIP_KINDS[pullRequestState] : "review-comment"}
+            kind="review-comment"
           />
         );
       },

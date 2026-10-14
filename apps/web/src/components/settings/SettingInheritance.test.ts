@@ -13,30 +13,30 @@ describe("settingInheritanceLayers", () => {
     const layers = settingInheritanceLayers(
       { environmentId, label: "Laptop", projectId: null, ...resolved },
       DEFAULT_SERVER_SETTINGS,
-      "defaultAutoPull",
+      "enableAgentBrowserAccess",
     );
     expect(layers.map((layer) => [layer.label, layer.value, layer.effective])).toEqual([
       ["Laptop", "Inherits", false],
-      ["Default", "Off", true],
+      ["Default", "On", true],
     ]);
   });
 
   it("walks project override, environment value, then built-in default", () => {
     const settings = {
       ...DEFAULT_SERVER_SETTINGS,
-      defaultAutoPull: true,
-      projectSettingsOverrides: { [projectId]: { defaultAutoPull: false } },
+      enableAgentBrowserAccess: false,
+      projectSettingsOverrides: { [projectId]: { enableAgentBrowserAccess: true } },
     };
     const resolved = resolveProjectSettings(settings, projectId);
     const layers = settingInheritanceLayers(
       { environmentId, label: "Laptop", projectId, ...resolved },
       settings,
-      "defaultAutoPull",
+      "enableAgentBrowserAccess",
     );
     expect(layers.map((layer) => [layer.label, layer.value, layer.effective])).toEqual([
-      ["Project", "Off", true],
-      ["Laptop", "On", false],
-      ["Default", "Off", false],
+      ["Project", "On", true],
+      ["Laptop", "Off", false],
+      ["Default", "On", false],
     ]);
     const inherited = settingInheritanceLayers(
       {
@@ -46,49 +46,12 @@ describe("settingInheritanceLayers", () => {
         ...resolveProjectSettings(settings, ProjectId.make("other")),
       },
       settings,
-      "defaultAutoPull",
+      "enableAgentBrowserAccess",
     );
     expect(inherited.map((layer) => [layer.value, layer.effective])).toEqual([
       ["Inherits", false],
-      ["On", true],
-      ["Off", false],
-    ]);
-  });
-
-  it("shows the checkout's t3.json as a layer for file-backed keys", () => {
-    const file = { defaultThreadEnvMode: "worktree" as const };
-    const fromFile = settingInheritanceLayers(
-      {
-        environmentId,
-        label: "Laptop",
-        projectId,
-        ...resolveProjectSettings(DEFAULT_SERVER_SETTINGS, projectId, null, file),
-      },
-      DEFAULT_SERVER_SETTINGS,
-      "defaultThreadEnvMode",
-    );
-    expect(fromFile.map((layer) => [layer.label, layer.value, layer.effective])).toEqual([
-      ["Project", "Inherits", false],
-      ["Laptop", "Inherits", false],
-      ["t3.json", "New worktree", true],
-      ["Default", "Current checkout", false],
-    ]);
-    const settings = { ...DEFAULT_SERVER_SETTINGS, defaultThreadEnvMode: "local" as const };
-    const fromEnvironment = settingInheritanceLayers(
-      {
-        environmentId,
-        label: "Laptop",
-        projectId,
-        ...resolveProjectSettings(settings, projectId, null, file),
-      },
-      settings,
-      "defaultThreadEnvMode",
-    );
-    expect(fromEnvironment.map((layer) => [layer.value, layer.effective])).toEqual([
-      ["Inherits", false],
-      ["Current checkout", true],
-      ["Inherits", false],
-      ["Current checkout", false],
+      ["Off", true],
+      ["On", false],
     ]);
   });
 });

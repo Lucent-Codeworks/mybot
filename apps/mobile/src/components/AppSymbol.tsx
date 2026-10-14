@@ -58,19 +58,14 @@ import IconExternalLink from "@tabler/icons-react-native/IconExternalLink";
 import IconEyeOff from "@tabler/icons-react-native/IconEyeOff";
 import IconEye from "@tabler/icons-react-native/IconEye";
 import IconFileText from "@tabler/icons-react-native/IconFileText";
-import IconFileDiff from "@tabler/icons-react-native/IconFileDiff";
 import IconFilter from "@tabler/icons-react-native/IconFilter";
 import IconFilterFilled from "@tabler/icons-react-native/IconFilterFilled";
 import IconFolder from "@tabler/icons-react-native/IconFolder";
 import IconFolderOpen from "@tabler/icons-react-native/IconFolderOpen";
 import IconHeadphones from "@tabler/icons-react-native/IconHeadphones";
 import IconFolderPlus from "@tabler/icons-react-native/IconFolderPlus";
-import IconGitPullRequestClosed from "@tabler/icons-react-native/IconGitPullRequestClosed";
-import IconGitPullRequestDraft from "@tabler/icons-react-native/IconGitPullRequestDraft";
-import IconGitCommit from "@tabler/icons-react-native/IconGitCommit";
 import IconGitBranch from "@tabler/icons-react-native/IconGitBranch";
 import IconGitMerge from "@tabler/icons-react-native/IconGitMerge";
-import IconGitPullRequest from "@tabler/icons-react-native/IconGitPullRequest";
 import IconHammer from "@tabler/icons-react-native/IconHammer";
 import IconHome from "@tabler/icons-react-native/IconHome";
 import IconInfoCircle from "@tabler/icons-react-native/IconInfoCircle";
@@ -135,10 +130,6 @@ import { withUniwind } from "uniwind";
 
 const ANDROID_ICON_BY_SF_SYMBOL = {
   plusminus: IconPlusMinus,
-  "git.pull-request.closed": IconGitPullRequestClosed,
-  "git.pull-request.draft": IconGitPullRequestDraft,
-  "git.commit": IconGitCommit,
-  "arrow.branch": IconGitBranch,
   "arrow.left": IconArrowLeft,
   "arrow.right": IconArrowRight,
   "arrow.left.arrow.right": IconArrowsLeftRight,
@@ -148,7 +139,6 @@ const ANDROID_ICON_BY_SF_SYMBOL = {
   "arrow.right.circle": IconArrowRightCircle,
   "arrow.triangle.branch": IconGitBranch,
   "arrow.triangle.merge": IconGitMerge,
-  "arrow.triangle.pull": IconGitPullRequest,
   "square.3.layers.3d": IconStack2,
   "arrow.turn.left.up": IconArrowBackUp,
   "arrow.up": IconArrowUp,
@@ -189,7 +179,6 @@ const ANDROID_ICON_BY_SF_SYMBOL = {
   doc: IconFileText,
   "doc.on.doc": IconCopy,
   "doc.text": IconFileText,
-  "file.diff": IconFileDiff,
   ellipsis: IconDots,
   moon: IconMoon,
   "ellipsis.circle": IconDotsCircleHorizontal,
@@ -272,18 +261,8 @@ const ANDROID_ICON_BY_SF_SYMBOL = {
   "wifi.slash": IconWifiOff,
   xmark: IconX,
   "xmark.circle.fill": IconCircleXFilled,
-} satisfies Partial<
-  Record<
-    SFSymbol | "git.pull-request.closed" | "git.pull-request.draft" | "git.commit" | "file.diff",
-    Icon
-  >
->;
-const SF_ICON_LOOKUP: Partial<
-  Record<
-    SFSymbol | "git.pull-request.closed" | "git.pull-request.draft" | "git.commit" | "file.diff",
-    Icon
-  >
-> = ANDROID_ICON_BY_SF_SYMBOL;
+} satisfies Partial<Record<SFSymbol, Icon>>;
+const SF_ICON_LOOKUP: Partial<Record<SFSymbol, Icon>> = ANDROID_ICON_BY_SF_SYMBOL;
 
 // Callers can pass `{ ios, android }` names where `android` is a Material
 // icon name (the raw expo-symbols contract). Resolve those here too so the

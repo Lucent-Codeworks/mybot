@@ -14,10 +14,7 @@ import { useNewThreadHandler } from "~/hooks/useHandleNewThread";
 import { useScratchProject } from "~/hooks/useScratchProject";
 import { useClientSettings } from "~/hooks/useSettings";
 import { hasExplicitComposerModelSelection } from "~/lib/chatThreadActions";
-import {
-  deriveLogicalProjectKeyFromSettings,
-  selectProjectGroupingSettings,
-} from "~/logicalProject";
+import { deriveLogicalProjectKey } from "~/logicalProject";
 import {
   buildSidebarProjectPickerEntries,
   buildSidebarProjectSnapshots,
@@ -66,7 +63,6 @@ export function DraftHeroHeadline({
   const threads = useThreadShells();
   const { environments } = useEnvironments();
   const primaryEnvironmentId = usePrimaryEnvironmentId();
-  const projectGroupingSettings = useClientSettings(selectProjectGroupingSettings);
   const projectSortOrder = useClientSettings((settings) => settings.sidebarProjectSortOrder);
   const setLogicalProjectDraftThreadId = useComposerDraftStore(
     (store) => store.setLogicalProjectDraftThreadId,
@@ -91,7 +87,6 @@ export function DraftHeroHeadline({
       sortLogicalProjectsForSidebar(
         buildSidebarProjectSnapshots({
           projects,
-          settings: projectGroupingSettings,
           primaryEnvironmentId,
           resolveEnvironmentLabel: (environmentId) =>
             environmentLabelById.get(environmentId) ?? null,
@@ -99,14 +94,7 @@ export function DraftHeroHeadline({
         threads,
         projectSortOrder,
       ),
-    [
-      environmentLabelById,
-      primaryEnvironmentId,
-      projectGroupingSettings,
-      projectSortOrder,
-      projects,
-      threads,
-    ],
+    [environmentLabelById, primaryEnvironmentId, projectSortOrder, projects, threads],
   );
   // Same-named projects on two machines are only told apart by where they
   // live, so rows on another machine carry its icon once the catalog spans
@@ -263,7 +251,7 @@ export function DraftHeroHeadline({
     ) {
       return false;
     }
-    selectProject(project, deriveLogicalProjectKeyFromSettings(project, projectGroupingSettings));
+    selectProject(project, deriveLogicalProjectKey(project));
     return true;
   };
 

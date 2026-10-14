@@ -9,7 +9,6 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import {
   resolveThreadActionProjectRef,
   hasExplicitComposerModelSelection,
-  resolveNewDraftStartFromOrigin,
   resolveNewThreadModelSelectionOverride,
   startNewThreadFromContext,
   type ChatThreadActionContext,
@@ -87,21 +86,6 @@ describe("chatThreadActions", () => {
     ).toEqual(PROJECT_DEFAULT_SELECTION);
   });
 
-  it("only applies the start-from-origin default to new worktree drafts", () => {
-    expect(
-      resolveNewDraftStartFromOrigin({
-        envMode: "worktree",
-        newWorktreesStartFromOrigin: true,
-      }),
-    ).toBe(true);
-    expect(
-      resolveNewDraftStartFromOrigin({
-        envMode: "local",
-        newWorktreesStartFromOrigin: true,
-      }),
-    ).toBe(false);
-  });
-
   it("prefers the active thread project when resolving thread actions", () => {
     const projectRef = resolveThreadActionProjectRef(
       createContext({
@@ -138,7 +122,7 @@ describe("chatThreadActions", () => {
     expect(projectRef).toEqual(scopeProjectRef(ENVIRONMENT_ID, PROJECT_ID));
   });
 
-  it("inherits only the project from context, never branch or worktree state", async () => {
+  it("inherits only the project from context", async () => {
     const handleNewThread = vi.fn<ChatThreadActionContext["handleNewThread"]>(async () => {});
 
     const didStart = await startNewThreadFromContext(

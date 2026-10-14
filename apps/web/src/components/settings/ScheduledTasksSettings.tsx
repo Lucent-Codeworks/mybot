@@ -13,7 +13,6 @@ import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } fro
 import type {
   EnvironmentId,
   ModelSelection,
-  OrchestrationV2ThreadLaunchWorkspaceStrategy,
   ProjectId,
   ScheduledTask,
   ScheduledTaskId,
@@ -57,7 +56,6 @@ import { useProjects } from "../../state/entities";
 import { useEnvironmentQuery } from "../../state/query";
 import { EMPTY_SERVER_PROVIDERS, serverEnvironment } from "../../state/server";
 import { useAtomCommand } from "../../state/use-atom-command";
-import { WorktreeBaseBranchPicker } from "../WorktreeBaseBranchPicker";
 import { EnvironmentMachineIcon } from "../EnvironmentMachineIcon";
 import { AuthOrchestrationOperateScope } from "@t3tools/contracts";
 import { readEnvironmentScope } from "~/state/session";
@@ -70,7 +68,6 @@ import {
   taskToDraft,
   type DraftState,
   type ScheduleMode,
-  type WorkspaceMode,
 } from "./scheduledTasksSettings.logic";
 import { Label } from "../ui/label";
 import { Menu, MenuTrigger, MenuPopup, MenuItem, MenuSeparator } from "../ui/menu";
@@ -107,12 +104,6 @@ const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0] as const;
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const WEEKDAY_SHORT = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] as const;
 
-const WORKSPACE_MODE_LABELS: Record<WorkspaceMode, string> = {
-  worktree: "Create a new worktree",
-  root: "Use the project checkout",
-  existing_worktree: "Use a specific checkout",
-};
-
 const EMPTY_DRAFT: DraftState = {
   editingId: null,
   title: "",
@@ -124,10 +115,6 @@ const EMPTY_DRAFT: DraftState = {
   weekdays: new Set([1, 2, 3, 4, 5]),
   projectId: "",
   threadId: "",
-  workspaceMode: "worktree",
-  baseRef: "main",
-  startFromOrigin: true,
-  existingWorktreePath: "",
   modelKey: "",
   runtimeMode: "full-access",
   interactionMode: "default",
@@ -906,10 +893,6 @@ function ScheduledTaskEditorDialog({
       reportFailure("Invalid interval", "Enter an interval of at least one minute.");
       return;
     }
-    if (draft.workspaceMode === "existing_worktree" && !draft.existingWorktreePath.trim()) {
-      reportFailure("Checkout path is required", "Enter the path of the checkout to run in.");
-      return;
-    }
     // Keep the original selection object (with provider options) when the
     // picker still points at the same instance+model.
     const modelSelection =
@@ -918,16 +901,6 @@ function ScheduledTaskEditorDialog({
       draft.baseModelSelection.model === selection.model
         ? draft.baseModelSelection
         : selection;
-    const workspaceStrategy: OrchestrationV2ThreadLaunchWorkspaceStrategy =
-      draft.workspaceMode === "root"
-        ? { type: "root" }
-        : draft.workspaceMode === "existing_worktree"
-          ? { type: "existing_worktree", worktreePath: draft.existingWorktreePath.trim() }
-          : {
-              type: "worktree",
-              baseRef: draft.baseRef.trim() || "main",
-              startFromOrigin: draft.startFromOrigin,
-            };
     const input: ScheduledTaskUpsertInput = {
       ...(draft.editingId ? { id: draft.editingId as ScheduledTaskId, requireExisting: true } : {}),
       title: draft.title.trim(),
@@ -936,7 +909,8 @@ function ScheduledTaskEditorDialog({
       schedule,
       projectId: selectedProjectId as ProjectId,
       threadId: draft.threadId ? (draft.threadId as ThreadId) : null,
-      workspaceStrategy,
+      // Tasks always run in the project folder.
+      workspaceStrategy: { type: "root" },
       modelSelection,
       runtimeMode: draft.runtimeMode,
       interactionMode: draft.interactionMode,
@@ -991,9 +965,6 @@ function ScheduledTaskEditorDialog({
                     projectId: "",
                     modelKey: "",
                     baseModelSelection: null,
-                    baseRef: "main",
-                    startFromOrigin: true,
-                    existingWorktreePath: "",
                   }));
                 }}
               >
@@ -1042,80 +1013,25 @@ function ScheduledTaskEditorDialog({
               />
             </Field>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Project" htmlFor="scheduled-task-project">
-                <Select
-                  value={selectedProjectId}
-                  onValueChange={(projectId) =>
-                    setDraft((current) => ({ ...current, projectId: projectId ?? "" }))
-                  }
-                >
-                  <SelectTrigger size="sm" id="scheduled-task-project">
-                    <SelectValue placeholder="Select a project">
-                      {selectedProject?.title}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectPopup>
-                    {projects.map((project) => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.title}
-                      </SelectItem>
-                    ))}
-                  </SelectPopup>
-                </Select>
-              </Field>
-
-              <Field label="Workspace" htmlFor="scheduled-task-workspace">
-                <Select
-                  value={draft.workspaceMode}
-                  onValueChange={(value) =>
-                    setDraft((current) => ({ ...current, workspaceMode: value as WorkspaceMode }))
-                  }
-                >
-                  <SelectTrigger size="sm" id="scheduled-task-workspace">
-                    <SelectValue>{WORKSPACE_MODE_LABELS[draft.workspaceMode]}</SelectValue>
-                  </SelectTrigger>
-                  <SelectPopup>
-                    <SelectItem value="worktree">Create a new worktree</SelectItem>
-                    <SelectItem value="root">Use the project checkout</SelectItem>
-                    <SelectItem value="existing_worktree">Use a specific checkout</SelectItem>
-                  </SelectPopup>
-                </Select>
-              </Field>
-            </div>
-
-            {draft.workspaceMode === "worktree" ? (
-              <Field label="Base branch" htmlFor="scheduled-task-base-ref">
-                <WorktreeBaseBranchPicker
-                  key={`${environmentId}:${selectedProjectId}`}
-                  id="scheduled-task-base-ref"
-                  environmentId={environmentId}
-                  cwd={selectedProject?.workspaceRoot ?? null}
-                  value={draft.baseRef}
-                  onValueChange={(baseRef) => setDraft((current) => ({ ...current, baseRef }))}
-                  startFromOrigin={draft.startFromOrigin}
-                  onStartFromOriginChange={(startFromOrigin) =>
-                    setDraft((current) => ({ ...current, startFromOrigin }))
-                  }
-                  disabled={saving || !connected}
-                />
-              </Field>
-            ) : null}
-            {draft.workspaceMode === "existing_worktree" ? (
-              <Field label="Checkout path" htmlFor="scheduled-task-checkout">
-                <Input
-                  id="scheduled-task-checkout"
-                  value={draft.existingWorktreePath}
-                  placeholder="/path/to/checkout"
-                  onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      existingWorktreePath: event.target.value,
-                    }))
-                  }
-                />
-              </Field>
-            ) : null}
+            <Field label="Project" htmlFor="scheduled-task-project">
+              <Select
+                value={selectedProjectId}
+                onValueChange={(projectId) =>
+                  setDraft((current) => ({ ...current, projectId: projectId ?? "" }))
+                }
+              >
+                <SelectTrigger size="sm" id="scheduled-task-project">
+                  <SelectValue placeholder="Select a project">{selectedProject?.title}</SelectValue>
+                </SelectTrigger>
+                <SelectPopup>
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.title}
+                    </SelectItem>
+                  ))}
+                </SelectPopup>
+              </Select>
+            </Field>
 
             <Field label="Prompt" htmlFor="scheduled-task-prompt">
               <Textarea

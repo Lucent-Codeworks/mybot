@@ -1,7 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import type { EnvironmentThreadSearchMatch } from "@t3tools/client-runtime/state/thread-search";
 import { THREAD_JUMP_KEYBINDING_COMMANDS } from "@t3tools/contracts";
-import { threadPullRequestSearchTerms } from "@t3tools/shared/threadPullRequests";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
@@ -59,7 +58,6 @@ const ACTION_ICONS: Record<string, AppSymbolName> = {
   archive: "archivebox",
   files: "doc.text",
   terminal: "terminal",
-  review: "arrow.triangle.pull",
   copyThreadReference: "link",
 };
 
@@ -190,7 +188,7 @@ export function CommandPalette(props: {
         key: "addProject",
         kind: "action",
         title: "Add project",
-        searchTerms: ["folder", "clone", "repository", "git"],
+        searchTerms: ["folder", "directory", "create"],
         run: () => navigation.navigate("NewTaskSheet", { screen: "AddProject" }),
       },
       {
@@ -287,8 +285,7 @@ export function CommandPalette(props: {
       const threadActions = [
         ["files", "Go to file", ["open", "files", "browse", "search"]],
         ["terminal", "Open terminal", ["shell", "console"]],
-        ["review", "Review changes", ["diff", "git", "pull request"]],
-        ["copyThreadReference", "Copy PR link or thread ID", ["reference", "clipboard"]],
+        ["copyThreadReference", "Copy thread ID", ["reference", "clipboard"]],
       ] as const;
       actions.push(
         ...threadActions.map(([command, title, searchTerms]) => ({
@@ -332,12 +329,7 @@ export function CommandPalette(props: {
           kind: "thread",
           title: thread.title || "Untitled thread",
           detail: [project?.title, environment].filter(Boolean).join(" · "),
-          searchTerms: [
-            project?.title ?? "",
-            environment,
-            thread.branch ?? "",
-            ...threadPullRequestSearchTerms(thread),
-          ],
+          searchTerms: [project?.title ?? "", environment],
           run: () => selectThread(thread),
         };
       });

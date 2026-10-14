@@ -7,7 +7,6 @@ import { usePrimaryEnvironmentId } from "../../state/environments";
 import { useRightPanelStore } from "~/rightPanelStore";
 import { AttachmentFilePreview } from "../files/AttachmentFilePreview";
 import { Dialog, DialogPopup, DialogTitle } from "../ui/dialog";
-import { filterComposerPullRequestMatches } from "@t3tools/shared/composerPullRequestMatches";
 import { importPastedComposerText, readPastedComposerContext } from "../composerInlineTokenPaste";
 import { elementContextToPreviewAnnotation } from "../../lib/elementContext";
 import { RefreshIcon } from "~/components/ui/refresh-icon";
@@ -26,7 +25,6 @@ import type {
   EnvironmentId,
   ModelSelection,
   ProjectId,
-  PullRequestListInput,
   PreviewAnnotationPayload,
   ProviderApprovalDecision,
   ThreadContextRecord,
@@ -212,7 +210,6 @@ import {
   composerContextRecordsFromDraft,
   uploadedContextRecordFromDraft,
 } from "../composerContextPresentation";
-import { useOpenPrLink } from "~/lib/openPullRequestLink";
 import {
   collectInlineContextIds,
   stripInlineContextReferences,
@@ -234,7 +231,6 @@ import {
   previewAnnotationContextRecord,
   previewAnnotationFromRecord,
   reviewCommentContextId,
-  reviewCommentContextReference,
   reviewCommentContextRecord,
   reviewCommentFromRecord,
   terminalContextDraftFromRecord,
@@ -253,13 +249,6 @@ import { resolveAssetUrl } from "~/assets/assetUrls";
 import { assetEnvironment } from "~/state/assets";
 import { readPreparedConnection } from "~/state/session";
 import { useAtomQueryRunner } from "~/state/use-atom-query-runner";
-import {
-  pullRequestEnvironment,
-  usePullRequestList,
-  type EnvironmentQueryTarget,
-} from "~/state/pullRequests";
-import { useEnvironmentQuery } from "~/state/query";
-import { useDebouncedValue } from "~/state/queries";
 import { ProviderModelPicker } from "./ProviderModelPicker";
 import { resolveModelPickerSelectedModel } from "./ModelPickerContent";
 import {
@@ -281,11 +270,6 @@ import {
   ComposerSelectControl,
 } from "./ComposerControl";
 import { resolveComposerMenuActiveItemId } from "./composerMenuHighlight";
-import { buildPullRequestReferenceContext } from "../pullRequest/pullRequestDetail.logic";
-import {
-  matchesPullRequestQuery,
-  rankPullRequestMatches,
-} from "../pullRequest/pullRequestList.logic";
 import {
   searchSlashCommandItems,
   slashCommandItemsForPromptPosition,
@@ -410,11 +394,6 @@ function SnapShotAttachmentFrame({
     />
   );
 }
-
-const COMPOSER_PULL_REQUEST_LIST_LIMIT = 99;
-const COMPOSER_PULL_REQUEST_RESULT_LIMIT = 12;
-const EMPTY_PULL_REQUEST_LIST_TARGETS: ReadonlyArray<EnvironmentQueryTarget<PullRequestListInput>> =
-  [];
 
 const COMPOSER_SCROLL_COLLAPSE_THRESHOLD_PX = 24;
 const COMPOSER_SCROLL_GESTURE_RESET_MS = 120;
@@ -892,7 +871,7 @@ function useComposerRestingTransition(
     const requestId = transitionLayoutRequestRef.current + 1;
     transitionLayoutRequestRef.current = requestId;
     const stateChanged = previousCollapsedRef.current !== isCollapsed;
-    // A non-Git context strip enters or leaves flow through ChatView state in
+    // A context strip enters or leaves flow through ChatView state in
     // an earlier layout effect. Let React flush that parent update before the
     // FLIP reads its destination geometry, while still running before paint.
     queueMicrotask(() => {
@@ -1364,7 +1343,6 @@ const ComposerFooterPrimaryActions = memo(function ComposerFooterPrimaryActions(
   activeContextWindow: ContextWindowSnapshot | null;
   reserveContextWindowMeter: boolean;
   activeThreadModelDisplayName: string | null;
-  isPreparingWorktree: boolean;
   pendingAction: {
     questionIndex: number;
     isLastQuestion: boolean;
@@ -1425,7 +1403,6 @@ const ComposerFooterPrimaryActions = memo(function ComposerFooterPrimaryActions(
         sendDisabledReason={props.sendDisabledReason}
         isConnecting={props.isConnecting}
         isEnvironmentUnavailable={props.isEnvironmentUnavailable}
-        isPreparingWorktree={props.isPreparingWorktree}
         hasSendableContent={props.hasSendableContent}
         canResume={props.canResume}
         preserveComposerFocusOnPointerDown={props.preserveComposerFocusOnPointerDown ?? false}
@@ -1556,7 +1533,6 @@ export interface ChatComposerProps {
   canResume: boolean;
   isRevertingCheckpoint?: boolean;
   sendDisabledReason: string | null;
-  isPreparingWorktree: boolean;
   bannerItems: readonly ComposerBannerStackItem[];
   /** Tokens a stale session would re-read; null when the thread is not offered compaction. */
   resumeCompactionTokens: number | null;
@@ -1626,9 +1602,7 @@ export interface ChatComposerProps {
   settings: UnifiedSettings;
   keybindings: ResolvedKeybindingsConfig;
   terminalOpen: boolean;
-  gitCwd: string | null;
-  pullRequestProjectId: ProjectId | null;
-  pullRequestRepository: string | null;
+  workspaceCwd: string | null;
   restingControlsHost: HTMLDivElement | null;
   restingControlsHaveLeadingContext: boolean;
   onRestingControlsVisibilityChange: (visible: boolean) => void;
@@ -1742,7 +1716,6 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     canResume,
     isRevertingCheckpoint = false,
     sendDisabledReason: externalSendDisabledReason,
-    isPreparingWorktree,
     environmentUnavailable,
     activePendingApproval: incomingPendingApproval,
     pendingApprovals,
@@ -1772,9 +1745,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     settings,
     keybindings,
     terminalOpen,
-    gitCwd,
-    pullRequestProjectId,
-    pullRequestRepository,
+    workspaceCwd,
     restingControlsHost,
     restingControlsHaveLeadingContext,
     onRestingControlsVisibilityChange,
@@ -1919,13 +1890,12 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   }, [composerImages, composerPreviewAnnotations]);
   const nonPersistedComposerImageIds = attachmentDraft.nonPersistedImageIds;
   const uploadsByImageId = useAttachmentUploadStore((state) => state.uploadsByImageId);
-  const openPrLink = useOpenPrLink(routeThreadRef);
   const [previewFileId, setPreviewFileId] = useState<string | null>(null);
   const previewFile = composerFiles.find((file) => file.id === previewFileId);
   const composerContextActions = useMemo(
     () => ({
       environmentId,
-      cwd: gitCwd ?? undefined,
+      cwd: workspaceCwd ?? undefined,
       expandImage: (imageId: string) => {
         const preview = buildExpandedImagePreview(composerImages, imageId);
         if (preview) onExpandImage(preview);
@@ -1952,19 +1922,8 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
         });
         if (persistedPreview) onExpandImage(persistedPreview);
       },
-      openPullRequest: (event: React.MouseEvent<HTMLElement>, url: string) => {
-        openPrLink(event, url);
-      },
     }),
-    [
-      composerFiles,
-      composerImages,
-      gitCwd,
-      environmentId,
-      onExpandImage,
-      openPrLink,
-      routeThreadRef,
-    ],
+    [composerFiles, composerImages, workspaceCwd, environmentId, onExpandImage, routeThreadRef],
   );
   const composerContextRecords = useMemo(
     () =>
@@ -2243,15 +2202,17 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   // Memoized so the composer menu memo below can cache between renders.
   const selectedProviderSkills = useMemo(
     () =>
-      selectedProviderStatus ? resolveProviderSkillsForCwd(selectedProviderStatus, gitCwd) : [],
-    [gitCwd, selectedProviderStatus],
+      selectedProviderStatus
+        ? resolveProviderSkillsForCwd(selectedProviderStatus, workspaceCwd)
+        : [],
+    [workspaceCwd, selectedProviderStatus],
   );
   const selectedProviderSlashCommands = useMemo(
     () =>
       selectedProviderStatus
-        ? resolveProviderSlashCommandsForCwd(selectedProviderStatus, gitCwd)
+        ? resolveProviderSlashCommandsForCwd(selectedProviderStatus, workspaceCwd)
         : [],
-    [gitCwd, selectedProviderStatus],
+    [workspaceCwd, selectedProviderStatus],
   );
   const refreshProviders = useAtomCommand(serverEnvironment.refreshProviders, {
     reportFailure: false,
@@ -2264,12 +2225,12 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     notBefore: number;
   } | null>(null);
   const workspaceRefreshScopeKey =
-    gitCwd && selectedProviderEntry
-      ? `${environmentId}:${selectedProviderEntry.instanceId}:${gitCwd}`
+    workspaceCwd && selectedProviderEntry
+      ? `${environmentId}:${selectedProviderEntry.instanceId}:${workspaceCwd}`
       : null;
   const workspaceSlashCommandsPending =
     selectedProviderStatus?.workspaceSnapshots?.some(
-      (snapshot) => snapshot.cwd === gitCwd && snapshot.slashCommandsPending === true,
+      (snapshot) => snapshot.cwd === workspaceCwd && snapshot.slashCommandsPending === true,
     ) ?? false;
   useEffect(() => {
     if (
@@ -2290,17 +2251,17 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   useEffect(() => {
     const hasWorkspaceSnapshot = hasCompleteProviderWorkspaceSnapshot(
       selectedProviderStatus,
-      gitCwd,
+      workspaceCwd,
     );
     if (hadWorkspaceSnapshotRef.current && !hasWorkspaceSnapshot) {
       workspaceRefreshKeyRef.current = null;
       setWorkspaceRefreshRetry(null);
     }
     hadWorkspaceSnapshotRef.current = hasWorkspaceSnapshot;
-  }, [gitCwd, selectedProviderStatus]);
+  }, [workspaceCwd, selectedProviderStatus]);
   useEffect(() => {
-    if (!gitCwd || !selectedProviderEntry) return;
-    const key = `${environmentId}:${selectedProviderEntry.instanceId}:${gitCwd}`;
+    if (!workspaceCwd || !selectedProviderEntry) return;
+    const key = `${environmentId}:${selectedProviderEntry.instanceId}:${workspaceCwd}`;
     const now = Date.now();
     const lastRequest = workspaceRefreshKeyRef.current;
     if (
@@ -2308,7 +2269,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       now - lastRequest.requestedAt < PROVIDER_WORKSPACE_SNAPSHOT_TTL_MS
     )
       return;
-    if (hasCurrentProviderWorkspaceSnapshot(selectedProviderStatus, gitCwd, now)) {
+    if (hasCurrentProviderWorkspaceSnapshot(selectedProviderStatus, workspaceCwd, now)) {
       setWorkspaceRefreshRetry(null);
       return;
     }
@@ -2326,7 +2287,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     };
     void refreshProviders({
       environmentId,
-      input: { instanceId: selectedProviderEntry.instanceId, cwd: gitCwd },
+      input: { instanceId: selectedProviderEntry.instanceId, cwd: workspaceCwd },
     }).then((result) => {
       const hasWorkspaceSnapshot =
         result._tag === "Success" &&
@@ -2334,13 +2295,13 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
           result.value.providers.find(
             (provider) => provider.instanceId === selectedProviderEntry.instanceId,
           ),
-          gitCwd,
+          workspaceCwd,
         );
       if (!hasWorkspaceSnapshot) retryLater();
     }, retryLater);
   }, [
     environmentId,
-    gitCwd,
+    workspaceCwd,
     prompt,
     refreshProviders,
     selectedProviderEntry,
@@ -2596,23 +2557,12 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   // ------------------------------------------------------------------
   const composerTriggerKind = composerTrigger?.kind ?? null;
   const pathTriggerQuery = composerTrigger?.kind === "path" ? composerTrigger.query : "";
-  const pullRequestTriggerQuery =
-    composerTrigger?.kind === "pull-request" ? composerTrigger.query : "";
-  const pullRequestTextQuery =
-    composerTriggerKind === "pull-request" &&
-    pullRequestTriggerQuery.length > 0 &&
-    !/^\d+$/u.test(pullRequestTriggerQuery)
-      ? pullRequestTriggerQuery
-      : null;
-  const debouncedPullRequestTextQuery = useDebouncedValue(pullRequestTextQuery, 180);
-  const settledPullRequestTextQuery =
-    pullRequestTextQuery === debouncedPullRequestTextQuery ? pullRequestTextQuery : null;
   const isPathTrigger = composerTriggerKind === "path";
   // Thread shells only feed `@` thread matches, so skip shell updates otherwise.
   const environmentThreadShells = useThreadShells(isPathTrigger);
   const workspaceEntries = useComposerPathSearch({
     environmentId,
-    cwd: isPathTrigger ? gitCwd : null,
+    cwd: isPathTrigger ? workspaceCwd : null,
     query: isPathTrigger ? pathTriggerQuery : null,
   });
   const compactSlashCommandAvailable =
@@ -2625,68 +2575,6 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     composerTerminalContexts.length === 0 &&
     composerPreviewAnnotations.length === 0 &&
     composerReviewComments.length === 0;
-
-  const pullRequestListTargets = useMemo(
-    () =>
-      composerTriggerKind !== "pull-request" ||
-      pullRequestProjectId === null ||
-      (pullRequestTextQuery !== null && settledPullRequestTextQuery === null)
-        ? EMPTY_PULL_REQUEST_LIST_TARGETS
-        : [
-            {
-              environmentId,
-              input: {
-                state: "all" as const,
-                projectId: pullRequestProjectId,
-                limit: COMPOSER_PULL_REQUEST_LIST_LIMIT,
-                ...(settledPullRequestTextQuery === null
-                  ? {}
-                  : { query: settledPullRequestTextQuery }),
-              },
-            },
-          ],
-    [
-      composerTriggerKind,
-      environmentId,
-      pullRequestProjectId,
-      pullRequestTextQuery,
-      settledPullRequestTextQuery,
-    ],
-  );
-  const pullRequestLookup = usePullRequestList(pullRequestListTargets);
-  const pullRequestTriggerNumber = useMemo(() => {
-    if (composerTrigger?.kind !== "pull-request" || composerTrigger.query.length === 0) {
-      return null;
-    }
-    const number = Number(composerTrigger.query);
-    return Number.isSafeInteger(number) && number > 0 ? number : null;
-  }, [composerTrigger]);
-  const debouncedPullRequestNumber = useDebouncedValue(pullRequestTriggerNumber, 180);
-  const settledPullRequestNumber =
-    pullRequestTriggerNumber === debouncedPullRequestNumber ? pullRequestTriggerNumber : null;
-  const recentHasExactPullRequest =
-    settledPullRequestNumber !== null &&
-    pullRequestLookup.data?.entries.some(
-      (entry) =>
-        entry.projectId === pullRequestProjectId &&
-        entry.repository.trim().toLowerCase() === pullRequestRepository?.trim().toLowerCase() &&
-        entry.number === settledPullRequestNumber,
-    ) === true;
-  const exactPullRequestLookup = useEnvironmentQuery(
-    settledPullRequestNumber === null ||
-      pullRequestProjectId === null ||
-      pullRequestRepository === null ||
-      recentHasExactPullRequest
-      ? null
-      : pullRequestEnvironment.detail({
-          environmentId,
-          input: {
-            projectId: pullRequestProjectId,
-            repository: pullRequestRepository,
-            number: settledPullRequestNumber,
-          },
-        }),
-  );
 
   const composerMenuItems = useMemo<ComposerCommandItem[]>(() => {
     if (!composerTrigger) return [];
@@ -2787,57 +2675,6 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
           (skill.scope ? `${skill.scope} skill` : "Run provider skill"),
       }));
     }
-    if (
-      composerTrigger.kind === "pull-request" &&
-      pullRequestProjectId !== null &&
-      pullRequestRepository !== null
-    ) {
-      const exactPullRequest =
-        exactPullRequestLookup.data?.number === pullRequestTriggerNumber
-          ? [exactPullRequestLookup.data]
-          : [];
-      const matches = /^\d*$/u.test(composerTrigger.query)
-        ? filterComposerPullRequestMatches({
-            entries: [...exactPullRequest, ...(pullRequestLookup.data?.entries ?? [])],
-            projectId: pullRequestProjectId,
-            repository: pullRequestRepository,
-            query: composerTrigger.query,
-            limit: COMPOSER_PULL_REQUEST_RESULT_LIMIT,
-          })
-        : rankPullRequestMatches(
-            (pullRequestLookup.data?.entries ?? []).filter((entry) => {
-              if (
-                entry.projectId !== pullRequestProjectId ||
-                entry.repository.trim().toLowerCase() !== pullRequestRepository.trim().toLowerCase()
-              ) {
-                return false;
-              }
-              const provider = pullRequestLookup.data?.providers.find(
-                (candidate) => candidate.host === entry.host,
-              );
-              return (
-                provider?.searchesOnHost === true ||
-                matchesPullRequestQuery(entry, composerTrigger.query)
-              );
-            }),
-            composerTrigger.query,
-          ).slice(0, COMPOSER_PULL_REQUEST_RESULT_LIMIT);
-      return matches.map((pullRequest) => ({
-        id: `pull-request:${pullRequest.projectId}:${pullRequest.repository}:${pullRequest.number}`,
-        type: "pull-request",
-        pullRequest: {
-          number: pullRequest.number,
-          title: pullRequest.title,
-          url: pullRequest.url,
-          headBranch: pullRequest.headBranch,
-          baseBranch: pullRequest.baseBranch,
-          state: pullRequest.state,
-          isDraft: pullRequest.isDraft,
-        },
-        label: `#${pullRequest.number}`,
-        description: pullRequest.title,
-      }));
-    }
     return [];
   }, [
     activeThreadId,
@@ -2845,12 +2682,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     composerTrigger,
     environmentId,
     environmentThreadShells,
-    exactPullRequestLookup.data,
     planModeUiEnabled,
-    pullRequestLookup.data,
-    pullRequestProjectId,
-    pullRequestRepository,
-    pullRequestTriggerNumber,
     selectedProvider,
     selectedProviderSkills,
     selectedProviderSlashCommands,
@@ -2915,13 +2747,12 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     if (showPlanFollowUpPrompt) {
       return prompt.trim().length > 0 ? "plan:refine" : "plan:implement";
     }
-    return `idle:${composerSendState.hasSendableContent}:${isSendBusy}:${isConnecting}:${isPreparingWorktree}`;
+    return `idle:${composerSendState.hasSendableContent}:${isSendBusy}:${isConnecting}`;
   }, [
     activePendingIsResponding,
     activePendingProgress,
     composerSendState.hasSendableContent,
     isConnecting,
-    isPreparingWorktree,
     isSendBusy,
     phase,
     prompt,
@@ -2929,43 +2760,15 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   ]);
 
   const isComposerMenuLoading =
-    (composerTriggerKind === "path" && pathTriggerQuery.length > 0 && workspaceEntries.isPending) ||
-    (composerTriggerKind === "pull-request" &&
-      pullRequestProjectId !== null &&
-      pullRequestRepository !== null &&
-      (pullRequestLookup.isPending ||
-        pullRequestTextQuery !== debouncedPullRequestTextQuery ||
-        pullRequestTriggerNumber !== debouncedPullRequestNumber ||
-        exactPullRequestLookup.isPending));
+    composerTriggerKind === "path" && pathTriggerQuery.length > 0 && workspaceEntries.isPending;
   const composerMenuEmptyState = useMemo(() => {
     if (composerTriggerKind === "skill") {
       return "No skills found. Try / to browse provider commands.";
     }
-    if (composerTriggerKind === "pull-request") {
-      if (pullRequestProjectId === null || pullRequestRepository === null) {
-        return "Pull requests are not available for this project.";
-      }
-      if (
-        pullRequestLookup.error !== null ||
-        pullRequestLookup.data?.errors.some((error) => error.projectId === pullRequestProjectId)
-      ) {
-        return "Pull requests could not be read for this project.";
-      }
-      return composerTrigger?.query
-        ? `No pull request matches ${composerTrigger.query}.`
-        : "No pull requests found in this repository.";
-    }
     return composerTriggerKind === "path"
       ? "No matching files or folders."
       : "No matching command.";
-  }, [
-    composerTrigger,
-    composerTriggerKind,
-    pullRequestLookup.data?.errors,
-    pullRequestLookup.error,
-    pullRequestProjectId,
-    pullRequestRepository,
-  ]);
+  }, [composerTriggerKind]);
 
   // ------------------------------------------------------------------
   // Provider traits UI
@@ -4112,36 +3915,6 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
         }
         return;
       }
-      if (item.type === "pull-request") {
-        if (
-          trigger.kind !== "pull-request" ||
-          !composerMenuItemsRef.current.some((candidate) => candidate.id === item.id)
-        ) {
-          return;
-        }
-        const comment = buildPullRequestReferenceContext(item.pullRequest);
-        const replacement = `${formatInlineContextReference(
-          reviewCommentContextReference(comment),
-        )} `;
-        const replacementRangeEnd = extendReplacementRangeForTrailingSpace(
-          snapshot.value,
-          trigger.rangeEnd,
-          replacement,
-        );
-        const applied = applyPromptReplacement(
-          trigger.rangeStart,
-          replacementRangeEnd,
-          replacement,
-          { expectedText: snapshot.value.slice(trigger.rangeStart, replacementRangeEnd) },
-        );
-        if (applied) {
-          addComposerDraftReviewComment(composerDraftTarget, comment, {
-            appendReference: false,
-          });
-          setComposerHighlightedItemId(null);
-        }
-        return;
-      }
       if (item.type === "thread") {
         if (trigger.kind !== "path") return;
         const shell = readThreadShell(item.thread);
@@ -5233,7 +5006,6 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     composerMenuOpen ||
     isStashMenuOpen ||
     isDragOverComposer ||
-    isPreparingWorktree ||
     showProviderUnavailable ||
     projectSelectionRequired ||
     environmentUnavailable !== null ||
@@ -6255,7 +6027,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     [expandMobileComposer, insertComposerText, isComposerCollapsedMobile],
   );
 
-  // Context produced by other panels (diff comments, preview picks) asks the store to place
+  // Context produced by other panels (file comments, preview picks) asks the store to place
   // its chip; while this composer is mounted for the draft, that means the caret.
   const insertContextReferencesAtCaret = useCallback(
     (references: ReadonlyArray<ComposerContextReference>): boolean =>
@@ -6946,7 +6718,6 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                                 noProviderAvailable ||
                                 projectSelectionRequired
                               }
-                              isPreparingWorktree={false}
                               hasSendableContent={false}
                               preserveComposerFocusOnPointerDown
                               onPreviousPendingQuestion={onPreviousActivePendingUserInputQuestion}
@@ -7109,9 +6880,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
               <div role="status" aria-atomic="true" className="sr-only">
                 {composerSuggestionsVisible && composerMenuItems.length === 0
                   ? isComposerMenuLoading
-                    ? composerTriggerKind === "pull-request"
-                      ? "Finding pull request..."
-                      : "Searching workspace files..."
+                    ? "Searching workspace files..."
                     : composerMenuEmptyState
                   : ""}
               </div>
@@ -7636,7 +7405,6 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                         noProviderAvailable ||
                         projectSelectionRequired
                       }
-                      isPreparingWorktree={false}
                       hasSendableContent={false}
                       preserveComposerFocusOnPointerDown
                       onPreviousPendingQuestion={onPreviousActivePendingUserInputQuestion}
@@ -7762,7 +7530,6 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                       noProviderAvailable ||
                       projectSelectionRequired
                     }
-                    isPreparingWorktree={isPreparingWorktree}
                     hasSendableContent={composerSendState.hasSendableContent}
                     canResume={showResumeAction}
                     preserveComposerFocusOnPointerDown={isMobileViewport || isComposerResting}

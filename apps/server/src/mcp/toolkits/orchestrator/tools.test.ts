@@ -79,13 +79,7 @@ describe("orchestrator MCP tool guidance", () => {
     };
 
     assert.equal(schema.type, "object");
-    assert.hasAllKeys(schema.properties ?? {}, [
-      "threadId",
-      "action",
-      "title",
-      "pullRequest",
-      "clientRequestId",
-    ]);
-    assert.include(ThreadUpdateTool.description ?? "", "Workspace and branch changes");
+    assert.hasAllKeys(schema.properties ?? {}, ["threadId", "action", "title", "clientRequestId"]);
+    assert.include(ThreadUpdateTool.description ?? "", "action='regenerate_title'");
   });
 });

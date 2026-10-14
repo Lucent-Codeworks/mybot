@@ -750,15 +750,12 @@ it("shows readable models and only differing workspace details in agent tooltips
   const parent = {
     id: "parent",
     projectId: "main",
-    worktreePath: null,
     lineage: {},
     activeProviderThreadId: null,
   };
   const child = {
     id: "child",
     projectId: "main",
-    worktreePath: null as string | null,
-    branch: null as string | null,
     title: "Worker",
     modelSelection: {
       instanceId: "codex",
@@ -848,7 +845,6 @@ it("shows readable models and only differing workspace details in agent tooltips
   expect(text()).not.toContain("Tokens");
   expect(text()).not.toContain("Open subagent");
   expect(text()).not.toContain("Project");
-  expect(text()).not.toContain("Worktree");
   expect(text()).not.toContain("Workspace");
 
   for (const [model, expected] of [
@@ -1111,30 +1107,13 @@ it("shows readable models and only differing workspace details in agent tooltips
   expect(text()).not.toContain(result);
   state.projection = projection;
 
-  child.worktreePath = "/main/worktrees/checker";
-  await rerender();
-  expect(text()).toContain("Worktree");
-  expect(text()).toContain("checker");
-  expect(text()).not.toContain("/main/worktrees");
-  expect(text()).not.toContain("Project");
-
-  child.branch = "fix/checker";
-  await rerender();
-  expect(text()).toContain("Branch");
-  expect(text()).toContain("fix/checker");
-  expect(text()).not.toContain("Worktree");
-  expect(text()).not.toContain("/main/worktrees");
-
   child.projectId = "other";
-  child.worktreePath = null;
-  child.branch = null;
   await rerender();
   expect(text()).toContain("Other project");
   expect(text()).toContain("Workspace");
   expect(text()).toContain("other");
   expect(text()).not.toContain("/other");
   expect(text()).not.toContain("Wrong environment");
-  expect(text()).not.toContain("Worktree");
 
   state.shells = [];
   state.configs.clear();

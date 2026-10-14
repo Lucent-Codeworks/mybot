@@ -699,8 +699,8 @@ const horizontalRuleInputRule = new InputRule({
 
 /**
  * `# ` through `###### ` at a top-level paragraph make a heading. The space
- * is required, which is exactly what keeps `#1234` a pull request reference
- * with its picker rather than a heading. Not inside lists or quotes, whose
+ * is required, which is exactly what keeps `#1234` plain text rather than a
+ * heading. Not inside lists or quotes, whose
  * serializers have no line for one.
  */
 const headingInputRule = new InputRule({

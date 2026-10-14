@@ -4,7 +4,6 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 
 import { useEnvironments, type EnvironmentPresentation } from "../../state/environments";
 import { useProjects } from "../../state/entities";
-import { useMobileProjectGroupingSettings } from "../../state/project-grouping";
 import { toggleSettingsEnvironment } from "./settings-environment-filter.logic";
 
 export type SettingsTarget = EnvironmentPresentation & {
@@ -33,18 +32,9 @@ const SettingsEnvironmentFilterContext = createContext<{
 export function SettingsEnvironmentFilterProvider(props: { readonly children: ReactNode }) {
   const { environments } = useEnvironments();
   const projects = useProjects();
-  const groupingSettings = useMobileProjectGroupingSettings();
-  const groupingMode = groupingSettings.sidebarProjectGroupingMode;
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<EnvironmentId> | null>(null);
   const [selectedProjectKey, setSelectedProjectKey] = useState<string | null>(null);
-  const projectGroups = useMemo(
-    () =>
-      buildProjectGroups({
-        projects,
-        settings: { sidebarProjectGroupingMode: groupingMode, sidebarProjectGroupingOverrides: {} },
-      }),
-    [projects, groupingMode],
-  );
+  const projectGroups = useMemo(() => buildProjectGroups({ projects }), [projects]);
   const availableTargets = useMemo(() => connectedSettingsTargets(environments), [environments]);
   const selectedTargets = useMemo(
     () =>

@@ -7,9 +7,7 @@ import {
   type ServerSettings,
 } from "@t3tools/contracts";
 import { describe, expect, it, vi } from "vite-plus/test";
-import { applyServerSettingsPatch } from "@t3tools/shared/serverSettings";
 import * as Cause from "effect/Cause";
-import { resolveWorktreeCleanup } from "@t3tools/shared/projectSettings";
 
 import type { SidebarProjectSnapshot } from "../../sidebarProjectGrouping";
 import {
@@ -134,73 +132,30 @@ describe("scoped settings targets", () => {
   it("resolves each member's effective settings and source at project scope", () => {
     const overridden = environment("Server", {
       settings: {
-        defaultAutoPull: false,
-        projectSettingsOverrides: { [projectId]: { defaultAutoPull: true } },
+        enableAgentDeviceAccess: false,
+        projectSettingsOverrides: { [projectId]: { enableAgentDeviceAccess: true } },
       },
     });
     const targets = resolveScopedSettingsTargets(project, [laptop, overridden]);
-    expect(targets.map((target) => [target.projectId, target.settings.defaultAutoPull])).toEqual([
+    expect(
+      targets.map((target) => [target.projectId, target.settings.enableAgentDeviceAccess]),
+    ).toEqual([
       [projectId, true],
       [laptopProjectId, false],
     ]);
-    expect(scopedSettingsSource(targets, ["defaultAutoPull"])).toBe("mixed");
-    expect(scopedSettingsSource([targets[0]!], ["defaultAutoPull"])).toBe("project");
+    expect(scopedSettingsSource(targets, ["enableAgentDeviceAccess"])).toBe("mixed");
+    expect(scopedSettingsSource([targets[0]!], ["enableAgentDeviceAccess"])).toBe("project");
     expect(scopedSettingsSource(targets, ["enableProviderUpdateChecks"])).toBe("environment");
-    expect(scopedSettingsAreMixed(targets, ["defaultAutoPull"])).toBe(true);
+    expect(scopedSettingsAreMixed(targets, ["enableAgentDeviceAccess"])).toBe(true);
   });
 });
 
 describe("scoped settings writes", () => {
-  it("edits the effective machine policy without changing other machines' rules", () => {
-    const custom = environment("Laptop", {
-      settings: {
-        worktreeCleanup: {
-          mode: "custom",
-          rules: {
-            worktreeAfterDays: 12,
-            worktreeOnDelete: true,
-            worktreeOnMerge: true,
-            worktreeUnchanged: false,
-            worktreeKeepWhen: "uncommitted-changes",
-          },
-        },
-      },
-    });
-    const disabled = environment("Server", {
-      settings: { worktreeCleanup: { mode: "off" } },
-    });
-    const targets = [custom, disabled];
-    const plan = planScopedSettingsPatch(all, targets, {
-      storageCleanup: { worktreeOnDelete: false },
-    });
-    const policies = plan.serverWrites.map((write, index) =>
-      resolveWorktreeCleanup(
-        applyServerSettingsPatch(targets[index]!.serverConfig!.settings, write.patch),
-        null,
-      ),
-    );
-    expect(policies).toEqual([
-      {
-        worktreeAfterDays: 12,
-        worktreeOnDelete: false,
-        worktreeOnMerge: true,
-        worktreeUnchanged: false,
-        worktreeKeepWhen: "uncommitted-changes",
-      },
-      {
-        worktreeAfterDays: null,
-        worktreeOnDelete: false,
-        worktreeOnMerge: false,
-        worktreeUnchanged: false,
-        worktreeKeepWhen: "uncommitted-changes",
-      },
-    ]);
-  });
   it("isolates a formerly shared server preference to the named environment", async () => {
     const persistServer = vi.fn().mockResolvedValue({ _tag: "Success" });
     const persistClient = vi.fn();
     await persistScopedSettingsPatch(
-      planScopedSettingsPatch(named, environments, { sidebarAutoSettleOnMerge: false }),
+      planScopedSettingsPatch(named, environments, { enableProviderUpdateChecks: false }),
       persistServer,
       persistClient,
     );
@@ -208,7 +163,7 @@ describe("scoped settings writes", () => {
       [
         {
           environmentId: server.environmentId,
-          input: { patch: { sidebarAutoSettleOnMerge: false } },
+          input: { patch: { enableProviderUpdateChecks: false } },
         },
       ],
     ]);
@@ -260,8 +215,8 @@ describe("scoped settings writes", () => {
     it("reports a dropped toggle", async () => {
       expect(
         await outcome(
-          planScopedSettingsPatch(all, environments, { reviewGuidesEnabled: true }),
-          upgradedLaptop({ reviewGuidesEnabled: true }),
+          planScopedSettingsPatch(all, environments, { enableDeviceSupport: true }),
+          upgradedLaptop({ enableDeviceSupport: true }),
         ),
       ).toEqual({ saved: [laptop.label], failed: unsupported });
     });
@@ -269,8 +224,8 @@ describe("scoped settings writes", () => {
     it("reports dropped text but accepts the server trimming it", async () => {
       expect(
         await outcome(
-          planScopedSettingsPatch(all, environments, { reviewGuideInstructions: " Read tests " }),
-          upgradedLaptop({ reviewGuideInstructions: "Read tests" }),
+          planScopedSettingsPatch(all, environments, { addProjectBaseDirectory: " ~/code " }),
+          upgradedLaptop({ addProjectBaseDirectory: "~/code" }),
         ),
       ).toEqual({ saved: [laptop.label], failed: unsupported });
     });
@@ -278,16 +233,16 @@ describe("scoped settings writes", () => {
     it("reports a dropped key inside a project override", async () => {
       expect(
         await outcome(
-          planScopedSettingsPatch(project, environments, { defaultAutoPull: true }),
+          planScopedSettingsPatch(project, environments, { enableAgentDeviceAccess: true }),
           upgradedLaptop({
-            projectSettingsOverrides: { [laptopProjectId]: { defaultAutoPull: true } },
+            projectSettingsOverrides: { [laptopProjectId]: { enableAgentDeviceAccess: true } },
           }),
         ),
       ).toEqual({ saved: [laptop.label], failed: unsupported });
     });
 
     it("reports a nested key dropped beside one that saved", async () => {
-      const patch = { defaultAutoPull: true, enableAgentBrowserAccess: false };
+      const patch = { enableAgentDeviceAccess: true, enableAgentBrowserAccess: false };
       const persistServer = vi.fn(async ({ environmentId }: { environmentId: EnvironmentId }) => ({
         _tag: "Success" as const,
         value: {
@@ -295,7 +250,7 @@ describe("scoped settings writes", () => {
           projectSettingsOverrides:
             environmentId === laptop.environmentId
               ? { [laptopProjectId]: patch }
-              : { [projectId]: { defaultAutoPull: true } },
+              : { [projectId]: { enableAgentDeviceAccess: true } },
         },
       }));
       expect(
@@ -306,7 +261,7 @@ describe("scoped settings writes", () => {
     it("accepts a write that matches what the environment already had", async () => {
       expect(
         await outcome(
-          planScopedSettingsPatch(all, environments, { reviewGuidesEnabled: false }),
+          planScopedSettingsPatch(all, environments, { enableDeviceSupport: false }),
           upgradedLaptop({}),
         ),
       ).toEqual({ saved: [laptop.label, server.label], failed: [] });
@@ -318,13 +273,13 @@ describe("scoped settings writes", () => {
     const persistClient = vi.fn();
     await persistScopedSettingsPatch(
       planScopedSettingsPatch(named, environments, {
-        diffIgnoreWhitespace: false,
+        wordWrap: false,
         enableProviderUpdateChecks: false,
       }),
       persistServer,
       persistClient,
     );
-    expect(persistClient).toHaveBeenCalledExactlyOnceWith({ diffIgnoreWhitespace: false });
+    expect(persistClient).toHaveBeenCalledExactlyOnceWith({ wordWrap: false });
     expect(persistServer).toHaveBeenCalledExactlyOnceWith({
       environmentId: server.environmentId,
       input: { patch: { enableProviderUpdateChecks: false } },
@@ -338,7 +293,7 @@ describe("scoped settings writes", () => {
       },
     });
     const plan = planScopedSettingsPatch(project, [laptop, withExisting], {
-      defaultAutoPull: true,
+      enableAgentDeviceAccess: true,
     });
     expect(plan.unavailableReason).toBeNull();
     expect(plan.serverWrites).toEqual([
@@ -348,7 +303,7 @@ describe("scoped settings writes", () => {
         previous: expect.anything(),
         patch: {
           projectSettingsOverrides: {
-            [projectId]: { enableAgentBrowserAccess: false, defaultAutoPull: true },
+            [projectId]: { enableAgentBrowserAccess: false, enableAgentDeviceAccess: true },
           },
         },
       },
@@ -356,85 +311,16 @@ describe("scoped settings writes", () => {
         environmentId: laptop.environmentId,
         label: laptop.label,
         previous: expect.anything(),
-        patch: { projectSettingsOverrides: { [laptopProjectId]: { defaultAutoPull: true } } },
+        patch: {
+          projectSettingsOverrides: { [laptopProjectId]: { enableAgentDeviceAccess: true } },
+        },
       },
     ]);
     expect(
-      planScopedSettingsPatch(checkout, [laptop, server], { defaultAutoPull: true }),
+      planScopedSettingsPatch(checkout, [laptop, server], { enableAgentDeviceAccess: true }),
     ).toMatchObject({
       serverWrites: [{ environmentId: server.environmentId }],
     });
-  });
-
-  it("keeps each project's other cleanup rules when changing one rule across machines", () => {
-    const machine = environment("Laptop", {
-      settings: {
-        storageCleanup: { ...DEFAULT_SERVER_SETTINGS.storageCleanup, worktreeAfterDays: 30 },
-      },
-    });
-    const customized = environment("Server", {
-      settings: {
-        projectSettingsOverrides: {
-          [projectId]: {
-            defaultAutoPull: true,
-            worktreeCleanup: {
-              mode: "custom",
-              rules: {
-                worktreeAfterDays: 8,
-                worktreeOnDelete: false,
-                worktreeOnMerge: true,
-                worktreeUnchanged: false,
-                worktreeKeepWhen: "uncommitted-changes",
-              },
-            },
-          },
-        },
-      },
-    });
-    const plan = planScopedSettingsPatch(project, [machine, customized], {
-      worktreeCleanup: { mode: "custom", rules: { worktreeOnDelete: true } },
-    });
-    expect(plan.serverWrites.map((write) => write.patch.projectSettingsOverrides)).toEqual([
-      {
-        [projectId]: {
-          defaultAutoPull: true,
-          worktreeCleanup: {
-            mode: "custom",
-            rules: {
-              worktreeAfterDays: 8,
-              worktreeOnDelete: true,
-              worktreeOnMerge: true,
-              worktreeUnchanged: false,
-              worktreeKeepWhen: "uncommitted-changes",
-            },
-          },
-        },
-      },
-      {
-        [laptopProjectId]: {
-          worktreeCleanup: {
-            mode: "custom",
-            rules: {
-              worktreeAfterDays: 30,
-              worktreeOnDelete: true,
-              worktreeOnMerge: false,
-              worktreeUnchanged: false,
-              worktreeKeepWhen: "uncommitted-changes",
-            },
-          },
-        },
-      },
-    ]);
-    expect(
-      planScopedSettingsClear(checkout, [customized], ["worktreeCleanup"]).serverWrites[0]?.patch,
-    ).toEqual({
-      projectSettingsOverrides: { [projectId]: { defaultAutoPull: true } },
-    });
-    expect(
-      planScopedSettingsPatch(project, [machine, customized], {
-        storageCleanup: { browserArtifactsAfterDays: 8 },
-      }).serverWrites,
-    ).toEqual([]);
   });
 
   it("scopes agent device access to projects while keeping hub and hosts environment-wide", () => {
@@ -459,7 +345,7 @@ describe("scoped settings writes", () => {
     });
     const legacy = environment("Server", { projectOverrides: false });
     expect(
-      planScopedSettingsPatch(checkout, [laptop, legacy], { defaultAutoPull: true }),
+      planScopedSettingsPatch(checkout, [laptop, legacy], { enableAgentDeviceAccess: true }),
     ).toMatchObject({ serverWrites: [], unavailableReason: expect.stringContaining("update") });
   });
 
@@ -467,11 +353,15 @@ describe("scoped settings writes", () => {
     const withOverrides = environment("Server", {
       settings: {
         projectSettingsOverrides: {
-          [projectId]: { defaultAutoPull: true, enableAgentBrowserAccess: false },
+          [projectId]: { enableAgentDeviceAccess: true, enableAgentBrowserAccess: false },
         },
       },
     });
-    const plan = planScopedSettingsClear(checkout, [laptop, withOverrides], ["defaultAutoPull"]);
+    const plan = planScopedSettingsClear(
+      checkout,
+      [laptop, withOverrides],
+      ["enableAgentDeviceAccess"],
+    );
     expect(plan.serverWrites).toEqual([
       {
         environmentId: server.environmentId,
@@ -484,7 +374,7 @@ describe("scoped settings writes", () => {
       planScopedSettingsClear(
         checkout,
         [laptop, withOverrides],
-        ["defaultAutoPull", "enableAgentBrowserAccess"],
+        ["enableAgentDeviceAccess", "enableAgentBrowserAccess"],
       ).serverWrites[0]?.patch,
     ).toEqual({ projectSettingsOverrides: { [projectId]: null } });
   });
@@ -548,15 +438,11 @@ describe("scoped settings mixed values", () => {
   });
 
   it("treats independently decoded equal nested settings as the same value", () => {
-    const style = {
-      ...DEFAULT_SERVER_SETTINGS.sourceControlWritingStyle,
-      mode: "custom" as const,
-      customInstructions: "Use plain language",
-    };
-    const first = environment("First", { settings: { sourceControlWritingStyle: { ...style } } });
-    const second = environment("Second", { settings: { sourceControlWritingStyle: { ...style } } });
+    const cleanup = { ...DEFAULT_SERVER_SETTINGS.storageCleanup, logsAfterDays: 14 };
+    const first = environment("First", { settings: { storageCleanup: { ...cleanup } } });
+    const second = environment("Second", { settings: { storageCleanup: { ...cleanup } } });
     const targets = resolveScopedSettingsTargets(all, [first, second]);
-    expect(scopedSettingsAreMixed(targets, ["sourceControlWritingStyle"])).toBe(false);
+    expect(scopedSettingsAreMixed(targets, ["storageCleanup"])).toBe(false);
   });
 });
 
@@ -582,12 +468,12 @@ describe("project overrides at environment scope", () => {
     const entries = listProjectOverrides(
       [
         environment(laptop, {
-          [fleet]: { defaultAutoPull: true, defaultThreadEnvMode: "local" },
-          [t3]: { defaultThreadEnvMode: "local" },
+          [fleet]: { enableAgentDeviceAccess: true, responseStreamingMode: "turn" },
+          [t3]: { responseStreamingMode: "turn" },
         }),
-        environment(desk, { [fleet]: { defaultAutoPull: false } }),
+        environment(desk, { [fleet]: { enableAgentDeviceAccess: false } }),
       ],
-      ["defaultAutoPull"],
+      ["enableAgentDeviceAccess"],
     );
     expect(entries).toEqual([
       { environmentId: laptop, projectId: fleet },
@@ -599,15 +485,15 @@ describe("project overrides at environment scope", () => {
     const plan = planProjectOverridesClear(
       [
         environment(laptop, {
-          [fleet]: { defaultAutoPull: true, defaultThreadEnvMode: "local" },
-          [t3]: { defaultAutoPull: true },
+          [fleet]: { enableAgentDeviceAccess: true, responseStreamingMode: "turn" },
+          [t3]: { enableAgentDeviceAccess: true },
         }),
       ],
       [
         { environmentId: laptop, projectId: fleet },
         { environmentId: laptop, projectId: t3 },
       ],
-      ["defaultAutoPull"],
+      ["enableAgentDeviceAccess"],
     );
     expect(plan.serverWrites).toEqual([
       {
@@ -615,95 +501,25 @@ describe("project overrides at environment scope", () => {
         label: laptop,
         previous: expect.anything(),
         patch: {
-          projectSettingsOverrides: { [fleet]: { defaultThreadEnvMode: "local" }, [t3]: null },
+          projectSettingsOverrides: { [fleet]: { responseStreamingMode: "turn" }, [t3]: null },
         },
       },
     ]);
   });
 });
 
-describe("null patches at project scope", () => {
-  it("removes the override for keys that cannot store null and keeps it for keys that can", () => {
-    const environmentId = EnvironmentId.make("laptop");
-    const projectId = ProjectId.make("fleet");
-    const scope = {
-      kind: "project" as const,
-      group: {} as never,
-      environmentId: null,
-      label: "fleet",
-      members: [{ id: projectId, environmentId } as never],
-      environmentIds: [environmentId],
-    };
-    const environments = [
-      {
-        environmentId,
-        label: "Laptop",
-        connection: { phase: "connected" as const },
-        serverConfig: {
-          settings: {
-            ...DEFAULT_SERVER_SETTINGS,
-            projectSettingsOverrides: {
-              [projectId]: { defaultThreadEnvMode: "worktree" as const, defaultAutoPull: true },
-            },
-          },
-          environment: { capabilities: { projectSettingsOverrides: true } },
-        },
-      },
-    ];
-    expect(
-      planScopedSettingsPatch(scope, environments, { defaultThreadEnvMode: null }).serverWrites[0]
-        ?.patch,
-    ).toEqual({ projectSettingsOverrides: { [projectId]: { defaultAutoPull: true } } });
-    expect(
-      planScopedSettingsPatch(scope, environments, { defaultModelSelection: null }).serverWrites[0]
-        ?.patch,
-    ).toEqual({
-      projectSettingsOverrides: {
-        [projectId]: {
-          defaultThreadEnvMode: "worktree",
-          defaultAutoPull: true,
-          defaultModelSelection: null,
-        },
-      },
-    });
-  });
-});
-
 describe("partial object patches at project scope", () => {
-  it("completes a writing style field patch from the target's effective value", () => {
+  it("completes a model selection field patch from the target's effective value", () => {
     const environmentId = EnvironmentId.make("laptop");
     const projectId = ProjectId.make("fleet");
-    const member = {
-      id: projectId,
-      environmentId,
-      physicalProjectKey: "laptop:/repo",
-      environmentLabel: "Laptop",
-      title: "fleet",
-      workspaceRoot: "/repo",
-      defaultModelSelection: null,
-      scripts: [],
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-01T00:00:00.000Z",
-    };
-    const settings = {
-      ...DEFAULT_SERVER_SETTINGS,
-      projectSettingsOverrides: {
-        [projectId]: {
-          sourceControlWritingStyle: {
-            mode: "custom" as const,
-            customInstructions: "Keep it short.",
-            followChangeRequestTemplates: false,
-          },
-        },
-      },
-    };
+    const selection = DEFAULT_SERVER_SETTINGS.textGenerationModelSelection;
     const plan = planScopedSettingsPatch(
       {
         kind: "project",
         group: {} as never,
         environmentId: null,
         label: "fleet",
-        members: [member as never],
+        members: [{ id: projectId, environmentId } as never],
         environmentIds: [environmentId],
       },
       [
@@ -712,22 +528,51 @@ describe("partial object patches at project scope", () => {
           label: "Laptop",
           connection: { phase: "connected" },
           serverConfig: {
-            settings,
+            settings: DEFAULT_SERVER_SETTINGS,
             environment: { capabilities: { projectSettingsOverrides: true } },
           },
         },
       ],
-      { sourceControlWritingStyle: { customInstructions: "Be terse." } },
+      { textGenerationModelSelection: { model: "terse-model" } },
     );
     expect(plan.serverWrites[0]?.patch).toEqual({
       projectSettingsOverrides: {
-        [projectId]: {
-          sourceControlWritingStyle: {
-            mode: "custom",
-            customInstructions: "Be terse.",
-            followChangeRequestTemplates: false,
+        [projectId]: { textGenerationModelSelection: { ...selection, model: "terse-model" } },
+      },
+    });
+  });
+
+  it("keeps a null override for keys that can store null", () => {
+    const environmentId = EnvironmentId.make("laptop");
+    const projectId = ProjectId.make("fleet");
+    const plan = planScopedSettingsPatch(
+      {
+        kind: "project",
+        group: {} as never,
+        environmentId: null,
+        label: "fleet",
+        members: [{ id: projectId, environmentId } as never],
+        environmentIds: [environmentId],
+      },
+      [
+        {
+          environmentId,
+          label: "Laptop",
+          connection: { phase: "connected" },
+          serverConfig: {
+            settings: {
+              ...DEFAULT_SERVER_SETTINGS,
+              projectSettingsOverrides: { [projectId]: { enableAgentDeviceAccess: true } },
+            },
+            environment: { capabilities: { projectSettingsOverrides: true } },
           },
         },
+      ],
+      { defaultModelSelection: null },
+    );
+    expect(plan.serverWrites[0]?.patch).toEqual({
+      projectSettingsOverrides: {
+        [projectId]: { enableAgentDeviceAccess: true, defaultModelSelection: null },
       },
     });
   });

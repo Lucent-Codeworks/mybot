@@ -6,7 +6,6 @@ import {
 import {
   type ProjectEntry,
   type ProviderDriverKind,
-  type PullRequestContextMetadata,
   type ScopedThreadRef,
   type ServerProviderSkill,
   type ServerProviderSlashCommand,
@@ -23,12 +22,10 @@ import {
 import { memo, useLayoutEffect, useRef } from "react";
 
 import { type ComposerSlashCommand, type ComposerTriggerKind } from "../../composer-logic";
-import { cn } from "~/lib/utils";
 import { Badge } from "../ui/badge";
 import { Command, CommandGroup, CommandItem, CommandList } from "../ui/command";
 import { PierreEntryIcon } from "./PierreEntryIcon";
 import { ComposerBanner } from "./ComposerBanner";
-import { resolvePullRequestState } from "../pullRequest/pullRequestPresentation";
 
 export type ComposerCommandItem =
   | {
@@ -59,13 +56,6 @@ export type ComposerCommandItem =
       type: "skill";
       provider: ProviderDriverKind;
       skill: ServerProviderSkill;
-      label: string;
-      description: string;
-    }
-  | {
-      id: string;
-      type: "pull-request";
-      pullRequest: PullRequestContextMetadata;
       label: string;
       description: string;
     }
@@ -140,9 +130,7 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
               {props.isLoading
                 ? props.triggerKind === "skill"
                   ? "Searching workspace skills..."
-                  : props.triggerKind === "pull-request"
-                    ? "Finding pull request..."
-                    : "Searching workspace files..."
+                  : "Searching workspace files..."
                 : (props.emptyStateText ??
                   (props.triggerKind === "skill"
                     ? "No skills found. Try / to browse provider commands."
@@ -170,8 +158,6 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
     props.item.type === "skill" ? resolveProviderSkillSourceKind(props.item.skill) : null;
   const isSlashSkill =
     props.triggerKind === "slash-command" && props.item.type === "skill" ? props.item.skill : null;
-  const pullRequestPresentation =
-    props.item.type === "pull-request" ? resolvePullRequestState(props.item.pullRequest) : null;
 
   return (
     <CommandItem
@@ -199,13 +185,6 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
       ) : null}
       {props.item.type === "thread" ? (
         <MessagesSquareIcon aria-hidden="true" className="size-4 shrink-0 text-secondary-label" />
-      ) : null}
-      {pullRequestPresentation ? (
-        <pullRequestPresentation.Icon
-          role="img"
-          aria-label={pullRequestPresentation.label}
-          className={cn("size-4 shrink-0", pullRequestPresentation.toneClassName)}
-        />
       ) : null}
       <span className="flex min-w-0 flex-1 items-center gap-2">
         <span className="min-w-0 max-w-[45%] shrink-0 truncate font-sans text-xs font-medium">
@@ -239,7 +218,6 @@ export function composerSuggestionOptionId(listId: string, itemId: string): stri
 
 const LISTBOX_LABEL_BY_TRIGGER: Record<ComposerTriggerKind, string> = {
   path: "Files and folders",
-  "pull-request": "Pull requests",
   "slash-command": "Commands",
   skill: "Skills",
 };

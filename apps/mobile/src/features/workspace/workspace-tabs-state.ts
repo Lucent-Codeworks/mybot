@@ -1,4 +1,4 @@
-export type WorkspaceTab = "threads" | "pullRequests";
+export type WorkspaceTab = "threads";
 export type WorkspaceSearchMode = "resting" | "active" | "expanded";
 
 export interface WorkspaceTabState {
@@ -22,7 +22,7 @@ export function initialWorkspaceTabsState(): WorkspaceTabsState {
   return {
     selectedTab: "threads",
     selectionRevision: 0,
-    tabs: { threads: emptyTab(), pullRequests: emptyTab() },
+    tabs: { threads: emptyTab() },
   };
 }
 
@@ -39,14 +39,8 @@ export function workspaceTabsReducer(
   state: WorkspaceTabsState,
   action: WorkspaceTabsAction,
 ): WorkspaceTabsState {
-  if (action.type === "select")
-    return action.tab === state.selectedTab
-      ? state
-      : {
-          ...state,
-          selectedTab: action.tab,
-          selectionRevision: state.selectionRevision + 1,
-        };
+  // Threads is the only root, so selecting it never changes anything.
+  if (action.type === "select") return state;
   const tab = action.tab ?? state.selectedTab;
   const current = state.tabs[tab];
   let next: WorkspaceTabState;
@@ -83,7 +77,7 @@ export function workspaceTabsReducer(
 }
 
 export const WORKSPACE_TOOLBAR = { height: 48, expandedGap: 10, edge: 16, gap: 8 };
-export const WORKSPACE_DOCK = { height: 48, tabsWidth: 176, gap: 12, bottomGap: 6 };
+export const WORKSPACE_DOCK = { height: 48, gap: 12, bottomGap: 6 };
 
 export function workspaceToolbarHeight(mode: WorkspaceSearchMode): number {
   return mode === "expanded"

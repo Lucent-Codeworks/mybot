@@ -108,7 +108,6 @@ describe("TerminalOpenInput", () => {
       threadId: "thread-1",
       terminalId: DEFAULT_TERMINAL_ID,
       cwd: "/tmp/project",
-      worktreePath: "/tmp/project/.t3/worktrees/feature-a",
       cols: 100,
       rows: 24,
       env: {
@@ -121,7 +120,6 @@ describe("TerminalOpenInput", () => {
       T3CODE_PROJECT_ROOT: "/tmp/project",
       CUSTOM_FLAG: "1",
     });
-    expect(parsed.worktreePath).toBe("/tmp/project/.t3/worktrees/feature-a");
     expect(parsed.providerInstanceId).toBe("codex_work");
   });
 
@@ -261,7 +259,6 @@ describe("TerminalSessionSnapshot", () => {
         threadId: "thread-1",
         terminalId: DEFAULT_TERMINAL_ID,
         cwd: "/tmp/project",
-        worktreePath: null,
         status: "running",
         pid: 1234,
         history: "hello\n",
@@ -322,7 +319,7 @@ describe("TerminalEvent", () => {
     ).toBe(true);
   });
 
-  it("accepts started events with snapshot worktree metadata", () => {
+  it("accepts started events with a snapshot", () => {
     expect(
       decodes(TerminalEvent, {
         type: "started",
@@ -331,8 +328,7 @@ describe("TerminalEvent", () => {
         snapshot: {
           threadId: "thread-1",
           terminalId: DEFAULT_TERMINAL_ID,
-          cwd: "/tmp/project/.t3/worktrees/feature-a",
-          worktreePath: "/tmp/project/.t3/worktrees/feature-a",
+          cwd: "/tmp/project",
           status: "running",
           pid: 1234,
           history: "",

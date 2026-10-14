@@ -242,19 +242,11 @@ beforeEach(() => {
   state.sessions.clear();
   for (const id of [primaryId, remoteId])
     state.sessions.set(id, Atom.make<SessionResult>(writable()).pipe(Atom.keepAlive));
-  state.projects = [primaryId, remoteId].map((environmentId) => ({
+  state.projects = [remoteId].map((environmentId) => ({
     id: ProjectId.make(`project-${environmentId}`),
     environmentId,
     title: "Shared repo",
     workspaceRoot: `/work/${environmentId}`,
-    repositoryIdentity: {
-      canonicalKey: "github.com/example/shared-repo",
-      locator: {
-        source: "git-remote",
-        remoteName: "origin",
-        remoteUrl: "https://github.com/example/shared-repo.git",
-      },
-    },
     defaultModelSelection: { instanceId, model: "gpt-5-codex" },
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
@@ -303,7 +295,6 @@ afterEach(async () => {
 function group() {
   return buildSidebarProjectSnapshots({
     projects: state.projects,
-    settings: DEFAULT_CLIENT_SETTINGS,
     primaryEnvironmentId: primaryId,
     resolveEnvironmentLabel: (id) => id,
   })[0]!;
@@ -329,7 +320,7 @@ async function grant(id: EnvironmentId, result: SessionResult) {
 }
 
 describe("project settings permissions", () => {
-  it("preflights every member before any shared field update", async () => {
+  it("blocks shared field updates and removal without project access", async () => {
     await grant(remoteId, AsyncResult.success(session([AuthSettingsWriteScope])));
     const root = await mountPanel();
     const name = root.findByProps({ "aria-label": "Project name" });
@@ -343,78 +334,37 @@ describe("project settings permissions", () => {
     expect(state.update).not.toHaveBeenCalled();
     expect(state.projects.every((project) => project.title === "Shared repo")).toBe(true);
     expect(name.props.disabled).toBe(true);
-    expect(button("Remove all entries").props.disabled).toBe(true);
+    expect(button("Remove project").props.disabled).toBe(true);
   });
 
-  it("updates every member when all have project access without settings access", async () => {
+  it("updates the project with project access but without settings access", async () => {
     const root = await mountPanel();
     await act(async () => {
       const name = root.findByProps({ "aria-label": "Project name" });
       name.props.onChange();
       name.props.onBlur({ currentTarget: { value: "Renamed" } });
     });
-    expect(state.update.mock.calls.map(([request]) => request.environmentId)).toEqual([
-      primaryId,
-      remoteId,
-    ]);
-    expect(state.projects.map((project) => project.title)).toEqual(["Renamed", "Renamed"]);
+    expect(state.update.mock.calls.map(([request]) => request.environmentId)).toEqual([remoteId]);
+    expect(state.projects.map((project) => project.title)).toEqual(["Renamed"]);
   });
 
-  it("stops before the next member if its grant is revoked during an earlier update", async () => {
-    const firstUpdate = deferred<AsyncResult.Success<void>>();
-    state.update.mockReturnValueOnce(firstUpdate.promise);
-    const root = await mountPanel();
-    await act(async () => {
-      const name = root.findByProps({ "aria-label": "Project name" });
-      name.props.onChange();
-      name.props.onBlur({ currentTarget: { value: "Renamed" } });
-    });
-    expect(state.update).toHaveBeenCalledOnce();
-
-    await grant(remoteId, AsyncResult.success(session([])));
-    await act(async () => {
-      firstUpdate.resolve(AsyncResult.success(undefined));
-      await firstUpdate.promise;
-    });
-    expect(state.update).toHaveBeenCalledOnce();
-    expect(state.update.mock.calls[0]![0].environmentId).toBe(primaryId);
-  });
-
-  it("disables removal for a checkout whose project grant is missing", async () => {
-    await grant(remoteId, AsyncResult.success(session([])));
-    const root = await mountPanel();
-    const denied = root.findByProps({ "aria-label": "Remove checkout /work/remote" });
-    expect(denied.props.disabled).toBe(true);
-    await act(async () => denied.props.onClick());
-    expect(state.confirm).not.toHaveBeenCalled();
-    expect(state.delete).not.toHaveBeenCalled();
-    expect(root.findByProps({ "aria-label": "Remove checkout /work/primary" }).props.disabled).toBe(
-      false,
-    );
-  });
-
-  it("allows removing a writable checkout while denying removal of the mixed group", async () => {
-    await grant(remoteId, AsyncResult.success(session([])));
+  it("removes the project and its drafts after confirmation", async () => {
     await mountPanel();
-    await act(async () => button("Remove all entries").props.onClick());
-    expect(state.confirm).not.toHaveBeenCalled();
-    expect(state.delete).not.toHaveBeenCalled();
-    await act(async () =>
-      renderer!.root.findByProps({ "aria-label": "Remove checkout /work/primary" }).props.onClick(),
-    );
+    await act(async () => button("Remove project").props.onClick());
+    expect(state.confirm).toHaveBeenCalledOnce();
     expect(state.delete).toHaveBeenCalledExactlyOnceWith({
-      environmentId: primaryId,
+      environmentId: remoteId,
       input: { projectId: state.projects[0]!.id, force: true },
     });
     expect(state.releaseUploads).toHaveBeenCalledOnce();
     expect(state.clearDraft).toHaveBeenCalledOnce();
   });
 
-  it("rechecks every removal target after confirmation before deleting or clearing drafts", async () => {
+  it("rechecks access after confirmation before deleting or clearing drafts", async () => {
     const confirmed = deferred<boolean>();
     state.confirm.mockReturnValueOnce(confirmed.promise);
     await mountPanel();
-    await act(async () => button("Remove all entries").props.onClick());
+    await act(async () => button("Remove project").props.onClick());
     expect(state.confirm).toHaveBeenCalledOnce();
     await grant(remoteId, AsyncResult.success(session([])));
     await act(async () => {
@@ -426,11 +376,7 @@ describe("project settings permissions", () => {
     expect(state.clearDraft).not.toHaveBeenCalled();
   });
 
-  it("reacts to another member's revoked and restored grant and guards a stale handler", async () => {
-    await grant(
-      primaryId,
-      AsyncResult.success(session([AuthOrchestrationOperateScope, AuthSettingsWriteScope])),
-    );
+  it("reacts to a revoked and restored grant and guards a stale handler", async () => {
     const root = await mountPanel();
     const name = () => root.findByProps({ "aria-label": "Project name" });
     const staleSave = name().props.onBlur;
@@ -448,7 +394,7 @@ describe("project settings permissions", () => {
       name().props.onChange();
       name().props.onBlur({ currentTarget: { value: "Renamed" } });
     });
-    expect(state.projects.map((project) => project.title)).toEqual(["Renamed", "Renamed"]);
+    expect(state.projects.map((project) => project.title)).toEqual(["Renamed"]);
   });
 
   it.each([
@@ -459,18 +405,15 @@ describe("project settings permissions", () => {
       false,
     ],
     ["refreshing", () => AsyncResult.waiting(writable()), true],
-  ] as const)(
-    "uses the current grant while a member's session is %s",
-    async (_state, result, allowed) => {
-      await grant(remoteId, result());
-      const root = await mountPanel();
-      const name = root.findByProps({ "aria-label": "Project name" });
-      expect(name.props.disabled).toBe(!allowed);
-      await act(async () => {
-        name.props.onChange();
-        name.props.onBlur({ currentTarget: { value: "Renamed" } });
-      });
-      expect(state.update).toHaveBeenCalledTimes(allowed ? 2 : 0);
-    },
-  );
+  ] as const)("uses the current grant while the session is %s", async (_state, result, allowed) => {
+    await grant(remoteId, result());
+    const root = await mountPanel();
+    const name = root.findByProps({ "aria-label": "Project name" });
+    expect(name.props.disabled).toBe(!allowed);
+    await act(async () => {
+      name.props.onChange();
+      name.props.onBlur({ currentTarget: { value: "Renamed" } });
+    });
+    expect(state.update).toHaveBeenCalledTimes(allowed ? 1 : 0);
+  });
 });

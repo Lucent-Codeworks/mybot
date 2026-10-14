@@ -37,22 +37,7 @@ import {
   TurnItemId,
 } from "./baseSchemas.ts";
 import { ChatAttachment } from "./chatAttachment.ts";
-import {
-  OrchestrationGetFullThreadDiffInput,
-  OrchestrationGetFullThreadDiffResult,
-  OrchestrationGetTurnDiffInput,
-  OrchestrationGetTurnDiffResult,
-} from "./checkpointDiff.ts";
 import { ModelSelection } from "./modelSelection.ts";
-import {
-  ThreadLinkedPullRequest,
-  ThreadPullRequestLink,
-  ThreadPullRequestKey,
-  ThreadPullRequestLinkSource,
-  ThreadPullRequestSnapshot,
-  ThreadPullRequestStack,
-  ThreadPullRequestWatch,
-} from "./threadPullRequest.ts";
 import {
   ProviderApprovalDecision,
   ProviderApprovalOption,
@@ -370,14 +355,6 @@ export const OrchestrationV2AppThread = Schema.Struct({
   modelSelection: ModelSelection,
   runtimeMode: RuntimeMode,
   interactionMode: ProviderInteractionMode,
-  branch: Schema.NullOr(TrimmedNonEmptyString),
-  worktreePath: Schema.NullOr(TrimmedNonEmptyString),
-  /** Pull request the user linked to this thread (#8160); optional so
-      pre-linking servers still decode. */
-  linkedPullRequest: Schema.optional(Schema.NullOr(ThreadLinkedPullRequest)),
-  pullRequests: Schema.optional(Schema.Array(ThreadPullRequestLink)),
-  /** Pull request discovered from the thread's current branch. */
-  branchPullRequest: Schema.optional(Schema.NullOr(ThreadLinkedPullRequest)),
   activeProviderThreadId: Schema.NullOr(ProviderThreadId),
   historyOrigin: Schema.optional(OrchestrationV2ThreadHistoryOrigin),
   lineage: OrchestrationV2AppThreadLineage,
@@ -517,21 +494,19 @@ export const OrchestrationV2RunBackgroundWorkCancelled = Schema.Struct({
 export type OrchestrationV2RunBackgroundWorkCancelled =
   typeof OrchestrationV2RunBackgroundWorkCancelled.Type;
 
+/**
+ * Threads always run in the project folder. The worktree strategies are retired and only kept so
+ * runs stored before their removal still decode.
+ */
 export const OrchestrationV2ThreadLaunchWorkspaceStrategy = Schema.Union([
   Schema.Struct({
     type: Schema.Literal("root"),
-    branch: Schema.optional(TrimmedNonEmptyString),
   }),
   Schema.Struct({
     type: Schema.Literal("existing_worktree"),
-    worktreePath: TrimmedNonEmptyString,
-    branch: Schema.optional(TrimmedNonEmptyString),
   }),
   Schema.Struct({
     type: Schema.Literal("worktree"),
-    baseRef: TrimmedNonEmptyString,
-    branch: Schema.optional(TrimmedNonEmptyString),
-    startFromOrigin: Schema.optional(Schema.Boolean),
   }),
 ]);
 export type OrchestrationV2ThreadLaunchWorkspaceStrategy =
@@ -1757,6 +1732,7 @@ export const OrchestrationV2DomainEvent = Schema.Union([
       "thread.visited",
       "thread.marked-unread",
       "thread.metadata-updated",
+      // Retired: kept so stored events still decode; nothing emits it now.
       "thread.pull-request-synced",
       "thread.runtime-mode-updated",
       "thread.interaction-mode-updated",
@@ -1933,13 +1909,6 @@ export const OrchestrationV2ThreadShell = Schema.Struct({
   modelSelection: ModelSelection,
   runtimeMode: RuntimeMode,
   interactionMode: ProviderInteractionMode,
-  branch: Schema.NullOr(TrimmedNonEmptyString),
-  worktreePath: Schema.NullOr(TrimmedNonEmptyString),
-  /** Pull request the user linked to this thread (#8160). */
-  linkedPullRequest: Schema.optional(Schema.NullOr(ThreadLinkedPullRequest)),
-  pullRequests: Schema.optional(Schema.Array(ThreadPullRequestLink)),
-  /** Pull request discovered from the thread's current branch. */
-  branchPullRequest: Schema.optional(Schema.NullOr(ThreadLinkedPullRequest)),
   lineage: OrchestrationV2AppThreadLineage,
   forkedFrom: Schema.NullOr(OrchestrationV2AppThread.fields.forkedFrom),
   activeProviderThreadId: Schema.NullOr(ProviderThreadId),
@@ -2040,12 +2009,6 @@ export const OrchestrationV2ShellStreamItem = Schema.Union([
   Schema.Struct({
     kind: Schema.Literal("snapshot"),
     snapshot: OrchestrationV2ShellSnapshot,
-    /**
-     * Workspace roots whose repository-identity resolution completed for this
-     * enrichment refresh. Omitted on authoritative HTTP/initial WebSocket
-     * snapshots. Older clients ignore the field.
-     */
-    resolvedRepositoryIdentityRoots: Schema.optionalKey(Schema.Array(Schema.String)),
   }),
   Schema.Struct({
     kind: Schema.Literal("project.updated"),
@@ -2576,6 +2539,7 @@ export const OrchestrationV2DomainEventJson = Schema.Union([
       "thread.active-reordered",
       "thread.visited",
       "thread.marked-unread",
+      // Retired: kept so stored events still decode; nothing emits it now.
       "thread.pull-request-synced",
       "thread.metadata-updated",
       "thread.runtime-mode-updated",
@@ -2711,8 +2675,6 @@ export const OrchestrationV2Command = Schema.Union([
     modelSelection: ModelSelection,
     runtimeMode: RuntimeMode,
     interactionMode: ProviderInteractionMode,
-    branch: Schema.NullOr(TrimmedNonEmptyString),
-    worktreePath: Schema.NullOr(TrimmedNonEmptyString),
     importedNativeThread: Schema.optional(
       Schema.Struct({
         ref: Schema.Struct({
@@ -2835,64 +2797,9 @@ export const OrchestrationV2Command = Schema.Union([
     title: Schema.optional(TrimmedNonEmptyString),
     /** Kick off (true) or abandon (false) an async title regeneration. */
     regenerateTitle: Schema.optional(Schema.Boolean),
-    branch: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
-    worktreePath: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
-    expectedWorktreePath: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
     /** Reject unless no message or run has landed on this thread. */
     expectedEmpty: Schema.optional(Schema.Boolean),
     limitRecovery: Schema.optional(Schema.NullOr(OrchestrationV2LimitRecoveryUpdate)),
-    /** Link (object) or unlink (null) a pull request (#8160); absent leaves it unchanged. */
-    linkedPullRequest: Schema.optional(Schema.NullOr(ThreadLinkedPullRequest)),
-  }),
-  Schema.Struct({
-    type: Schema.Literal("thread.pull-request.link"),
-    commandId: CommandId,
-    threadId: ThreadId,
-    ...ThreadPullRequestKey.fields,
-    url: TrimmedNonEmptyString,
-    source: ThreadPullRequestLinkSource,
-  }),
-  Schema.Struct({
-    type: Schema.Literal("thread.pull-request.unlink"),
-    commandId: CommandId,
-    threadId: ThreadId,
-    ...ThreadPullRequestKey.fields,
-  }),
-  Schema.Struct({
-    type: Schema.Literal("thread.pull-request-link.sync"),
-    commandId: CommandId,
-    threadId: ThreadId,
-    ...ThreadPullRequestKey.fields,
-    snapshot: ThreadPullRequestSnapshot,
-    stack: Schema.NullOr(ThreadPullRequestStack),
-  }),
-  /** Start or stop the server watching a linked pull request for this thread's agent. */
-  Schema.Struct({
-    type: Schema.Literal("thread.pull-request.watch"),
-    commandId: CommandId,
-    threadId: ThreadId,
-    ...ThreadPullRequestKey.fields,
-    watching: Schema.Boolean,
-    /** Links the pull request first when starting a watch on one the thread has not linked. */
-    link: Schema.optional(
-      Schema.Struct({ url: TrimmedNonEmptyString, source: ThreadPullRequestLinkSource }),
-    ),
-  }),
-  Schema.Struct({
-    type: Schema.Literal("thread.pull-request.sync"),
-    commandId: CommandId,
-    threadId: ThreadId,
-    projectId: ProjectId,
-    snapshotSequence: NonNegativeInt,
-    expected: Schema.Struct({
-      workspaceRoot: TrimmedNonEmptyString,
-      branch: Schema.NullOr(TrimmedNonEmptyString),
-      worktreePath: Schema.NullOr(TrimmedNonEmptyString),
-      linkedPullRequest: Schema.NullOr(ThreadLinkedPullRequest),
-      branchPullRequest: Schema.NullOr(ThreadLinkedPullRequest),
-    }),
-    branchPullRequest: Schema.NullOr(ThreadLinkedPullRequest),
-    linkedPullRequest: Schema.optional(ThreadLinkedPullRequest),
   }),
   Schema.Struct({
     type: Schema.Literal("thread.title.regeneration.complete"),
@@ -2979,6 +2886,7 @@ export const OrchestrationV2Command = Schema.Union([
     threadId: ThreadId,
     messageId: MessageId,
   }),
+  /** Retired with project setup scripts; nothing dispatches it, kept so stored commands decode. */
   Schema.Struct({
     type: Schema.Literal("prepared-run.progress"),
     commandId: CommandId,
@@ -3015,8 +2923,8 @@ export const OrchestrationV2Command = Schema.Union([
     runId: RunId,
     reason: Schema.optional(Schema.String),
     /**
-     * Set by the Stop button. Stop also holds the queue, ends the thread's pull request
-     * watches, and stops every delegated task under the thread.
+     * Set by the Stop button. Stop also holds the queue and stops every delegated task under
+     * the thread.
      */
     holdQueue: Schema.optional(Schema.Boolean),
   }),
@@ -3160,27 +3068,6 @@ export type OrchestrationV2Command = typeof OrchestrationV2Command.Type;
  * send them.
  */
 const OrchestrationV2InternalCommand = Schema.Union([
-  /**
-   * Records what a pull request watch saw, and wakes the agent in the same transaction when
-   * `wake` is set. Rejected once the watch started at `startedAt` has ended, and a wake is
-   * rejected on a settled or archived thread, so a read that raced either changes nothing.
-   */
-  Schema.Struct({
-    type: Schema.Literal("thread.pull-request-watch.sync"),
-    commandId: CommandId,
-    threadId: ThreadId,
-    ...ThreadPullRequestKey.fields,
-    startedAt: IsoDateTime,
-    /** The watch to record, or null to end it. */
-    watch: Schema.NullOr(ThreadPullRequestWatch),
-    wake: Schema.optional(
-      Schema.Struct({
-        messageId: MessageId,
-        text: Schema.String,
-        notification: OrchestrationV2Notification,
-      }),
-    ),
-  }),
   /** Records that the provider rollback `requestId` failed for good. */
   Schema.Struct({
     type: Schema.Literal("checkpoint.rollback.fail"),
@@ -3217,7 +3104,7 @@ const OrchestrationV2InternalCommand = Schema.Union([
   }),
   /**
    * Stop for one thread, whatever it is doing: interrupts its running turn, holds its queue,
-   * ends its pull request watches, and drops pending delegated-task wakes. Nothing to stop is
+   * and drops pending delegated-task wakes. Nothing to stop is
    * an accepted no-op. Delegated tasks under the thread get their own `thread.stop`.
    */
   Schema.Struct({
@@ -3250,8 +3137,6 @@ export type OrchestrationV2ServerCommand = OrchestrationV2Command | Orchestratio
 
 export const ORCHESTRATION_V2_WS_METHODS = {
   dispatchCommand: "orchestration.dispatchCommand",
-  getTurnDiff: "orchestration.getTurnDiff",
-  getFullThreadDiff: "orchestration.getFullThreadDiff",
   searchThreads: "orchestration.searchThreads",
   searchThread: "orchestration.searchThread",
   searchThreadStream: "orchestration.searchThreadStream",
@@ -3753,14 +3638,6 @@ export const OrchestrationV2RpcSchemas = {
   dispatchCommand: {
     input: OrchestrationV2Command,
     output: OrchestrationV2DispatchCommandResult,
-  },
-  getTurnDiff: {
-    input: OrchestrationGetTurnDiffInput,
-    output: OrchestrationGetTurnDiffResult,
-  },
-  getFullThreadDiff: {
-    input: OrchestrationGetFullThreadDiffInput,
-    output: OrchestrationGetFullThreadDiffResult,
   },
   getArchivedShellSnapshot: {
     input: Schema.Struct({}),

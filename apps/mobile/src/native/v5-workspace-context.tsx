@@ -9,7 +9,6 @@ export const NativeWorkspaceTabActivityContext = createContext<{
 } | null>(null);
 export const NativePrimaryColumnContext = createContext<{
   readonly selectedThreadKey: string | null;
-  readonly selectedPullRequestKey: string | null;
 } | null>(null);
 export const NativeWorkspaceInspectorContext = createContext<{
   readonly render: (() => ReactNode) | undefined;

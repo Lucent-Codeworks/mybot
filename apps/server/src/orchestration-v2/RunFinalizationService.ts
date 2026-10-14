@@ -1,11 +1,9 @@
-import { CheckpointScopeId, ProjectId, RunId, ThreadId } from "@t3tools/contracts";
+import { CheckpointScopeId, RunId, ThreadId } from "@t3tools/contracts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
 
-import * as PullRequestService from "../pullRequest/PullRequestService.ts";
-import * as VcsStatusBroadcaster from "../vcs/VcsStatusBroadcaster.ts";
 import * as WorkspaceEntries from "../workspace/WorkspaceEntries.ts";
 import * as CheckpointCapture from "./CheckpointCaptureService.ts";
 import * as ProjectionStore from "./ProjectionStore.ts";
@@ -27,14 +25,13 @@ export class RunFinalizationRefreshError extends Schema.TaggedError<RunFinalizat
 ) {}
 
 export class RunFinalizationObserver extends Context.Reference<{
-  readonly refreshAfterTurn: (projectId: ProjectId) => Effect.Effect<void>;
   readonly refresh: (input: {
     readonly cwd: string;
     readonly threadId: ThreadId;
     readonly runId: RunId;
   }) => Effect.Effect<void, RunFinalizationRefreshError>;
 }>("t3/orchestration-v2/RunFinalizationObserver", {
-  defaultValue: () => ({ refresh: () => Effect.void, refreshAfterTurn: () => Effect.void }),
+  defaultValue: () => ({ refresh: () => Effect.void }),
 }) {}
 
 export class RunFinalizationService extends Context.Service<
@@ -87,35 +84,13 @@ const make = Effect.gen(function* () {
 
 export const layer = Layer.effect(RunFinalizationService, make);
 
+/** Refreshes the workspace file index after a run so file search sees its changes. */
 export const layerObserver = Layer.effect(
   RunFinalizationObserver,
   Effect.gen(function* () {
     const workspaceEntries = yield* WorkspaceEntries.WorkspaceEntries;
-    const vcsStatus = yield* VcsStatusBroadcaster.VcsStatusBroadcaster;
-    const projections = yield* ProjectionStore.ProjectionStoreV2;
-    const pullRequests = yield* PullRequestService.PullRequestService;
     return {
-      refreshAfterTurn: pullRequests.refreshAfterTurn,
-      refresh: ({ cwd, threadId, runId }) =>
-        Effect.gen(function* () {
-          const [, local] = yield* Effect.all(
-            [workspaceEntries.refresh(cwd), vcsStatus.refreshLocalStatus(cwd)],
-            { concurrency: "unbounded" },
-          );
-          if (local.refName === null || local.isDefaultRef) return;
-          const thread = yield* projections.getThreadShell(threadId);
-          if (!thread || thread.branch !== local.refName) return;
-          if (thread.activeRunId !== null && thread.activeRunId !== runId) return;
-          yield* vcsStatus.refreshPullRequestStatus(cwd).pipe(
-            Effect.catch((error) =>
-              Effect.logWarning("failed to refresh pull request status after run completion", {
-                threadId,
-                cwd,
-                detail: error.message,
-              }),
-            ),
-          );
-        }).pipe(Effect.mapError((cause) => new RunFinalizationRefreshError({ cwd, cause }))),
+      refresh: ({ cwd }) => workspaceEntries.refresh(cwd),
     };
   }),
 );

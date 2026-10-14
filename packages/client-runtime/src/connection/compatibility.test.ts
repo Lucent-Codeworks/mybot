@@ -16,7 +16,7 @@ const descriptor = (orchestrationProtocolVersion?: number): ExecutionEnvironment
   platform: { os: "darwin", arch: "arm64" },
   serverVersion: "9.0.0",
   ...(orchestrationProtocolVersion === undefined ? {} : { orchestrationProtocolVersion }),
-  capabilities: { repositoryIdentity: true },
+  capabilities: { connectionProbe: true },
 });
 
 describe("orchestration protocol compatibility", () => {
@@ -59,17 +59,14 @@ describe("orchestration protocol compatibility", () => {
       orchestrationProtocolCompatibilityError({ ...older, capabilities });
 
     expect(
-      withCapabilities({ repositoryIdentity: true, serverSelfUpdate: "boot-service" }),
+      withCapabilities({ connectionProbe: true, serverSelfUpdate: "boot-service" }),
     ).toMatchObject({ serverUpdateRequired: true });
-    expect(withCapabilities({ repositoryIdentity: true })).not.toHaveProperty(
-      "serverUpdateRequired",
-    );
+    expect(withCapabilities({ connectionProbe: true })).not.toHaveProperty("serverUpdateRequired");
     expect(
-      withCapabilities({ repositoryIdentity: true, serverSelfUpdate: "desktop-managed" }),
+      withCapabilities({ connectionProbe: true, serverSelfUpdate: "desktop-managed" }),
     ).not.toHaveProperty("serverUpdateRequired");
     expect(
       withCapabilities({
-        repositoryIdentity: true,
         serverSelfUpdate: "desktop-managed",
         desktopAppUpdate: true,
       }),

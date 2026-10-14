@@ -24,11 +24,8 @@ import type { EnvironmentConnectionPhase } from "../connection/presentation.ts";
 const SHARED_SERVER_SETTING_KEYS = [
   "continueThreadsAfterServerUpdate",
   "sidebarAutoSettleAfterDays",
-  "sidebarAutoSettleOnMerge",
   "autoResumeLimitedThreads",
   "snoozeLimitedThreads",
-  "newWorktreesStartFromOrigin",
-  "sourceControlWritingStyle",
   "textGenerationModelSelection",
 ] as const satisfies ReadonlyArray<keyof ServerSettings & keyof ServerSettingsPatch>;
 

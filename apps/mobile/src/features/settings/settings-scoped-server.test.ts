@@ -70,7 +70,7 @@ describe("mobile project settings scope", () => {
     const firstSettings: ServerSettings = {
       ...DEFAULT_SERVER_SETTINGS,
       responseStreamingMode: "paragraph",
-      projectSettingsOverrides: { [firstProject]: { defaultAutoPull: true } },
+      projectSettingsOverrides: { [firstProject]: { enableAgentBrowserAccess: true } },
     };
     const secondSettings: ServerSettings = {
       ...DEFAULT_SERVER_SETTINGS,
@@ -93,7 +93,7 @@ describe("mobile project settings scope", () => {
         environmentId: firstId,
         patch: {
           projectSettingsOverrides: {
-            [firstProject]: { defaultAutoPull: true, responseStreamingMode: "turn" },
+            [firstProject]: { enableAgentBrowserAccess: true, responseStreamingMode: "turn" },
           },
         },
       },
@@ -106,31 +106,25 @@ describe("mobile project settings scope", () => {
     expect(secondSettings.responseStreamingMode).toBe("turn");
   });
 
-  it("removes a project override when a picker sends null for a key that cannot store it", () => {
+  it("stores null as a real override value for nullable keys", () => {
     const settings: ServerSettings = {
       ...DEFAULT_SERVER_SETTINGS,
       projectSettingsOverrides: {
-        [firstProject]: { defaultThreadEnvMode: "worktree", defaultAutoPull: true },
+        [firstProject]: { defaultRuntimeMode: "approval-required", enableAgentBrowserAccess: true },
       },
     };
     const targets = resolveMobileSettingsTargets(
       [environment(firstId, settings)],
       [{ environmentId: firstId, id: firstProject }],
     );
-    expect(planMobileScopedSettingsPatch(targets, true, { defaultThreadEnvMode: null })).toEqual([
-      {
-        environmentId: firstId,
-        patch: { projectSettingsOverrides: { [firstProject]: { defaultAutoPull: true } } },
-      },
-    ]);
     expect(planMobileScopedSettingsPatch(targets, true, { defaultModelSelection: null })).toEqual([
       {
         environmentId: firstId,
         patch: {
           projectSettingsOverrides: {
             [firstProject]: {
-              defaultThreadEnvMode: "worktree",
-              defaultAutoPull: true,
+              defaultRuntimeMode: "approval-required",
+              enableAgentBrowserAccess: true,
               defaultModelSelection: null,
             },
           },
@@ -143,7 +137,7 @@ describe("mobile project settings scope", () => {
     const settings: ServerSettings = {
       ...DEFAULT_SERVER_SETTINGS,
       projectSettingsOverrides: {
-        [firstProject]: { defaultAutoPull: true, responseStreamingMode: "turn" },
+        [firstProject]: { enableAgentBrowserAccess: true, responseStreamingMode: "turn" },
       },
     };
     const targets = resolveMobileSettingsTargets(
@@ -154,7 +148,7 @@ describe("mobile project settings scope", () => {
     expect(planMobileScopedSettingsClear(targets, ["responseStreamingMode"])).toEqual([
       {
         environmentId: firstId,
-        patch: { projectSettingsOverrides: { [firstProject]: { defaultAutoPull: true } } },
+        patch: { projectSettingsOverrides: { [firstProject]: { enableAgentBrowserAccess: true } } },
       },
     ]);
     expect(

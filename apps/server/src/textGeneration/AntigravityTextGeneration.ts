@@ -1,4 +1,5 @@
-import { type ProviderSetupError, TextGenerationError } from "@t3tools/contracts";
+import { type ProviderSetupError } from "@t3tools/contracts";
+import { TextGenerationError } from "@t3tools/provider-core/server/textGeneration";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
@@ -306,8 +307,5 @@ export const makeAntigravityTextGeneration = Effect.fn("makeAntigravityTextGener
       ),
   );
 
-  return TextGenerationOperations.fromRunner(
-    "AntigravityTextGeneration",
-    TextGenerationOperations.withoutInvestigation("Antigravity", runAntigravityJson),
-  );
+  return TextGenerationOperations.fromRunner("AntigravityTextGeneration", runAntigravityJson);
 });

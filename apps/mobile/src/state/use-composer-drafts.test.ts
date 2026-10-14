@@ -240,20 +240,18 @@ function contextDraft(start: number, count: number): ComposerDraft {
 }
 
 describe("mobile composer drafts", () => {
-  it("restores a PR checkout source after restarting the composer", () => {
-    const draft: ComposerDraft = {
-      text: "Address feedback",
-      attachments: [],
-      workspaceSelection: {
-        mode: "worktree",
-        branch: "fork/feature",
-        worktreePath: null,
-        startFromOrigin: false,
-        pullRequestReference: "https://github.com/acme/repo/pull/123",
-      },
-    };
+  it("drops a legacy workspace selection when restoring a draft", () => {
+    const draft: ComposerDraft = { text: "Address feedback", attachments: [] };
     expect(
-      decodePersistedComposerState({ schemaVersion: 1, drafts: { task: draft } }).drafts.task,
+      decodePersistedComposerState({
+        schemaVersion: 1,
+        drafts: {
+          task: {
+            ...draft,
+            workspaceSelection: { mode: "worktree", branch: "fork/feature", worktreePath: null },
+          },
+        },
+      }).drafts.task,
     ).toEqual(draft);
   });
   it.each([false, true])(
@@ -1717,11 +1715,6 @@ describe("mobile composer drafts", () => {
       },
       runtimeMode: "approval-required",
       interactionMode: "plan",
-      workspaceSelection: {
-        mode: "worktree",
-        branch: "main",
-        worktreePath: null,
-      },
       project: {
         environmentId: "environment-1",
         projectId: "project-1",
@@ -1880,7 +1873,7 @@ describe("mobile composer drafts", () => {
     );
 
     // Clearing content on the way out drops the stamp with it.
-    clearComposerDraftContent(first, { clearModelSelection: true, clearWorkspaceSelection: true });
+    clearComposerDraftContent(first, { clearModelSelection: true });
     expect(appAtomRegistry.get(composerDraftsAtom)[first]).toBeUndefined();
     expect(getComposerDraftSnapshot(second).text).toBe("second idea");
   });
@@ -1901,7 +1894,6 @@ describe("mobile composer drafts", () => {
       [key]: {
         ...getComposerDraftSnapshot(key),
         runtimeMode: "approval-required",
-        workspaceSelection: { mode: "worktree", branch: "feature/a", worktreePath: null },
       },
     });
     const createdAt = getComposerDraftSnapshot(key).project?.createdAt;
@@ -1911,8 +1903,6 @@ describe("mobile composer drafts", () => {
     const moved = getComposerDraftSnapshot(key);
     expect(moved.text).toBe("moving house");
     expect(moved.runtimeMode).toBe("approval-required");
-    // Branch and worktree belong to the old repo.
-    expect(moved.workspaceSelection).toBeUndefined();
     expect(moved.project).toEqual({ ...to, createdAt });
     expect(findNewTaskDraftKeys(appAtomRegistry.get(composerDraftsAtom), from)).toEqual([]);
     expect(findNewTaskDraftKeys(appAtomRegistry.get(composerDraftsAtom), to)).toEqual([key]);
@@ -2171,24 +2161,18 @@ describe("mobile composer drafts", () => {
         model: "gpt-5.4",
         options: [{ id: "reasoningEffort", value: "xhigh" }],
       },
-      workspaceSelection: {
-        mode: "worktree",
-        branch: "main",
-        worktreePath: null,
-      },
     };
 
     expect(clearComposerDraftContentState({ [draftKey]: draft }, draftKey)).toEqual({
       [draftKey]: {
         modelSelection: draft.modelSelection,
-        workspaceSelection: draft.workspaceSelection,
         text: "",
         attachments: [],
       },
     });
   });
 
-  it("drops draft-local model and workspace selections after sending a new task", () => {
+  it("drops the draft-local model selection after sending a new task", () => {
     const draftKey = "new-task:environment-1:project-1";
     const draft: ComposerDraft = {
       text: "send this",
@@ -2197,18 +2181,11 @@ describe("mobile composer drafts", () => {
         instanceId: ProviderInstanceId.make("codex"),
         model: "gpt-5.4",
       },
-      workspaceSelection: {
-        mode: "worktree",
-        branch: "main",
-        worktreePath: null,
-        startFromOrigin: false,
-      },
     };
 
     expect(
       clearComposerDraftContentState({ [draftKey]: draft }, draftKey, {
         clearModelSelection: true,
-        clearWorkspaceSelection: true,
       }),
     ).toEqual({});
   });

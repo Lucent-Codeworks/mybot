@@ -11,7 +11,7 @@ import {
   threadSearchMatchKey,
   type EnvironmentThreadSearchMatch,
 } from "@t3tools/client-runtime/state/thread-search";
-import { type EnvironmentId, type SidebarProjectGroupingMode } from "@t3tools/contracts";
+import { type EnvironmentId } from "@t3tools/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import { useFocusEffect } from "@react-navigation/native";
 import { use, useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
@@ -96,7 +96,6 @@ interface HomeScreenProps {
   readonly selectedEnvironmentId: EnvironmentId | null;
   readonly selectedProjectKey: string | null;
   readonly projectSortOrder: HomeProjectSortOrder;
-  readonly projectGroupingMode: SidebarProjectGroupingMode;
   readonly onSearchQueryChange: (query: string) => void;
   readonly onEnvironmentChange: (environmentId: EnvironmentId | null) => void;
   readonly onProjectChange: (projectKey: string | null) => void;
@@ -128,7 +127,6 @@ interface HomeScreenProps {
   readonly onRegenerateThreadTitle: (thread: EnvironmentThreadShell) => Promise<boolean>;
   readonly onSelectPendingTask: (pendingTask: PendingNewTask) => void;
   readonly onDeletePendingTask: (pendingTask: PendingNewTask) => void;
-  readonly onNewThreadOnBranch: (thread: EnvironmentThreadShell) => void;
   readonly onNewThreadInProject: (project: EnvironmentProject) => void;
 }
 
@@ -406,9 +404,8 @@ export function HomeScreen(props: HomeScreenProps) {
       buildHomeProjectScopes({
         projects: props.projects,
         environmentId: props.selectedEnvironmentId,
-        projectGroupingMode: props.projectGroupingMode,
       }),
-    [props.projectGroupingMode, props.projects, props.selectedEnvironmentId],
+    [props.projects, props.selectedEnvironmentId],
   );
   const hasSearchQuery = props.searchQuery.trim().length > 0;
   const projectByKey = useMemo(() => {
@@ -774,7 +771,6 @@ export function HomeScreen(props: HomeScreenProps) {
           pane={primaryColumn ? "sidebar" : "screen"}
           selected={scopedThreadKey(thread.environmentId, thread.id) === selectedThreadKey}
           fullSwipeWidth={fullSwipeWidth}
-          onNewThreadOnBranch={props.onNewThreadOnBranch}
           thread={thread}
           variant={item.item.variant}
           hasQueuedMessages={item.hasQueuedMessages}
@@ -866,7 +862,6 @@ export function HomeScreen(props: HomeScreenProps) {
       primaryColumn,
       selectedThreadKey,
       fullSwipeWidth,
-      props.onNewThreadOnBranch,
       props.savedConnectionsById,
       resolveProviderInstance,
       providersByEnvironmentId,

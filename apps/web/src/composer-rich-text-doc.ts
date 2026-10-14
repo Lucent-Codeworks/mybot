@@ -320,8 +320,8 @@ function isTrailingLineAfterRule(doc: ProseMirrorNode, index: number): boolean {
 
 /**
  * A heading keeps the exact whitespace between its `#`s and its text. The
- * `#`s must be followed by whitespace to count, which is also what keeps a
- * `#1234` pull request reference a reference: the marker owns no document
+ * `#`s must be followed by whitespace to count, which is also what keeps
+ * `#1234` plain text: the marker owns no document
  * characters, closing `#`s stay literal text, and nothing is ever stripped.
  */
 const ComposerHeadingExtension = Heading.extend({

@@ -10,10 +10,7 @@ import { createModelSelection } from "./model.ts";
 import {
   clearProjectSettingsOverrides,
   hasProjectSettingsOverrides,
-  resolveNewThreadEnvMode,
-  resolveProjectFileBackedSetting,
   resolveProjectSettings,
-  resolveWorktreeCleanup,
   withProjectSettingsOverrides,
 } from "./projectSettings.ts";
 import { applyServerSettingsPatch } from "./serverSettings.ts";
@@ -61,20 +58,22 @@ describe("resolveProjectSettings", () => {
 
   it("applies overrides per key and reports their source", () => {
     const settings = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
-      defaultAutoPull: true,
+      enableAgentDeviceAccess: true,
       sidebarAutoSettleAfterDays: 3,
       projectSettingsOverrides: {
-        [projectId]: { defaultAutoPull: false, sidebarAutoSettleAfterDays: null },
+        [projectId]: { enableAgentDeviceAccess: false, sidebarAutoSettleAfterDays: null },
       },
     });
     const resolved = resolveProjectSettings(settings, projectId);
-    expect(resolved.settings.defaultAutoPull).toBe(false);
+    expect(resolved.settings.enableAgentDeviceAccess).toBe(false);
     expect(resolved.settings.sidebarAutoSettleAfterDays).toBeNull();
-    expect(resolved.settings.defaultThreadEnvMode).toBe(settings.defaultThreadEnvMode);
-    expect(resolved.sources.defaultAutoPull).toBe("project");
+    expect(resolved.settings.defaultRuntimeMode).toBe(settings.defaultRuntimeMode);
+    expect(resolved.sources.enableAgentDeviceAccess).toBe("project");
     expect(resolved.sources.sidebarAutoSettleAfterDays).toBe("project");
-    expect(resolved.sources.defaultThreadEnvMode).toBe("environment");
-    expect(resolveProjectSettings(settings, otherProjectId).settings.defaultAutoPull).toBe(true);
+    expect(resolved.sources.defaultRuntimeMode).toBe("environment");
+    expect(resolveProjectSettings(settings, otherProjectId).settings.enableAgentDeviceAccess).toBe(
+      true,
+    );
   });
 
   it("keeps the environment text generation model when the override's provider is disabled", () => {
@@ -99,29 +98,25 @@ describe("resolveProjectSettings", () => {
 
   it("honours the aggregate's own fields only until the server has folded them", () => {
     const aggregateModel = createModelSelection(ProviderInstanceId.make("codex"), "gpt-5.5");
-    const project = {
-      defaultModelSelection: aggregateModel,
-      defaultThreadEnvMode: "local" as const,
-    };
+    const project = { defaultModelSelection: aggregateModel };
     const unfolded = resolveProjectSettings(
       { ...DEFAULT_SERVER_SETTINGS, projectSettingsFolded: false },
       projectId,
       project,
     );
     expect(unfolded.settings.defaultModelSelection).toEqual(aggregateModel);
-    expect(unfolded.settings.defaultThreadEnvMode).toBe("local");
     expect(unfolded.sources.defaultModelSelection).toBe("project");
     // A stored override still beats the aggregate before the fold.
     const overridden = resolveProjectSettings(
       {
         ...DEFAULT_SERVER_SETTINGS,
         projectSettingsFolded: false,
-        projectSettingsOverrides: { [projectId]: { defaultThreadEnvMode: "worktree" } },
+        projectSettingsOverrides: { [projectId]: { defaultModelSelection: null } },
       },
       projectId,
       project,
     );
-    expect(overridden.settings.defaultThreadEnvMode).toBe("worktree");
+    expect(overridden.settings.defaultModelSelection).toBeNull();
     // After the fold a reset in the record wins over the stale aggregate.
     const folded = resolveProjectSettings(
       { ...DEFAULT_SERVER_SETTINGS, projectSettingsFolded: true },
@@ -187,146 +182,12 @@ describe("resolveProjectSettings", () => {
   });
 });
 
-describe("resolveProjectSettings with a t3.json", () => {
-  it("walks project override, environment value, file, then built-in for file-backed keys", () => {
-    const file = { defaultThreadEnvMode: "worktree" as const };
-    const fromOverride = resolveProjectSettings(
-      {
-        ...DEFAULT_SERVER_SETTINGS,
-        projectSettingsOverrides: { [projectId]: { defaultThreadEnvMode: "local" } },
-      },
-      projectId,
-      null,
-      file,
-    );
-    expect(fromOverride.settings.defaultThreadEnvMode).toBe("local");
-    expect(fromOverride.sources.defaultThreadEnvMode).toBe("project");
-
-    const fromEnvironment = resolveProjectSettings(
-      { ...DEFAULT_SERVER_SETTINGS, defaultThreadEnvMode: "local" },
-      projectId,
-      null,
-      file,
-    );
-    expect(fromEnvironment.settings.defaultThreadEnvMode).toBe("local");
-    expect(fromEnvironment.sources.defaultThreadEnvMode).toBe("environment");
-
-    const fromFile = resolveProjectSettings(DEFAULT_SERVER_SETTINGS, projectId, null, file);
-    expect(fromFile.settings.defaultThreadEnvMode).toBe("worktree");
-    expect(fromFile.sources.defaultThreadEnvMode).toBe("t3.json");
-
-    const builtIn = resolveProjectSettings(DEFAULT_SERVER_SETTINGS, projectId, null, null);
-    expect(builtIn.settings.defaultThreadEnvMode).toBe("local");
-    expect(builtIn.sources.defaultThreadEnvMode).toBe("environment");
-    // A stored null override defers like an unset one and is not reported
-    // as the project's value.
-    const nullOverride = resolveProjectSettings(
-      {
-        ...DEFAULT_SERVER_SETTINGS,
-        projectSettingsOverrides: { [projectId]: { defaultThreadEnvMode: null } as never },
-      },
-      projectId,
-      null,
-      file,
-    );
-    expect(nullOverride.settings.defaultThreadEnvMode).toBe("worktree");
-    expect(nullOverride.sources.defaultThreadEnvMode).toBe("t3.json");
-    // A file that does not mention the key leaves the source alone too.
-    expect(
-      resolveProjectSettings(DEFAULT_SERVER_SETTINGS, projectId, null, {}).sources
-        .defaultThreadEnvMode,
-    ).toBe("environment");
-  });
-
-  it("resolves one key from the settings tier, then the file, then the built-in", () => {
-    expect(
-      resolveProjectFileBackedSetting("worktreeSubmodules", "none", {
-        worktreeSubmodules: "top-level",
-      }),
-    ).toEqual({ value: "none", source: "environment" });
-    expect(
-      resolveProjectFileBackedSetting("worktreeSubmodules", null, {
-        worktreeSubmodules: "top-level",
-      }),
-    ).toEqual({ value: "top-level", source: "t3.json" });
-    expect(resolveProjectFileBackedSetting("worktreeSubmodules", null, null)).toEqual({
-      value: "recursive",
-      source: "environment",
-    });
-  });
-
-  it("leaves settings untouched when no file is passed", () => {
-    expect(resolveProjectSettings(DEFAULT_SERVER_SETTINGS, projectId).settings).toBe(
-      DEFAULT_SERVER_SETTINGS,
-    );
-  });
-});
-
-describe("resolveNewThreadEnvMode", () => {
-  const worktreeEnvironment = resolveProjectSettings(
-    { ...DEFAULT_SERVER_SETTINGS, defaultThreadEnvMode: "worktree" },
-    projectId,
-    null,
-    null,
-  );
-  const newProject = {
-    projectSettings: worktreeEnvironment,
-    workspaceRoot: "/data/projects/pinball-stats",
-    newProjectsRoot: "/data/projects/",
-    projectHasThreads: false,
-  };
-
-  it("starts a new project's first thread in its checkout", () => {
-    expect(resolveNewThreadEnvMode(newProject)).toBe("local");
-    expect(
-      resolveNewThreadEnvMode({
-        ...newProject,
-        workspaceRoot: "C:\\Data\\Projects\\Pinball-Stats",
-        newProjectsRoot: "c:/data/projects",
-      }),
-    ).toBe("local");
-  });
-
-  it("keeps the configured default once the project has a thread or is not a new project", () => {
-    expect(resolveNewThreadEnvMode({ ...newProject, projectHasThreads: true })).toBe("worktree");
-    expect(resolveNewThreadEnvMode({ ...newProject, workspaceRoot: "/data/projects" })).toBe(
-      "worktree",
-    );
-    expect(
-      resolveNewThreadEnvMode({ ...newProject, workspaceRoot: "/data/projects/a/nested" }),
-    ).toBe("worktree");
-    expect(resolveNewThreadEnvMode({ ...newProject, workspaceRoot: "/data/projects-old/a" })).toBe(
-      "worktree",
-    );
-    expect(resolveNewThreadEnvMode({ ...newProject, newProjectsRoot: undefined })).toBe("worktree");
-  });
-
-  it("lets a project override, or a t3.json the environment defers to, keep worktree mode", () => {
-    for (const projectSettings of [
-      resolveProjectSettings(
-        {
-          ...DEFAULT_SERVER_SETTINGS,
-          projectSettingsOverrides: { [projectId]: { defaultThreadEnvMode: "worktree" } },
-        },
-        projectId,
-        null,
-        null,
-      ),
-      resolveProjectSettings(DEFAULT_SERVER_SETTINGS, projectId, null, {
-        defaultThreadEnvMode: "worktree",
-      }),
-    ]) {
-      expect(resolveNewThreadEnvMode({ ...newProject, projectSettings })).toBe("worktree");
-    }
-  });
-});
-
 describe("projectSettingsOverrides patches", () => {
   it("replaces a project's entry, removes it with null, and drops empty entries", () => {
     const first = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
       projectSettingsOverrides: {
-        [projectId]: { defaultAutoPull: true, enableAgentBrowserAccess: false },
-        [otherProjectId]: { defaultAutoPull: false },
+        [projectId]: { enableAgentDeviceAccess: true, enableAgentBrowserAccess: false },
+        [otherProjectId]: { enableAgentDeviceAccess: false },
       },
     });
     expect(hasProjectSettingsOverrides(first)).toBe(true);
@@ -336,7 +197,9 @@ describe("projectSettingsOverrides patches", () => {
     expect(replaced.projectSettingsOverrides[projectId]).toEqual({
       enableAgentBrowserAccess: false,
     });
-    expect(replaced.projectSettingsOverrides[otherProjectId]).toEqual({ defaultAutoPull: false });
+    expect(replaced.projectSettingsOverrides[otherProjectId]).toEqual({
+      enableAgentDeviceAccess: false,
+    });
     const emptied = applyServerSettingsPatch(replaced, {
       projectSettingsOverrides: { [projectId]: {} },
     });
@@ -345,7 +208,7 @@ describe("projectSettingsOverrides patches", () => {
       projectSettingsOverrides: { [projectId]: null },
     });
     expect(removed.projectSettingsOverrides).toEqual({
-      [otherProjectId]: { defaultAutoPull: false },
+      [otherProjectId]: { enableAgentDeviceAccess: false },
     });
     expect(hasProjectSettingsOverrides(DEFAULT_SERVER_SETTINGS)).toBe(false);
   });
@@ -353,151 +216,73 @@ describe("projectSettingsOverrides patches", () => {
   it("derives the legacy per-key maps from the generic record", () => {
     const settings = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
       projectSettingsOverrides: {
-        [projectId]: { defaultAutoPull: true, enableAgentBrowserAccess: false },
+        [projectId]: { enableAgentDeviceAccess: true, enableAgentBrowserAccess: false },
         [otherProjectId]: { defaultProjectScripts: [] },
       },
     });
-    expect(settings.projectAutoPullOverrides).toEqual({ [projectId]: true });
     expect(settings.projectAgentBrowserAccessOverrides).toEqual({ [projectId]: false });
     expect(settings.projectScriptOverrides).toEqual({ [otherProjectId]: [] });
   });
 
   it("translates legacy per-key patches into the generic record", () => {
     const written = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
-      projectAutoPullOverrides: { [projectId]: true },
+      projectScriptOverrides: { [projectId]: [] },
       projectAgentBrowserAccessOverrides: { [projectId]: false, [otherProjectId]: true },
     });
     expect(written.projectSettingsOverrides).toEqual({
-      [projectId]: { defaultAutoPull: true, enableAgentBrowserAccess: false },
+      [projectId]: { defaultProjectScripts: [], enableAgentBrowserAccess: false },
       [otherProjectId]: { enableAgentBrowserAccess: true },
     });
     const cleared = applyServerSettingsPatch(written, {
       projectAgentBrowserAccessOverrides: { [projectId]: null, [otherProjectId]: null },
     });
-    expect(cleared.projectSettingsOverrides).toEqual({ [projectId]: { defaultAutoPull: true } });
+    expect(cleared.projectSettingsOverrides).toEqual({
+      [projectId]: { defaultProjectScripts: [] },
+    });
   });
 
   it("lets a canonical entry win over a legacy map for the same project", () => {
     const current = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
-      projectSettingsOverrides: { [projectId]: { defaultAutoPull: true } },
+      projectSettingsOverrides: { [projectId]: { enableAgentBrowserAccess: true } },
     });
-    // The canonical entry omits defaultAutoPull to clear it; the stale legacy
+    // The canonical entry omits enableAgentBrowserAccess to clear it; the stale legacy
     // map in the same patch must not put it back.
     const next = applyServerSettingsPatch(current, {
-      projectSettingsOverrides: { [projectId]: { defaultThreadEnvMode: "local" } },
-      projectAutoPullOverrides: { [projectId]: true, [otherProjectId]: false },
+      projectSettingsOverrides: { [projectId]: { defaultRuntimeMode: "approval-required" } },
+      projectAgentBrowserAccessOverrides: { [projectId]: true, [otherProjectId]: false },
     });
     expect(next.projectSettingsOverrides).toEqual({
-      [projectId]: { defaultThreadEnvMode: "local" },
-      [otherProjectId]: { defaultAutoPull: false },
+      [projectId]: { defaultRuntimeMode: "approval-required" },
+      [otherProjectId]: { enableAgentBrowserAccess: false },
     });
   });
 
   it("builds replacement entries and clears individual keys", () => {
     const settings = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
       projectSettingsOverrides: {
-        [projectId]: { defaultAutoPull: true, enableAgentBrowserAccess: false },
+        [projectId]: { enableAgentDeviceAccess: true, enableAgentBrowserAccess: false },
       },
     });
-    expect(clearProjectSettingsOverrides(settings, projectId, ["defaultAutoPull"])).toEqual({
-      enableAgentBrowserAccess: false,
-    });
+    expect(clearProjectSettingsOverrides(settings, projectId, ["enableAgentDeviceAccess"])).toEqual(
+      {
+        enableAgentBrowserAccess: false,
+      },
+    );
     expect(
       clearProjectSettingsOverrides(settings, projectId, [
-        "defaultAutoPull",
+        "enableAgentDeviceAccess",
         "enableAgentBrowserAccess",
       ]),
     ).toBeNull();
-    expect(clearProjectSettingsOverrides(settings, otherProjectId, ["defaultAutoPull"])).toBeNull();
+    expect(
+      clearProjectSettingsOverrides(settings, otherProjectId, ["enableAgentDeviceAccess"]),
+    ).toBeNull();
     expect(withProjectSettingsOverrides(settings, projectId, null)).toEqual({});
     expect(
-      withProjectSettingsOverrides(settings, otherProjectId, { defaultThreadEnvMode: "worktree" }),
+      withProjectSettingsOverrides(settings, otherProjectId, { defaultRuntimeMode: "auto" }),
     ).toEqual({
       ...settings.projectSettingsOverrides,
-      [otherProjectId]: { defaultThreadEnvMode: "worktree" },
+      [otherProjectId]: { defaultRuntimeMode: "auto" },
     });
   });
-});
-
-describe("resolveWorktreeCleanup", () => {
-  it("inherits machine rules, disables one project and keeps custom rules isolated", () => {
-    const machine = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
-      storageCleanup: { worktreeAfterDays: 8, worktreeOnDelete: true, logsAfterDays: 3 },
-    });
-    const inherited = resolveWorktreeCleanup(machine, projectId);
-    const off = applyServerSettingsPatch(machine, {
-      projectSettingsOverrides: {
-        [projectId]: { worktreeCleanup: { mode: "off" } },
-      },
-    });
-    expect(resolveWorktreeCleanup(off, projectId)).toEqual({
-      worktreeAfterDays: null,
-      worktreeOnDelete: false,
-      worktreeOnMerge: false,
-      worktreeUnchanged: false,
-      worktreeKeepWhen: "uncommitted-changes",
-    });
-    expect(resolveWorktreeCleanup(off, otherProjectId)).toEqual(inherited);
-    const custom = applyServerSettingsPatch(off, {
-      projectSettingsOverrides: {
-        [projectId]: {
-          worktreeCleanup: { mode: "custom", rules: { ...inherited, worktreeAfterDays: 15 } },
-        },
-      },
-    });
-    expect(resolveWorktreeCleanup(custom, projectId).worktreeAfterDays).toBe(15);
-    expect(custom.storageCleanup.logsAfterDays).toBe(3);
-    const reset = applyServerSettingsPatch(custom, {
-      projectSettingsOverrides: {
-        [projectId]: clearProjectSettingsOverrides(custom, projectId, ["worktreeCleanup"]),
-      },
-    });
-    expect(resolveWorktreeCleanup(reset, projectId)).toEqual(inherited);
-  });
-  it("completes partial machine custom rules and preserves them across edits", () => {
-    const initial = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
-      storageCleanup: { worktreeAfterDays: 8, worktreeOnDelete: true },
-    });
-    const custom = applyServerSettingsPatch(initial, {
-      worktreeCleanup: { mode: "custom", rules: { worktreeOnMerge: true } },
-    });
-    const edited = applyServerSettingsPatch(custom, {
-      worktreeCleanup: { mode: "custom", rules: { worktreeAfterDays: 15 } },
-    });
-    expect(resolveWorktreeCleanup(edited, null)).toEqual({
-      worktreeAfterDays: 15,
-      worktreeOnDelete: true,
-      worktreeOnMerge: true,
-      worktreeUnchanged: false,
-      worktreeKeepWhen: "uncommitted-changes",
-    });
-    expect(
-      resolveWorktreeCleanup(applyServerSettingsPatch(edited, { worktreeCleanup: null }), null)
-        .worktreeAfterDays,
-    ).toBe(8);
-  });
-});
-
-it("inherits branch naming defaults and applies project overrides independently", () => {
-  const settings = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
-    branchNamingMode: "static",
-    branchNamePrefix: "team/",
-    branchNameInstructions: "Use issue IDs.",
-    projectSettingsOverrides: { [projectId]: { branchNamingMode: "custom" } },
-  });
-  expect(resolveProjectSettings(settings, projectId).settings).toMatchObject({
-    branchNamingMode: "custom",
-    branchNamePrefix: "team/",
-    branchNameInstructions: "Use issue IDs.",
-  });
-  expect(resolveProjectSettings(settings, otherProjectId).settings).toMatchObject({
-    branchNamingMode: "static",
-    branchNamePrefix: "team/",
-  });
-  const cleared = applyServerSettingsPatch(settings, {
-    projectSettingsOverrides: {
-      [projectId]: clearProjectSettingsOverrides(settings, projectId, ["branchNamingMode"]),
-    },
-  });
-  expect(resolveProjectSettings(cleared, projectId).settings.branchNamingMode).toBe("static");
 });

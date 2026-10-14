@@ -26,7 +26,6 @@ import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
-import * as PubSub from "effect/PubSub";
 import * as Queue from "effect/Queue";
 import * as Schema from "effect/Schema";
 import * as Scope from "effect/Scope";
@@ -95,20 +94,9 @@ const layerManagement = Layer.unwrap(
     });
   }),
 );
-const layerEnrichment = Layer.unwrap(
-  Effect.gen(function* () {
-    const changes = yield* PubSub.unbounded<never>();
-    return Layer.mock(ProjectEnrichmentService.ProjectEnrichmentService)({
-      getAvailable: () =>
-        Effect.succeed({
-          repositoryIdentity: null,
-          faviconPath: null,
-          repositoryIdentityResolved: true,
-        }),
-      subscribeChanges: PubSub.subscribe(changes),
-    });
-  }),
-);
+const layerEnrichment = Layer.mock(ProjectEnrichmentService.ProjectEnrichmentService)({
+  getAvailable: () => Effect.succeed({ faviconPath: null }),
+});
 // The transfer history has no project events, so shell streams never read a project shell.
 const layerServices = layerManagement.pipe(
   Layer.provideMerge(ProjectStore.layer),

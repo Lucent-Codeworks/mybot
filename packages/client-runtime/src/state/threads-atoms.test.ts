@@ -1,7 +1,6 @@
 import {
   EnvironmentId,
   EventId,
-  MessageId,
   ORCHESTRATION_V2_WS_METHODS,
   TurnItemId,
   type OrchestrationV2ThreadHistoryPage,
@@ -179,10 +178,6 @@ const makeHarness = Effect.fn("TestThreadAtoms.makeHarness")(function* (options?
           removeThread: () => Effect.void,
           loadServerConfig: () => Effect.succeedNone,
           saveServerConfig: () => Effect.void,
-          loadVcsRefs: () => Effect.succeedNone,
-          saveVcsRefs: () => Effect.void,
-          removeVcsRefs: () => Effect.void,
-          clearVcsRefs: () => Effect.void,
           clear: () => Effect.void,
         }),
       ),
@@ -492,68 +487,6 @@ describe("createEnvironmentThreadStateAtoms", () => {
       }),
   );
 });
-
-it.effect.each([1, 16, 500])("publishes V2 message replay once per batch of %i", (batchSize) =>
-  Effect.gen(function* () {
-    const h = yield* makeHarness();
-    const unmount = h.registry.mount(h.stateAtom);
-    const first = yield* Queue.take(h.subscriptions);
-    let updates = 0;
-    const stop = h.registry.subscribe(
-      Atom.map(h.stateAtom, (state) => Option.getOrNull(state.data)?.messages),
-      () => updates++,
-      {
-        immediate: true,
-      },
-    );
-    updates = 0;
-    const events: OrchestrationV2ThreadStreamItem[] = Array.from({ length: 500 }, (_, index) => ({
-      kind: "event",
-      sequence: 8 + index,
-      event: {
-        id: EventId.make(`replay-${index}`),
-        type: "message.updated",
-        threadId: THREAD_ID,
-        occurredAt: THREAD.thread.createdAt,
-        payload: {
-          id: MessageId.make("replayed-message"),
-          threadId: THREAD_ID,
-          runId: null,
-          nodeId: null,
-          role: "assistant",
-          text: `${index},`,
-          streaming: true,
-          attachments: [],
-          createdBy: "agent",
-          creationSource: "provider",
-          createdAt: THREAD.thread.createdAt,
-          updatedAt: THREAD.thread.createdAt,
-        },
-      },
-    }));
-    for (let offset = 0; offset < events.length; offset += batchSize) {
-      yield* Queue.offerAll(first.events, events.slice(offset, offset + batchSize));
-      const last = Math.min(offset + batchSize, events.length) - 1;
-      yield* observeState(
-        h.registry,
-        h.stateAtom,
-        (state) => Option.getOrNull(state.data)?.messages[0]?.text === `${last},`,
-      );
-    }
-    yield* Queue.offerAll(first.events, [events[499]!, events[0]!, { kind: "synchronized" }]);
-    yield* observeState(h.registry, h.stateAtom, (state) => state.status === "live");
-    expect(currentThread(h.registry, h.stateAtom).messages[0]?.text).toBe("499,");
-    expect(updates).toBe(Math.ceil(500 / batchSize));
-    stop();
-    unmount();
-    yield* Deferred.await(first.closed);
-    const remount = h.registry.mount(h.stateAtom);
-    const next = yield* Queue.take(h.subscriptions);
-    expect(next.afterSequence).toBe(507);
-    remount();
-    yield* Deferred.await(next.closed);
-  }),
-);
 
 it.effect("keeps snapshot boundaries and completion markers ordered inside a replay batch", () =>
   Effect.gen(function* () {

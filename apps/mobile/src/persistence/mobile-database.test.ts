@@ -61,18 +61,29 @@ describe("mobile database legacy cache migration", () => {
   });
 
   it("skips malformed legacy records", () => {
-    expect(MobileDatabase.decodeLegacyCacheRecord("connection-vcs-refs", "{not-json")).toBeNull();
+    expect(
+      MobileDatabase.decodeLegacyCacheRecord("connection-thread-snapshots", "{not-json"),
+    ).toBeNull();
+    expect(
+      MobileDatabase.decodeLegacyCacheRecord(
+        "connection-thread-snapshots",
+        JSON.stringify({ schemaVersion: 1, environmentId: "environment-1" }),
+      ),
+    ).toBeNull();
+  });
+
+  it("drops legacy source control records", () => {
     expect(
       MobileDatabase.decodeLegacyCacheRecord(
         "connection-vcs-refs",
-        JSON.stringify({ schemaVersion: 1, environmentId: "environment-1" }),
+        JSON.stringify({ schemaVersion: 1, environmentId: "environment-1", cwd: "/repo" }),
       ),
     ).toBeNull();
   });
 });
 
-// Exercise the production SQL against SQLite, including the eviction window functions.
-describe("offline pull request cache", () => {
+// Exercise the production SQL against SQLite.
+describe("client cache", () => {
   const environmentId = "cached-environment" as import("@t3tools/contracts").EnvironmentId;
   const otherEnvironment = "other-environment" as import("@t3tools/contracts").EnvironmentId;
 
@@ -106,51 +117,43 @@ describe("offline pull request cache", () => {
       Effect.gen(function* () {
         yield* Effect.promise(sqliteDatabase);
         const database = yield* MobileDatabase.make;
-        yield* database.saveCache(environmentId, "pull-request", "v1:list", 1, '{"entries":[]}');
-        yield* database.saveCache(otherEnvironment, "pull-request", "v1:list", 1, "other");
-        expect(yield* database.loadCache(environmentId, "pull-request", "v1:list")).toEqual(
+        yield* database.saveCache(environmentId, "thread", "thread-1", 1, '{"entries":[]}');
+        yield* database.saveCache(otherEnvironment, "thread", "thread-1", 1, "other");
+        expect(yield* database.loadCache(environmentId, "thread", "thread-1")).toEqual(
           Option.some('{"entries":[]}'),
         );
         yield* database.clearEnvironmentCache(environmentId);
-        expect((yield* database.loadCache(environmentId, "pull-request", "v1:list"))._tag).toBe(
-          "None",
-        );
-        expect((yield* database.loadCache(otherEnvironment, "pull-request", "v1:list"))._tag).toBe(
+        expect((yield* database.loadCache(environmentId, "thread", "thread-1"))._tag).toBe("None");
+        expect((yield* database.loadCache(otherEnvironment, "thread", "thread-1"))._tag).toBe(
           "Some",
         );
       }),
     ),
   );
 
-  it.effect(
-    "expires old records and bounds count and payload size without evicting other cache kinds",
-    () =>
-      Effect.scoped(
-        Effect.gen(function* () {
-          const sqlite = yield* Effect.promise(sqliteDatabase);
-          const database = yield* MobileDatabase.make;
-          yield* database.saveCache(environmentId, "thread", "thread", 1, "thread");
-          yield* database.saveCache(environmentId, "pull-request", "old", 1, "old");
-          sqlite.prepare("UPDATE client_cache SET updated_at = 0 WHERE cache_key = 'old'").run();
-          expect((yield* database.loadCache(environmentId, "pull-request", "old"))._tag).toBe(
-            "None",
-          );
-          for (let i = 0; i < 260; i++)
-            yield* database.saveCache(environmentId, "pull-request", `page-${i}`, 1, "page");
-          expect((yield* database.listCache("pull-request")).length).toBe(256);
-          const large = "x".repeat(4 * 1024 * 1024);
-          for (let i = 0; i < 10; i++)
-            yield* database.saveCache(environmentId, "pull-request", `diff-${i}`, 1, large);
-          const summary = yield* database.inspectCaches;
-          const prs = summary.find((row) => row.kind === "pull-request");
-          expect(prs?.payloadBytes).toBeLessThanOrEqual(32 * 1024 * 1024);
-          expect(prs?.recordCount).toBeLessThanOrEqual(256);
-          expect((yield* database.loadCache(environmentId, "thread", "thread"))._tag).toBe("Some");
-          yield* database.saveCache(environmentId, "pull-request", "oversized", 1, large + "x");
-          expect((yield* database.loadCache(environmentId, "pull-request", "oversized"))._tag).toBe(
-            "None",
-          );
-        }),
-      ),
+  it.effect("deletes cache rows of removed source control kinds on open", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const sqlite = yield* Effect.promise(sqliteDatabase);
+        sqlite.exec(`
+          CREATE TABLE client_cache (
+            environment_id TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            cache_key TEXT NOT NULL,
+            schema_version INTEGER NOT NULL,
+            payload TEXT NOT NULL,
+            updated_at INTEGER NOT NULL,
+            PRIMARY KEY (environment_id, kind, cache_key)
+          ) WITHOUT ROWID;
+          INSERT INTO client_cache VALUES
+            ('cached-environment', 'vcs-refs', '/repo', 1, '{}', 1),
+            ('cached-environment', 'pull-request', '/repo', 1, '{}', 1),
+            ('cached-environment', 'thread', 'thread-1', 1, '{}', 1);
+        `);
+        const database = yield* MobileDatabase.make;
+        // Unknown kinds would fail to decode here if they survived.
+        expect((yield* database.inspectCaches).map((row) => row.kind)).toEqual(["thread"]);
+      }),
+    ),
   );
 });

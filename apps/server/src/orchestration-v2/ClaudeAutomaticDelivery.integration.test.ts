@@ -190,8 +190,6 @@ it.effect.each(["child completion", "scheduled message", "user steering"] as con
             modelSelection,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: cwd,
             createdBy: "user",
             creationSource: "web",
           });

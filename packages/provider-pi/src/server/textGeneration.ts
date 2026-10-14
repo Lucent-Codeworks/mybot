@@ -10,7 +10,7 @@ import * as Queue from "effect/Queue";
 import * as Schema from "effect/Schema";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 
-import { TextGenerationError } from "@t3tools/contracts";
+import { TextGenerationError } from "@t3tools/provider-core/server/textGeneration";
 import type { PiSettings } from "../settings.ts";
 
 import { makePiRpcConnection, parsePiModelSlug } from "./rpc.ts";
@@ -119,8 +119,5 @@ export const makePiTextGeneration = Effect.fn("makePiTextGeneration")(function* 
     );
   };
 
-  return TextGenerationOperations.fromRunner(
-    "PiTextGeneration",
-    TextGenerationOperations.withoutInvestigation("Pi", runPiJson),
-  );
+  return TextGenerationOperations.fromRunner("PiTextGeneration", runPiJson);
 });

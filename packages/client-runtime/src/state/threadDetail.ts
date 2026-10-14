@@ -123,12 +123,6 @@ export function createEnvironmentThreadDetailAtoms<E>(
     }).pipe(Atom.setIdleTTL(0), Atom.withLabel(`environment-thread-turn-subagents:${key}`));
   });
 
-  const worktreePathAtomFamily = Atom.family((key: string) =>
-    Atom.make(
-      (get) =>
-        Option.getOrNull(get(threadStateValueAtomFamily(key)).data)?.thread.worktreePath ?? null,
-    ).pipe(Atom.setIdleTTL(0), Atom.withLabel(`environment-thread-worktree:${key}`)),
-  );
   const pendingRequestsAtomFamily = Atom.family((key: string) => {
     let previous: Pick<OrchestrationV2ThreadProjection, "runtimeRequests" | "turnItems"> | null =
       null;
@@ -184,7 +178,6 @@ export function createEnvironmentThreadDetailAtoms<E>(
   );
 
   return {
-    worktreePathAtom: (ref: ScopedThreadRef) => worktreePathAtomFamily(threadKey(ref)),
     pendingRequestsAtom: (ref: ScopedThreadRef) => pendingRequestsAtomFamily(threadKey(ref)),
     queueWorkflowAtom: (ref: ScopedThreadRef) => queueWorkflowAtomFamily(threadKey(ref)),
     queuedCountAtom: (ref: ScopedThreadRef) => queuedCountAtomFamily(threadKey(ref)),

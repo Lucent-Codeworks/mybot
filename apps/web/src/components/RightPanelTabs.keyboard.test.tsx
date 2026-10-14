@@ -79,17 +79,11 @@ async function renderPanel(overrides: Partial<ComponentProps<typeof RightPanelTa
         onAddBrowser={noop}
         onAddBrowserInProfile={noop}
         onAddTerminal={noop}
-        onAddDiff={noop}
         onAddFiles={addFiles}
-        onAddPullRequest={noop}
-        onAddPullRequests={noop}
         onAddDevice={noop}
         browserAvailable={false}
         terminalAvailable={false}
-        diffAvailable={false}
         filesAvailable
-        pullRequestAvailable={false}
-        pullRequestsAvailable={false}
         deviceAvailable={false}
         {...overrides}
       >
@@ -120,9 +114,7 @@ describe("right panel new-tab shortcut", () => {
         platform === "MacIntel" ? { metaKey: true } : { ctrlKey: true },
       );
       expect(event.defaultPrevented).toBe(true);
-      expect(document.querySelector('[role="menu"]')?.textContent).toContain(
-        "Linked pull requests",
-      );
+      expect(document.querySelector('[role="menu"]')?.textContent).toContain("Device");
       expect(document.activeElement?.closest('[role="menu"]')).not.toBeNull();
       expect(
         (

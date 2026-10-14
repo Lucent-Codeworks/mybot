@@ -297,7 +297,7 @@ describe("showContextMenuFallback", () => {
         label: "Copy",
         children: [
           { id: "copy:path", label: "Path" },
-          { id: "copy:branch", label: "Branch" },
+          { id: "copy:name", label: "Name" },
         ],
       },
     ]);
@@ -310,7 +310,7 @@ describe("showContextMenuFallback", () => {
     expect(parentButton?.attributes.get("aria-expanded")).toBe("true");
 
     const childButton = findButton("Path");
-    const siblingButton = findButton("Branch");
+    const siblingButton = findButton("Name");
     expect(childButton).toBeTruthy();
     expect(siblingButton).toBeTruthy();
     expect(childButton?.focused).toBe(true);
@@ -323,7 +323,7 @@ describe("showContextMenuFallback", () => {
     expect(siblingButton?.style.background).toBe("var(--accent)");
     siblingButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
-    await expect(selectionPromise).resolves.toBe("copy:branch");
+    await expect(selectionPromise).resolves.toBe("copy:name");
     expect(invoker.focused).toBe(true);
   });
 });

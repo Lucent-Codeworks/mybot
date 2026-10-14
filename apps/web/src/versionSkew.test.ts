@@ -159,9 +159,7 @@ describe("versionSkew", () => {
             arch: "arm64",
           },
           serverVersion: "0.0.33",
-          capabilities: {
-            repositoryIdentity: true,
-          },
+          capabilities: {},
         },
       }),
     ).toMatchObject({
@@ -209,7 +207,6 @@ describe("versionSkew", () => {
           platform: { os: "darwin", arch: "arm64" },
           serverVersion: "9.9.9",
           capabilities: {
-            repositoryIdentity: true,
             serverSelfUpdate: "desktop-managed",
           },
         },
@@ -226,7 +223,6 @@ describe("versionSkew", () => {
         platform: { os: "darwin", arch: "arm64" } as const,
         serverVersion: "9.9.9",
         capabilities: {
-          repositoryIdentity: true,
           serverSelfUpdate: "desktop-managed" as const,
           ...(desktopAppUpdate === undefined ? {} : { desktopAppUpdate }),
         },

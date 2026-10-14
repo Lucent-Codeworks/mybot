@@ -22,7 +22,7 @@ import { Switch } from "../ui/switch";
 import { Textarea } from "../ui/textarea";
 import type { ProviderClientDefinition } from "@t3tools/provider-core/client";
 
-/** What the form reads from a definition: an agent provider's, or a source control host's. */
+/** What the form reads from an agent provider's definition. */
 export type SettingsFormDefinition = Pick<ProviderClientDefinition, "settingsSchema"> & {
   readonly driverKind?: ProviderClientDefinition["driverKind"];
 };

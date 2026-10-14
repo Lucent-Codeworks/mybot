@@ -27,8 +27,6 @@ export function makeRawThreadShell(
     modelSelection: { instanceId: providerInstanceId, model: "gpt-5.4" },
     runtimeMode: "full-access",
     interactionMode: "default",
-    branch: null,
-    worktreePath: null,
     activeProviderThreadId: null,
     lineage: { rootThreadId: id, parentThreadId: null, relationshipToParent: null },
     forkedFrom: null,
@@ -65,8 +63,6 @@ export function makeThreadShellFixture(
     modelSelection: overrides.modelSelection,
     runtimeMode: overrides.runtimeMode,
     interactionMode: overrides.interactionMode,
-    branch: overrides.branch,
-    worktreePath: overrides.worktreePath,
   });
   return { ...presentThreadShell(environmentId, raw), ...overrides };
 }

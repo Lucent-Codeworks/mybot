@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-import type { VcsStatusResult } from "@t3tools/contracts";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
@@ -31,7 +30,6 @@ vi.mock("@react-navigation/native", () => {
     useNavigation: () => navigation,
   };
 });
-vi.mock("../../native/useOpenPullRequest", () => ({ useOpenPullRequest: () => () => {} }));
 
 vi.mock("../../state/session", () => ({ useEnvironmentScope: () => true }));
 vi.mock("react-native", () => ({ Alert: { alert: () => {} }, Linking: {}, Platform: {} }));
@@ -53,51 +51,23 @@ vi.mock("../settings/appearance/AppearancePreferencesProvider", () => ({
 
 import { ThreadHeader } from "./ThreadHeader";
 
-const projectScripts: never[] = [];
+const projectScripts: ReadonlyArray<import("@t3tools/contracts").ProjectScript> = [];
 
-function status(
-  files: ReadonlyArray<string>,
-  overrides: Partial<VcsStatusResult> = {},
-): VcsStatusResult {
-  return {
-    isRepo: true,
-    hasPrimaryRemote: false,
-    isDefaultRef: true,
-    refName: "master",
-    hasWorkingTreeChanges: files.length > 0,
-    workingTree: {
-      files: files.map((path) => ({ path, insertions: 0, deletions: 0 })),
-      insertions: 0,
-      deletions: 0,
-    },
-    hasUpstream: false,
-    aheadCount: 0,
-    behindCount: 0,
-    pr: null,
-    ...overrides,
-  } as unknown as VcsStatusResult;
-}
-
-// Mirrors the route screen: every render passes fresh gitControls callbacks.
-function Header(props: { readonly gitStatus: VcsStatusResult | null; readonly title?: string }) {
+// Mirrors the route screen: every render passes fresh control callbacks.
+function Header(props: { readonly title?: string; readonly scripts?: typeof projectScripts }) {
   return (
     <ThreadHeader
       title={props.title ?? "Thread"}
       subtitle=""
       headerColor="#000"
       usesNativeHeaderGlass
-      gitControls={{
+      controls={{
         environmentId: "environment-1",
         threadId: "thread-1",
-        currentBranch: "master",
-        gitStatus: props.gitStatus,
-        gitOperationLabel: null,
-        onPull: async () => {},
-        onRunAction: async () => null,
         canOpenTerminal: true,
         canOperateTerminal: true,
         canOpenFiles: true,
-        projectScripts,
+        projectScripts: props.scripts ?? projectScripts,
         terminalSessions: [],
         onOpenTerminal: () => {},
         onOpenNewTerminal: () => {},
@@ -108,26 +78,17 @@ function Header(props: { readonly gitStatus: VcsStatusResult | null; readonly ti
       fileInspectorSupported={false}
       inspectorMode={null}
       onToggleInspector={() => {}}
-      onOpenGitInspector={() => {}}
       onOpenFilesInspector={() => {}}
     />
   );
 }
 
-function renderedGitMenuItems(): Array<{
-  description?: unknown;
-  label?: unknown;
-  onPress?: () => void;
-}> {
+function renderedTerminalMenuLabels(): unknown[] {
   const items = harness.renderedRightItems.at(-1) ?? [];
-  const git = items.find((item) => item.identifier === "thread-right-git") as
-    | { menu: { items: Array<{ description?: unknown; label?: unknown; onPress?: () => void }> } }
+  const terminal = items.find((item) => item.identifier === "thread-right-terminal") as
+    | { menu: { items: Array<{ label?: unknown }> } }
     | undefined;
-  return git?.menu.items ?? [];
-}
-
-function renderedGitStatusDescription(): unknown {
-  return renderedGitMenuItems()[0]?.description;
+  return terminal?.menu.items.map((item) => item.label) ?? [];
 }
 
 let root: Root | null = null;
@@ -147,46 +108,22 @@ afterEach(() => {
 });
 
 describe("ThreadHeader", () => {
-  it("re-applies native header items when Git status changes", () => {
-    render(<Header gitStatus={status([])} />);
-    expect(renderedGitStatusDescription()).toBe("Clean");
+  it("re-applies native header items when the project scripts change", () => {
+    render(<Header />);
+    expect(renderedTerminalMenuLabels()).toContain("No project scripts");
 
-    // A refreshed status (e.g. after reconnect) must reach the Git popover even
-    // though nothing else in the header changed.
-    render(<Header gitStatus={status(["audit.txt"])} />);
-    expect(renderedGitStatusDescription()).toBe("1 changed");
-
-    render(<Header gitStatus={status([])} />);
-    expect(renderedGitStatusDescription()).toBe("Clean");
+    render(<Header scripts={[{ id: "dev", name: "Dev", command: "pnpm dev", icon: "play" }]} />);
+    expect(renderedTerminalMenuLabels()).toContain("Dev");
   });
 
   it("does not re-apply options for re-renders with equivalent header content", () => {
-    render(<Header gitStatus={status([])} />);
+    render(<Header />);
     const applied = harness.setOptionsCalls;
 
-    // Streaming re-renders the route with fresh callbacks and equal Git content.
+    // Streaming re-renders the route with fresh callbacks and equal content.
     for (let index = 0; index < 20; index += 1) {
-      render(<Header gitStatus={status([])} />);
+      render(<Header />);
     }
     expect(harness.setOptionsCalls).toBe(applied);
-  });
-
-  it("re-applies menu actions when the default ref changes behind the same label", async () => {
-    // An unpushed commit on a branch with an open PR shows "Push" whether or not the
-    // branch is the default one, but only the default branch asks for confirmation.
-    const pushable = (isDefaultRef: boolean) =>
-      status([], {
-        isDefaultRef,
-        aheadCount: 1,
-        hasPrimaryRemote: true,
-        pr: { state: "open", url: "https://example.com/pr/1" },
-      } as Partial<VcsStatusResult>);
-    render(<Header gitStatus={pushable(false)} />);
-    expect(renderedGitMenuItems()[1]?.label).toBe("Push");
-
-    render(<Header gitStatus={pushable(true)} />);
-    expect(renderedGitMenuItems()[1]?.label).toBe("Push");
-    await act(async () => renderedGitMenuItems()[1]?.onPress?.());
-    expect(harness.navigatedRoutes).toEqual(["GitConfirm"]);
   });
 });

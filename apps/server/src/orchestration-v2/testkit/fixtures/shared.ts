@@ -229,6 +229,12 @@ export type OrchestratorFixtureInputStep =
       readonly waitForTurnItemType?: OrchestrationV2TurnItem["type"];
     }
   | {
+      /** Waits until `until` holds for the projections of every thread, subagent threads included. */
+      readonly type: "await_threads";
+      readonly label: string;
+      readonly until: (threads: ReadonlyArray<OrchestrationV2ThreadProjection>) => boolean;
+    }
+  | {
       /**
        * A run held open for background work finishes through the adapter's
        * debounce, which replay passes on the adapter's receipt.
@@ -468,8 +474,6 @@ function createThreadCommand(input: {
     modelSelection: input.modelSelection,
     runtimeMode: input.runtimeMode ?? "full-access",
     interactionMode: input.interactionMode ?? "default",
-    branch: null,
-    worktreePath: null,
   };
 }
 
@@ -691,6 +695,9 @@ export function materializeFixtureInput(input: {
               itemType: step.waitForTurnItemType,
             });
           }
+          break;
+        case "await_threads":
+          steps.push(step);
           break;
         case "finish_held_run":
           steps.push({

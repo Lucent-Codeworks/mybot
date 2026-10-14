@@ -1534,8 +1534,6 @@ function makeCodexTestAppThread(input: {
     modelSelection: CODEX_TEST_MODEL_SELECTION,
     runtimeMode: "full-access",
     interactionMode: "default",
-    branch: null,
-    worktreePath: null,
     activeProviderThreadId: input.providerThread.id,
     lineage: {
       parentThreadId: null,
@@ -4559,33 +4557,6 @@ describe("CodexAdapterV2 post-settle continuation", () => {
           ),
         );
         const replayDriver = yield* CodexReplay.makeReplayDriver(localTranscript);
-        const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-        assert.equal(
-          Number(yield* spawner.exitCode(ChildProcess.make("git", ["init", "--quiet"], { cwd }))),
-          0,
-        );
-        assert.equal(
-          Number(
-            yield* spawner.exitCode(
-              ChildProcess.make(
-                "git",
-                [
-                  "-c",
-                  "user.name=Test",
-                  "-c",
-                  "user.email=test@example.com",
-                  "commit",
-                  "--allow-empty",
-                  "--quiet",
-                  "-m",
-                  "Initial commit",
-                ],
-                { cwd },
-              ),
-            ),
-          ),
-          0,
-        );
         yield* Effect.gen(function* () {
           const orchestrator = yield* Orchestrator.OrchestratorV2;
           const worker = yield* EffectWorker.OrchestrationEffectWorkerV2;
@@ -4599,8 +4570,6 @@ describe("CodexAdapterV2 post-settle continuation", () => {
             modelSelection: CODEX_TEST_MODEL_SELECTION,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: cwd,
             createdBy: "user",
             creationSource: "web",
           });
@@ -4697,23 +4666,6 @@ describe("CodexAdapterV2 post-settle continuation", () => {
             yield* encodeStringJson(cwd),
           ),
         );
-        const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-        for (const args of [
-          ["init", "--quiet"],
-          [
-            "-c",
-            "user.name=Test",
-            "-c",
-            "user.email=test@example.com",
-            "commit",
-            "--allow-empty",
-            "--quiet",
-            "-m",
-            "Initial commit",
-          ],
-        ]) {
-          assert.equal(Number(yield* spawner.exitCode(ChildProcess.make("git", args, { cwd }))), 0);
-        }
         yield* Effect.gen(function* () {
           const orchestrator = yield* Orchestrator.OrchestratorV2;
           const worker = yield* EffectWorker.OrchestrationEffectWorkerV2;
@@ -4727,8 +4679,6 @@ describe("CodexAdapterV2 post-settle continuation", () => {
             modelSelection: CODEX_TEST_MODEL_SELECTION,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: cwd,
             createdBy: "user",
             creationSource: "web",
           });

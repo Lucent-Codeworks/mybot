@@ -60,7 +60,7 @@ const config: ShowcaseConfig = {
       simulator: "iPhone Test",
       appearance: "dark",
       theme: "t3-code",
-      scenes: ["thread", "review"],
+      scenes: ["thread", "threads"],
       storeAsset: appleSpec,
     },
     {
@@ -82,14 +82,14 @@ it("parses repeatable capture filters", () => {
     "--device",
     "phone",
     "--scene",
-    "review",
+    "terminal",
     "--appearance",
     "both",
     "--skip-build",
   ]);
   assert.deepStrictEqual([...options.platforms], ["ios"]);
   assert.deepStrictEqual([...options.deviceIds], ["phone"]);
-  assert.deepStrictEqual([...options.scenes], ["review"]);
+  assert.deepStrictEqual([...options.scenes], ["terminal"]);
   assert.deepStrictEqual([...options.appearances], ["light", "dark"]);
   assert.equal(options.skipBuild, true);
 });

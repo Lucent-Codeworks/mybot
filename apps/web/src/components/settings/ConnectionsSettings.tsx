@@ -91,7 +91,6 @@ import {
 } from "./EnvironmentRow";
 import { FoldedSettingsSection } from "./FoldedSettingsSection";
 import { LoadBalancingSettings } from "./LoadBalancingSettings";
-import { GitHubRoutingSettings } from "./GitHubRoutingSettings";
 import { Input } from "../ui/input";
 import { CommandShortcut } from "../ui/command";
 import {
@@ -2121,7 +2120,7 @@ export function ConnectionsSettings() {
     [savedServerUpdateStates],
   );
   // Switched-off machines never receive threads, so they stay out of the
-  // load balancing and GitHub sharing lists. The WSL backend has no row in
+  // load balancing list. The WSL backend has no row in
   // the Environments list but does take threads, so it stays in here. This
   // machine leads the list.
   const loadBalancingEnvironments = useMemo(
@@ -4169,7 +4168,6 @@ export function ConnectionsSettings() {
         />
       ) : null}
       <LoadBalancingSettings environments={loadBalancingEnvironments} />
-      <GitHubRoutingSettings environments={loadBalancingEnvironments} />
     </SettingsPageContainer>
   );
 }

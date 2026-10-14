@@ -18,7 +18,6 @@
  * `OPENCODE2_STEP_WAIT` seconds (120 by default).
  */
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
-import * as SourceControlProviderRegistry from "../sourceControl/SourceControlProviderRegistry.ts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as NodeSqlite from "node:sqlite";
 import { assert, it } from "@effect/vitest";
@@ -40,11 +39,9 @@ import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 import { FetchHttpClient, HttpClient } from "effect/http";
-import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import { describe } from "vite-plus/test";
 
 import * as ResetCreditCoordinator from "../provider/resetCreditCoordinator.ts";
-import * as CheckpointStore from "../checkpointing/CheckpointStore.ts";
 import * as BackgroundPolicy from "../background/BackgroundPolicy.ts";
 import * as HostPowerMonitor from "../background/HostPowerMonitor.ts";
 import * as ServerConfig from "../config.ts";
@@ -61,12 +58,9 @@ import * as OpenCode2Client from "@t3tools/provider-opencode/server/v2/OpenCode2
 import * as OpenCodeRuntime from "@t3tools/provider-opencode/server/OpenCodeRuntime";
 import * as OpenCodeServerLedger from "@t3tools/provider-opencode/server/OpenCodeServerLedger";
 import * as ServerSettings from "../serverSettings.ts";
-import * as VcsDriverRegistry from "../vcs/VcsDriverRegistry.ts";
-import * as VcsProcess from "../vcs/VcsProcess.ts";
 import * as EffectWorker from "./EffectWorker.ts";
 import * as Orchestrator from "./Orchestrator.ts";
 import * as ProviderInstanceRegistry from "../provider/ProviderInstanceRegistry.ts";
-import * as ProviderTurnStartServiceTestkit from "./ProviderTurnStartService.testkit.ts";
 import * as RuntimeLayer from "./runtimeLayer.ts";
 import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
 import * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
@@ -125,18 +119,8 @@ const layerMcpRegistry = Layer.succeed(
   }),
 );
 
-const layerPlatformTest = Layer.merge(
-  NodeServices.layer,
-  Layer.mock(SourceControlProviderRegistry.SourceControlProviderRegistry)({
-    resolveLink: () => Effect.die("unused title link"),
-  }),
-);
+const layerPlatformTest = NodeServices.layer;
 const layerServerConfig = ServerConfig.layerTest(`${ROOT}/work`, { prefix: "t3-opencode2-live-" });
-const layerVcsDriverRegistry = VcsDriverRegistry.layer.pipe(
-  Layer.provide(VcsProcess.layer),
-  Layer.provide(layerServerConfig),
-  Layer.provide(layerPlatformTest),
-);
 // Isolated OpenCode state: the server never touches the developer's own data.
 const layerServerSettings = ServerSettings.layerTest({
   providerInstances: {
@@ -207,10 +191,8 @@ const layerProviderInstanceRegistry = ProviderInstanceRegistryHydration.layer.pi
   ),
 );
 const layerOrchestration = RuntimeLayer.layer.pipe(
-  Layer.provide(ProviderTurnStartServiceTestkit.layer),
   Layer.provide(layerMcpRegistry),
   Layer.provide(SqlitePersistence.layerMemory),
-  Layer.provide(CheckpointStore.layer.pipe(Layer.provide(layerVcsDriverRegistry))),
   Layer.provide(layerServerConfig),
   Layer.provide(layerServerSettings),
   // Merged, not only provided: the test reads the same instance the orchestrator uses.
@@ -370,8 +352,6 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
           modelSelection: MODEL,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: `${ROOT}/work`,
         });
 
         yield* send(
@@ -460,8 +440,6 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
           modelSelection: MODEL,
           runtimeMode: "approval-required",
           interactionMode: "default",
-          branch: null,
-          worktreePath: `${ROOT}/work`,
         });
         const pendingAsk = (projection: OrchestrationV2ThreadProjection) =>
           projection.runtimeRequests.find((request) => request.status === "pending");
@@ -570,8 +548,6 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
           modelSelection: MODEL,
           runtimeMode: "full-access",
           interactionMode: "plan",
-          branch: null,
-          worktreePath: `${ROOT}/work`,
         });
         // The plan agent's directory: `$HOME/.opencode/plan` under the isolated HOME.
         const planDir = path.join(ROOT, ".opencode", "plan");
@@ -610,8 +586,6 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
             modelSelection: MODEL,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: `${ROOT}/work`,
           });
           return threadId;
         });
@@ -727,31 +701,11 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
   );
 
   it.live(
-    "steers a running turn, queues two messages, forks an earlier turn and rolls back a write",
+    "steers a running turn, queues two messages, forks an earlier turn and rolls back the conversation",
     () =>
       Effect.gen(function* () {
-        const fs = yield* FileSystem.FileSystem;
-        const path = yield* Path.Path;
         yield* EffectWorker.runDaemonWithOptions({ concurrency: 2 }).pipe(Effect.forkScoped);
         const orchestrator = yield* Orchestrator.OrchestratorV2;
-        // A worktree of its own, so rolling back restores files for this thread only.
-        const work = path.join(ROOT, "inbox-work");
-        yield* fs.makeDirectory(work, { recursive: true });
-        const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-        const git = (...args: ReadonlyArray<string>) =>
-          spawner.exitCode(ChildProcess.make("git", ["-C", work, ...args]));
-        yield* git("init", "-q");
-        yield* git(
-          "-c",
-          "user.name=t3",
-          "-c",
-          "user.email=t3@example.com",
-          "commit",
-          "-q",
-          "--allow-empty",
-          "-m",
-          "init",
-        );
         const threadId = ThreadId.make("thread:opencode2-live-inbox");
         yield* orchestrator.dispatch({
           type: "thread.create",
@@ -764,8 +718,6 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
           modelSelection: MODEL,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: work,
         });
         const dispatch = (
           key: string,
@@ -794,20 +746,15 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
             )
             .join("\n");
 
-        // 1. A turn that writes ALPHA, which the rollback keeps.
-        yield* dispatch(
-          "alpha",
-          "Use the write tool to create reverted.txt containing exactly ALPHA, then reply DONE.",
-          { type: "start_immediately" },
-        );
+        // 1. The first turn, which the rollback keeps.
+        yield* dispatch("alpha", "Reply with exactly ALPHA.", { type: "start_immediately" });
         const first = yield* waitFor(threadId, settled);
         assert.equal(first.runs[0]?.status, "completed");
-        assert.equal((yield* fs.readFileString(path.join(work, "reverted.txt"))).trim(), "ALPHA");
 
         // 2. A long shell turn: steered while it runs, with two messages queued behind it.
         yield* dispatch(
           "shell",
-          "Run the shell command `sleep 15 && echo A` with the shell tool in the foreground (not in the background) and wait for it, then use the write tool to overwrite reverted.txt with exactly BETA, then reply DONE_A.",
+          "Run the shell command `sleep 15 && echo A` with the shell tool in the foreground (not in the background) and wait for it, then reply DONE_A.",
           { type: "start_immediately" },
         );
         const running = yield* waitFor(threadId, (projection) =>
@@ -847,7 +794,6 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
           drained.attempts.filter((attempt) => attempt.runId === shell!.id),
           1,
         );
-        assert.equal((yield* fs.readFileString(path.join(work, "reverted.txt"))).trim(), "BETA");
 
         // 3. Fork from the first turn: the fork only knows what came before the shell turn.
         const forkId = ThreadId.make("thread:opencode2-live-inbox-fork");
@@ -859,16 +805,6 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
           sourceThreadId: threadId,
           targetThreadId: forkId,
           sourcePoint: { type: "run", runId: first.runs[0]!.id },
-        });
-        // In its own worktree, so the source's rollback below restores files for
-        // the source alone. The fork's session moves there with it.
-        const forkWork = path.join(ROOT, "inbox-fork-work");
-        yield* fs.makeDirectory(forkWork, { recursive: true });
-        yield* orchestrator.dispatch({
-          type: "thread.metadata.update",
-          commandId: CommandId.make("command:opencode2-live-inbox:fork-worktree"),
-          threadId: forkId,
-          worktreePath: forkWork,
         });
         yield* orchestrator.dispatch({
           type: "message.dispatch",
@@ -887,8 +823,7 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
         assert.equal(forked.runs[0]?.status, "completed");
         assert.include(assistantText(forked, forked.runs[0]!.id).toUpperCase(), "NO");
 
-        // 4. Roll the source back to the first turn: OpenCode's history drops the
-        // later turns and T3's checkpoint puts ALPHA back.
+        // 4. Roll the source back to the first turn: OpenCode's history drops the later turns.
         const checkpoint = drained.checkpoints.find(
           (candidate) => candidate.appRunOrdinal === 1 && candidate.status === "ready",
         );
@@ -907,7 +842,6 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
           rolledBack.runs.map((run) => run.status),
           ["completed", "rolled_back", "rolled_back", "rolled_back"],
         );
-        assert.equal((yield* fs.readFileString(path.join(work, "reverted.txt"))).trim(), "ALPHA");
         yield* dispatch(
           "after",
           "Did I ask you to reply with QUEUED_B in this conversation? Answer only YES or NO.",
@@ -983,8 +917,6 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
           modelSelection: MODEL,
           runtimeMode: "full-access",
           interactionMode: "plan",
-          branch: null,
-          worktreePath: work,
         });
         const runs = (count: number) => (projection: OrchestrationV2ThreadProjection) =>
           projection.runs.length === count && settled(projection);
@@ -1068,8 +1000,6 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
           modelSelection: MODEL,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: work,
         });
         const runs = (count: number) => (projection: OrchestrationV2ThreadProjection) =>
           projection.runs.length === count && settled(projection);
@@ -1143,8 +1073,6 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
           modelSelection: MODEL,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: work,
         });
         yield* send(
           threadId,

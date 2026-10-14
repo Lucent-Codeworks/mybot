@@ -37,7 +37,7 @@ describe("requestLatencyState", () => {
   });
 
   it("clears the slow request once the server acknowledges it", () => {
-    trackRpcRequestSent("1", "git.status");
+    trackRpcRequestSent("1", "server.getConfig");
     vi.advanceTimersByTime(SLOW_RPC_ACK_THRESHOLD_MS);
     expect(getSlowRpcAckRequests()).toHaveLength(1);
 
@@ -58,16 +58,6 @@ describe("requestLatencyState", () => {
 
     expect(getSlowRpcAckRequests()).toEqual([]);
   });
-
-  it.each(Object.values(WS_METHODS).filter((method) => method.startsWith("pullRequests.")))(
-    "ignores pull request workspace request %s",
-    (method) => {
-      trackRpcRequestSent("1", method);
-      vi.advanceTimersByTime(SLOW_RPC_ACK_THRESHOLD_MS * 2);
-
-      expect(getSlowRpcAckRequests()).toEqual([]);
-    },
-  );
 
   it("keeps ignoring untracked methods when a display tag is supplied", () => {
     trackRpcRequestSent(

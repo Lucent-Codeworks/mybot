@@ -8,12 +8,12 @@ review check enforces the same rules; keep the two in step.
 
 ## Where a feature lives
 
-A server capability is a method on a service in its domain folder (`project/`, `workspace/`, `git/`,
+A server capability is a method on a service in its domain folder (`project/`, `workspace/`,
 `provider/`, ...). Extend the service that already owns the domain; add a new one only when none
 does.
 
 A transport handler does three things: decode the request, call one service method, and map the
-service's typed errors to the transport's error. Nothing else. Filesystem, Git, process, or
+service's typed errors to the transport's error. Nothing else. Filesystem, process, or
 persistence work, folder naming, multi-step dispatch, retries, and rollback belong in the service.
 
 The reason is reach. Users trigger a capability from the WebSocket, agents reach it through MCP

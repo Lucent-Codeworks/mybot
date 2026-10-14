@@ -47,13 +47,12 @@ public final class T3KeyboardCommandsView: ExpoView {
       enabledCommand("back", input: "[", modifiers: .command, action: #selector(goBack), title: "Back"),
       enabledCommand("files", input: "f", modifiers: [.command, .shift], action: #selector(openFiles), title: "Open Files"),
       enabledCommand("terminal", input: "t", modifiers: [.command, .shift], action: #selector(openTerminal), title: "Open Terminal"),
-      enabledCommand("review", input: "r", modifiers: [.command, .shift], action: #selector(openReview), title: "Open Review"),
       enabledCommand(
         "copyThreadReference",
         input: "c",
         modifiers: [.command, .shift],
         action: #selector(copyThreadReference),
-        title: "Copy PR Link or Thread ID"
+        title: "Copy Thread ID"
       ),
       enabledCommand("toggleSidebar", input: "\\", modifiers: .command, action: #selector(handleToggleSidebar), title: "Toggle Sidebar"),
       enabledCommand("cycleHost", input: "h", modifiers: [.command, .shift], action: #selector(cycleHost), title: "Next Machine"),
@@ -154,7 +153,6 @@ public final class T3KeyboardCommandsView: ExpoView {
   @objc private func goBack() { emit("back") }
   @objc private func openFiles() { emit("files") }
   @objc private func openTerminal() { emit("terminal") }
-  @objc private func openReview() { emit("review") }
   @objc private func copyThreadReference() { emit("copyThreadReference") }
   @objc private func handleToggleSidebar() { emit("toggleSidebar") }
   @objc private func cycleHost() { emit("cycleHost") }

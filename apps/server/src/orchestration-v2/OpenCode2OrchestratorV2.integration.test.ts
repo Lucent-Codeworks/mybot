@@ -190,17 +190,6 @@ const answeredPrompt = (text: string): ReadonlyArray<ProviderReplayEntry> => [
   }),
   event("session.execution.succeeded", { sessionID: SESSION }),
 ];
-/** The model list read the first time a thread runs in `directory`. */
-const directoryModels = (directory: string): ReadonlyArray<ProviderReplayEntry> => [
-  out("model.list", { "location[directory]": directory }),
-  reply("model.list", {
-    location: { directory },
-    data: [
-      catalogModel("big-pickle", "Big Pickle"),
-      catalogModel("mimo-v2.6-flash-free", "MiMo V2.6 Flash Free"),
-    ],
-  }),
-];
 /** A `/api/model` entry as 2.0.18 lists it; a known window means no re-read after a turn. */
 const catalogModel = (id: string, name: string) => ({
   id,
@@ -256,7 +245,6 @@ const withDirectory = <T>(value: T, directory: string): T => {
 
 const threadCommands = (input: {
   readonly name: string;
-  readonly worktreePath: string;
   readonly runtimeMode?: RuntimeMode;
   readonly interactionMode?: ProviderInteractionMode;
 }) => {
@@ -275,8 +263,6 @@ const threadCommands = (input: {
       modelSelection: bigPickle,
       runtimeMode: input.runtimeMode ?? "full-access",
       interactionMode: input.interactionMode ?? "default",
-      branch: null,
-      worktreePath: input.worktreePath,
     } satisfies OrchestrationV2Command,
     message: (key: string, modelSelection: ModelSelection = bigPickle, text?: string) =>
       ({
@@ -306,6 +292,7 @@ const threadCommands = (input: {
 const runScenario = (input: {
   readonly name: string;
   readonly threadId: ThreadId;
+  readonly cwd: string;
   readonly entries: ReadonlyArray<ProviderReplayEntry>;
   readonly commands: ReadonlyArray<OrchestrationV2Command>;
 }) =>
@@ -325,7 +312,13 @@ const runScenario = (input: {
         : []),
     ]);
     const result = yield* runOrchestratorV2ProviderReplayScenario(
-      { name: input.name, transcript, commands: input.commands, steps },
+      {
+        name: input.name,
+        transcript,
+        commands: input.commands,
+        steps,
+        runtimePolicyOverride: { cwd: input.cwd },
+      },
       OpenCode2OrchestratorReplayHarness,
     ).pipe(provideDeterministicTestRuntime);
     const projection = result.projections.get(input.threadId);
@@ -340,10 +333,11 @@ describe("OpenCode 2 through the orchestrator", () => {
       Effect.gen(function* () {
         const name = `opencode2-model-switch-${via.replace(" ", "-")}`;
         const cwd = yield* checkpointWorkspace(name);
-        const thread = threadCommands({ name, worktreePath: cwd });
+        const thread = threadCommands({ name });
         const projection = yield* runScenario({
           name,
           threadId: thread.threadId,
+          cwd,
           entries: [
             ...createdSession(cwd, name),
             ...instructionsWritten,
@@ -388,106 +382,6 @@ describe("OpenCode 2 through the orchestrator", () => {
       }).pipe(Effect.scoped),
   );
 
-  it.effect("moves the session to the thread's new worktree before the next prompt", () =>
-    Effect.gen(function* () {
-      const name = "opencode2-worktree-move";
-      const before = yield* checkpointWorkspace(`${name}-before`);
-      const after = yield* checkpointWorkspace(`${name}-after`);
-      const thread = threadCommands({ name, worktreePath: before });
-      const projection = yield* runScenario({
-        name,
-        threadId: thread.threadId,
-        entries: [
-          ...createdSession(before, name),
-          ...instructionsWritten,
-          ...answeredPrompt("FIRST"),
-          ...directoryModels(after),
-          out("session.get", { sessionID: SESSION }),
-          reply("session.get", sessionInfo(before, t3Rules(name), name)),
-          // The worktree change detached the thread, so its session is loaded afresh.
-          ...noOpenRequests,
-          out("session.move", { sessionID: SESSION, directory: after }),
-          reply("session.move", null),
-          // The moved thread reopens its session, which writes the entry again.
-          ...instructionsWritten,
-          ...answeredPrompt("SECOND"),
-        ],
-        commands: [
-          thread.create,
-          thread.message("first"),
-          {
-            type: "thread.metadata.update",
-            commandId: thread.command("worktree"),
-            threadId: thread.threadId,
-            worktreePath: after,
-          },
-          thread.message("second"),
-        ],
-      });
-      assert.deepEqual(
-        projection.runs.map((run) => run.status),
-        ["completed", "completed"],
-      );
-      assert.lengthOf(projection.providerThreads, 1);
-    }).pipe(Effect.scoped),
-  );
-
-  it.effect("gives a session made with older rules T3's rules before its next prompt", () =>
-    Effect.gen(function* () {
-      const name = "opencode2-resume-rules";
-      const before = yield* checkpointWorkspace(`${name}-before`);
-      const after = yield* checkpointWorkspace(`${name}-after`);
-      const thread = threadCommands({ name, worktreePath: before });
-      const projection = yield* runScenario({
-        name,
-        threadId: thread.threadId,
-        entries: [
-          ...createdSession(before, name),
-          ...instructionsWritten,
-          ...answeredPrompt("FIRST"),
-          ...directoryModels(after),
-          // Reopened after a worktree change, the session reports the rules an
-          // older build gave it, which denied subagents; they are replaced
-          // before anything runs.
-          out("session.get", { sessionID: SESSION }),
-          reply(
-            "session.get",
-            sessionInfo(
-              before,
-              [
-                { action: "*", resource: "*", effect: "allow" },
-                { action: "subagent", resource: "*", effect: "deny" },
-              ],
-              name,
-            ),
-          ),
-          ...noOpenRequests,
-          out("session.update", { sessionID: SESSION, permissions: t3Rules(name) }),
-          reply("session.update", null),
-          out("session.move", { sessionID: SESSION, directory: after }),
-          reply("session.move", null),
-          ...instructionsWritten,
-          ...answeredPrompt("SECOND"),
-        ],
-        commands: [
-          thread.create,
-          thread.message("first"),
-          {
-            type: "thread.metadata.update",
-            commandId: thread.command("worktree"),
-            threadId: thread.threadId,
-            worktreePath: after,
-          },
-          thread.message("second"),
-        ],
-      });
-      assert.deepEqual(
-        projection.runs.map((run) => run.status),
-        ["completed", "completed"],
-      );
-    }).pipe(Effect.scoped),
-  );
-
   it.effect(
     "creates a Supervised thread's session with rules that ask before shell and edits",
     () =>
@@ -496,12 +390,12 @@ describe("OpenCode 2 through the orchestrator", () => {
         const cwd = yield* checkpointWorkspace(name);
         const thread = threadCommands({
           name,
-          worktreePath: cwd,
           runtimeMode: "approval-required",
         });
         const projection = yield* runScenario({
           name,
           threadId: thread.threadId,
+          cwd,
           entries: [
             ...createdSession(cwd, name, supervisedRules(name), true),
             ...instructionsWritten,
@@ -520,7 +414,7 @@ describe("OpenCode 2 through the orchestrator", () => {
     Effect.gen(function* () {
       const name = "opencode2-mode-change";
       const cwd = yield* checkpointWorkspace(name);
-      const thread = threadCommands({ name, worktreePath: cwd });
+      const thread = threadCommands({ name });
       const setMode = (key: string, runtimeMode: RuntimeMode) =>
         ({
           type: "thread.runtime-mode.set",
@@ -531,6 +425,7 @@ describe("OpenCode 2 through the orchestrator", () => {
       const projection = yield* runScenario({
         name,
         threadId: thread.threadId,
+        cwd,
         entries: [
           ...createdSession(cwd, name),
           ...instructionsWritten,
@@ -571,10 +466,11 @@ describe("OpenCode 2 through the orchestrator", () => {
     Effect.gen(function* () {
       const name = "opencode2-plan-rules";
       const cwd = yield* checkpointWorkspace(name);
-      const thread = threadCommands({ name, worktreePath: cwd, interactionMode: "plan" });
+      const thread = threadCommands({ name, interactionMode: "plan" });
       const projection = yield* runScenario({
         name,
         threadId: thread.threadId,
+        cwd,
         entries: [
           ...createdSession(cwd, name, planRules(name), true),
           // Plan mode is also OpenCode's plan agent, switched before the prompt.
@@ -621,7 +517,7 @@ describe("OpenCode 2 through the orchestrator", () => {
       const transcript = yield* OpenCode2OrchestratorReplayHarness.decodeTranscript(
         withDirectory(recorded, cwd),
       );
-      const source = threadCommands({ name, worktreePath: cwd });
+      const source = threadCommands({ name });
       const target = ThreadId.make(`thread:${name}:target`);
       const [one, two] = [source.message("one"), source.message("two")];
       const commands: ReadonlyArray<OrchestrationV2Command> = [
@@ -657,7 +553,14 @@ describe("OpenCode 2 through the orchestrator", () => {
           : []),
       ]);
       const result = yield* runOrchestratorV2ProviderReplayScenario(
-        { name, transcript, commands, steps, projectionThreadIds: [source.threadId, target] },
+        {
+          name,
+          transcript,
+          commands,
+          steps,
+          projectionThreadIds: [source.threadId, target],
+          runtimePolicyOverride: { cwd },
+        },
         OpenCode2OrchestratorReplayHarness,
       ).pipe(provideDeterministicTestRuntime);
       const forked = result.projections.get(target);
@@ -684,7 +587,7 @@ describe("OpenCode 2 through the orchestrator", () => {
     Effect.gen(function* () {
       const name = "opencode2-queued-cancel";
       const cwd = yield* checkpointWorkspace(name);
-      const thread = threadCommands({ name, worktreePath: cwd });
+      const thread = threadCommands({ name });
       const queued = (key: string): OrchestrationV2Command => ({
         ...thread.message(key),
         dispatchMode: { type: "queue_after_active" },
@@ -752,6 +655,7 @@ describe("OpenCode 2 through the orchestrator", () => {
           },
           commands: [thread.create, first, second, third, cancel],
           steps,
+          runtimePolicyOverride: { cwd },
         },
         OpenCode2OrchestratorReplayHarness,
       ).pipe(provideDeterministicTestRuntime);
@@ -811,7 +715,7 @@ describe("OpenCode 2 through the orchestrator", () => {
         ...input.reconnect(BACKGROUND_PARENT),
       ],
     });
-    const thread = threadCommands({ name: input.name, worktreePath: cwd });
+    const thread = threadCommands({ name: input.name });
     const ids = yield* IdAllocator.IdAllocatorV2;
     const run = (ordinal: number) => ids.derive.run({ threadId: thread.threadId, ordinal });
     const result = yield* runOrchestratorV2ProviderReplayScenario(
@@ -820,6 +724,7 @@ describe("OpenCode 2 through the orchestrator", () => {
         transcript,
         commands: input.commands(thread),
         steps: input.steps(thread, run),
+        runtimePolicyOverride: { cwd },
       },
       OpenCode2OrchestratorReplayHarness,
       // Opens the continuation run a follow-up asks for, as the server does.
@@ -1079,12 +984,13 @@ describe("OpenCode 2 through the orchestrator", () => {
             byLabel("session.execution.succeeded.3"),
           ],
         });
-        const thread = threadCommands({ name: "opencode2-background-in-turn", worktreePath: cwd });
+        const thread = threadCommands({ name: "opencode2-background-in-turn" });
         const ids = yield* IdAllocator.IdAllocatorV2;
         const result = yield* runOrchestratorV2ProviderReplayScenario(
           {
             name: "opencode2-background-in-turn",
             transcript,
+            runtimePolicyOverride: { cwd },
             commands: [thread.create, thread.message("start", bigPickle, BACKGROUND_PROMPT)],
             steps: [
               { type: "dispatch", command: thread.create },
@@ -1136,7 +1042,7 @@ describe("OpenCode 2 through the orchestrator", () => {
       Effect.gen(function* () {
         const name = "opencode2_switch";
         const cwd = yield* checkpointWorkspace(name);
-        const thread = threadCommands({ name, worktreePath: cwd });
+        const thread = threadCommands({ name });
         // The spike's recording: plan agent, then build agent and a new model on
         // one session. Its `<work>` is this test's workspace.
         const recorded = yield* Effect.gen(function* () {
@@ -1155,6 +1061,7 @@ describe("OpenCode 2 through the orchestrator", () => {
         const projection = yield* runScenario({
           name,
           threadId: thread.threadId,
+          cwd,
           entries: recorded.entries,
           commands: [
             thread.create,

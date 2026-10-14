@@ -41,7 +41,6 @@ export function usePendingTaskListActions(): {
             // re-resolves project defaults instead of inheriting the pick.
             clearComposerDraftContent(pendingTask.draftKey, {
               clearModelSelection: true,
-              clearWorkspaceSelection: true,
             });
           },
         },

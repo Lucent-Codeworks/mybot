@@ -509,9 +509,8 @@ it.layer(
       const unsubscribe = yield* manager.attachStream(
         openInput({
           env: {
-            T3CODE_WORKTREE_PATH: "/tmp/should-not-restart",
+            CUSTOM_FLAG: "should-not-restart",
           },
-          worktreePath: "/tmp/should-not-restart",
         }),
         (event) => Ref.update(attachEvents, (events) => [...events, event]),
       );
@@ -521,7 +520,6 @@ it.layer(
       expect(snapshot).toBeDefined();
       if (!snapshot || snapshot.type !== "snapshot") return;
       assert.equal(snapshot.snapshot.status, "exited");
-      assert.equal(snapshot.snapshot.worktreePath, null);
       expect(ptyAdapter.spawnInputs).toHaveLength(1);
     }),
   );
@@ -547,9 +545,8 @@ it.layer(
         {
           ...openInput({
             env: {
-              T3CODE_WORKTREE_PATH: "/tmp/restart-requested",
+              CUSTOM_FLAG: "restart-requested",
             },
-            worktreePath: "/tmp/restart-requested",
           }),
           restartIfNotRunning: true,
         },
@@ -561,7 +558,6 @@ it.layer(
       expect(snapshot).toBeDefined();
       if (!snapshot || snapshot.type !== "snapshot") return;
       assert.equal(snapshot.snapshot.status, "running");
-      assert.equal(snapshot.snapshot.worktreePath, "/tmp/restart-requested");
       expect(ptyAdapter.spawnInputs).toHaveLength(2);
     }),
   );
@@ -920,87 +916,6 @@ it.layer(
       assert.equal(reopened.cwd, differentCwd);
       assert.equal(reopened.history, "");
       yield* waitFor(Effect.map(readFileString(logPath), (text) => text === ""));
-    }),
-  );
-
-  it.effect("propagates explicit worktree metadata through snapshots and lifecycle events", () =>
-    Effect.gen(function* () {
-      const { manager, getEvents, baseDir } = yield* createManager();
-      const path = yield* Path.Path;
-      const firstWorktreePath = path.join(baseDir, "worktrees", "feature-a");
-      const secondWorktreePath = path.join(baseDir, "worktrees", "feature-b");
-      yield* makeDirectory(firstWorktreePath);
-      yield* makeDirectory(secondWorktreePath);
-      const startedSnapshot = yield* manager.open(
-        openInput({
-          cwd: firstWorktreePath,
-          worktreePath: firstWorktreePath,
-        }),
-      );
-      const restartedSnapshot = yield* manager.restart(
-        restartInput({
-          cwd: secondWorktreePath,
-          worktreePath: secondWorktreePath,
-        }),
-      );
-
-      assert.equal(startedSnapshot.worktreePath, firstWorktreePath);
-      assert.equal(restartedSnapshot.worktreePath, secondWorktreePath);
-
-      const events = yield* getEvents;
-      const startedEvent = events.find(
-        (event): event is Extract<TerminalEvent, { type: "started" }> => event.type === "started",
-      );
-      const restartedEvent = events.find(
-        (event): event is Extract<TerminalEvent, { type: "restarted" }> =>
-          event.type === "restarted",
-      );
-
-      assert.equal(startedEvent?.snapshot.worktreePath, firstWorktreePath);
-      assert.equal(restartedEvent?.snapshot.worktreePath, secondWorktreePath);
-    }),
-  );
-
-  it.effect("preserves worktree metadata when reopening an exited session", () =>
-    Effect.gen(function* () {
-      const { manager, ptyAdapter, getEvents, baseDir } = yield* createManager();
-      const path = yield* Path.Path;
-      const worktreePath = path.join(baseDir, "worktrees", "feature-a");
-      yield* makeDirectory(worktreePath);
-
-      yield* manager.open(
-        openInput({
-          cwd: worktreePath,
-          worktreePath,
-        }),
-      );
-
-      const process = ptyAdapter.processes[0];
-      expect(process).toBeDefined();
-      if (!process) return;
-      process.emitExit({ exitCode: 0, signal: 0 });
-
-      yield* waitFor(
-        Effect.map(getEvents, (events) => events.some((event) => event.type === "exited")),
-      );
-
-      const reopenedSnapshot = yield* manager.open(
-        openInput({
-          cwd: worktreePath,
-          worktreePath,
-        }),
-      );
-
-      assert.equal(reopenedSnapshot.worktreePath, worktreePath);
-
-      const events = yield* getEvents;
-      const reopenedEvent = events
-        .toReversed()
-        .find(
-          (event): event is Extract<TerminalEvent, { type: "started" }> => event.type === "started",
-        );
-
-      assert.equal(reopenedEvent?.snapshot.worktreePath, worktreePath);
     }),
   );
 
@@ -2178,7 +2093,6 @@ it.layer(
         openInput({
           env: {
             T3CODE_PROJECT_ROOT: "/repo",
-            T3CODE_WORKTREE_PATH: "/repo/worktree-a",
             CUSTOM_FLAG: "1",
             NO_COLOR: "1",
             FORCE_COLOR: "0",
@@ -2190,7 +2104,6 @@ it.layer(
       if (!spawnInput) return;
 
       assert.equal(spawnInput.env.T3CODE_PROJECT_ROOT, "/repo");
-      assert.equal(spawnInput.env.T3CODE_WORKTREE_PATH, "/repo/worktree-a");
       assert.equal(spawnInput.env.CUSTOM_FLAG, "1");
       assert.equal(spawnInput.env.NO_COLOR, "1");
       assert.equal(spawnInput.env.FORCE_COLOR, "0");
@@ -2790,7 +2703,6 @@ it.layer(
           type: "snapshot",
           snapshot: {
             cwd: opened.cwd,
-            worktreePath: opened.worktreePath,
             pid: opened.pid,
             history: "existing history\n",
           },

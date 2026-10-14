@@ -13,8 +13,6 @@ import type { WorkspaceTab } from "./workspace-tabs-state";
 import { NativeWorkspaceTabActivityContext } from "../../native/v5-workspace-context";
 import { useSystemWorkspaceTabBar } from "./useSystemWorkspaceTabBar";
 
-// Tabler's git-pull-request geometry, rasterized at 1x/2x/3x for UIKit template images.
-const PULL_REQUEST_ICON = require("../../../assets/icons/pull-request.png");
 const COMPOSE_TAB = "compose";
 
 /** Retain each native controller tree; removing its root can leave RNS's stack empty. */
@@ -46,7 +44,7 @@ function RetainedWorkspaceTab(props: {
 }
 
 /**
- * UIKit retains both controller trees and displays the system tab bar or sidebar for the current size class.
+ * UIKit retains the controller tree and displays the system tab bar or sidebar for the current size class.
  * On phones, compose is UIKit's own search-role tab, detached like Photos' search button; it never
  * becomes selected and opens a new chat instead.
  */
@@ -85,7 +83,7 @@ export function WorkspaceNativeTabs(props: {
         }}
         onTabSelected={({ nativeEvent }: NativeSyntheticEvent<TabSelectedEvent>) => {
           const tab = nativeEvent.selectedScreenKey;
-          if (tab !== "threads" && tab !== "pullRequests") return;
+          if (tab !== "threads") return;
           setProvenance(nativeEvent.provenance);
           if (nativeEvent.actionOrigin === "programmatic-js" || tab === selectedTab) return;
           Keyboard.dismiss();
@@ -93,19 +91,15 @@ export function WorkspaceNativeTabs(props: {
           workspace.dispatch({ type: "select", tab });
         }}
       >
-        {(["threads", "pullRequests"] as const).map((tab: WorkspaceTab) => (
+        {(["threads"] as const).map((tab: WorkspaceTab) => (
           <Tabs.Screen
             key={tab}
             screenKey={tab}
-            title={tab === "threads" ? "Threads" : "Pulls"}
-            tabBarItemAccessibilityLabel={tab === "threads" ? "Threads" : "Pull requests"}
+            title="Threads"
+            tabBarItemAccessibilityLabel="Threads"
             ios={{
-              icon:
-                tab === "threads"
-                  ? { type: "sfSymbol", name: "text.bubble" }
-                  : { type: "templateSource", templateSource: PULL_REQUEST_ICON },
-              selectedIcon:
-                tab === "threads" ? { type: "sfSymbol", name: "text.bubble.fill" } : undefined,
+              icon: { type: "sfSymbol", name: "text.bubble" },
+              selectedIcon: { type: "sfSymbol", name: "text.bubble.fill" },
               overrideScrollViewContentInsetAdjustmentBehavior: false,
             }}
           >

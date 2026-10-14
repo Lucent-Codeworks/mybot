@@ -10,7 +10,6 @@ import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "re
 
 import { useOpenLink } from "~/browser/useOpenLink";
 import { useHtmlRenderTheme } from "~/hooks/useHtmlRenderTheme";
-import { useOpenChangeRequestLink } from "~/lib/openPullRequestLink";
 import { readLocalApi } from "~/localApi";
 import { cn } from "~/lib/utils";
 
@@ -90,28 +89,15 @@ export function HtmlRenderDocument(props: {
     frameRef.current?.contentWindow?.postMessage(htmlRenderThemeMessage(theme), "*");
   };
   useEffect(postTheme, [theme]);
-  const openChangeRequestLink = useOpenChangeRequestLink(props.threadRef);
   const openLink = useOpenLink(props.threadRef);
-  // Same rules as a chat link: a pull request opens in the right panel, any
-  // other link follows "Open links in", and Cmd/Ctrl-click goes to the system
-  // browser. Without a thread there is no panel, so it goes to the browser.
+  // Same rules as a chat link: a link follows "Open links in", and
+  // Cmd/Ctrl-click goes to the system browser.
   const open = useEffectEvent((url: string, modifiers: { metaKey: boolean; ctrlKey: boolean }) => {
     // The modifier's destination needs no saved setting, so it never waits on one.
     if (modifiers.metaKey || modifiers.ctrlKey) {
       void readLocalApi()
         ?.shell.openExternal(url)
         .catch((cause: unknown) => console.error(cause));
-      return;
-    }
-    if (
-      props.threadRef !== undefined &&
-      openChangeRequestLink(
-        { ...modifiers, preventDefault: () => undefined, stopPropagation: () => undefined },
-        url,
-        undefined,
-        props.threadRef.environmentId,
-      )
-    ) {
       return;
     }
     void openLink(url, { event: modifiers }).catch((cause: unknown) => console.error(cause));

@@ -1,30 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { MessageId, RunId, type ReviewDiffPreviewSource } from "@t3tools/contracts";
-import type { ThreadCheckpointSummary } from "@t3tools/client-runtime/state/thread-checkpoints";
-
 import {
-  applyReviewDiffMetadata,
   buildReviewParsedDiff,
-  buildReviewSectionItems,
-  getDefaultReviewSectionId,
   getReviewFilePreviewState,
-  getReviewSectionIdForCheckpoint,
   type ReviewRenderableFile,
 } from "./reviewModel";
-
-function makeCheckpoint(
-  input: Partial<ThreadCheckpointSummary> &
-    Pick<ThreadCheckpointSummary, "runId" | "checkpointTurnCount" | "completedAt">,
-): ThreadCheckpointSummary {
-  return {
-    checkpointRef: `refs/t3/checkpoints/thread/${input.checkpointTurnCount}` as any,
-    status: "ready",
-    files: [],
-    assistantMessageId: MessageId.make(`msg-${input.checkpointTurnCount}`),
-    ...input,
-  };
-}
 
 function makeRenderableFile(
   input: Partial<ReviewRenderableFile> & Pick<ReviewRenderableFile, "path">,
@@ -43,110 +23,6 @@ function makeRenderableFile(
     ...input,
   };
 }
-
-describe("buildReviewSectionItems", () => {
-  it("keeps one chip per checkpoint and appends git sources", () => {
-    const checkpoints = [
-      makeCheckpoint({
-        runId: RunId.make("run-1"),
-        checkpointTurnCount: 1,
-        completedAt: "2026-04-01T00:00:00.000Z",
-      }),
-      makeCheckpoint({
-        runId: RunId.make("run-2"),
-        checkpointTurnCount: 2,
-        completedAt: "2026-04-02T00:00:00.000Z",
-      }),
-    ];
-    const gitSections: ReviewDiffPreviewSource[] = [
-      {
-        id: "working-tree",
-        kind: "working-tree",
-        title: "Uncommitted",
-        baseRef: "HEAD",
-        headRef: null,
-        diff: "diff --git a/a.ts b/a.ts",
-        diffHash: "hash-dirty",
-        truncated: false,
-      },
-      {
-        id: "branch-range",
-        kind: "branch-range",
-        title: "Changes vs main",
-        baseRef: "main",
-        headRef: "feature",
-        diff: "diff --git a/a.ts b/a.ts",
-        diffHash: "hash-base",
-        truncated: false,
-      },
-    ];
-
-    const loadedTurnId = getReviewSectionIdForCheckpoint(checkpoints[0]!);
-    const items = buildReviewSectionItems({
-      checkpoints,
-      gitSections,
-      turnDiffById: {
-        [loadedTurnId]: "diff --git a/loaded.ts b/loaded.ts",
-      },
-      loadingTurnIds: {
-        [getReviewSectionIdForCheckpoint(checkpoints[1]!)]: true,
-      },
-      loadingGitSections: false,
-    });
-
-    expect(items.map((item) => item.id)).toEqual([
-      "turn:2",
-      "turn:1",
-      "git:working-tree",
-      "git:branch-range",
-    ]);
-    expect(items[0]).toMatchObject({ isLoading: true, diff: null });
-    expect(items[1]).toMatchObject({
-      isLoading: false,
-      diff: expect.stringContaining("loaded.ts"),
-    });
-    expect(getDefaultReviewSectionId(items)).toBe("git:branch-range");
-  });
-
-  it("falls back to the first turn without git sections", () => {
-    const items = buildReviewSectionItems({
-      checkpoints: [
-        makeCheckpoint({
-          runId: RunId.make("run-1"),
-          checkpointTurnCount: 1,
-          completedAt: "2026-04-01T00:00:00.000Z",
-        }),
-      ],
-      gitSections: [],
-      turnDiffById: {},
-      loadingTurnIds: {},
-      loadingGitSections: false,
-    });
-
-    expect(getDefaultReviewSectionId(items)).toBe("turn:1");
-  });
-
-  it("holds the Changes place while git preview is loading", () => {
-    const items = buildReviewSectionItems({
-      checkpoints: [],
-      gitSections: [],
-      turnDiffById: {},
-      loadingTurnIds: {},
-      loadingGitSections: true,
-    });
-
-    expect(items).toEqual([
-      expect.objectContaining({
-        id: "git:branch-range",
-        kind: "branch-range",
-        title: "Changes",
-        diff: null,
-        isLoading: true,
-      }),
-    ]);
-    expect(getDefaultReviewSectionId(items)).toBe("git:branch-range");
-  });
-});
 
 describe("buildReviewParsedDiff", () => {
   it.each([
@@ -312,36 +188,5 @@ describe("buildReviewParsedDiff", () => {
       title: "Large diff",
       actionLabel: "Load diff",
     });
-  });
-});
-
-describe("applyReviewDiffMetadata", () => {
-  it("uses complete counts even when the preview contains only part of one file", () => {
-    const parsed = buildReviewParsedDiff(
-      [
-        "diff --git a/large.txt b/large.txt",
-        "--- a/large.txt",
-        "+++ b/large.txt",
-        "@@ -1 +1 @@",
-        "-before",
-        "+after",
-      ].join("\n"),
-      "partial",
-    );
-    const result = applyReviewDiffMetadata(parsed, {
-      truncated: true,
-      files: [
-        { path: "large.txt", previousPath: null, additions: 4000, deletions: 3000 },
-        { path: "unseen.txt", previousPath: null, additions: 100, deletions: 20 },
-      ],
-    });
-    expect(result.kind).toBe("files");
-    if (result.kind !== "files") return;
-    expect(result.fileCount).toBe(2);
-    expect(result.additions).toBe(4100);
-    expect(result.deletions).toBe(3020);
-    expect(result.files[0]?.additions).toBe(4000);
-    expect(result.notice).toContain("Counts include all changes");
-    expect(applyReviewDiffMetadata(parsed, null)).toEqual(parsed);
   });
 });

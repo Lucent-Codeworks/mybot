@@ -5,7 +5,7 @@
  * one `ProviderInstance` bundling:
  *   - `snapshot`   — the live `ManagedServerProvider` for this instance;
  *   - `adapter`    — the Codex session/turn/approval runtime;
- *   - `textGeneration` — commit/PR/branch/title generation via `codex exec`.
+ *   - `textGeneration` — thread title generation via `codex exec`.
  *
  * Each call to `create()` captures the `codexConfig` argument in closures
  * owned by the returned instance. Two instances created with different

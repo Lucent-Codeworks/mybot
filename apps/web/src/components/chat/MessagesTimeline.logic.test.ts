@@ -1,5 +1,5 @@
 import { shouldPreserveAssistantLineBreaks } from "@t3tools/shared/markdownPipeline";
-import { ThreadId, type WorktreeSetupSnapshot } from "@t3tools/contracts";
+import { ThreadId } from "@t3tools/contracts";
 import {
   CheckpointRef,
   NodeId,
@@ -813,71 +813,27 @@ describe("deriveMessagesTimelineRows", () => {
     });
   });
 
-  it("presents project MCP calls and summarizes successful clones through the web timeline", () => {
+  it("presents project MCP calls through the web timeline", () => {
     const fixture = makeStreamingTimelineFixture();
     const source = fixture.visibleTurnItems.find((row) => row.item.type === "dynamic_tool")!;
     if (source.item.type !== "dynamic_tool") throw new Error("Expected tool fixture");
-    const items: OrchestrationV2ProjectedTurnItem["item"][] = [
-      {
-        ...source.item,
-        type: "dynamic_tool",
-        id: TurnItemId.make("list"),
-        status: "completed",
-        title: "Custom provider title",
-        toolName: "T3-code.t3_project_list",
-        input: {},
-        output: { projects: [] },
-      },
-      {
-        ...source.item,
-        type: "dynamic_tool",
-        id: TurnItemId.make("clone"),
-        status: "completed",
-        title: "Custom provider title",
-        toolName: "mcp__t3_code__t3_project_clone",
-        input: {},
-        output: { cwd: "/tmp/repo" },
-      },
-      {
-        ...source.item,
-        type: "dynamic_tool",
-        id: TurnItemId.make("failed-clone"),
-        status: "completed",
-        title: "Custom provider title",
-        toolName: "t3_project_clone",
-        input: {},
-        output: { isError: true },
-      },
-    ];
+    const item: OrchestrationV2ProjectedTurnItem["item"] = {
+      ...source.item,
+      type: "dynamic_tool",
+      id: TurnItemId.make("list"),
+      status: "completed",
+      title: "Custom provider title",
+      toolName: "T3-code.t3_project_list",
+      input: {},
+      output: { projects: [] },
+    };
     const entries = deriveTimelineEntriesFromVisibleTurnItems({
-      visibleTurnItems: items.map((item, position) => ({
-        ...source,
-        item,
-        position,
-        sourceItemId: item.id,
-      })),
+      visibleTurnItems: [{ ...source, item, position: 0, sourceItemId: item.id }],
       optimisticMessages: [],
     });
     const work = entries.flatMap((entry) => (entry.kind === "work" ? [entry.entry] : []));
     expect(workEntryDisplayLabel(work[0]!, undefined)).toBe("Listed projects");
-    expect(workEntryDisplayLabel(work[1]!, undefined)).toBe("Cloned a repository");
-    expect(workEntryDisplayLabel(work[2]!, undefined)).toBe("Failed to clone a repository");
-    expect(
-      resolveTimelineToolPresentation(items[1]!.type === "dynamic_tool" ? items[1].toolName : null)
-        ?.logo,
-    ).toBe("t3-code");
-    const rows = deriveMessagesTimelineRows({
-      timelineEntries: entries,
-      isWorking: false,
-      runningRunId: fixture.runId,
-      activeTurnStartedAt: fixture.time(0),
-      turnDiffSummaries: [],
-      supportsConversationRollback: false,
-    });
-    expect(rows.find((row) => row.kind === "work-toggle")).toMatchObject({
-      summary: "Listed projects 1 time and cloned 1 repository",
-      hasFailure: true,
-    });
+    expect(resolveTimelineToolPresentation(item.toolName)?.logo).toBe("t3-code");
   });
 
   it.each(["waiting", "completed"] as const)(
@@ -1272,15 +1228,15 @@ describe("deriveMessagesTimelineRows", () => {
     expect(assistantRows[1]?.assistantCopyStreaming).toBe(true);
   });
 
-  it("projects assistant diff summaries and user revert counts onto the affected rows", () => {
-    const assistantTurnDiffSummary = {
+  it("projects user revert counts onto the affected rows", () => {
+    const checkpointSummary = {
       runId: "turn-1" as never,
       completedAt: "2026-01-01T00:00:30Z",
       assistantMessageId: "assistant-1" as never,
       checkpointTurnCount: 2,
       checkpointRef: "checkpoint-1" as never,
       status: "ready" as const,
-      files: [{ path: "src/index.ts", kind: "modified", additions: 3, deletions: 1 }],
+      files: [],
     };
 
     const rows = deriveMessagesTimelineRows({
@@ -1317,7 +1273,7 @@ describe("deriveMessagesTimelineRows", () => {
       ],
       isWorking: false,
       activeTurnStartedAt: null,
-      turnDiffSummaries: [assistantTurnDiffSummary],
+      turnDiffSummaries: [checkpointSummary],
       supportsConversationRollback: true,
     });
 
@@ -1325,13 +1281,8 @@ describe("deriveMessagesTimelineRows", () => {
       (row): row is Extract<(typeof rows)[number], { kind: "message" }> =>
         row.kind === "message" && row.message.role === "user",
     );
-    const assistantRow = rows.find(
-      (row): row is Extract<(typeof rows)[number], { kind: "message" }> =>
-        row.kind === "message" && row.message.role === "assistant",
-    );
 
     expect(userRow?.revertTurnCount).toBe(1);
-    expect(assistantRow?.assistantTurnDiffSummary).toBe(assistantTurnDiffSummary);
   });
 
   it("folds the first assistant message and settled work before the terminal response", () => {
@@ -4883,162 +4834,6 @@ it.each([true, false])(
     if (isWorking) expect(rows.find((row) => row.id === boundary)?.createdAt).toBe(time(40));
   },
 );
-
-it("keeps the working header in place across worktree setup handoff", () => {
-  const snapshot: WorktreeSetupSnapshot = {
-    threadId: ThreadId.make("thread-setup"),
-    phase: "running",
-    startedAt: "2026-01-01T00:00:00Z",
-    endedAt: null,
-    branch: "feature",
-    baseRef: "main",
-    worktreePath: null,
-    setupScript: null,
-    stages: [],
-    error: null,
-    sequence: 3,
-  };
-  const userEntry = {
-    id: "user-entry",
-    kind: "message",
-    createdAt: "2026-01-01T00:00:00Z",
-    message: {
-      id: "user-1" as never,
-      role: "user",
-      text: "Build it",
-      runId: null,
-      createdAt: "2026-01-01T00:00:00Z",
-      updatedAt: "2026-01-01T00:00:00Z",
-      streaming: false,
-    },
-  } as const;
-  const assistantEntry = {
-    id: "assistant-entry",
-    kind: "message",
-    createdAt: "2026-01-01T00:00:30Z",
-    message: {
-      id: "assistant-1" as never,
-      role: "assistant",
-      text: "On it",
-      runId: "turn-1" as never,
-      createdAt: "2026-01-01T00:00:30Z",
-      updatedAt: "2026-01-01T00:00:30Z",
-      streaming: true,
-    },
-  } as const;
-  const withoutMessages = deriveMessagesTimelineRows({
-    timelineEntries: [],
-    isWorking: true,
-    activeTurnStartedAt: "2026-01-01T00:00:00Z",
-    turnDiffSummaries: [],
-    supportsConversationRollback: false,
-    worktreeSetup: snapshot,
-  });
-  expect(withoutMessages).toEqual([
-    { kind: "working", id: "working-indicator-row", createdAt: snapshot.startedAt },
-    {
-      kind: "worktree-setup",
-      id: "worktree-setup-row",
-      createdAt: "2026-01-01T00:00:00Z",
-      snapshot,
-      embedded: false,
-    },
-  ]);
-
-  // A failed setup never handed off, so the card stays under the send.
-  const withMessages = deriveMessagesTimelineRows({
-    timelineEntries: [userEntry, assistantEntry],
-    isWorking: true,
-    activeTurnStartedAt: "2026-01-01T00:00:00Z",
-    turnDiffSummaries: [],
-    supportsConversationRollback: false,
-    worktreeSetup: { ...snapshot, phase: "failed" },
-  });
-  expect(withMessages.map((row) => row.kind)).toEqual([
-    "message",
-    "worktree-setup",
-    "working",
-    "message",
-    "thinking",
-  ]);
-
-  // Once the agent stage is done the setup script may still be running in
-  // the background: the header owns its progress chip, so no setup row remains.
-  const stage = (id: "agent" | "setup-script", status: "done" | "running") =>
-    ({
-      id,
-      status,
-      startedAt: "2026-01-01T00:00:10Z",
-      endedAt: status === "done" ? "2026-01-01T00:00:11Z" : null,
-      percent: null,
-      detail: null,
-      tail: [],
-    }) as const;
-  const asyncSnapshot: WorktreeSetupSnapshot = {
-    ...snapshot,
-    stages: [stage("setup-script", "running"), stage("agent", "done")],
-  };
-  const liveTurn = {
-    runId: "turn-1" as never,
-    status: "running",
-    startedAt: "2026-01-01T00:00:11Z",
-    completedAt: null,
-  } as const;
-  const asyncRows = deriveMessagesTimelineRows({
-    timelineEntries: [userEntry],
-    latestRun: liveTurn,
-    isWorking: true,
-    activeTurnStartedAt: "2026-01-01T00:00:00Z",
-    turnDiffSummaries: [],
-    supportsConversationRollback: false,
-    worktreeSetup: asyncSnapshot,
-  });
-  expect(asyncRows.map((row) => row.kind)).toEqual(["message", "working", "thinking"]);
-
-  // Dispatched but not yet visible as a turn: the full card stays put so
-  // nothing collapses during the handoff.
-  const handoffRows = deriveMessagesTimelineRows({
-    timelineEntries: [userEntry],
-    isWorking: true,
-    activeTurnStartedAt: "2026-01-01T00:00:00Z",
-    turnDiffSummaries: [],
-    supportsConversationRollback: false,
-    worktreeSetup: asyncSnapshot,
-  });
-  expect(handoffRows.map((row) => row.kind)).toEqual(["message", "working", "worktree-setup"]);
-  expect(handoffRows[2]).toMatchObject({ kind: "worktree-setup", embedded: false });
-
-  // A clean finish before the turn is live keeps that same layout, so the card
-  // does not jump above the header in the gap before the run starts.
-  const settledRows = deriveMessagesTimelineRows({
-    timelineEntries: [userEntry],
-    isWorking: true,
-    activeTurnStartedAt: "2026-01-01T00:00:00Z",
-    turnDiffSummaries: [],
-    supportsConversationRollback: false,
-    worktreeSetup: {
-      ...snapshot,
-      phase: "done",
-      stages: [stage("setup-script", "done"), stage("agent", "done")],
-    },
-  });
-  expect(settledRows.map((row) => row.kind)).toEqual(["message", "working", "worktree-setup"]);
-
-  // A script that already finished has nothing left to show once the turn is live.
-  const finishedRows = deriveMessagesTimelineRows({
-    timelineEntries: [userEntry],
-    latestRun: liveTurn,
-    isWorking: true,
-    activeTurnStartedAt: "2026-01-01T00:00:00Z",
-    turnDiffSummaries: [],
-    supportsConversationRollback: false,
-    worktreeSetup: {
-      ...asyncSnapshot,
-      stages: [stage("setup-script", "done"), stage("agent", "done")],
-    },
-  });
-  expect(finishedRows.map((row) => row.kind)).toEqual(["message", "working", "thinking"]);
-});
 
 describe("failed turn transcript", () => {
   it.each(["provider_error", "usage_limit"] as const)(

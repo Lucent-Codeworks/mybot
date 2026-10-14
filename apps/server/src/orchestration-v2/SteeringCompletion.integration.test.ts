@@ -183,8 +183,6 @@ it.effect.each(
           modelSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: cwd,
           createdBy: "user",
           creationSource: "web",
         });
@@ -528,8 +526,6 @@ const nextTurnSelectionHarness = Effect.fn("nextTurnSelectionHarness")(function*
       modelSelection: runSelection,
       runtimeMode: "full-access",
       interactionMode: "default",
-      branch: null,
-      worktreePath: cwd,
       createdBy: "user",
       creationSource: "web",
     });

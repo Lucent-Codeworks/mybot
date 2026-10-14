@@ -140,10 +140,7 @@ export const layer: Layer.Layer<
                           modelSelection: current,
                           runtimeMode: projection.thread.runtimeMode,
                           interactionMode: projection.thread.interactionMode,
-                          workspace:
-                            currentSession?.cwd ??
-                            projection.thread.worktreePath ??
-                            "<unresolved-workspace>",
+                          workspace: currentSession?.cwd ?? "<unresolved-workspace>",
                           capabilities:
                             negotiatedCapabilities ?? currentInstance.value.capabilities,
                         },
@@ -156,10 +153,7 @@ export const layer: Layer.Layer<
                     modelSelection: targetModelSelection,
                     runtimeMode: projection.thread.runtimeMode,
                     interactionMode: projection.thread.interactionMode,
-                    workspace:
-                      projection.thread.worktreePath ??
-                      currentSession?.cwd ??
-                      "<unresolved-workspace>",
+                    workspace: currentSession?.cwd ?? "<unresolved-workspace>",
                     capabilities: targetInstance.value.capabilities,
                     available: targetInstance.value.enabled,
                   },

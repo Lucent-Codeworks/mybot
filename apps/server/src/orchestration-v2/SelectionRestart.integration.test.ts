@@ -418,8 +418,6 @@ it.live("retries a failed selection restart session open before completing", () 
           modelSelection: initialSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: cwd,
         });
         const running = yield* eventSink
           .stream({
@@ -492,7 +490,7 @@ it.live("retries a failed selection restart session open before completing", () 
       }).pipe(
         Effect.provide(
           ProviderReplayHarness.layerWithRegistry(
-            { name: "selection-restart-lifecycle" },
+            { name: "selection-restart-lifecycle", runtimePolicyOverride: { cwd } },
             layerRegistry,
           ),
         ),
@@ -612,8 +610,6 @@ it.live.each(["stopped", "error"] as const)(
             modelSelection: seedSelection,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: cwd,
           });
           const first = yield* dispatch("first", seedSelection);
           const liveSession = first.providerSessions.find(
@@ -749,8 +745,6 @@ it.live("detaches the old provider session after an active provider handoff", ()
           modelSelection: initialSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
-          branch: null,
-          worktreePath: cwd,
         });
         yield* orchestrator.dispatch({
           type: "message.dispatch",
@@ -908,8 +902,6 @@ it.live.each(["active", "idle", "selection-command", "pooled", "separate-home"] 
             modelSelection: selection,
             runtimeMode: "full-access",
             interactionMode: "default",
-            branch: null,
-            worktreePath: cwd,
             createdBy: "user",
             creationSource: "web",
           });

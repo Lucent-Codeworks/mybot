@@ -49,7 +49,7 @@ interface ScannerTestInput {
   readonly claudeHomePath: string;
   readonly codexHomePath: string;
   readonly importedWorkspaceRoots?: ReadonlyArray<string>;
-  /** Base dir for the test ServerConfig; worktreesDir derives from it. */
+  /** Base dir for the test ServerConfig. */
   readonly configBaseDir?: string;
   readonly providerInstances?: ContractServerSettings["providerInstances"];
 }
@@ -196,7 +196,6 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
             threadCount: 1,
             lastActiveAt: "2026-03-01T00:00:00.000Z",
             alreadyImported: false,
-            git: null,
           },
           {
             path: olderWorkspace,
@@ -205,7 +204,6 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
             threadCount: 2,
             lastActiveAt: "2026-01-02T00:00:00.000Z",
             alreadyImported: false,
-            git: null,
           },
         ]);
       }),
@@ -248,7 +246,6 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
             threadCount: 1,
             lastActiveAt: "2026-02-09T11:00:00.000Z",
             alreadyImported: false,
-            git: null,
           },
           {
             path: workspace,
@@ -257,7 +254,6 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
             threadCount: 2,
             lastActiveAt: "2026-02-09T10:00:00.000Z",
             alreadyImported: false,
-            git: null,
           },
         ]);
       }),
@@ -376,7 +372,6 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
             threadCount: 2,
             lastActiveAt: "2026-04-01T09:00:00.000Z",
             alreadyImported: true,
-            git: null,
           },
         ]);
       }),
@@ -409,7 +404,6 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
           path: workspace,
           projectId: ProjectId.make("project-1"),
           alreadyImported: true,
-          git: null,
         });
       }),
     );
@@ -441,7 +435,6 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
           path: workspaceAlias,
           projectId: ProjectId.make("project-1"),
           alreadyImported: true,
-          git: null,
         });
       }),
     );
@@ -488,7 +481,6 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
             threadCount: 2,
             lastActiveAt: "2026-01-02T00:00:00.000Z",
             alreadyImported: true,
-            git: null,
           },
         ]);
       }),
@@ -825,27 +817,6 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
       }),
     );
 
-    it.effect("excludes T3-managed worktree sandboxes", () =>
-      Effect.gen(function* () {
-        const path = yield* Path.Path;
-        const claudeHomePath = yield* makeTempDir("t3code-claude-home-");
-        const codexHomePath = yield* makeTempDir("t3code-codex-home-");
-        const fileSystem = yield* FileSystem.FileSystem;
-
-        const worktreeCwd = path.join(claudeHomePath, ".t3", "worktrees", "t3code", "wt-1");
-        yield* fileSystem.makeDirectory(worktreeCwd, { recursive: true });
-        yield* writeTranscript({
-          filePath: path.join(claudeHomePath, "projects", "-slug", "a.jsonl"),
-          contents: claudeSessionLine(worktreeCwd),
-          mtimeMs: Date.parse("2026-01-01T00:00:00.000Z"),
-        });
-
-        const result = yield* runScan({ claudeHomePath, codexHomePath });
-
-        expect(result.candidates).toEqual([]);
-      }),
-    );
-
     it.effect("excludes Codex scratch directories and Downloads", () =>
       Effect.gen(function* () {
         const path = yield* Path.Path;
@@ -893,94 +864,7 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
       }),
     );
 
-    it.effect("skips linked git worktrees and reports the origin of real checkouts", () =>
-      Effect.gen(function* () {
-        const path = yield* Path.Path;
-        const fileSystem = yield* FileSystem.FileSystem;
-        const claudeHomePath = yield* makeTempDir("t3code-claude-home-");
-        const codexHomePath = yield* makeTempDir("t3code-codex-home-");
-        const repo = yield* makeTempDir("t3code-workspace-repo-");
-        const worktree = yield* makeTempDir("t3code-workspace-worktree-");
-        const plain = yield* makeTempDir("t3code-workspace-plain-");
-        const noRemote = yield* makeTempDir("t3code-workspace-noremote-");
-        const submodule = yield* makeTempDir("t3code-workspace-submodule-");
-
-        yield* fileSystem.makeDirectory(path.join(repo, ".git"));
-        yield* fileSystem.writeFileString(
-          path.join(repo, ".git", "config"),
-          '[core]\n\tbare = false\n[remote "origin"]\n\turl = git@github.com:pingdotgg/t3code.git\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n',
-        );
-        yield* fileSystem.writeFileString(
-          path.join(worktree, ".git"),
-          `gitdir: ${path.join(repo, ".git", "worktrees", "wt")}\n`,
-        );
-        yield* fileSystem.makeDirectory(path.join(noRemote, ".git"));
-        yield* fileSystem.writeFileString(path.join(noRemote, ".git", "config"), "[core]\n");
-        // Submodules also use a gitdir pointer, but into `modules/`, not `worktrees/`.
-        const submoduleGitDir = path.join(repo, ".git", "modules", "vendor");
-        yield* fileSystem.makeDirectory(submoduleGitDir, { recursive: true });
-        yield* fileSystem.writeFileString(
-          path.join(submoduleGitDir, "config"),
-          '[remote "origin"]\n\turl = ssh://github.com/pingdotgg/vendor.git\n',
-        );
-        yield* fileSystem.writeFileString(
-          path.join(submodule, ".git"),
-          `gitdir: ${submoduleGitDir}\n`,
-        );
-
-        for (const [index, cwd] of [repo, worktree, plain, noRemote, submodule].entries()) {
-          yield* writeTranscript({
-            filePath: path.join(claudeHomePath, "projects", `-slug-${index}`, "a.jsonl"),
-            contents: claudeSessionLine(cwd),
-            mtimeMs: Date.parse(`2026-01-0${index + 1}T00:00:00.000Z`),
-          });
-        }
-
-        const result = yield* runScan({ claudeHomePath, codexHomePath });
-
-        expect(
-          result.candidates.map((candidate) => ({ path: candidate.path, git: candidate.git })),
-        ).toEqual([
-          {
-            path: submodule,
-            git: { remoteKey: "github.com/pingdotgg/vendor", repository: "pingdotgg/vendor" },
-          },
-          { path: noRemote, git: { remoteKey: null, repository: null } },
-          { path: plain, git: null },
-          {
-            path: repo,
-            git: { remoteKey: "github.com/pingdotgg/t3code", repository: "pingdotgg/t3code" },
-          },
-        ]);
-      }),
-    );
-
-    it.effect("excludes sandboxes under the configured worktrees dir without .t3 in the path", () =>
-      Effect.gen(function* () {
-        const path = yield* Path.Path;
-        const claudeHomePath = yield* makeTempDir("t3code-claude-home-");
-        const codexHomePath = yield* makeTempDir("t3code-codex-home-");
-        const configBaseDir = yield* makeTempDir("t3code-scanner-base-");
-        const fileSystem = yield* FileSystem.FileSystem;
-
-        // worktreesDir derives as `<baseDir>/worktrees`, and the temp base
-        // dir contains no `.t3` segment — only the config-based prefix match
-        // can exclude this one.
-        const worktreeCwd = path.join(configBaseDir, "worktrees", "t3code", "wt-2");
-        yield* fileSystem.makeDirectory(worktreeCwd, { recursive: true });
-        yield* writeTranscript({
-          filePath: path.join(claudeHomePath, "projects", "-slug", "a.jsonl"),
-          contents: claudeSessionLine(worktreeCwd),
-          mtimeMs: Date.parse("2026-01-01T00:00:00.000Z"),
-        });
-
-        const result = yield* runScan({ claudeHomePath, codexHomePath, configBaseDir });
-
-        expect(result.candidates).toEqual([]);
-      }),
-    );
-
-    it.effect("excludes sandboxes reached through a symlink into the worktrees dir", () =>
+    it.effect("excludes directories reached through a symlink into the T3 data directory", () =>
       Effect.gen(function* () {
         const path = yield* Path.Path;
         const claudeHomePath = yield* makeTempDir("t3code-claude-home-");
@@ -990,11 +874,11 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
         const fileSystem = yield* FileSystem.FileSystem;
 
         // The recorded cwd is a symlink whose own spelling looks harmless;
-        // only its realpath reveals the managed sandbox.
-        const worktreeCwd = path.join(configBaseDir, "worktrees", "t3code", "wt-3");
-        yield* fileSystem.makeDirectory(worktreeCwd, { recursive: true });
+        // only its realpath reveals the T3 data directory.
+        const dataDirCwd = path.join(configBaseDir, "userdata", "t3code");
+        yield* fileSystem.makeDirectory(dataDirCwd, { recursive: true });
         const symlinkCwd = path.join(linkParent, "innocent-project");
-        yield* fileSystem.symlink(worktreeCwd, symlinkCwd);
+        yield* fileSystem.symlink(dataDirCwd, symlinkCwd);
         yield* writeTranscript({
           filePath: path.join(claudeHomePath, "projects", "-slug", "a.jsonl"),
           contents: claudeSessionLine(symlinkCwd),
@@ -1331,7 +1215,6 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
             threadCount: 1,
             lastActiveAt: "2026-05-03T00:00:00.000Z",
             alreadyImported: false,
-            git: null,
           },
         ]);
       }),
@@ -2367,51 +2250,6 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
         ).toEqual(["newer-session"]);
         expect(contentReads).toEqual([newerPath]);
         expect(openCounts.get(olderPath)).toBe(1);
-      }),
-    );
-
-    it.effect("does not import sessions from a T3-managed worktree", () =>
-      Effect.gen(function* () {
-        const path = yield* Path.Path;
-        const fileSystem = yield* FileSystem.FileSystem;
-        const nowMs = Date.parse("2026-08-24T12:00:00.000Z");
-        yield* TestClock.setTime(nowMs);
-        const claudeHomePath = yield* makeTempDir("t3code-claude-home-");
-        const codexHomePath = yield* makeTempDir("t3code-codex-home-");
-        const configBaseDir = yield* makeTempDir("t3code-scanner-base-");
-        const workspace = path.join(configBaseDir, "worktrees", "t3code", "managed-worktree");
-        yield* fileSystem.makeDirectory(workspace, { recursive: true });
-
-        yield* writeTranscript({
-          filePath: path.join(
-            codexHomePath,
-            "sessions",
-            "2026",
-            "08",
-            "24",
-            "rollout-managed.jsonl",
-          ),
-          contents: [
-            encodeTranscriptRecord({
-              type: "session_meta",
-              payload: { id: "managed-session", cwd: workspace },
-            }),
-            encodeTranscriptRecord({
-              type: "event_msg",
-              payload: { type: "user_message", message: "Do not import this session" },
-            }),
-          ].join("\n"),
-          mtimeMs: nowMs,
-        });
-
-        const threads = yield* runRecentThreads({
-          claudeHomePath,
-          codexHomePath,
-          configBaseDir,
-          workspaceRoot: workspace,
-        });
-
-        expect(threads).toEqual([]);
       }),
     );
 

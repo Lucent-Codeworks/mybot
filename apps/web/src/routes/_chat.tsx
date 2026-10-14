@@ -7,13 +7,12 @@ import { isCommandPaletteOpen } from "../commandPaletteBus";
 import { ThreadRouteView } from "../components/ThreadRouteView";
 import { ThreadLinkPrompt } from "../components/promptLinks/ThreadLinkPrompt";
 import { resolveThreadRouteTarget } from "../threadRoutes";
-import { useClientSettings, useLegacySidebarEnabled } from "../hooks/useSettings";
+import { useLegacySidebarEnabled } from "../hooks/useSettings";
 import { openCommandPalette } from "../commandPaletteBus";
 import { useProjects } from "../state/entities";
 import { isPreviewAvailableFor } from "../browser/previewRuntime";
 import { usePrimaryEnvironmentId } from "../state/environments";
 import { useEnvironmentScope } from "../state/session";
-import { selectProjectGroupingSettings } from "../logicalProject";
 import { buildSidebarProjectSnapshots } from "../sidebarProjectGrouping";
 import { dispatchPreviewAction } from "../components/preview/previewActionBus";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
@@ -42,7 +41,6 @@ function ChatRouteGlobalShortcuts() {
   );
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
   const legacySidebarEnabled = useLegacySidebarEnabled();
-  const projectGroupingSettings = useClientSettings(selectProjectGroupingSettings);
   const projects = useProjects();
   const primaryEnvironmentId = usePrimaryEnvironmentId();
   const { scratchEnvironmentId, startScratchThread } = useScratchProject();
@@ -50,11 +48,10 @@ function ChatRouteGlobalShortcuts() {
     () =>
       buildSidebarProjectSnapshots({
         projects,
-        settings: projectGroupingSettings,
         primaryEnvironmentId,
         resolveEnvironmentLabel: () => null,
       }).length,
-    [primaryEnvironmentId, projectGroupingSettings, projects],
+    [primaryEnvironmentId, projects],
   );
   const terminalOpen = useTerminalUiStateStore((state) =>
     routeThreadRef

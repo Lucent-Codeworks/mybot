@@ -40,7 +40,6 @@ import {
   resolveThreadRowClassName,
   resolveThreadStatusPill,
   resolveWorkingStartedAt,
-  pullRequestMatchesSearchQuery,
   searchSidebarThreads,
   shouldClearThreadSelectionOnMouseDown,
   shouldShowSidebarV2Duration,
@@ -153,25 +152,25 @@ describe("deleteSelectedThreadEntries", () => {
   const failure = AsyncResult.failure(Cause.fail(new Error("Delete failed")));
   const interrupted = AsyncResult.failure(Cause.interrupt());
 
-  it("waits for each delete and excludes only earlier successes from worktree checks", async () => {
+  it("waits for each delete and passes only earlier successes to later deletes", async () => {
     let resolveDelete!: (result: typeof success) => void;
     const pendingDelete = new Promise<typeof success>((resolve) => {
       resolveDelete = resolve;
     });
-    const worktreeChecks: { threadKey: string; deletedThreadKeys: string[] }[] = [];
+    const deletedKeyChecks: { threadKey: string; deletedThreadKeys: string[] }[] = [];
     const deletion = deleteSelectedThreadEntries({
       entries,
       delete: async ({ threadKey }, deletedThreadKeys) => {
-        worktreeChecks.push({ threadKey, deletedThreadKeys: [...deletedThreadKeys] });
+        deletedKeyChecks.push({ threadKey, deletedThreadKeys: [...deletedThreadKeys] });
         return threadKey === "one" ? pendingDelete : success;
       },
     });
 
-    expect(worktreeChecks).toEqual([{ threadKey: "one", deletedThreadKeys: [] }]);
+    expect(deletedKeyChecks).toEqual([{ threadKey: "one", deletedThreadKeys: [] }]);
     resolveDelete(success);
     const outcome = await deletion;
 
-    expect(worktreeChecks).toEqual([
+    expect(deletedKeyChecks).toEqual([
       { threadKey: "one", deletedThreadKeys: [] },
       { threadKey: "two", deletedThreadKeys: ["one"] },
       { threadKey: "three", deletedThreadKeys: ["one", "two"] },
@@ -224,18 +223,18 @@ describe("deleteSelectedThreadEntries", () => {
 
   it("does not count a skipped entry as deleted", async () => {
     const visibleEntries = new Set(entries.map(({ threadKey }) => threadKey));
-    const worktreeChecks: string[][] = [];
+    const deletedKeyChecks: string[][] = [];
     const outcome = await deleteSelectedThreadEntries({
       entries,
       delete: async ({ threadKey }, deletedThreadKeys) => {
         if (!visibleEntries.has(threadKey)) return null;
-        worktreeChecks.push([...deletedThreadKeys]);
+        deletedKeyChecks.push([...deletedThreadKeys]);
         visibleEntries.delete("two");
         return success;
       },
     });
 
-    expect(worktreeChecks).toEqual([[], ["one"]]);
+    expect(deletedKeyChecks).toEqual([[], ["one"]]);
     expect(outcome).toEqual({
       deletedThreadKeys: new Set(["one", "three"]),
       firstFailure: null,
@@ -995,27 +994,6 @@ describe("resolveSidebarThreadStatus", () => {
   });
 });
 
-describe("pullRequestMatchesSearchQuery", () => {
-  const branchPullRequest = {
-    projectId: ProjectId.make("project"),
-    repository: "pingdotgg/t3code",
-    number: 123,
-    url: "https://github.com/pingdotgg/t3code/pull/123",
-  };
-
-  it("matches when every query token appears in the PR's terms", () => {
-    expect(pullRequestMatchesSearchQuery({ branchPullRequest }, "123")).toBe(true);
-    expect(pullRequestMatchesSearchQuery({ branchPullRequest }, "pingdotgg/t3code #123")).toBe(
-      true,
-    );
-  });
-
-  it("rejects queries with a token the PR does not carry, and blank queries", () => {
-    expect(pullRequestMatchesSearchQuery({ branchPullRequest }, "rebase 123")).toBe(false);
-    expect(pullRequestMatchesSearchQuery({ branchPullRequest }, "   ")).toBe(false);
-  });
-});
-
 describe("searchSidebarThreads", () => {
   const searchThread = (id: string, title: string, project: string) => ({
     environmentId: localEnvironmentId,
@@ -1026,7 +1004,7 @@ describe("searchSidebarThreads", () => {
   const threads = [
     searchThread("thread-1", "Fix workspace search", "Alpha"),
     searchThread("thread-2", "Review providers", "Workspace"),
-    searchThread("thread-3", "WORKTREE cleanup", "Beta"),
+    searchThread("thread-3", "WORKER cleanup", "Beta"),
   ];
   const contentKeys = (...ids: ReadonlyArray<string>) =>
     new Set(
@@ -1463,7 +1441,6 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     environmentId: localEnvironmentId,
     title: "Project",
     workspaceRoot: "/tmp/project",
-    repositoryIdentity: null,
     defaultModelSelection: {
       instanceId: ProviderInstanceId.make("codex"),
       model: "gpt-5.4",
@@ -1499,8 +1476,6 @@ function makeThread(overrides: ThreadFixtureOverrides = {}): Thread {
     deletedAt: null,
     updatedAt: "2026-03-09T10:00:00.000Z",
     latestRun: null,
-    branch: null,
-    worktreePath: null,
     ...overrides,
   });
 }

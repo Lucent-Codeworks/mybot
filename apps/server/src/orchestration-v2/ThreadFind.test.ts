@@ -82,8 +82,6 @@ const thread = (
     modelSelection: { instanceId: providerInstanceId, model: "gpt-5" },
     runtimeMode: "full-access",
     interactionMode: "default",
-    branch: null,
-    worktreePath: null,
     activeProviderThreadId: null,
     lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
     forkedFrom: null,
@@ -810,19 +808,14 @@ describe("V2 thread find", () => {
     }).pipe(Effect.provide(layerTest)),
   );
 
-  it.effect("memory store resolves worktree file labels and rejects deleted threads", () =>
+  it.effect("memory store finds file references and rejects deleted threads", () =>
     Effect.gen(function* () {
       const projection = yield* ProjectionStore.ProjectionStoreV2;
       const created = thread(threadId, projectId);
-      if (created.type !== "thread.created") return;
-      const withWorktree = {
-        ...created,
-        payload: { ...created.payload, worktreePath: "/work/tree" },
-      };
       const message = item("file", 1, "See `docs/notes.md:12`.");
       yield* Effect.forEach(
         [
-          withWorktree,
+          created,
           run(),
           {
             id: EventId.make("file"),
@@ -836,7 +829,7 @@ describe("V2 thread find", () => {
         { discard: true },
       );
       assert.equal(
-        (yield* projection.searchThread({ threadId, query: "notes.md · L12" })).totalMatches,
+        (yield* projection.searchThread({ threadId, query: "notes.md" })).totalMatches,
         1,
       );
       const deleted = thread(threadId, projectId, { deletedAt: at(3) });

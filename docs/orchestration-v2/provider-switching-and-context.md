@@ -168,7 +168,7 @@ Include:
 - commands/tests run,
 - plans/todo state,
 - unresolved approvals/questions,
-- current checkpoint/diff summary,
+- latest checkpoint (conversation position),
 - known failures,
 - relevant subagent results.
 
@@ -183,7 +183,7 @@ Do not include:
 
 Provider switching does not change checkpoint ownership. Checkpoints still attach to app runs.
 
-However, handoff generation should reference the latest checkpoint and diff summary so the next provider has a correct workspace-state picture.
+However, handoff generation should reference the latest checkpoint so the next provider knows which conversation position the summary covers. Checkpoints carry no workspace state; file changes come from the turn items themselves.
 
 ```text
 run N completed

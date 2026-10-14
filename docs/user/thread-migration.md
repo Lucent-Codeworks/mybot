@@ -15,12 +15,11 @@ the V2 desktop app copies stashed prompts, unsent drafts, layout, and theme from
 change in V2 afterwards stays in V2.
 
 The migrated thread keeps its title, project, provider and model selection, permission and
-interaction modes, branch or worktree, archive state, settlement state, snooze and pin state, and
-linked pull request. T3 Code also brings over user and assistant messages, their timestamps, and
+interaction modes, archive state, settlement state, and snooze and pin state. T3 Code also brings over user and assistant messages, their timestamps, and
 supported attachments. Large histories may appear in stages while the server imports transcripts.
 
 The migration does not recreate the old provider's live session. It also does not convert old run
-records, checkpoints and diffs, tool activity, approval history, or proposed plan history into the
+records, checkpoints, tool activity, approval history, or proposed plan history into the
 new format. These items may be absent from a migrated timeline even though the conversation text is
 present.
 

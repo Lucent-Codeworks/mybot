@@ -1,4 +1,3 @@
-import { useOpenPullRequest } from "../../native/useOpenPullRequest";
 import { ThreadMarkdownVideo, ThreadMediaVisibleContext } from "./ThreadMarkdownVideo";
 import { useMarkdownImageSource } from "../../native/useMarkdownImageSource";
 import { enrichedContextLinkPresentation } from "../../lib/enrichedLinkPresentation";
@@ -6,11 +5,6 @@ import { ThreadContextDivider } from "./thread-context-divider";
 import { ThreadHandoffDivider, ThreadHandoffRow } from "./thread-handoff-row";
 import { SecretRequestCard } from "./SecretRequestCard";
 import { AppActivityIndicator } from "../../components/AppActivityIndicator";
-import {
-  WorktreeWorkingHeader,
-  WorktreeSetupCard,
-  type WorktreeSetupCardProps,
-} from "./worktree-setup-card";
 import * as Haptics from "expo-haptics";
 import { KeyboardAwareLegendList } from "@legendapp/list/keyboard";
 import { useViewabilityAmount, type LegendListRef } from "@legendapp/list/react-native";
@@ -282,8 +276,6 @@ export interface ThreadFeedHistoryControls {
 }
 
 export interface ThreadFeedProps {
-  readonly worktreeSetup?: WorktreeSetupCardProps | null;
-  readonly setupWorkingStartedAt?: string | null;
   readonly queuedMessages: ReadonlyArray<QueuedThreadMessage>;
   readonly dispatchingMessageId: MessageId | null;
   /** Null where a pending message cannot be edited (no composer to edit it in). */
@@ -1698,7 +1690,6 @@ function ThreadFeedPlaceholder(props: {
 
 export const ThreadFeed = memo(function ThreadFeed(props: ThreadFeedProps) {
   const usesNativeWorkspaceColumns = useNativeWorkspaceColumnsSupported();
-  const openPullRequest = useOpenPullRequest();
   const navigation = useNavigation();
   const { themeAppearance } = useAppearancePreferences();
   const copyFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1885,10 +1876,10 @@ export const ThreadFeed = memo(function ThreadFeed(props: ThreadFeedProps) {
           );
           return;
         }
-        void openPullRequest(presentation.href);
+        void tryOpenExternalUrl(presentation.href, "markdown-link");
       }
     },
-    [props.environmentId, props.threadId, props.workspaceRoot, navigation, openPullRequest],
+    [props.environmentId, props.threadId, props.workspaceRoot, navigation],
   );
   const resolveImageSource = useMarkdownImageSource({
     environmentId: props.environmentId,
@@ -2039,8 +2030,6 @@ export const ThreadFeed = memo(function ThreadFeed(props: ThreadFeedProps) {
   // even when the final message update arrives before the turn settles.
   const listAppearanceData = useMemo(
     () => ({
-      worktreeSetup: props.worktreeSetup,
-      setupWorkingStartedAt: props.setupWorkingStartedAt,
       dispatchingMessageId: props.dispatchingMessageId,
       unsettledTurnId,
       copiedRowId,
@@ -2055,8 +2044,6 @@ export const ThreadFeed = memo(function ThreadFeed(props: ThreadFeedProps) {
       viewportWidth,
     }),
     [
-      props.worktreeSetup,
-      props.setupWorkingStartedAt,
       props.dispatchingMessageId,
       unsettledTurnId,
       copiedRowId,
@@ -2219,9 +2206,6 @@ export const ThreadFeed = memo(function ThreadFeed(props: ThreadFeedProps) {
       props.feed,
       props.latestRun,
     ],
-  );
-  const setupAnchorIndex = presentedFeed.findIndex(
-    (entry) => entry.type === "message" && entry.message.role === "user",
   );
   // The empty↔filled key below remounts the list and resets its imperative
   // content-inset override. Seed the fresh instance synchronously with the
@@ -2553,20 +2537,12 @@ export const ThreadFeed = memo(function ThreadFeed(props: ThreadFeedProps) {
               skills: props.skills,
               workspaceRoot: props.workspaceRoot,
             })}
-            {props.worktreeSetup && info.index === setupAnchorIndex ? (
-              <WorktreeSetupCard key={props.threadId} {...props.worktreeSetup} />
-            ) : props.setupWorkingStartedAt && info.index === setupAnchorIndex ? (
-              <WorktreeWorkingHeader startedAt={props.setupWorkingStartedAt} />
-            ) : null}
           </ThreadMediaVisibility>
         </MessageImageGalleryScope>
       </Animated.View>
     ),
     [
-      props.worktreeSetup,
-      props.setupWorkingStartedAt,
       props.threadId,
-      setupAnchorIndex,
       props.dispatchingMessageId,
       props.onEditPendingMessage,
       copiedRowId,
@@ -2750,9 +2726,6 @@ export const ThreadFeed = memo(function ThreadFeed(props: ThreadFeedProps) {
             ListHeaderComponent={
               <>
                 {usesNativeAutomaticInsets ? null : <View style={{ height: topContentInset }} />}
-                {setupAnchorIndex < 0 && props.worktreeSetup ? (
-                  <WorktreeSetupCard key={props.threadId} {...props.worktreeSetup} />
-                ) : null}
                 {props.historyControls ? (
                   <ThreadFeedLoadEarlierControl {...props.historyControls} />
                 ) : null}
@@ -2776,7 +2749,6 @@ export const ThreadFeed = memo(function ThreadFeed(props: ThreadFeedProps) {
           />
         </View>
         {presentedFeed.length === 0 &&
-        !props.worktreeSetup &&
         props.activeWorkStartedAt === null &&
         props.contentPresentation.kind === "ready" ? (
           <View

@@ -88,8 +88,6 @@ vi.mock("./server", async () => {
   return { serverEnvironment: { configValueAtom: Atom.family(() => Atom.make(null)) } };
 });
 
-vi.mock("./git", () => ({ gitEnvironment: {} }));
-
 vi.mock("./threads", () => ({
   threadEnvironment: {},
 }));
@@ -723,9 +721,6 @@ describe("thread outbox recovery rollback", () => {
       modelSelection: { instanceId: ProviderInstanceId.make("codex"), model: "gpt-5.6-sol" },
       creation: {
         projectId: ProjectId.make("project-1"),
-        workspaceMode: "local",
-        branch: null,
-        worktreePath: null,
       },
     };
     await harness.manager.enqueue(message);
@@ -765,9 +760,6 @@ describe("thread outbox recovery rollback", () => {
       modelSelection: { instanceId: ProviderInstanceId.make("codex"), model: "gpt-5.6-sol" },
       creation: {
         projectId: ProjectId.make("project-1"),
-        workspaceMode: "local",
-        branch: null,
-        worktreePath: null,
       },
     };
     await harness.manager.enqueue(message);
@@ -796,9 +788,6 @@ describe("thread outbox recovery rollback", () => {
       modelSelection: { instanceId: ProviderInstanceId.make("codex"), model: "gpt-5.6-sol" },
       creation: {
         projectId: ProjectId.make("project-1"),
-        workspaceMode: "local",
-        branch: null,
-        worktreePath: null,
       },
     };
     await harness.manager.enqueue(message);

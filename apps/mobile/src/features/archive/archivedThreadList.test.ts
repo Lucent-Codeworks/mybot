@@ -14,7 +14,6 @@ function makeProject(
 ): OrchestrationProjectShell {
   return {
     workspaceRoot: `/workspaces/${input.id}`,
-    repositoryIdentity: null,
     defaultModelSelection: null,
     scripts: [],
     createdAt: "2026-06-01T00:00:00.000Z",
@@ -25,7 +24,6 @@ function makeProject(
 
 function makeThread(
   input: Pick<OrchestrationV2ThreadShell, "id" | "projectId" | "title"> & {
-    readonly branch?: string | null;
     readonly archivedAt?: string | null;
   },
 ): OrchestrationV2ThreadShell {
@@ -78,12 +76,11 @@ describe("buildArchivedThreadGroups", () => {
     expect(result[0]?.threads.map((thread) => thread.id)).toEqual(["thread-newer", "thread-older"]);
   });
 
-  it("filters by environment and matches project, thread, and branch text", () => {
+  it("filters by environment and matches thread text", () => {
     const secondEnvironmentId = EnvironmentId.make("environment-2");
     const firstProject = makeProject({ id: ProjectId.make("project-1"), title: "T3 Code" });
     const secondProject = makeProject({ id: ProjectId.make("project-2"), title: "Website" });
     const firstThread = makeThread({
-      branch: "fix/archive-screen",
       id: ThreadId.make("thread-1"),
       projectId: firstProject.id,
       title: "Build settings route",
@@ -105,7 +102,7 @@ describe("buildArchivedThreadGroups", () => {
         [secondEnvironmentId]: "Remote",
       },
       environmentId,
-      searchQuery: "archive-screen",
+      searchQuery: "settings route",
       sortOrder: "oldest",
     });
 

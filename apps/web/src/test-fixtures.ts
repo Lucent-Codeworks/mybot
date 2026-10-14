@@ -37,8 +37,6 @@ export function makeThreadProjectionFixture(): OrchestrationV2ThreadProjection {
       modelSelection: { instanceId: providerInstanceId, model: "gpt-5.4" },
       runtimeMode: "full-access",
       interactionMode: "default",
-      branch: null,
-      worktreePath: null,
       activeProviderThreadId: null,
       lineage: { rootThreadId: id, parentThreadId: null, relationshipToParent: null },
       forkedFrom: null,
@@ -103,8 +101,6 @@ export function makeThreadFixture(overrides: ThreadFixtureOverrides = {}): Threa
     modelSelection,
     runtimeMode: overrides.runtimeMode ?? "full-access",
     interactionMode: overrides.interactionMode ?? "default",
-    branch: overrides.branch ?? null,
-    worktreePath: overrides.worktreePath ?? null,
     activeProviderThreadId: overrides.activeProviderThreadId ?? null,
     lineage: overrides.lineage ?? {
       rootThreadId: id,

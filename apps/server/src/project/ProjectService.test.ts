@@ -24,7 +24,6 @@ import * as WorkspacePaths from "../workspace/WorkspacePaths.ts";
 import * as ProjectEnrichmentService from "./ProjectEnrichmentService.ts";
 import * as ProjectFaviconResolver from "./ProjectFaviconResolver.ts";
 import * as ProjectService from "./ProjectService.ts";
-import * as RepositoryIdentityResolver from "./RepositoryIdentityResolver.ts";
 
 const layerWorkspacePaths = Layer.succeed(WorkspacePaths.WorkspacePaths, {
   normalizeWorkspaceRoot: (workspaceRoot) => Effect.succeed(workspaceRoot.replace(/\/$/, "")),
@@ -32,29 +31,12 @@ const layerWorkspacePaths = Layer.succeed(WorkspacePaths.WorkspacePaths, {
     Effect.succeed({ absolutePath: `${workspaceRoot}/${relativePath}`, relativePath }),
 });
 
-const layerMetadata = Layer.merge(
-  Layer.succeed(RepositoryIdentityResolver.RepositoryIdentityResolver, {
-    resolve: (workspaceRoot) =>
-      Effect.succeed({
-        canonicalKey: `github.com/t3tools/${workspaceRoot.split("/").at(-1)}`,
-        locator: {
-          source: "git-remote" as const,
-          remoteName: "origin",
-          remoteUrl: `git@github.com:t3tools/${workspaceRoot.split("/").at(-1)}.git`,
-        },
-        rootPath: workspaceRoot,
-      }),
-  }),
-  Layer.succeed(ProjectFaviconResolver.ProjectFaviconResolver, {
-    resolvePath: (workspaceRoot) => Effect.succeed(`${workspaceRoot}/favicon.svg`),
-  }),
-);
+const layerMetadata = Layer.succeed(ProjectFaviconResolver.ProjectFaviconResolver, {
+  resolvePath: (workspaceRoot) => Effect.succeed(`${workspaceRoot}/favicon.svg`),
+});
 
 const layerTestFor = (
-  projectMetadataLayer: Layer.Layer<
-    | ProjectFaviconResolver.ProjectFaviconResolver
-    | RepositoryIdentityResolver.RepositoryIdentityResolver
-  >,
+  projectMetadataLayer: Layer.Layer<ProjectFaviconResolver.ProjectFaviconResolver>,
 ) =>
   RuntimeLayer.layerProjectService.pipe(
     Layer.provideMerge(ProjectEnrichmentService.layer),
@@ -122,59 +104,46 @@ it.layer(layerTest)("ProjectService", (it) => {
             name: "Setup",
             command: "vp install",
             icon: "configure",
-            runOnWorktreeCreate: true,
           },
         ],
       });
       assert.equal(created.workspaceRoot, "/work/project");
-      assert.isNull(created.repositoryIdentity);
       assert.isNull(created.faviconPath);
 
       const hydratedCreated = yield* waitForProject(
         service,
         projectId,
-        (project) => project.repositoryIdentity !== null && project.faviconPath !== null,
+        (project) => project.faviconPath !== null,
       );
-      assert.equal(hydratedCreated?.repositoryIdentity?.canonicalKey, "github.com/t3tools/project");
       assert.equal(hydratedCreated?.faviconPath, "/work/project/favicon.svg");
 
       const updated = yield* service.update({
         commandId: CommandId.make("command:project:update"),
         projectId,
         title: "Renamed",
-        autoPull: true,
         projectIcon: { kind: "emoji", emoji: "🦊" },
         faviconPath: "/work/project/custom.svg",
-        defaultThreadEnvMode: "worktree",
       });
       assert.equal(updated.title, "Renamed");
       assert.equal(updated.createdAt, created.createdAt);
-      assert.isTrue(updated.autoPull);
       assert.deepEqual(updated.projectIcon, { kind: "emoji", emoji: "🦊" });
       assert.equal(updated.faviconPath, "/work/project/custom.svg");
-      assert.equal(updated.defaultThreadEnvMode, "worktree");
 
       const byId = yield* service.getById(projectId);
       const byWorkspace = yield* service.getByWorkspaceRoot("/work/project/");
       assert.isTrue(Option.isSome(byId));
       assert.isTrue(Option.isSome(byWorkspace));
       assert.equal(Option.getOrThrow(byWorkspace).id, projectId);
-      assert.isTrue(Option.getOrThrow(byId).autoPull);
       assert.deepEqual(Option.getOrThrow(byId).projectIcon, updated.projectIcon);
       assert.equal(Option.getOrThrow(byId).faviconPath, updated.faviconPath);
-      assert.equal(Option.getOrThrow(byId).defaultThreadEnvMode, "worktree");
       const reset = yield* service.update({
         commandId: CommandId.make("command:project:reset-appearance"),
         projectId,
-        autoPull: false,
         projectIcon: null,
         faviconPath: null,
-        defaultThreadEnvMode: null,
       });
-      assert.isFalse(reset.autoPull);
       assert.isNull(reset.projectIcon);
       assert.equal(reset.faviconPath, hydratedCreated.faviconPath);
-      assert.isNull(reset.defaultThreadEnvMode);
       assert.deepEqual(
         (yield* service.snapshot).projects.map((project) => project.id),
         [projectId],
@@ -265,7 +234,7 @@ it.layer(layerTest)("ProjectService", (it) => {
       const updateInput = {
         commandId: CommandId.make("command:retry:update"),
         projectId,
-        autoPull: true,
+        title: "Retried",
       };
       yield* service.update(updateInput);
       yield* service.update(updateInput);
@@ -292,7 +261,7 @@ it.layer(layerTest)("ProjectService", (it) => {
         ],
       );
       for (const row of committed) assert.equal(row.receipt_sequence, row.sequence);
-      assert.isTrue(Option.getOrThrow(yield* service.getById(projectId)).autoPull);
+      assert.equal(Option.getOrThrow(yield* service.getById(projectId)).title, "Retried");
     }),
   );
 
@@ -316,7 +285,6 @@ it.layer(layerTest)("ProjectService", (it) => {
             name: "Invalid",
             command: "true",
             icon: "play" as const,
-            runOnWorktreeCreate: false,
           },
         ],
       };
@@ -493,36 +461,19 @@ it.effect(
   "returns project mutations before slow enrichment and shares the eventual result across reads",
   () =>
     Effect.gen(function* () {
-      const repositoryStarted = yield* Deferred.make<void>();
-      const releaseRepository = yield* Deferred.make<void>();
-      const repositoryCalls = yield* Ref.make(0);
+      const faviconStarted = yield* Deferred.make<void>();
+      const releaseFavicon = yield* Deferred.make<void>();
       const faviconCalls = yield* Ref.make(0);
 
-      const layerSlowMetadata = Layer.merge(
-        Layer.succeed(RepositoryIdentityResolver.RepositoryIdentityResolver, {
-          resolve: (workspaceRoot) =>
-            Effect.gen(function* () {
-              yield* Ref.update(repositoryCalls, (count) => count + 1);
-              yield* Deferred.succeed(repositoryStarted, undefined);
-              yield* Deferred.await(releaseRepository);
-              return {
-                canonicalKey: "github.com/t3tools/slow-project",
-                locator: {
-                  source: "git-remote" as const,
-                  remoteName: "origin",
-                  remoteUrl: "git@github.com:t3tools/slow-project.git",
-                },
-                rootPath: workspaceRoot,
-              };
-            }),
-        }),
-        Layer.succeed(ProjectFaviconResolver.ProjectFaviconResolver, {
-          resolvePath: (workspaceRoot) =>
-            Ref.updateAndGet(faviconCalls, (count) => count + 1).pipe(
-              Effect.as(`${workspaceRoot}/favicon.svg`),
-            ),
-        }),
-      );
+      const layerSlowMetadata = Layer.succeed(ProjectFaviconResolver.ProjectFaviconResolver, {
+        resolvePath: (workspaceRoot) =>
+          Effect.gen(function* () {
+            yield* Ref.update(faviconCalls, (count) => count + 1);
+            yield* Deferred.succeed(faviconStarted, undefined);
+            yield* Deferred.await(releaseFavicon);
+            return `${workspaceRoot}/favicon.svg`;
+          }),
+      });
 
       yield* Effect.gen(function* () {
         const service = yield* ProjectService.ProjectService;
@@ -536,12 +487,11 @@ it.effect(
           })
           .pipe(Effect.forkChild({ startImmediately: true }));
 
-        yield* Deferred.await(repositoryStarted);
+        yield* Deferred.await(faviconStarted);
         yield* Effect.yieldNow;
         assert.isDefined(createFiber.pollUnsafe());
 
         const created = yield* Fiber.join(createFiber);
-        assert.isNull(created.repositoryIdentity);
         assert.isNull(created.faviconPath);
 
         const updated = yield* service.update({
@@ -550,8 +500,7 @@ it.effect(
           title: "Updated before enrichment",
         });
         assert.equal(updated.title, "Updated before enrichment");
-        assert.isNull(updated.repositoryIdentity);
-        assert.equal(updated.faviconPath, "/work/slow-enrichment/favicon.svg");
+        assert.isNull(updated.faviconPath);
 
         const immediateReadFiber = yield* service
           .getById(projectId)
@@ -559,8 +508,7 @@ it.effect(
         yield* Effect.yieldNow;
         assert.isDefined(immediateReadFiber.pollUnsafe());
         const immediateRead = Option.getOrThrow(yield* Fiber.join(immediateReadFiber));
-        assert.isNull(immediateRead.repositoryIdentity);
-        assert.equal(immediateRead.faviconPath, "/work/slow-enrichment/favicon.svg");
+        assert.isNull(immediateRead.faviconPath);
 
         const snapshotFiber = yield* service.snapshot.pipe(
           Effect.forkChild({ startImmediately: true }),
@@ -568,27 +516,19 @@ it.effect(
         yield* Effect.yieldNow;
         assert.isDefined(snapshotFiber.pollUnsafe());
         const immediateSnapshot = yield* Fiber.join(snapshotFiber);
-        assert.isNull(immediateSnapshot.projects[0]?.repositoryIdentity ?? null);
+        assert.isNull(immediateSnapshot.projects[0]?.faviconPath ?? null);
 
-        yield* Deferred.succeed(releaseRepository, undefined);
+        yield* Deferred.succeed(releaseFavicon, undefined);
 
         const firstProject = yield* waitForProject(
           service,
           projectId,
-          (project) => project.repositoryIdentity !== null && project.faviconPath !== null,
-        );
-        assert.isDefined(firstProject);
-        assert.equal(
-          firstProject.repositoryIdentity?.canonicalKey,
-          "github.com/t3tools/slow-project",
+          (project) => project.faviconPath !== null,
         );
         assert.equal(firstProject.faviconPath, "/work/slow-enrichment/favicon.svg");
 
-        const byId = Option.getOrThrow(yield* service.getById(projectId));
         const secondSnapshot = yield* service.snapshot;
-        assert.equal(byId.repositoryIdentity?.canonicalKey, "github.com/t3tools/slow-project");
         assert.equal(secondSnapshot.projects[0]?.faviconPath, "/work/slow-enrichment/favicon.svg");
-        assert.equal(yield* Ref.get(repositoryCalls), 1);
         assert.equal(yield* Ref.get(faviconCalls), 1);
       }).pipe(Effect.provide(layerTestFor(layerSlowMetadata)));
     }),
@@ -596,21 +536,16 @@ it.effect(
 
 it.effect("keeps project snapshots available when optional metadata enrichment fails", () =>
   Effect.gen(function* () {
-    const layerFailingMetadata = Layer.merge(
-      Layer.succeed(RepositoryIdentityResolver.RepositoryIdentityResolver, {
-        resolve: () => Effect.succeed(null),
-      }),
-      Layer.succeed(ProjectFaviconResolver.ProjectFaviconResolver, {
-        resolvePath: (workspaceRoot) =>
-          Effect.fail(
-            new ProjectFaviconResolver.ProjectFaviconResolutionError({
-              operation: "stat-candidate",
-              workspaceRoot,
-              cause: "permission denied",
-            }),
-          ),
-      }),
-    );
+    const layerFailingMetadata = Layer.succeed(ProjectFaviconResolver.ProjectFaviconResolver, {
+      resolvePath: (workspaceRoot) =>
+        Effect.fail(
+          new ProjectFaviconResolver.ProjectFaviconResolutionError({
+            operation: "stat-candidate",
+            workspaceRoot,
+            cause: "permission denied",
+          }),
+        ),
+    });
 
     yield* Effect.gen(function* () {
       const service = yield* ProjectService.ProjectService;
@@ -626,7 +561,6 @@ it.effect("keeps project snapshots available when optional metadata enrichment f
       assert.equal(snapshot.projects.length, 1);
       assert.equal(snapshot.projects[0]?.id, projectId);
       assert.equal(snapshot.projects[0]?.title, "Still visible");
-      assert.isNull(snapshot.projects[0]?.repositoryIdentity ?? null);
       assert.isNull(snapshot.projects[0]?.faviconPath ?? null);
     }).pipe(Effect.provide(layerTestFor(layerFailingMetadata)));
   }),
@@ -635,28 +569,12 @@ it.effect("keeps project snapshots available when optional metadata enrichment f
 it.effect("invalidates workspace-derived metadata when a project moves", () =>
   Effect.gen(function* () {
     const metadataVersion = yield* Ref.make(1);
-    const layerVersionedMetadata = Layer.merge(
-      Layer.succeed(RepositoryIdentityResolver.RepositoryIdentityResolver, {
-        resolve: (workspaceRoot) =>
-          Ref.get(metadataVersion).pipe(
-            Effect.map((version) => ({
-              canonicalKey: `example.test/v${version}${workspaceRoot}`,
-              locator: {
-                source: "git-remote" as const,
-                remoteName: "origin",
-                remoteUrl: `https://example.test/v${version}${workspaceRoot}.git`,
-              },
-              rootPath: workspaceRoot,
-            })),
-          ),
-      }),
-      Layer.succeed(ProjectFaviconResolver.ProjectFaviconResolver, {
-        resolvePath: (workspaceRoot) =>
-          Ref.get(metadataVersion).pipe(
-            Effect.map((version) => `${workspaceRoot}/favicon-v${version}.svg`),
-          ),
-      }),
-    );
+    const layerVersionedMetadata = Layer.succeed(ProjectFaviconResolver.ProjectFaviconResolver, {
+      resolvePath: (workspaceRoot) =>
+        Ref.get(metadataVersion).pipe(
+          Effect.map((version) => `${workspaceRoot}/favicon-v${version}.svg`),
+        ),
+    });
 
     yield* Effect.gen(function* () {
       const service = yield* ProjectService.ProjectService;

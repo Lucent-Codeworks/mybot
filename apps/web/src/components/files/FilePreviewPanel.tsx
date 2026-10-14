@@ -98,7 +98,7 @@ import {
 } from "./fileSurfaceChrome";
 import SourceFilePreview from "./ReadOnlySourcePreview";
 import { resolveCenteredFileLineScrollTop } from "./fileLineReveal";
-import { DiffCommentAnnotation } from "../diffs/DiffCommentAnnotation";
+import { FileCommentAnnotation } from "./FileCommentAnnotation";
 import { projectFileCacheKey } from "./fileContentRevision";
 import {
   filePreviewReadErrorMessage,
@@ -938,7 +938,7 @@ function EditableFileSurface({
             renderAnnotation={(annotation) => (
               <div className="py-1">
                 {annotation.metadata.entries.map((entry) => (
-                  <DiffCommentAnnotation
+                  <FileCommentAnnotation
                     key={entry.id}
                     kind={entry.kind}
                     rangeLabel={formatFileCommentRange(entry.startLine, entry.endLine)}

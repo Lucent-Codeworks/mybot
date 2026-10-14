@@ -938,34 +938,6 @@ public final class T3ComposerEditorView: ExpoView, UITextViewDelegate, UITextDro
     return attributedAttachment
   }
 
-  /// Chip glyphs with no SF Symbol that reads correctly. A pull request would otherwise land on
-  /// `arrow.triangle.branch`, a road-sign fork that says "branch", not "pull request", so it is
-  /// drawn from the same lucide geometry web and Android use.
-  private static func vectorIcon(named name: String, size: CGFloat, color: UIColor) -> UIImage? {
-    guard name == "git-pull-request" else { return nil }
-    return UIGraphicsImageRenderer(size: CGSize(width: size, height: size)).image { _ in
-      let s = size / 24  // lucide authors on a 24pt grid.
-      let path = UIBezierPath()
-      for centre in [CGPoint(x: 18 * s, y: 18 * s), CGPoint(x: 6 * s, y: 6 * s)] {
-        path.append(UIBezierPath(arcCenter: centre, radius: 3 * s, startAngle: 0,
-                                 endAngle: .pi * 2, clockwise: true))
-      }
-      path.move(to: CGPoint(x: 13 * s, y: 6 * s))
-      path.addLine(to: CGPoint(x: 16 * s, y: 6 * s))
-      path.addCurve(to: CGPoint(x: 18 * s, y: 8 * s),
-                    controlPoint1: CGPoint(x: 17.1 * s, y: 6 * s),
-                    controlPoint2: CGPoint(x: 18 * s, y: 6.9 * s))
-      path.addLine(to: CGPoint(x: 18 * s, y: 15 * s))
-      path.move(to: CGPoint(x: 6 * s, y: 9 * s))
-      path.addLine(to: CGPoint(x: 6 * s, y: 21 * s))
-      path.lineWidth = 2 * s
-      path.lineCapStyle = .round
-      path.lineJoinStyle = .round
-      color.setStroke()
-      path.stroke()
-    }
-  }
-
   private func renderChip(
     label: String,
     detail: String?,
@@ -973,16 +945,13 @@ public final class T3ComposerEditorView: ExpoView, UITextViewDelegate, UITextDro
     iconImage: UIImage?,
     style: ComposerChipStyle
   ) -> UIImage {
-    // Kept in step with `T3ContextChipVectorIcon` in the markdown module: a chip drawn here and
-    // the same chip drawn in a sent message have to be the same picture.
     let chipFontSize = fontSize * 0.86
     let font = UIFont(name: "DMSans-Medium", size: chipFontSize)
       ?? UIFont.systemFont(ofSize: chipFontSize, weight: .medium)
-    let fallbackIcon = Self.vectorIcon(named: iconName, size: 14, color: style.textColor)
-      ?? UIImage(
-        systemName: iconName,
-        withConfiguration: UIImage.SymbolConfiguration(pointSize: 12, weight: .medium)
-      )
+    let fallbackIcon = UIImage(
+      systemName: iconName,
+      withConfiguration: UIImage.SymbolConfiguration(pointSize: 12, weight: .medium)
+    )
     let icon = iconImage ?? fallbackIcon
     // The size reads as metadata, not part of the name, so it renders a step down from the
     // label the way the web chip does.

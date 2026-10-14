@@ -19,7 +19,7 @@ The composer writes Markdown and shows it styled as you type. Markers such as
 them. Lines starting with `- `, `1. `, `- [ ] `, `> `, `# ` or `---` become lists,
 task lists, quotes, headings and rules; ` ``` ` followed by Enter opens a code
 block. What you typed is what the agent receives, markers and numbering
-included, and `#1234` without a space still looks up a pull request.
+included.
 
 Enter sends. In a list or quote, **Shift+Enter** continues it, and Shift+Enter
 on an empty line leaves it; **Tab** nests a list item. In a code block, Enter
@@ -143,13 +143,8 @@ into a normal draft.
 ## Edit an earlier prompt
 
 On web and desktop, choose **Edit from here** beneath a sent message to rewind
-the conversation to before that message. Choose **Revert and keep changes** to
-leave workspace files as they are, or **Revert files too** to restore them as well.
-File restore is only offered for threads running in a worktree, and it is
-refused when another thread or agent session also uses that directory, a folder
-inside it, or a folder that contains it, since
-restoring would erase their changes. A thread that works in the project directory
-rewinds the conversation only. The selected prompt and its attachments return to the composer for editing and
+the conversation to before that message. Files in the project folder are not
+restored; they stay as the agent left them. The selected prompt and its attachments return to the composer for editing and
 resending. Any unsent draft stays above the restored prompt.
 
 This removes the selected message and later conversation from the active thread
@@ -248,19 +243,11 @@ row above the composer shows the goal and its progress.
 ## Context in your message
 
 Context you attach lands where your cursor is, as a chip inside your text: a terminal excerpt,
-a review comment from a diff or file, a preview annotation, or a file. You can type before and
+a review comment on a file, a preview annotation, or a file. You can type before and
 after a chip, move it by cutting and pasting, and delete it like a character. Hover a chip for
 its brief details. Select a terminal excerpt to open its captured output, or select a review
 comment, picked element, or preview annotation to open its full details. Chips read as "Terminal
 excerpt, Terminal 1 lines 3-4" and similar to screen readers.
-
-A pull request appears as its icon and number. Its color reflects whether it was open, draft,
-merged, or closed when it was attached. Select it to inspect the captured title and branches,
-then choose **Open pull request** to visit the pull request. On web and desktop, type `#` to browse the newest
-pull requests in the current project's repository. Continue typing digits to filter the recent list
-by any part of its pull request numbers. A complete number is also resolved directly, even when that
-pull request is older than the recent list. Type a single word after `#` to search pull requests in
-the repository by text. Choose a result to insert it as a chip.
 
 Another thread can be context too. Type `@` followed by part of its title to pick one from
 the same server, or on web and desktop drag a thread out of the sidebar and drop it on the

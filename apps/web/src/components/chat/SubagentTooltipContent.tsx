@@ -20,7 +20,6 @@ import {
   CircleDashedIcon,
   CircleXIcon,
   FolderIcon,
-  GitBranchIcon,
   TerminalIcon,
 } from "lucide-react";
 import { ThreadHoverCard } from "../ThreadHoverCard";
@@ -41,10 +40,8 @@ export function SubagentTooltipContent(props: {
   providers?: ReadonlyArray<ServerProvider> | undefined;
   driver?: ProviderDriverKind | undefined;
   elapsed?: ReactNode;
-  parentThread?: Pick<OrchestrationV2ThreadShell, "projectId" | "worktreePath"> | undefined;
-  childThread?:
-    | Pick<OrchestrationV2ThreadShell, "branch" | "worktreePath" | "modelSelection">
-    | undefined;
+  parentThread?: Pick<OrchestrationV2ThreadShell, "projectId"> | undefined;
+  childThread?: Pick<OrchestrationV2ThreadShell, "modelSelection"> | undefined;
   parentProject?: Pick<OrchestrationProjectShell, "workspaceRoot"> | undefined;
   childProject?: Pick<OrchestrationProjectShell, "id" | "title" | "workspaceRoot"> | undefined;
   status: OrchestrationV2TurnItemStatus;
@@ -170,16 +167,13 @@ export function SubagentTooltipContent(props: {
         </span>
         {props.elapsed}
       </div>
-      {metadata.map(({ label, value }) => {
-        const Icon = label === "Branch" ? GitBranchIcon : FolderIcon;
-        return (
-          <div key={label} className="flex min-w-0 items-center gap-2">
-            <Icon aria-hidden className="size-3 shrink-0" />
-            <span className="sr-only">{label}</span>
-            <MiddleTruncate value={value} className="flex" showTitle={false} />
-          </div>
-        );
-      })}
+      {metadata.map(({ label, value }) => (
+        <div key={label} className="flex min-w-0 items-center gap-2">
+          <FolderIcon aria-hidden className="size-3 shrink-0" />
+          <span className="sr-only">{label}</span>
+          <MiddleTruncate value={value} className="flex" showTitle={false} />
+        </div>
+      ))}
       {preview ? (
         <div className="flex min-w-0 items-center gap-2">
           <TerminalIcon aria-hidden className="size-3 shrink-0" />

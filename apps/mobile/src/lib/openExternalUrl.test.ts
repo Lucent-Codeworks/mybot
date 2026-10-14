@@ -22,7 +22,7 @@ describe("tryOpenExternalUrl", () => {
     openURL.mockResolvedValue(undefined);
 
     await expect(
-      tryOpenExternalUrl("https://github.com/pingdotgg/t3code", "pull-request"),
+      tryOpenExternalUrl("https://github.com/pingdotgg/t3code", "markdown-link"),
     ).resolves.toBe(true);
   });
 
@@ -32,16 +32,19 @@ describe("tryOpenExternalUrl", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     await expect(
-      tryOpenExternalUrl("https://github.com/pingdotgg/t3code/pull/1?token=secret", "pull-request"),
+      tryOpenExternalUrl(
+        "https://github.com/pingdotgg/t3code/pull/1?token=secret",
+        "markdown-link",
+      ),
     ).resolves.toBe(false);
 
     expect(consoleError).toHaveBeenCalledTimes(1);
     const [message, attributes] = consoleError.mock.calls[0] ?? [];
-    expect(message).toBe("Failed to open pull-request URL with the https scheme.");
+    expect(message).toBe("Failed to open markdown-link URL with the https scheme.");
     expect(attributes).toEqual(
       expect.objectContaining({
         _tag: "ExternalUrlOpenError",
-        target: "pull-request",
+        target: "markdown-link",
         scheme: "https",
         host: "github.com",
         stack: expect.stringContaining("ExternalUrlOpenError"),

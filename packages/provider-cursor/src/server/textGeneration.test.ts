@@ -1,5 +1,6 @@
 import type { RunResult } from "@cursor/sdk";
-import { ProviderInstanceId, TextGenerationError } from "@t3tools/contracts";
+import { ProviderInstanceId } from "@t3tools/contracts";
+import { TextGenerationError } from "@t3tools/provider-core/server/textGeneration";
 import { CursorSettings } from "../settings.ts";
 import { describe, expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
@@ -22,8 +23,7 @@ const cursorSdkMock = vi.hoisted(() => ({
   prompt: vi.fn<(prompt: string, options: unknown) => Promise<RunResult>>(async () => ({
     id: "run-cursor-text-generation-test",
     status: "finished",
-    result:
-      '{"subject":"Add generated commit message","body":"- verify cursor sdk text generation"}',
+    result: '{"title":"Cursor generated title"}',
   })),
 }));
 
@@ -66,8 +66,7 @@ beforeEach(() => {
   cursorSdkMock.prompt.mockResolvedValue({
     id: "run-cursor-text-generation-test",
     status: "finished",
-    result:
-      '{"subject":"Add generated commit message","body":"- verify cursor sdk text generation"}',
+    result: '{"title":"Cursor generated title"}',
   });
 });
 
@@ -82,17 +81,15 @@ describe("CursorTextGeneration", () => {
       );
       const input = {
         cwd: process.cwd(),
-        branch: "feature/cursor",
-        stagedSummary: "M file.ts",
-        stagedPatch: "diff",
+        message: "Fix the reconnect spinner after a resumed session.",
         modelSelection: createModelSelection(ProviderInstanceId.make("cursor"), "auto"),
       };
-      yield* generation.generateCommitMessage(input);
+      yield* generation.generateThreadTitle(input);
       expect(cursorSdkMock.create).toHaveBeenLastCalledWith(
         expect.objectContaining({ apiKey: "first-browser-key" }),
       );
       apiKey = "second-browser-key";
-      yield* generation.generateCommitMessage(input);
+      yield* generation.generateThreadTitle(input);
       expect(cursorSdkMock.create).toHaveBeenLastCalledWith(
         expect.objectContaining({ apiKey: "second-browser-key" }),
       );
@@ -105,12 +102,9 @@ describe("CursorTextGeneration", () => {
         CURSOR_API_KEY: "test-cursor-key",
       });
 
-      const generated = yield* textGeneration.generateCommitMessage({
+      const generated = yield* textGeneration.generateThreadTitle({
         cwd: process.cwd(),
-        branch: "feature/cursor-text-generation",
-        stagedSummary: "M apps/server/src/textGeneration/CursorTextGeneration.ts",
-        stagedPatch:
-          "diff --git a/apps/server/src/textGeneration/CursorTextGeneration.ts b/apps/server/src/textGeneration/CursorTextGeneration.ts",
+        message: "Fix the reconnect spinner after a resumed session.",
         modelSelection: createModelSelection(ProviderInstanceId.make("cursor"), "gpt-5.4", [
           { id: "thinking", value: "high" },
           { id: "contextWindow", value: "1m" },
@@ -118,14 +112,13 @@ describe("CursorTextGeneration", () => {
         ]),
       });
 
-      expect(generated.subject).toBe("Add generated commit message");
-      expect(generated.body).toBe("- verify cursor sdk text generation");
+      expect(generated.title).toBe("Cursor generated title");
 
       expect(cursorSdkMock.prompt).toHaveBeenCalledTimes(1);
       const [prompt, options] = (
         cursorSdkMock.prompt.mock.calls as unknown as Array<[string, unknown]>
       )[0]!;
-      expect(prompt).toContain("Staged patch:");
+      expect(prompt).toContain("User message:");
       expect(options).toEqual({
         apiKey: "test-cursor-key",
         mode: "plan",
@@ -159,15 +152,13 @@ describe("CursorTextGeneration", () => {
         CURSOR_API_KEY: "test-cursor-key",
       });
 
-      const generated = yield* textGeneration.generateCommitMessage({
+      const generated = yield* textGeneration.generateThreadTitle({
         cwd: process.cwd(),
-        branch: "feature/cursor-text-generation",
-        stagedSummary: "M apps/server/src/textGeneration/CursorTextGeneration.ts",
-        stagedPatch: "diff --git a/apps/server/src/textGeneration/CursorTextGeneration.ts",
+        message: "Fix the reconnect spinner after a resumed session.",
         modelSelection: createModelSelection(ProviderInstanceId.make("cursor"), "composer-2"),
       });
 
-      expect(generated.subject).toBe("Add generated commit message");
+      expect(generated.title).toBe("Cursor generated title");
       expect(cursorSdkMock.create).toHaveBeenCalledTimes(2);
       expect(cursorSdkMock.create.mock.calls[0]?.[0]).toMatchObject({
         local: { sandboxOptions: { enabled: true } },
@@ -194,11 +185,9 @@ describe("CursorTextGeneration", () => {
       });
 
       const error = yield* Effect.flip(
-        textGeneration.generateCommitMessage({
+        textGeneration.generateThreadTitle({
           cwd: process.cwd(),
-          branch: "feature/cursor-text-generation",
-          stagedSummary: "M README.md",
-          stagedPatch: "diff --git a/README.md b/README.md",
+          message: "Fix the reconnect spinner after a resumed session.",
           modelSelection: createModelSelection(ProviderInstanceId.make("cursor"), "composer-2"),
         }),
       );
@@ -214,25 +203,22 @@ describe("CursorTextGeneration", () => {
         id: "run-cursor-text-generation-test",
         status: "finished",
         result:
-          'Sure, here is the JSON:\n```json\n{\n  "subject": "Update README dummy comment with attribution and date",\n  "body": ""\n}\n```\nDone.',
+          'Sure, here is the JSON:\n```json\n{\n  "title": "Reconnect spinner after resume"\n}\n```\nDone.',
       });
       const textGeneration = yield* makeCursorTextGeneration(cursorSettings, {
         CURSOR_API_KEY: "test-cursor-key",
       });
 
-      const generated = yield* textGeneration.generateCommitMessage({
+      const generated = yield* textGeneration.generateThreadTitle({
         cwd: process.cwd(),
-        branch: "feature/cursor-noisy-json",
-        stagedSummary: "M README.md",
-        stagedPatch: "diff --git a/README.md b/README.md",
+        message: "Fix the reconnect spinner after a resumed session.",
         modelSelection: {
           instanceId: ProviderInstanceId.make("cursor"),
           model: "composer-2",
         },
       });
 
-      expect(generated.subject).toBe("Update README dummy comment with attribution and date");
-      expect(generated.body).toBe("");
+      expect(generated.title).toBe("Reconnect spinner after resume");
     }).pipe(Effect.provide(layerTest)),
   );
 
@@ -403,11 +389,9 @@ describe("CursorTextGeneration", () => {
       const textGeneration = yield* makeCursorTextGeneration(cursorSettings, {});
 
       const error = yield* Effect.flip(
-        textGeneration.generateCommitMessage({
+        textGeneration.generateThreadTitle({
           cwd: process.cwd(),
-          branch: "feature/cursor-api-key",
-          stagedSummary: "M README.md",
-          stagedPatch: "diff --git a/README.md b/README.md",
+          message: "Fix the reconnect spinner after a resumed session.",
           modelSelection: {
             instanceId: ProviderInstanceId.make("cursor"),
             model: "composer-2",

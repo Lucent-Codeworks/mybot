@@ -12,10 +12,10 @@ import {
 import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environment";
 import { AsyncResult } from "effect/reactivity";
 import { type EnvironmentId, type ProjectIconOverride } from "@t3tools/contracts";
-import { useLocation, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import * as Cause from "effect/Cause";
 import { InfoIcon, Trash2Icon } from "lucide-react";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useMemo, useRef, useState } from "react";
 
 import { useComposerDraftStore } from "../../composerDraftStore";
 import { releaseProjectDraftUploads } from "../../lib/composerDraftUploads";
@@ -58,7 +58,7 @@ function memberKey(member: { environmentId: string; id: string }): string {
 }
 
 /** `project` is the Projects page shortcut: the new-thread defaults people change most. */
-export type ProjectSettingsCategory = "general" | "integrations" | "source-control" | "project";
+export type ProjectSettingsCategory = "general" | "integrations" | "project";
 
 export function ProjectSettingsPanel({
   projectKey,
@@ -70,9 +70,6 @@ export function ProjectSettingsPanel({
   checkoutKey?: string | null;
 }) {
   const groups = useSettingsProjectGroups();
-  const navigate = useNavigate({ from: "/settings" });
-  const pathname = useLocation({ select: (location) => location.pathname });
-
   const selected = groups.find((group) => group.projectKey === projectKey) ?? null;
   const members = useMemo(
     () =>
@@ -83,52 +80,6 @@ export function ProjectSettingsPanel({
       ) ?? [],
     [selected, environmentId, checkoutKey],
   );
-
-  // Remember the members of the last rendered group so a grouping-rule change
-  // (which changes the group key) can follow the project to its new group.
-  const lastSelectionRef = useRef<{
-    key: string;
-    environmentId: EnvironmentId | null;
-    checkoutKey: string | null;
-    memberKeys: string[];
-  } | null>(null);
-  useEffect(() => {
-    if (!selected || members.length === 0) return;
-    lastSelectionRef.current = {
-      key: selected.projectKey,
-      environmentId,
-      checkoutKey,
-      memberKeys: members.map((member) => member.physicalProjectKey),
-    };
-  }, [selected, members, environmentId, checkoutKey]);
-
-  // A grouping-rule change replaces the group key mid-visit; follow the
-  // project to its new key instead of parking on the not-found state.
-  useEffect(() => {
-    if (members.length > 0) return;
-    const last = lastSelectionRef.current;
-    if (
-      last?.key !== projectKey ||
-      last.environmentId !== environmentId ||
-      last.checkoutKey !== checkoutKey
-    )
-      return;
-    const successor = groups.find((group) =>
-      group.memberProjects.some((member) => last.memberKeys.includes(member.physicalProjectKey)),
-    );
-    if (successor) {
-      void navigate({
-        to: pathname,
-        search: () => ({
-          project: successor.projectKey,
-          machine: environmentId ?? undefined,
-          checkout: checkoutKey ?? undefined,
-        }),
-        replace: true,
-        hashScrollIntoView: false,
-      });
-    }
-  }, [groups, navigate, pathname, projectKey, members.length, environmentId, checkoutKey]);
 
   if (!selected) {
     return (
@@ -155,18 +106,11 @@ export function ProjectSettingsPanel({
     <ProjectDetail
       key={`${selected.projectKey}:${environmentId ?? "all"}:${checkoutKey ?? "all"}`}
       group={scopedGroup}
-      hasOtherMembers={members.length < selected.memberProjects.length}
     />
   );
 }
 
-function ProjectDetail({
-  group,
-  hasOtherMembers,
-}: {
-  group: SidebarProjectSnapshot;
-  hasOtherMembers: boolean;
-}) {
+function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
   const navigate = useNavigate({ from: "/settings" });
   const primaryEnvironmentId = usePrimaryEnvironmentId();
   const { environments } = useEnvironments();
@@ -327,8 +271,6 @@ function ProjectDetail({
     [updateAllMembers],
   );
 
-  const hasMultipleCheckouts = group.memberProjects.length > 1;
-
   const removeMembers = useCallback(
     async (members: ReadonlyArray<SidebarProjectGroupMember>) => {
       if (checkProjectAccess(members, "Failed to remove project")) return;
@@ -339,16 +281,14 @@ function ProjectDetail({
       const projectThreads = threads.filter((thread) =>
         memberKeys.has(`${thread.environmentId}:${thread.projectId}`),
       );
-      const isWholeGroup = members.length === group.memberProjects.length;
-      const targetKind = hasOtherMembers || !isWholeGroup ? "checkout" : "project";
       const singleMember = members.length === 1 ? members[0]! : null;
       const targetLabel = singleMember?.title ?? group.displayName;
       const confirmed = await settlePromise(() =>
         api.dialogs.confirm(
           [
             projectThreads.length > 0
-              ? `Remove ${targetKind} "${targetLabel}" and delete its ${projectThreads.length} thread${projectThreads.length === 1 ? "" : "s"}?`
-              : `Remove ${targetKind} "${targetLabel}"?`,
+              ? `Remove project "${targetLabel}" and delete its ${projectThreads.length} thread${projectThreads.length === 1 ? "" : "s"}?`
+              : `Remove project "${targetLabel}"?`,
             ...(singleMember
               ? [
                   `Path: ${singleMember.workspaceRoot}`,
@@ -356,15 +296,13 @@ function ProjectDetail({
                     ? [`Environment: ${singleMember.environmentLabel}`]
                     : []),
                 ]
-              : [`This removes ${members.length} grouped project entries.`]),
+              : [`This removes ${members.length} project entries.`]),
             ...(projectThreads.length > 0
               ? [
                   "This permanently clears conversation history for those threads and any archived threads.",
                 ]
               : ["This permanently clears any archived conversation history."]),
-            isWholeGroup && !hasOtherMembers
-              ? "This removes only the project entries, not the files on disk."
-              : "Other entries in this grouped project are unaffected.",
+            "This removes only the project entries, not the files on disk.",
             "This action cannot be undone.",
           ].join("\n"),
           { variant: "destructive" },
@@ -406,43 +344,9 @@ function ProjectDetail({
         draftStore.clearProjectDraftThreadId(projectRef);
       }
 
-      if (isWholeGroup && !hasOtherMembers) {
-        void navigate({ to: "/", replace: true });
-      }
+      void navigate({ to: "/", replace: true });
     },
-    [
-      checkProjectAccess,
-      deleteProject,
-      group.displayName,
-      group.memberProjects.length,
-      hasOtherMembers,
-      navigate,
-      reportFailure,
-      threads,
-    ],
-  );
-
-  const checkoutChoices = (
-    <SettingsSection title="Checkouts">
-      {group.memberProjects.map((member) => (
-        <SettingsRow
-          key={member.physicalProjectKey}
-          title={member.environmentLabel ?? "Environment"}
-          description={member.workspaceRoot}
-          control={
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={!editableIds.has(member.environmentId)}
-              onClick={() => void removeMembers([member])}
-              aria-label={`Remove checkout ${member.workspaceRoot}`}
-            >
-              Remove
-            </Button>
-          }
-        />
-      ))}
-    </SettingsSection>
+    [checkProjectAccess, deleteProject, group.displayName, navigate, reportFailure, threads],
   );
 
   return (
@@ -457,14 +361,12 @@ function ProjectDetail({
         <SettingsSection id="project-overview" title="Project" hideTitle>
           {!canEditGroup ? (
             <p className="px-3 py-2 text-sm text-muted-foreground sm:px-4">
-              {group.memberProjects.length > 1
-                ? "Shared settings require permission to change every checkout in this group."
-                : "This connection cannot change this project."}
+              This connection cannot change this project.
             </p>
           ) : null}
           <SettingsRow
             title="Name"
-            description="The shared name for this project group in the sidebar and thread lists."
+            description="The name for this project in the sidebar and thread lists."
             control={
               <Input
                 key={`${group.projectKey}:${group.displayName}`}
@@ -538,23 +440,10 @@ function ProjectDetail({
         </SettingsSection>
         <ProjectDefaultsSettings category="project" />
         <ProjectActionsSettings />
-        {hasMultipleCheckouts ? checkoutChoices : null}
         <SettingsSection title="Danger">
           <SettingsRow
-            title={
-              hasOtherMembers
-                ? "Remove checkout"
-                : group.memberProjects.length > 1
-                  ? "Remove this project everywhere"
-                  : "Remove project"
-            }
-            description={
-              hasOtherMembers
-                ? "Deletes the selected machine's checkout entries and their threads. Other machines and files on disk are not touched."
-                : group.memberProjects.length > 1
-                  ? `Deletes all ${group.memberProjects.length} checkout entries and their threads on every machine. Files on disk are not touched.`
-                  : "Deletes the project entry and its threads. Files on disk are not touched."
-            }
+            title="Remove project"
+            description="Deletes the project entry and its threads. Files on disk are not touched."
             control={
               <Button
                 size="sm"
@@ -563,11 +452,7 @@ function ProjectDetail({
                 onClick={() => void removeMembers(group.memberProjects)}
               >
                 <Trash2Icon />
-                {hasOtherMembers
-                  ? "Remove checkout"
-                  : group.memberProjects.length > 1
-                    ? "Remove all entries"
-                    : "Remove project"}
+                Remove project
               </Button>
             }
           />

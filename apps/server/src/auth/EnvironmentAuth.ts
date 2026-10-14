@@ -5,7 +5,6 @@ import {
   AuthOrchestrationOperateScope,
   AuthOrchestrationReadScope,
   AuthSettingsWriteScope,
-  AuthSourceControlWriteScope,
   AuthStandardClientScopes,
   type AuthAccessTokenResult,
   type AuthBrowserSessionResult,
@@ -91,12 +90,7 @@ export const mcpClientScopes = (
   access === "read-only"
     ? [AuthOrchestrationReadScope]
     : access === "full-access"
-      ? [
-          AuthOrchestrationReadScope,
-          AuthOrchestrationOperateScope,
-          AuthSettingsWriteScope,
-          AuthSourceControlWriteScope,
-        ]
+      ? [AuthOrchestrationReadScope, AuthOrchestrationOperateScope, AuthSettingsWriteScope]
       : [AuthOrchestrationReadScope, AuthOrchestrationOperateScope];
 
 export interface McpClientSession {

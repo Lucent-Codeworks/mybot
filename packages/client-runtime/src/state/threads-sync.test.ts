@@ -212,10 +212,6 @@ const makeHarness = Effect.fn("TestEnvironmentThreads.makeHarness")(function* (o
       Ref.update(removedThreads, (current) => [...current, threadId]),
     loadServerConfig: () => Effect.succeedNone,
     saveServerConfig: () => Effect.void,
-    loadVcsRefs: () => Effect.succeedNone,
-    saveVcsRefs: () => Effect.void,
-    removeVcsRefs: () => Effect.void,
-    clearVcsRefs: () => Effect.void,
     clear: () => Effect.void,
   });
   let makeThreadState = makeEnvironmentThreadState(THREAD_ID, options?.resumeCache).pipe(
@@ -661,16 +657,6 @@ describe("EnvironmentThreads", () => {
       );
       expect(Option.isNone(state.data)).toBe(true);
       expect(yield* Ref.get(resumed.loaderCalls)).toBe(0);
-    }),
-  );
-
-  it.effect("publishes cached data immediately from a warm cache", () =>
-    Effect.gen(function* () {
-      const harness = yield* makeHarness({ cached: BASE_PROJECTION });
-      const state = yield* awaitThreadState(harness.observed, (value) => Option.isSome(value.data));
-
-      expect(Option.getOrThrow(state.data)).toEqual(BASE_PROJECTION);
-      expect(Option.isNone(state.error)).toBe(true);
     }),
   );
 

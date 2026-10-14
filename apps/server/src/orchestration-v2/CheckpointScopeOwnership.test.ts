@@ -14,12 +14,9 @@ import {
   RunId,
   ThreadId,
 } from "@t3tools/contracts";
-import * as CheckpointDiffQuery from "../checkpointing/CheckpointDiffQuery.ts";
-import * as CheckpointStore from "../checkpointing/CheckpointStore.ts";
 import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
 import { checkpointRefForScopeOrdinal } from "./CheckpointService.ts";
 import * as ProjectionStore from "./ProjectionStore.ts";
-import * as ThreadManagement from "./ThreadManagementService.ts";
 import * as SqlitePersistence from "../persistence/Sqlite.ts";
 const layerProjection = Layer.mergeAll(
   ProjectionStore.layer.pipe(Layer.provideMerge(SqlitePersistence.layerMemory)),
@@ -27,7 +24,7 @@ const layerProjection = Layer.mergeAll(
   IdAllocator.layer,
   NodeCrypto.layer,
 );
-it.effect("resolves the thread baseline after a second root run replaces scope ownership", () =>
+it.effect("keeps the thread baseline after a second root run replaces scope ownership", () =>
   Effect.gen(function* () {
     const ids = yield* IdAllocator.IdAllocatorV2;
     const projections = yield* ProjectionStore.ProjectionStoreV2;
@@ -66,8 +63,6 @@ it.effect("resolves the thread baseline after a second root run replaces scope o
         modelSelection,
         runtimeMode: "full-access",
         interactionMode: "default",
-        branch: null,
-        worktreePath: null,
         activeProviderThreadId: providerThreadId,
         lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
         forkedFrom: null,
@@ -212,28 +207,7 @@ it.effect("resolves the thread baseline after a second root run replaces scope o
     assert.equal(context.checkpointScopes.length, 1);
     assert.equal(context.checkpointScopes[0]?.runId, secondRunId);
 
-    const layerQuery = CheckpointDiffQuery.layer.pipe(
-      Layer.provide(
-        Layer.mergeAll(
-          Layer.mock(ThreadManagement.ThreadManagementService)({
-            getCheckpointContext: () => Effect.succeed(context),
-          }),
-          Layer.mock(CheckpointStore.CheckpointStore)({
-            listAuthoredPaths: () => Effect.succeed(null),
-            diffCheckpoints: (input) => {
-              assert.equal(input.cwd, "/prepared-repo");
-              assert.equal(input.fromCheckpointRef, checkpointRefs[0]);
-              assert.equal(input.toCheckpointRef, checkpointRefs[2]);
-              return Effect.succeed("two-run diff");
-            },
-          }),
-        ),
-      ),
-    );
-    const result = yield* Effect.gen(function* () {
-      const query = yield* CheckpointDiffQuery.CheckpointDiffQuery;
-      return yield* query.getFullThreadDiff({ threadId, toTurnCount: 2 });
-    }).pipe(Effect.provide(layerQuery));
-    assert.equal(result.diff, "two-run diff");
+    // The latest root run owns the scope and its prepared cwd.
+    assert.equal(context.checkpointScopes[0]?.cwd, "/prepared-repo");
   }).pipe(Effect.provide(layerProjection)),
 );

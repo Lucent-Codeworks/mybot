@@ -1,16 +1,7 @@
-import { pullRequestHostOf, type SourceControlProviderKind } from "@t3tools/contracts";
-import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
-import { useProjects, useServerConfigs, useThreadShells } from "~/state/entities";
-import {
-  threadPullRequestKeysEqual,
-  visibleThreadPullRequests,
-} from "@t3tools/shared/threadPullRequests";
 import type {
   ContextMenuItem,
   EnvironmentId,
   PreviewSessionSnapshot,
-  ProjectId,
-  PullRequestState,
   ResolvedKeybindingsConfig,
 } from "@t3tools/contracts";
 import { getTerminalLabel } from "@t3tools/shared/terminalLabels";
@@ -30,7 +21,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  FileDiff,
   Files,
   Globe2,
   Plus,
@@ -79,20 +69,12 @@ import { faviconUrlForOrigin } from "~/lib/favicon";
 import { useTheme } from "~/hooks/useTheme";
 import { useDeviceState } from "~/state/device";
 import type { PreviewPanelInlineSize } from "~/hooks/usePreviewPanelInlineSize";
-import {
-  newestPullRequestSummary,
-  pullRequestEnvironment,
-  useSharedPullRequestSummary,
-} from "~/state/pullRequests";
-import { useEnvironmentQuery } from "~/state/query";
 import { COLLAPSED_SIDEBAR_TITLEBAR_INSET_CLASS } from "~/workspaceTitlebar";
 
 import { PreviewPanelShell, type PreviewPanelMode } from "./preview/PreviewPanelShell";
 import { FaviconImage } from "./preview/PreviewFaviconIcon";
 import { previewBridge } from "./preview/previewBridge";
 import { PierreEntryIcon } from "./chat/PierreEntryIcon";
-import { resolvePullRequestState } from "./pullRequest/pullRequestPresentation";
-import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
 import { observeResize } from "~/lib/observeResize";
 
 interface RightPanelTabsProps {
@@ -138,31 +120,14 @@ interface RightPanelTabsProps {
    */
   onAddBrowserInProfile: (profileId: string) => void;
   onAddTerminal: () => void;
-  onAddDiff: () => void;
   onAddFiles: () => void;
-  onAddPullRequest: () => void;
-  onAddPullRequests: () => void;
   onAddDevice: () => void;
   browserAvailable: boolean;
   terminalAvailable: boolean;
-  diffAvailable: boolean;
   filesAvailable: boolean;
-  pullRequestAvailable: boolean;
-  pullRequestsAvailable: boolean;
   deviceAvailable: boolean;
-  pullRequestStatusSeeds?: Readonly<Record<string, PullRequestTabStatusSeed>>;
   children: ReactNode;
 }
-
-export interface PullRequestTabStatus {
-  projectId: string;
-  repository: string;
-  number: number;
-  state: PullRequestState;
-  isDraft: boolean;
-}
-
-export type PullRequestTabStatusSeed = Pick<PullRequestTabStatus, "state" | "isDraft">;
 
 export function shouldOpenDefaultBrowserProfileFromMenuClick(
   pointerType: string | undefined,
@@ -174,9 +139,6 @@ const SURFACE_DISABLED_REASONS = {
   browser: "Browser previews are only available in the T3 Code desktop app.",
   terminal: "Terminal surfaces are only available from a project thread.",
   files: "Files are only available when a project is open.",
-  diff: "Diff is only available for server threads in Git repositories.",
-  pullRequest: "This thread's branch has no pull request yet.",
-  pullRequests: "No linked pull requests are available for this thread.",
   device: "Devices are only available from a thread.",
 } as const;
 
@@ -197,9 +159,6 @@ const SURFACE_UNAVAILABLE_HINTS = {
   browser: "Only available in the desktop app.",
   terminal: "Available when a project is open.",
   files: "Available when a project is open.",
-  diff: "Available for Git repositories.",
-  pullRequest: "No pull request on this branch yet.",
-  pullRequests: "No linked pull requests available.",
   device: "Available from a thread.",
 } as const;
 
@@ -336,17 +295,11 @@ function RightPanelEmptyState(props: {
   onAddBrowserInProfile: (profileId: string) => void;
   browserProfiles: ReadonlyArray<{ readonly id: string; readonly name: string }>;
   onAddTerminal: () => void;
-  onAddDiff: () => void;
   onAddFiles: () => void;
-  onAddPullRequest: () => void;
-  onAddPullRequests: () => void;
   onAddDevice: () => void;
   browserAvailable: boolean;
   terminalAvailable: boolean;
-  diffAvailable: boolean;
   filesAvailable: boolean;
-  pullRequestAvailable: boolean;
-  pullRequestsAvailable: boolean;
   deviceAvailable: boolean;
 }) {
   // -1 means no highlight: it only appears on hover or arrow use.
@@ -376,30 +329,6 @@ function RightPanelEmptyState(props: {
       available: props.filesAvailable,
       disabledReason: SURFACE_UNAVAILABLE_HINTS.files,
       onClick: props.onAddFiles,
-    },
-    {
-      label: "Diff",
-      icon: FileDiff,
-      shortcut: "D",
-      available: props.diffAvailable,
-      disabledReason: SURFACE_UNAVAILABLE_HINTS.diff,
-      onClick: props.onAddDiff,
-    },
-    {
-      label: "Pull request",
-      icon: PullRequestGlyph.pullRequest,
-      shortcut: "P",
-      available: props.pullRequestAvailable,
-      disabledReason: SURFACE_UNAVAILABLE_HINTS.pullRequest,
-      onClick: props.onAddPullRequest,
-    },
-    {
-      label: "Linked pull requests",
-      icon: PullRequestGlyph.link,
-      shortcut: "L",
-      available: props.pullRequestsAvailable,
-      disabledReason: SURFACE_UNAVAILABLE_HINTS.pullRequests,
-      onClick: props.onAddPullRequests,
     },
     {
       label: "Device",
@@ -601,8 +530,6 @@ function surfaceTitle(
   terminalLabelsById: ReadonlyMap<string, string>,
 ): string {
   switch (surface.kind) {
-    case "diff":
-      return "Diff";
     case "files":
       return "Files";
     case "file":
@@ -614,10 +541,6 @@ function surfaceTitle(
         terminalLabelsById.get(surface.activeTerminalId) ??
         getTerminalLabel(surface.activeTerminalId)
       );
-    case "pull-request":
-      return `#${surface.number}`;
-    case "pull-requests":
-      return "Pull requests";
     case "device":
       return surface.title ?? surface.target?.name ?? "Device";
     case "preview": {
@@ -657,15 +580,11 @@ function SurfaceIcon({
   sessions,
   desktopByTabId,
   theme,
-  environmentId,
-  pullRequestStatusSeeds,
 }: {
   surface: RightPanelSurface;
   sessions: Readonly<Record<string, PreviewSessionSnapshot>>;
   desktopByTabId: Readonly<Record<string, DesktopPreviewOverlay>>;
   theme: "light" | "dark";
-  environmentId: EnvironmentId | null;
-  pullRequestStatusSeeds: Readonly<Record<string, PullRequestTabStatusSeed>> | undefined;
 }) {
   switch (surface.kind) {
     case "preview": {
@@ -676,8 +595,6 @@ function SurfaceIcon({
         favicon && url && sameOrigin(favicon.pageUrl, url) ? favicon.dataUrl : null;
       return <PreviewFavicon capturedUrl={capturedUrl} url={url} />;
     }
-    case "diff":
-      return <FileDiff className="size-3 shrink-0" />;
     case "files":
       return <Files className="size-3 shrink-0" />;
     case "file":
@@ -691,16 +608,6 @@ function SurfaceIcon({
       );
     case "terminal":
       return <TerminalSquare className="size-3 shrink-0" />;
-    case "pull-request":
-      return (
-        <PullRequestSurfaceIcon
-          surface={surface}
-          environmentId={environmentId}
-          seed={pullRequestStatusSeeds?.[surface.id]}
-        />
-      );
-    case "pull-requests":
-      return <PullRequestGlyph.link className="size-3 shrink-0" />;
     case "device":
       return surface.target?.platform === "ios" ? (
         <AppleIcon className="size-3 shrink-0" />
@@ -710,104 +617,6 @@ function SurfaceIcon({
         <Smartphone className="size-3 shrink-0" />
       );
   }
-}
-
-export function resolvePullRequestTabLink(
-  threads: readonly Pick<EnvironmentThreadShell, "environmentId" | "pullRequests">[],
-  environmentId: EnvironmentId | null,
-  host: string | null,
-  reference: { repository: string; number: number },
-) {
-  if (environmentId === null || host === null) return undefined;
-  let newest: EnvironmentThreadShell["pullRequests"][number] | undefined;
-  for (const thread of threads) {
-    if (thread.environmentId !== environmentId) continue;
-    for (const link of visibleThreadPullRequests(thread.pullRequests)) {
-      if (
-        !threadPullRequestKeysEqual(link, {
-          host,
-          repository: reference.repository,
-          number: reference.number,
-        })
-      )
-        continue;
-      if (
-        newest === undefined ||
-        (link.snapshot?.syncedAt ?? "") > (newest.snapshot?.syncedAt ?? "")
-      )
-        newest = link;
-    }
-  }
-  return newest;
-}
-
-function PullRequestSurfaceIcon({
-  surface,
-  environmentId,
-  seed,
-}: {
-  surface: Extract<RightPanelSurface, { kind: "pull-request" }>;
-  environmentId: EnvironmentId | null;
-  seed: PullRequestTabStatusSeed | undefined;
-}) {
-  const resolvedEnvironmentId =
-    (surface.environmentId as EnvironmentId | undefined) ?? environmentId;
-  const projects = useProjects();
-  const threads = useThreadShells();
-  const project = projects.find(
-    (entry) => entry.environmentId === resolvedEnvironmentId && entry.id === surface.projectId,
-  );
-  const identity = project?.repositoryIdentity;
-  const host =
-    surface.host ??
-    (identity?.provider
-      ? pullRequestHostOf(identity, identity.provider as SourceControlProviderKind)
-      : null);
-  const configs = useServerConfigs();
-  const capabilities =
-    resolvedEnvironmentId === null
-      ? undefined
-      : configs.get(resolvedEnvironmentId)?.environment.capabilities;
-  const linkedSnapshot =
-    capabilities?.threadPullRequests === true
-      ? (resolvePullRequestTabLink(threads, resolvedEnvironmentId, host, surface)?.snapshot ?? null)
-      : null;
-  const detail = useEnvironmentQuery(
-    resolvedEnvironmentId === null || capabilities?.pullRequests !== true || linkedSnapshot !== null
-      ? null
-      : pullRequestEnvironment.detail({
-          environmentId: resolvedEnvironmentId,
-          input: {
-            projectId: surface.projectId as ProjectId,
-            ...(capabilities?.threadPullRequests === true && surface.host !== undefined
-              ? { host: surface.host }
-              : {}),
-            repository: surface.repository,
-            number: surface.number,
-          },
-        }),
-  ).data;
-  const reference = useMemo(
-    () => ({
-      projectId: surface.projectId as ProjectId,
-      repository: surface.repository,
-      number: surface.number,
-    }),
-    [surface.projectId, surface.repository, surface.number],
-  );
-  const sharedSummary = useSharedPullRequestSummary(resolvedEnvironmentId, reference, null);
-  // The compact tab intentionally shows lifecycle and draft state only. Conflict warnings have
-  // their own presentation on surfaces that have mergeability, while this tab stays stable as
-  // detail data arrives.
-  const status = linkedSnapshot ?? newestPullRequestSummary(detail, sharedSummary) ?? seed ?? null;
-  if (status === null) {
-    return <PullRequestGlyph.pullRequest className="size-3 shrink-0 text-muted-foreground" />;
-  }
-  const presentation = resolvePullRequestState({
-    state: status.state,
-    isDraft: status.isDraft ?? detail?.isDraft ?? seed?.isDraft ?? false,
-  });
-  return <presentation.Icon className={cn("size-3 shrink-0", presentation.toneClassName)} />;
 }
 
 /**
@@ -958,30 +767,6 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
       available: props.filesAvailable,
       disabledReason: SURFACE_DISABLED_REASONS.files,
       onClick: props.onAddFiles,
-    },
-    {
-      label: "Diff",
-      icon: FileDiff,
-      shortcut: "D",
-      available: props.diffAvailable,
-      disabledReason: SURFACE_DISABLED_REASONS.diff,
-      onClick: props.onAddDiff,
-    },
-    {
-      label: "Pull request",
-      icon: PullRequestGlyph.pullRequest,
-      shortcut: "P",
-      available: props.pullRequestAvailable,
-      disabledReason: SURFACE_DISABLED_REASONS.pullRequest,
-      onClick: props.onAddPullRequest,
-    },
-    {
-      label: "Linked pull requests",
-      icon: PullRequestGlyph.link,
-      shortcut: "L",
-      available: props.pullRequestsAvailable,
-      disabledReason: SURFACE_DISABLED_REASONS.pullRequests,
-      onClick: props.onAddPullRequests,
     },
     {
       label: "Device",
@@ -1232,8 +1017,6 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
                         sessions={props.previewSessions}
                         desktopByTabId={props.desktopByTabId}
                         theme={resolvedTheme}
-                        environmentId={props.environmentId}
-                        pullRequestStatusSeeds={props.pullRequestStatusSeeds}
                       />
                       {pending ? (
                         <span
@@ -1478,17 +1261,11 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
             onAddBrowserInProfile={props.onAddBrowserInProfile}
             browserProfiles={browserProfiles}
             onAddTerminal={props.onAddTerminal}
-            onAddDiff={props.onAddDiff}
             onAddFiles={props.onAddFiles}
-            onAddPullRequest={props.onAddPullRequest}
-            onAddPullRequests={props.onAddPullRequests}
             onAddDevice={props.onAddDevice}
             browserAvailable={props.browserAvailable}
             terminalAvailable={props.terminalAvailable}
-            diffAvailable={props.diffAvailable}
             filesAvailable={props.filesAvailable}
-            pullRequestAvailable={props.pullRequestAvailable}
-            pullRequestsAvailable={props.pullRequestsAvailable}
             deviceAvailable={props.deviceAvailable}
           />
         ) : (

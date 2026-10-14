@@ -77,23 +77,17 @@ it.layer(layerGrokTextGenerationTest)("GrokTextGeneration", (it) => {
     return withFakeAcpGrok(
       {
         T3_ACP_REQUEST_LOG_PATH: requestLogPath,
-        T3_ACP_PROMPT_RESPONSE_TEXT: JSON.stringify({
-          subject: "Add Grok provider",
-          body: "Wire up the ACP runtime and headless text generation path.",
-        }),
+        T3_ACP_PROMPT_RESPONSE_TEXT: JSON.stringify({ title: "Add Grok provider" }),
       },
       (textGeneration) =>
         Effect.gen(function* () {
-          const generated = yield* textGeneration.generateCommitMessage({
+          const generated = yield* textGeneration.generateThreadTitle({
             cwd: process.cwd(),
-            branch: "feature/grok",
-            stagedSummary: "M apps/server/src/provider/Drivers/GrokDriver.ts",
-            stagedPatch: "diff --git a/.../GrokDriver.ts b/.../GrokDriver.ts",
+            message: "Add a Grok provider",
             modelSelection: createModelSelection(ProviderInstanceId.make("grok"), "grok-mock-alt"),
           });
 
-          expect(generated.subject).toBe("Add Grok provider");
-          expect(generated.body).toBe("Wire up the ACP runtime and headless text generation path.");
+          expect(generated.title).toBe("Add Grok provider");
 
           const requests = readJsonRpcRequests(requestLogPath);
           expect(
@@ -136,12 +130,12 @@ it.layer(layerGrokTextGenerationTest)("GrokTextGeneration", (it) => {
   it.effect("surfaces ACP request failures as text generation errors", () =>
     withFakeAcpGrok(
       {
-        T3_ACP_PROMPT_RESPONSE_TEXT: JSON.stringify({ branch: "unreachable" }),
+        T3_ACP_PROMPT_RESPONSE_TEXT: JSON.stringify({ title: "unreachable" }),
       },
       (textGeneration) =>
         Effect.gen(function* () {
           const error = yield* Effect.flip(
-            textGeneration.generateBranchName({
+            textGeneration.generateThreadTitle({
               cwd: process.cwd(),
               message: "wire up grok",
               modelSelection: createModelSelection(
@@ -172,32 +166,6 @@ it.layer(layerGrokTextGenerationTest)("GrokTextGeneration", (it) => {
           );
           expect(error._tag).toBe("TextGenerationError");
           expect(error.detail).toMatch(/empty/i);
-        }),
-    ),
-  );
-
-  it.effect("decodes a structured PR title + body", () =>
-    withFakeAcpGrok(
-      {
-        T3_ACP_PROMPT_RESPONSE_TEXT: JSON.stringify({
-          title: "feat(grok): wire up session/set_model",
-          body: "## Summary\n- Replace `-m` spawn flag with the typed ACP `session/set_model`.\n- Translate `MODEL_SWITCH_INCOMPATIBLE_AGENT` into a validation error.",
-        }),
-      },
-      (textGeneration) =>
-        Effect.gen(function* () {
-          const generated = yield* textGeneration.generatePrContent({
-            cwd: process.cwd(),
-            baseBranch: "main",
-            headBranch: "feat/grok-provider",
-            commitSummary: "feat: add grok provider",
-            diffSummary: "M apps/server/src/provider/Drivers/GrokDriver.ts",
-            diffPatch: "diff --git a/.../GrokDriver.ts b/.../GrokDriver.ts",
-            modelSelection: createModelSelection(ProviderInstanceId.make("grok"), "grok-build"),
-          });
-
-          expect(generated.title).toBe("feat(grok): wire up session/set_model");
-          expect(generated.body).toContain("Translate `MODEL_SWITCH_INCOMPATIBLE_AGENT`");
         }),
     ),
   );

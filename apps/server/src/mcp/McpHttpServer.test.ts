@@ -1,5 +1,3 @@
-import * as Orchestrator from "../orchestration-v2/Orchestrator.ts";
-import * as ProjectionStore from "../orchestration-v2/ProjectionStore.ts";
 import { expect, it } from "@effect/vitest";
 import { NodeHttpServer } from "@effect/platform-node";
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -26,8 +24,6 @@ import {
   HttpServerResponse,
 } from "effect/http";
 
-import * as ProjectService from "../project/ProjectService.ts";
-import * as PullRequestReviewGuideService from "../pullRequest/PullRequestReviewGuideService.ts";
 import * as ServerConfig from "../config.ts";
 import * as McpHttpServer from "./McpHttpServer.ts";
 import * as McpToolAccess from "./McpToolAccess.ts";
@@ -72,20 +68,6 @@ const layerTest = McpHttpServer.layerPreviewToolkit.pipe(
   Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "t3-mcp-http-server-test-" })),
   Layer.provideMerge(NodeServices.layer),
 );
-const layerPullRequestsTest = McpHttpServer.layerPullRequestsToolkit.pipe(
-  Layer.provideMerge(McpServer.McpServer.layer),
-  Layer.provideMerge(McpToolAccessTestkit.liveThreadsLayer),
-  Layer.provide(
-    Layer.mergeAll(
-      Layer.mock(ProjectService.ProjectService)({}),
-      Layer.mock(PullRequestReviewGuideService.PullRequestReviewGuideService)({}),
-      Layer.mock(Orchestrator.OrchestratorV2)({}),
-      Layer.mock(ProjectionStore.ProjectionStoreV2)({}),
-      NodeServices.layer,
-    ),
-  ),
-);
-
 const snapshotResult = {
   url: "http://example.test/",
   title: "Example",
@@ -471,38 +453,6 @@ it.effect("reports a tagged error when the screenshot cannot be saved", () =>
       });
     }),
   ).pipe(Effect.provide(layerTest)),
-);
-
-it.effect(
-  "registers the pull request toolkit and surfaces a missing capability as a tool error",
-  () =>
-    Effect.gen(function* () {
-      const server = yield* McpServer.McpServer;
-      const names = server.tools.map(({ tool }) => tool.name);
-      expect(names).toEqual(
-        expect.arrayContaining([
-          "link_pull_request",
-          "unlink_pull_request",
-          "list_thread_pull_requests",
-        ]),
-      );
-      const linkTool = server.tools.find(({ tool }) => tool.name === "link_pull_request");
-      expect(linkTool?.tool.annotations?.idempotentHint).toBe(true);
-      expect(linkTool?.tool.annotations?.openWorldHint).toBe(false);
-      expect(linkTool?.tool.description).toContain("Register every pull request you open");
-
-      const denied = yield* server
-        .callTool({ name: "list_thread_pull_requests", arguments: {} })
-        .pipe(
-          // A preview-only credential: the token predates the toolkit or was minted elsewhere.
-          Effect.provideService(McpInvocationContext.McpInvocationContext, invocation),
-          Effect.provideService(McpSchema.McpServerClient, client),
-        );
-      expect(denied.isError).toBe(true);
-      expect(denied.content).toEqual([
-        { type: "text", text: "MCP credential does not grant the pull-requests capability." },
-      ]);
-    }).pipe(Effect.provide(layerPullRequestsTest)),
 );
 
 it.effect("returns server ARIA refs to agents in text and structured results", () =>

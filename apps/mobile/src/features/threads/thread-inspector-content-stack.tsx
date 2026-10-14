@@ -3,9 +3,7 @@ import { View } from "react-native";
 
 import { RenderErrorBoundary, RenderFailureView } from "../../components/RenderErrorBoundary";
 
-export type ThreadInspectorMode = "route" | "git" | "files";
-
-const INSPECTOR_PREWARM_DELAY_MS = 350;
+export type ThreadInspectorMode = "route" | "files";
 
 function InspectorContentPane(props: {
   readonly children: ReactNode;
@@ -44,7 +42,6 @@ function InspectorContentPane(props: {
 
 export function ThreadInspectorContentStack(props: {
   readonly renderFiles: () => ReactNode;
-  readonly renderGit?: () => ReactNode;
   readonly mode: ThreadInspectorMode;
   readonly resetKeys: readonly [string | null, string | null];
   readonly renderRoute?: () => ReactNode;
@@ -60,25 +57,6 @@ export function ThreadInspectorContentStack(props: {
       }
       return new Set([...current, props.mode]);
     });
-
-    if (props.mode === "route") {
-      return;
-    }
-
-    // The file tree is expensive to detach because UIKit rebuilds its focus
-    // graph. Keep both chat inspectors alive after the opening animation so a
-    // later Files/Git switch only changes visibility.
-    const alternateMode = props.mode === "files" ? "git" : "files";
-    const timeout = setTimeout(() => {
-      setMountedModes((current) => {
-        if (current.has(alternateMode)) {
-          return current;
-        }
-        return new Set([...current, alternateMode]);
-      });
-    }, INSPECTOR_PREWARM_DELAY_MS);
-
-    return () => clearTimeout(timeout);
   }, [props.mode]);
 
   return (
@@ -90,15 +68,6 @@ export function ThreadInspectorContentStack(props: {
       >
         <InspectorRenderer render={props.renderFiles} />
       </InspectorContentPane>
-      {props.renderGit ? (
-        <InspectorContentPane
-          mounted={mountedModes.has("git") || props.mode === "git"}
-          resetKeys={props.resetKeys}
-          visible={props.mode === "git"}
-        >
-          <InspectorRenderer render={props.renderGit} />
-        </InspectorContentPane>
-      ) : null}
       {props.renderRoute ? (
         <InspectorContentPane
           mounted={mountedModes.has("route") || props.mode === "route"}

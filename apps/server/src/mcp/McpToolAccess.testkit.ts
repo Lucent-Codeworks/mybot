@@ -37,8 +37,6 @@ export const liveThreadShell = (
     modelSelection: { instanceId: providerInstanceId, model: "gpt-5" },
     runtimeMode: modes.runtimeMode ?? "full-access",
     interactionMode: modes.interactionMode ?? "default",
-    branch: null,
-    worktreePath: null,
     createdBy: "user",
     creationSource: "web",
     activeProviderThreadId: null,

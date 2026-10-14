@@ -28,9 +28,6 @@ function stableScopeKey(environmentId: EnvironmentId, scope: BackgroundScope): s
       return JSON.stringify([environmentId, scope.type]);
     case "provider-status":
       return JSON.stringify([environmentId, scope.type, scope.instanceId ?? null]);
-    case "vcs-status":
-    case "git-refs":
-      return JSON.stringify([environmentId, scope.type, scope.cwd]);
     case "thread":
       return JSON.stringify([environmentId, scope.type, scope.threadId]);
   }
@@ -39,15 +36,9 @@ function stableScopeKey(environmentId: EnvironmentId, scope: BackgroundScope): s
 function scopeForSubscription(
   observation: EnvironmentRpcSubscriptionObservation,
 ): BackgroundScope | null {
-  if (observation.method === WS_METHODS.subscribeResourceTelemetry) {
-    return { type: "diagnostics" };
-  }
-  if (observation.method !== WS_METHODS.subscribeVcsStatus) {
-    return null;
-  }
-  const input = observation.input as { readonly cwd?: unknown; readonly includeRemote?: unknown };
-  if (input.includeRemote === false) return null;
-  return typeof input.cwd === "string" ? { type: "vcs-status", cwd: input.cwd } : null;
+  return observation.method === WS_METHODS.subscribeResourceTelemetry
+    ? { type: "diagnostics" }
+    : null;
 }
 
 export function retainedMobileBackgroundScopes(
