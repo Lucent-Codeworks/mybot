@@ -24,6 +24,14 @@ an email, posting, paying, or deleting data, a bot shows you a draft and waits
 for your go-ahead. Write lasting rules into the instructions, including when a
 bot may act without asking. Put one-off requests in the conversation.
 
+## Bots working together
+
+Each bot knows your other bots and their jobs. When a request fits another
+bot's job better, it hands the task over: the work runs as a new conversation
+with that bot, using its instructions, memory, and model, and the first bot
+reports back with the result. You can also ask for it directly, for example
+"ask Inbox to sort today's mail".
+
 ## Memory
 
 Each bot keeps a `MEMORY.md` file in its folder. It reads the file at the start
@@ -49,6 +57,19 @@ created it. Manage routines in **Settings → Scheduled Tasks**.
 Routines run on the computer that hosts MyBot. On Windows and Linux, closing the
 MyBot window keeps it running in the system tray so routines keep working;
 choose **Quit MyBot** from the tray icon to stop it.
+
+## Message a bot from Telegram
+
+Each bot can have its own Telegram bot, so you can reach it from your phone.
+
+1. In Telegram, message @BotFather, send `/newbot`, and copy the token it gives you.
+2. In MyBot, open the bot's settings, paste the token under **Telegram**, and choose **Connect**.
+3. Send `/start` followed by the pairing code MyBot shows to your new Telegram bot.
+
+After pairing, only your Telegram account can talk to the bot. Each Telegram chat
+continues one conversation, which you can also open in MyBot; send `/new` to
+start a fresh one. MyBot must be running for the bot to answer, and replies
+arrive when the bot finishes. Choose **Disconnect** to stop.
 
 ## Change or remove a bot
 

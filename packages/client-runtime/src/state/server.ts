@@ -1086,6 +1086,10 @@ export function createServerEnvironmentAtoms<R, E>(
       label: "environment-data:server:process-resource-history",
       tag: WS_METHODS.serverGetProcessResourceHistory,
     }),
+    botTelegramStatus: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:server:bot-telegram:status",
+      tag: WS_METHODS.botsTelegramStatus,
+    }),
     scheduledTaskWebhookDeliveries: createEnvironmentRpcQueryAtomFamily(runtime, {
       label: "environment-data:server:scheduled-task:webhook-deliveries",
       tag: WS_METHODS.scheduledTasksListWebhookDeliveries,
@@ -1299,6 +1303,18 @@ export function createServerEnvironmentAtoms<R, E>(
     signalProcess: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:server:signal-process",
       tag: WS_METHODS.serverSignalProcess,
+    }),
+    connectBotTelegram: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:bot-telegram:connect",
+      tag: WS_METHODS.botsTelegramConnect,
+      scheduler: configScheduler,
+      concurrency: configConcurrency,
+    }),
+    disconnectBotTelegram: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:bot-telegram:disconnect",
+      tag: WS_METHODS.botsTelegramDisconnect,
+      scheduler: configScheduler,
+      concurrency: configConcurrency,
     }),
     upsertScheduledTask: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:server:scheduled-task:upsert",

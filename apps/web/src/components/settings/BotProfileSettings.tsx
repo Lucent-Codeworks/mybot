@@ -1,5 +1,18 @@
-import type { BotProfile, EnvironmentId } from "@t3tools/contracts";
-import { BotIcon, BotOffIcon } from "lucide-react";
+import { useAtomRefresh, useAtomValue } from "@effect/atom-react";
+import type { BotProfile, EnvironmentId, ProjectId } from "@t3tools/contracts";
+import * as Option from "effect/Option";
+import { AsyncResult } from "effect/reactivity";
+import { BotIcon, BotOffIcon, SendIcon } from "lucide-react";
+import { useState } from "react";
+
+import {
+  type AtomCommandResult,
+  isAtomCommandInterrupted,
+  squashAtomCommandFailure,
+} from "@t3tools/client-runtime/state/runtime";
+
+import { serverEnvironment } from "~/state/server";
+import { toastManager } from "../ui/toast";
 
 import { projectEnvironment } from "~/state/projects";
 import { useAtomCommand } from "~/state/use-atom-command";
@@ -16,6 +29,7 @@ import { SettingsRow, SettingsSection } from "./settingsLayout";
 export function BotProfileSettings(props: {
   bot: BotProfile | null;
   environmentId: EnvironmentId;
+  projectId: ProjectId;
   folder: string;
   disabled: boolean;
   onChange: (bot: BotProfile | null) => void;
@@ -86,6 +100,7 @@ export function BotProfileSettings(props: {
         </div>
       </SettingsRow>
       <BotMemoryRow environmentId={props.environmentId} folder={props.folder} disabled={disabled} />
+      <BotTelegramRow environmentId={props.environmentId} projectId={props.projectId} />
       <SettingsRow
         title="Stop being a bot"
         description="Keeps the project and its threads, without the job and instructions."
@@ -105,9 +120,7 @@ const MEMORY_FILE = "MEMORY.md";
 /** The bot's memory file, which the bot keeps itself and the user can correct. */
 function BotMemoryRow(props: { environmentId: EnvironmentId; folder: string; disabled: boolean }) {
   const memory = useProjectFileQuery(props.environmentId, props.folder, MEMORY_FILE);
-  const writeFile = useAtomCommand(projectEnvironment.writeFile, {
-    label: "bot memory write",
-  });
+  const writeFile = useAtomCommand(projectEnvironment.writeFile, { reportFailure: false });
   const contents = memory.data?.contents ?? "";
   // A read the server rejected, usually a missing file, starts empty; saving creates it.
   const readable = memory.data !== null || memory.readError !== null;
@@ -134,10 +147,137 @@ function BotMemoryRow(props: { environmentId: EnvironmentId; folder: string; dis
             void writeFile({
               environmentId: props.environmentId,
               input: { cwd: props.folder, relativePath: MEMORY_FILE, contents: next },
-            }).then(memory.refresh);
+            }).then((result) => {
+              memory.refresh();
+              if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
+                const error = squashAtomCommandFailure(result);
+                toastManager.add({
+                  type: "error",
+                  title: "Could not save the bot's memory",
+                  description: error instanceof Error ? error.message : "An error occurred.",
+                });
+              }
+            });
           }}
         />
       </div>
     </SettingsRow>
+  );
+}
+
+/** Connects the bot to a Telegram bot so the user can message it from their phone. */
+function BotTelegramRow(props: { environmentId: EnvironmentId; projectId: ProjectId }) {
+  const statusAtom = serverEnvironment.botTelegramStatus({
+    environmentId: props.environmentId,
+    input: { projectId: props.projectId },
+  });
+  const result = useAtomValue(statusAtom);
+  const refresh = useAtomRefresh(statusAtom);
+  const status = Option.getOrNull(AsyncResult.value(result));
+  const canOperate = useAtomValue(
+    serverEnvironment.connectBotTelegram.permissionAtom(props.environmentId),
+  );
+  const connect = useAtomCommand(serverEnvironment.connectBotTelegram, { reportFailure: false });
+  const disconnect = useAtomCommand(serverEnvironment.disconnectBotTelegram, {
+    reportFailure: false,
+  });
+  const [token, setToken] = useState("");
+  const [busy, setBusy] = useState(false);
+  const run = async (
+    title: string,
+    action: () => Promise<AtomCommandResult<unknown, unknown>>,
+  ): Promise<boolean> => {
+    setBusy(true);
+    const result = await action();
+    setBusy(false);
+    refresh();
+    if (result._tag === "Success") return true;
+    if (!isAtomCommandInterrupted(result)) {
+      const error = squashAtomCommandFailure(result);
+      toastManager.add({
+        type: "error",
+        title,
+        description: error instanceof Error ? error.message : "An error occurred.",
+      });
+    }
+    return false;
+  };
+
+  if (status === null || !status.connected) {
+    return (
+      <SettingsRow
+        title="Telegram"
+        description="Message this bot from Telegram. Create a bot with @BotFather, then paste the token it gives you."
+        control={
+          <form
+            className="flex items-center gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const value = token.trim();
+              if (!value) return;
+              void run("Could not connect Telegram", () =>
+                connect({
+                  environmentId: props.environmentId,
+                  input: { projectId: props.projectId, token: value },
+                }),
+              ).then((connected) => {
+                if (connected) setToken("");
+              });
+            }}
+          >
+            <Input
+              size="sm"
+              type="password"
+              className="w-full sm:w-56"
+              aria-label="Telegram bot token"
+              placeholder="Bot token"
+              autoComplete="off"
+              disabled={!canOperate || busy}
+              value={token}
+              onChange={(event) => setToken(event.target.value)}
+            />
+            <Button size="sm" variant="outline" type="submit" disabled={!canOperate || busy}>
+              <SendIcon />
+              Connect
+            </Button>
+          </form>
+        }
+      />
+    );
+  }
+  const handle = status.username ? `@${status.username}` : "your Telegram bot";
+  return (
+    <SettingsRow
+      title="Telegram"
+      description={
+        status.paired
+          ? `Connected to ${handle}. Only your Telegram account can message it; /new starts a fresh conversation.`
+          : `Send /start ${status.pairingCode ?? ""} to ${handle} in Telegram to pair your account.`
+      }
+      control={
+        <div className="flex items-center gap-2">
+          {status.paired ? null : (
+            <Button size="sm" variant="outline" onClick={refresh}>
+              Check again
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!canOperate || busy}
+            onClick={() =>
+              void run("Could not disconnect Telegram", () =>
+                disconnect({
+                  environmentId: props.environmentId,
+                  input: { projectId: props.projectId },
+                }),
+              )
+            }
+          >
+            Disconnect
+          </Button>
+        </div>
+      }
+    />
   );
 }

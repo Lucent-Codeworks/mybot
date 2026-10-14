@@ -66,6 +66,15 @@ describe("RPC authorization scopes", () => {
     }
   });
 
+  it("lets readers see a bot's Telegram status but only operators connect it", () => {
+    expect(requiredScopeForRpcMethod(WS_METHODS.botsTelegramStatus)).toBe(
+      AuthOrchestrationReadScope,
+    );
+    for (const method of [WS_METHODS.botsTelegramConnect, WS_METHODS.botsTelegramDisconnect]) {
+      expect(requiredScopeForRpcMethod(method)).toBe(AuthOrchestrationOperateScope);
+    }
+  });
+
   it("allows relay status reads without granting relay installation access", () => {
     expect(requiredScopeForRpcMethod(WS_METHODS.cloudGetRelayClientStatus)).toBe(
       AuthRelayReadScope,

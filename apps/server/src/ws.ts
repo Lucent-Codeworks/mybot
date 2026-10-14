@@ -110,6 +110,7 @@ import * as ProviderSessionManager from "./orchestration-v2/ProviderSessionManag
 import * as ThreadLaunchService from "./orchestration-v2/ThreadLaunchService.ts";
 import * as ThreadMessageIntake from "./orchestration-v2/ThreadMessageIntake.ts";
 import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
+import * as TelegramChannel from "./channels/TelegramChannel.ts";
 import * as ScheduledTasks from "./scheduledTasks/ScheduledTaskService.ts";
 import * as SecretRequests from "./secrets/SecretRequests.ts";
 import {
@@ -1057,6 +1058,7 @@ const layerWsRpc = (
       const threadLaunch = yield* ThreadLaunchService.ThreadLaunchService;
       const providerSessionManager = yield* ProviderSessionManager.ProviderSessionManagerV2;
       const scheduledTasks = yield* ScheduledTasks.ScheduledTaskService;
+      const telegram = yield* TelegramChannel.TelegramChannel;
       const secretRequests = yield* SecretRequests.SecretRequests;
       const deviceService = yield* DeviceService.DeviceService;
       const deviceHostContext =
@@ -1803,6 +1805,9 @@ const layerWsRpc = (
               Effect.andThen(subscribeOrchestrationV2Thread(input)),
             ),
           ),
+        [WS_METHODS.botsTelegramStatus]: (input) => telegram.status(input.projectId),
+        [WS_METHODS.botsTelegramConnect]: (input) => telegram.connect(input.projectId, input.token),
+        [WS_METHODS.botsTelegramDisconnect]: (input) => telegram.disconnect(input.projectId),
         [WS_METHODS.scheduledTasksList]: (_input) =>
           scheduledTasks.list().pipe(Effect.map(withVisibleWebhookUrls)),
         [WS_METHODS.scheduledTasksSubscribe]: (_input) =>

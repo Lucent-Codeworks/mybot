@@ -1,4 +1,5 @@
 import { MessageId, ThreadId, OrchestratorMcpFailure, ProjectId } from "@t3tools/contracts";
+import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as ThreadMessageIntake from "../../../orchestration-v2/ThreadMessageIntake.ts";
@@ -6,6 +7,7 @@ import * as Claims from "../../../orchestration-v2/AttachmentClaims.ts";
 import * as Project from "../../../project/ProjectService.ts";
 import * as ManagedProjectFolders from "../../../project/ManagedProjectFolders.ts";
 import * as McpToolAccess from "../../McpToolAccess.ts";
+import * as ServerSettings from "../../../serverSettings.ts";
 import { newCommandId, readCaller, resolveProjectId, unavailable } from "../../threadAccess.ts";
 import { ProjectToolkit } from "./tools.ts";
 
@@ -63,10 +65,29 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
           Effect.mapError(unavailable),
           Effect.map(Option.getOrUndefined),
         );
+        // Handing work to another bot runs it as that bot, so it starts on
+        // the bot's own model rather than the caller's.
+        const otherProject =
+          input.modelSelection === undefined &&
+          input.scratch !== true &&
+          projectId !== caller?.projectId
+            ? yield* readProject
+            : undefined;
+        const botModel = otherProject?.bot
+          ? resolveProjectSettings(
+              yield* ServerSettings.ServerSettingsService.pipe(
+                Effect.flatMap((settings) => settings.getSettings),
+                Effect.mapError(unavailable),
+              ),
+              otherProject.id,
+              otherProject,
+            ).settings.defaultModelSelection
+          : null;
         const modelSelection =
           input.modelSelection ??
+          botModel ??
           caller?.modelSelection ??
-          (yield* readProject)?.defaultModelSelection ??
+          (otherProject ?? (yield* readProject))?.defaultModelSelection ??
           undefined;
         if (modelSelection === undefined)
           return yield* new OrchestratorMcpFailure({

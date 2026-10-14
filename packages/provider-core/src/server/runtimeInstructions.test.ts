@@ -87,4 +87,17 @@ describe("buildBotInstructions", () => {
     expect(block).toContain("show the user exactly what you will do as a draft");
     expect(block).toContain("/mybot/skills/<short-name>/SKILL.md");
   });
+
+  it("lists teammates the bot can hand work to", () => {
+    const block = buildBotInstructions({
+      name: "Scout",
+      role: "",
+      instructions: "",
+      folder: "/bots/scout",
+      skillsFolder: "/mybot/skills",
+      teammates: [{ name: "Inbox", role: "Inbox triage", projectId: "project-inbox" }],
+    });
+    expect(block).toContain("- Inbox (Inbox triage): projectId project-inbox");
+    expect(block).toContain("call t3_thread_launch with that projectId");
+  });
 });
