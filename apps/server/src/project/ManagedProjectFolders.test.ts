@@ -15,6 +15,7 @@ import * as ServerConfig from "../config.ts";
 import * as RuntimeLayer from "../orchestration-v2/runtimeLayer.ts";
 import * as SqlitePersistence from "../persistence/Sqlite.ts";
 import * as ServerSettings from "../serverSettings.ts";
+import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
 import * as WorkspacePaths from "../workspace/WorkspacePaths.ts";
 import * as ProjectEnrichmentService from "./ProjectEnrichmentService.ts";
 import * as ProjectFaviconResolver from "./ProjectFaviconResolver.ts";
@@ -72,6 +73,7 @@ const withScratch = <A, E>(
     E,
     | ManagedProjectFolders.ManagedProjectFolders
     | ProjectService.ProjectService
+    | ServerSettings.ServerSettingsService
     | NodeServices.NodeServices
     | Scope.Scope
   >,
@@ -188,7 +190,11 @@ it.effect("starts a bot with its profile and chosen model", () =>
 
       const project = Option.getOrThrow(yield* projects.getById(created.projectId));
       assert.deepStrictEqual(project.bot, bot);
-      assert.deepStrictEqual(project.defaultModelSelection, defaultModelSelection);
+      const settings = yield* (yield* ServerSettings.ServerSettingsService).getSettings;
+      assert.deepStrictEqual(
+        resolveProjectSettings(settings, created.projectId, project).settings.defaultModelSelection,
+        defaultModelSelection,
+      );
     }),
   ),
 );

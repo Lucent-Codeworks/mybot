@@ -22,6 +22,7 @@ import * as PlatformError from "effect/PlatformError";
 import * as Schema from "effect/Schema";
 
 import * as ServerConfig from "../config.ts";
+import * as ServerSettings from "../serverSettings.ts";
 import * as ProjectService from "./ProjectService.ts";
 
 export class ScratchFolderError extends Schema.TaggedError<ScratchFolderError>()(
@@ -90,7 +91,8 @@ export class ManagedProjectFolders extends Context.Service<
      * (adding `-2`, `-3`, ... when taken), writes a README and an icon, then
      * creates the project. The folder is removed when the create fails or is
      * cancelled before the project exists, never once another project owns it.
-     * With `bot`, the project is a bot, and `defaultModelSelection` becomes its model.
+     * With `bot`, the project is a bot. `defaultModelSelection` becomes the
+     * project's model override, the model its new threads start with.
      */
     readonly createNamedProject: (input: ProjectCreateNewInput) => Effect.Effect<
       {
@@ -174,6 +176,7 @@ const make = Effect.gen(function* () {
   const fileSystem = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const projects = yield* ProjectService.ProjectService;
+  const serverSettings = yield* ServerSettings.ServerSettingsService;
   const crypto = yield* Crypto.Crypto;
 
   /**
@@ -338,13 +341,12 @@ const make = Effect.gen(function* () {
         ),
         Effect.mapError((cause) => new NamedProjectCreateError({ workspaceRoot, cause })),
       );
-    // Creation never records a model choice, so a chosen one is a follow-up update.
     if (input.defaultModelSelection !== undefined) {
-      yield* projects
-        .update({
-          commandId: CommandId.make(`named-project:${id}:model`),
-          projectId: project.id,
-          defaultModelSelection: input.defaultModelSelection,
+      yield* serverSettings
+        .updateSettings({
+          projectSettingsOverrides: {
+            [project.id]: { defaultModelSelection: input.defaultModelSelection },
+          },
         })
         .pipe(Effect.mapError((cause) => new NamedProjectCreateError({ workspaceRoot, cause })));
     }
