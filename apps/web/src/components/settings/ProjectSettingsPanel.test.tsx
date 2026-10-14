@@ -90,6 +90,10 @@ vi.mock("~/state/server", () => ({
     removeKeybinding: "removeKeybinding",
   },
 }));
+// The bot section reads a bot's memory file; these projects are not bots.
+vi.mock("~/components/files/projectFilesQueryState", () => ({
+  useProjectFileQuery: () => ({ data: null, readError: null, refresh: () => {} }),
+}));
 vi.mock("~/state/use-atom-command", () => ({
   useAtomCommand: (
     command: "update" | "delete" | "updateSettings" | "upsertKeybinding" | "removeKeybinding",
