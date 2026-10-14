@@ -3,6 +3,7 @@ import {
   type BotTelegramStatus,
   CommandId,
   MessageId,
+  type OrchestrationV2Run,
   type OrchestrationV2RuntimeRequest,
   type ProjectId,
   type ProviderApprovalDecision,
@@ -22,10 +23,12 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Schedule from "effect/Schedule";
 import * as Schema from "effect/Schema";
+import * as Stream from "effect/Stream";
 import * as SynchronizedRef from "effect/SynchronizedRef";
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http";
 
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
+import * as Orchestrator from "../orchestration-v2/Orchestrator.ts";
 import * as ThreadLaunchService from "../orchestration-v2/ThreadLaunchService.ts";
 import * as ThreadManagementService from "../orchestration-v2/ThreadManagementService.ts";
 import * as ProjectService from "../project/ProjectService.ts";
@@ -106,6 +109,7 @@ const make = Effect.gen(function* () {
   const threadManagement = yield* ThreadManagementService.ThreadManagementService;
   const projects = yield* ProjectService.ProjectService;
   const serverSettings = yield* ServerSettings.ServerSettingsService;
+  const orchestrator = yield* Orchestrator.OrchestratorV2;
   const listeners = yield* FiberMap.make<ProjectId>();
   /** Each connected bot's state, persisted after every change. */
   const states = new Map<ProjectId, SynchronizedRef.SynchronizedRef<BotState>>();
@@ -436,6 +440,28 @@ const make = Effect.gen(function* () {
     return sent._tag === "Success";
   });
 
+  /** Sends a finished routine run's result to its bot's paired chat. */
+  const forwardRoutineResult = Effect.fn("TelegramChannel.forwardRoutineResult")(function* (
+    run: OrchestrationV2Run,
+  ) {
+    const thread = yield* threadManagement.getThreadShell(run.threadId);
+    const ref = thread === null ? undefined : states.get(thread.projectId);
+    if (thread === null || ref === undefined) return;
+    const state = yield* SynchronizedRef.get(ref);
+    if (state.ownerUserId === null) return;
+    const records = yield* threadManagement.getThreadRecords(run.threadId, ["messages"], {
+      messageIds: [run.userMessageId],
+    });
+    if (!records.messages.some((message) => message.scheduledTaskId !== undefined)) return;
+    const text = yield* finalReply(run.threadId, run.id, {
+      threadId: run.threadId,
+      run,
+      timedOut: false,
+    });
+    // A private chat's id is its user's id.
+    yield* send(state.token, state.ownerUserId, `${thread.title}\n\n${text}`);
+  });
+
   const handleUpdate = Effect.fn("TelegramChannel.handleUpdate")(function* (
     projectId: ProjectId,
     update: TelegramUpdate,
@@ -528,6 +554,28 @@ const make = Effect.gen(function* () {
       states.set(projectId, yield* SynchronizedRef.make(state));
       yield* FiberMap.run(listeners, projectId, listen(projectId));
     });
+
+  const forwarded = new Set<string>();
+  yield* orchestrator.streamDomainEvents.pipe(
+    Stream.filter(
+      (event) =>
+        event.type === "run.updated" &&
+        (event.payload.status === "completed" || event.payload.status === "failed"),
+    ),
+    Stream.runForEach((event) => {
+      if (event.type !== "run.updated" || forwarded.has(event.payload.id)) return Effect.void;
+      forwarded.add(event.payload.id);
+      return forwardRoutineResult(event.payload).pipe(
+        Effect.catchCause((cause) =>
+          Effect.logWarning("Telegram routine result failed.", { cause }),
+        ),
+        Effect.forkDetach,
+        Effect.asVoid,
+      );
+    }),
+    Effect.catchCause((cause) => Effect.logWarning("Telegram routine results stopped.", { cause })),
+    Effect.forkScoped,
+  );
 
   for (const id of yield* readRegistry.pipe(Effect.orElseSucceed(() => []))) {
     const projectId = id as ProjectId;

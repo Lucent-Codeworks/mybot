@@ -1,6 +1,7 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
 import {
+  type OrchestrationV2DomainEvent,
   ProjectId,
   ProviderInstanceId,
   RunId,
@@ -13,10 +14,12 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Queue from "effect/Queue";
+import * as Stream from "effect/Stream";
 import * as HttpClient from "effect/http/HttpClient";
 import * as HttpClientResponse from "effect/http/HttpClientResponse";
 
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
+import * as Orchestrator from "../orchestration-v2/Orchestrator.ts";
 import * as ThreadLaunchService from "../orchestration-v2/ThreadLaunchService.ts";
 import * as ThreadManagementService from "../orchestration-v2/ThreadManagementService.ts";
 import * as ProjectService from "../project/ProjectService.ts";
@@ -77,6 +80,11 @@ const layerMemorySecrets = Layer.sync(ServerSecretStore.ServerSecretStore, () =>
     getOrCreateRandom: () => Effect.die("unused"),
     remove: (name) => Effect.sync(() => void values.delete(name)),
   });
+});
+
+/** No run events, for tests that do not follow routines. */
+const layerNoRunEvents = Layer.mock(Orchestrator.OrchestratorV2)({
+  streamDomainEvents: Stream.never,
 });
 
 interface FakeThreads {
@@ -184,6 +192,7 @@ it.effect("pairs the owner, refuses strangers, and relays conversations", () =>
               layerFakeTelegram(fake),
               layerMemorySecrets,
               layerFakeThreads(threads),
+              layerNoRunEvents,
               NodeServices.layer,
             ),
           ),
@@ -285,6 +294,83 @@ it.effect("forwards an approval to the chat and sends the owner's answer back", 
         decision: "accept",
       });
       assert.equal(yield* Queue.take(fake.sent), "Sent.");
+    }).pipe(
+      Effect.provide(
+        TelegramChannel.layer.pipe(
+          Layer.provide(
+            Layer.mergeAll(
+              layerFakeTelegram(fake),
+              layerMemorySecrets,
+              layerThreads,
+              layerNoRunEvents,
+              NodeServices.layer,
+            ),
+          ),
+        ),
+      ),
+    );
+  }).pipe(Effect.scoped),
+);
+
+it.effect("sends a finished routine's result to the paired owner", () =>
+  Effect.gen(function* () {
+    const fake: FakeTelegram = {
+      updates: yield* Queue.unbounded<ReadonlyArray<unknown>>(),
+      sent: yield* Queue.unbounded<string>(),
+    };
+    const runEvents = yield* Queue.unbounded<OrchestrationV2DomainEvent>();
+    const finished = (runId: string, userMessageId: string) =>
+      ({
+        type: "run.updated",
+        threadId: "thread-routine",
+        payload: {
+          id: RunId.make(runId),
+          threadId: ThreadId.make("thread-routine"),
+          userMessageId,
+          status: "completed",
+        },
+      }) as unknown as OrchestrationV2DomainEvent;
+    const layerThreads = Layer.mergeAll(
+      Layer.mock(ThreadLaunchService.ThreadLaunchService)({}),
+      Layer.mock(ThreadManagementService.ThreadManagementService)({
+        getThreadShell: () => Effect.succeed({ projectId, title: "Morning briefing" } as never),
+        getThreadRecords: (_threadId, fields, filter) =>
+          Effect.succeed(
+            (fields as ReadonlyArray<string>).includes("messages") && filter?.messageIds
+              ? {
+                  messages: filter.messageIds.includes("message-routine" as never)
+                    ? [{ scheduledTaskId: "task-1" }]
+                    : [{}],
+                }
+              : {
+                  messages: [
+                    {
+                      text: "Three things happened overnight.",
+                      streaming: false,
+                      createdAt: DateTime.makeUnsafe("2026-10-14T00:00:00.000Z"),
+                    },
+                  ],
+                },
+          ) as never,
+      }),
+      Layer.mock(ProjectService.ProjectService)({}),
+      ServerSettings.layerTest(),
+      Layer.mock(Orchestrator.OrchestratorV2)({ streamDomainEvents: Stream.fromQueue(runEvents) }),
+    );
+    yield* Effect.gen(function* () {
+      const telegram = yield* TelegramChannel.TelegramChannel;
+      const code = (yield* telegram.connect(projectId, "123:token")).pairingCode ?? "";
+      yield* Queue.offer(fake.updates, message(OWNER, `/start ${code}`, 1));
+      yield* Queue.take(fake.sent);
+
+      // A run the user started in MyBot stays in MyBot; a routine's run is forwarded.
+      yield* Queue.offer(runEvents, finished("run-typed", "message-typed"));
+      yield* Queue.offer(runEvents, finished("run-routine", "message-routine"));
+      assert.equal(
+        yield* Queue.take(fake.sent),
+        "Morning briefing\n\nThree things happened overnight.",
+      );
+      assert.isTrue(Option.isNone(yield* Queue.poll(fake.sent)));
     }).pipe(
       Effect.provide(
         TelegramChannel.layer.pipe(
