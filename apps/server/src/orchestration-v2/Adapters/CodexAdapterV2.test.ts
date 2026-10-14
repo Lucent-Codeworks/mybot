@@ -493,7 +493,12 @@ describe("CodexAdapterV2 runtime policy", () => {
     Effect.gen(function* () {
       const policy = { runtimeMode: "full-access", interactionMode: "default", cwd: null } as const;
       const modelSelection = { instanceId: ProviderInstanceId.make("codex"), model: "gpt-5.4" };
-      const bot = { name: "Scout", role: "Daily tech scout", instructions: "Check bookmarks." };
+      const bot = {
+        name: "Scout",
+        role: "Daily tech scout",
+        instructions: "Check bookmarks.",
+        folder: "/bots/scout",
+      };
       for (const hasT3Mcp of [false, true]) {
         const params = yield* CodexAdapterV2.buildCodexTurnStartParams({
           nativeThreadId: "native-bot",

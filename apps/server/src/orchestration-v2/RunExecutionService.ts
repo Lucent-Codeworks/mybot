@@ -1392,7 +1392,8 @@ export const layer: Layer.Layer<
           );
           const bot = Option.match(project, {
             onNone: () => undefined,
-            onSome: ({ title, bot }) => (bot ? { name: title, ...bot } : undefined),
+            onSome: ({ title, workspaceRoot, bot }) =>
+              bot ? { name: title, folder: workspaceRoot, ...bot } : undefined,
           });
           const turnInput = {
             appThread: input.appThread,

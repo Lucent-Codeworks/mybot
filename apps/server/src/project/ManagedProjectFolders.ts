@@ -21,6 +21,8 @@ import * as Path from "effect/Path";
 import * as PlatformError from "effect/PlatformError";
 import * as Schema from "effect/Schema";
 
+import { BOT_MEMORY_FILE_NAME } from "@t3tools/provider-core/server/runtimeInstructions";
+
 import * as ServerConfig from "../config.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import * as ProjectService from "./ProjectService.ts";
@@ -293,8 +295,12 @@ const make = Effect.gen(function* () {
   const scaffoldFolder = Effect.fn("ManagedProjectFolders.scaffoldFolder")(function* (
     cwd: string,
     name: string,
+    isBot: boolean,
   ) {
     yield* fileSystem.writeFileString(path.join(cwd, "README.md"), namedProjectReadme(name));
+    // The bot keeps this file itself; starting it here lets the user see it from day one.
+    if (isBot)
+      yield* fileSystem.writeFileString(path.join(cwd, BOT_MEMORY_FILE_NAME), "# Memory\n");
     yield* fileSystem.makeDirectory(path.join(cwd, "assets"));
     yield* fileSystem.writeFileString(
       path.join(cwd, "assets", "icon.svg"),
@@ -310,7 +316,7 @@ const make = Effect.gen(function* () {
     // Until the create is dispatched nothing else can use the folder, so any
     // exit but success removes it, an interrupt included.
     const [, id] = yield* Effect.all([
-      scaffoldFolder(workspaceRoot, input.name).pipe(
+      scaffoldFolder(workspaceRoot, input.name, input.bot !== undefined).pipe(
         Effect.mapError((cause) => new NamedProjectFolderError({ folder: workspaceRoot, cause })),
       ),
       crypto.randomUUIDv4.pipe(

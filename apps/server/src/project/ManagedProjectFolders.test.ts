@@ -190,6 +190,12 @@ it.effect("starts a bot with its profile and chosen model", () =>
 
       const project = Option.getOrThrow(yield* projects.getById(created.projectId));
       assert.deepStrictEqual(project.bot, bot);
+      const fileSystem = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      assert.equal(
+        yield* fileSystem.readFileString(path.join(created.workspaceRoot, "MEMORY.md")),
+        "# Memory\n",
+      );
       const settings = yield* (yield* ServerSettings.ServerSettingsService).getSettings;
       assert.deepStrictEqual(
         resolveProjectSettings(settings, created.projectId, project).settings.defaultModelSelection,

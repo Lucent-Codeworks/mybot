@@ -22,6 +22,15 @@ conversation with it.
 Write lasting rules into the instructions, such as "Ask before sending
 anything". Put one-off requests in the conversation.
 
+## Memory
+
+Each bot keeps a `MEMORY.md` file in its folder. It reads the file at the start
+of a conversation and adds what it learns: your preferences, lasting facts, and
+short notes on finished work. It is told never to store passwords or tokens.
+
+You can read and edit the memory in the bot's settings. Remove anything that is
+wrong or out of date; the bot uses what is there from its next conversation.
+
 ## Change or remove a bot
 
 Hover a bot and choose the gear icon, or open its project settings. You can

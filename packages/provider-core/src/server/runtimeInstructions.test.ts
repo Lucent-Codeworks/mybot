@@ -34,29 +34,45 @@ describe("buildBotInstructions", () => {
       name: "Scout",
       role: " Daily\ntech scout ",
       instructions: "  Check bookmarks.\n\nNever post without approval.  ",
+      folder: "/bots/scout",
     });
-    expect(block).toBe(
-      [
-        "<bot_profile>",
-        "You are Scout, Daily tech scout: a persistent teammate the user works with across many threads.",
-        "Follow these standing instructions from the user:",
-        "Check bookmarks.\n\nNever post without approval.",
-        "</bot_profile>",
-      ].join("\n"),
+    const lines = block.split("\n");
+    expect(lines[0]).toBe("<bot_profile>");
+    expect(lines[1]).toBe(
+      "You are Scout, Daily tech scout: a persistent teammate the user works with across many threads.",
+    );
+    expect(block).toContain(
+      "Follow these standing instructions from the user:\nCheck bookmarks.\n\nNever post without approval.\n</bot_profile>",
     );
   });
 
   it("leaves out an empty role and empty instructions", () => {
-    const block = buildBotInstructions({ name: "Scout", role: "", instructions: " " });
+    const block = buildBotInstructions({
+      name: "Scout",
+      role: "",
+      instructions: " ",
+      folder: "/bots/scout",
+    });
     expect(block).toContain("You are Scout: a persistent teammate");
     expect(block).not.toContain("standing instructions");
   });
 
   it("follows the runtime block only for a bot's turns", () => {
-    const bot = { name: "Scout", role: "", instructions: "" };
+    const bot = { name: "Scout", role: "", instructions: "", folder: "/bots/scout" };
     expect(buildRuntimeInstructions({ harness: "Codex" })).not.toContain("<bot_profile>");
     expect(buildRuntimeInstructions({ harness: "Codex", bot })).toMatch(
       /<\/runtime_info>\n\n<bot_profile>/,
     );
+  });
+
+  it("points the bot at its memory file and forbids storing secrets", () => {
+    const block = buildBotInstructions({
+      name: "Scout",
+      role: "",
+      instructions: "",
+      folder: "/bots/scout",
+    });
+    expect(block).toContain("Your memory is the file MEMORY.md in /bots/scout.");
+    expect(block).toContain("never store secrets");
   });
 });

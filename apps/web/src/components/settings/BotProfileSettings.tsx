@@ -1,6 +1,9 @@
-import type { BotProfile } from "@t3tools/contracts";
+import type { BotProfile, EnvironmentId } from "@t3tools/contracts";
 import { BotIcon, BotOffIcon } from "lucide-react";
 
+import { projectEnvironment } from "~/state/projects";
+import { useAtomCommand } from "~/state/use-atom-command";
+import { useProjectFileQuery } from "../files/projectFilesQueryState";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
@@ -12,6 +15,8 @@ import { SettingsRow, SettingsSection } from "./settingsLayout";
  */
 export function BotProfileSettings(props: {
   bot: BotProfile | null;
+  environmentId: EnvironmentId;
+  folder: string;
   disabled: boolean;
   onChange: (bot: BotProfile | null) => void;
 }) {
@@ -80,6 +85,7 @@ export function BotProfileSettings(props: {
           />
         </div>
       </SettingsRow>
+      <BotMemoryRow environmentId={props.environmentId} folder={props.folder} disabled={disabled} />
       <SettingsRow
         title="Stop being a bot"
         description="Keeps the project and its threads, without the job and instructions."
@@ -91,5 +97,47 @@ export function BotProfileSettings(props: {
         }
       />
     </SettingsSection>
+  );
+}
+
+const MEMORY_FILE = "MEMORY.md";
+
+/** The bot's memory file, which the bot keeps itself and the user can correct. */
+function BotMemoryRow(props: { environmentId: EnvironmentId; folder: string; disabled: boolean }) {
+  const memory = useProjectFileQuery(props.environmentId, props.folder, MEMORY_FILE);
+  const writeFile = useAtomCommand(projectEnvironment.writeFile, {
+    label: "bot memory write",
+  });
+  const contents = memory.data?.contents ?? "";
+  // A read the server rejected, usually a missing file, starts empty; saving creates it.
+  const readable = memory.data !== null || memory.readError !== null;
+  return (
+    <SettingsRow
+      title="Memory"
+      description={
+        memory.data?.truncated
+          ? "This memory file is too large to edit here. Ask the bot to shorten it."
+          : "What the bot remembers across conversations. It keeps this up to date itself; edit or remove anything here."
+      }
+    >
+      <div className="pb-3">
+        <Textarea
+          key={contents}
+          rows={8}
+          aria-label="Bot memory"
+          placeholder="Nothing remembered yet."
+          disabled={props.disabled || !readable || memory.data?.truncated === true}
+          defaultValue={contents}
+          onBlur={(event) => {
+            const next = event.currentTarget.value;
+            if (next === contents) return;
+            void writeFile({
+              environmentId: props.environmentId,
+              input: { cwd: props.folder, relativePath: MEMORY_FILE, contents: next },
+            }).then(memory.refresh);
+          }}
+        />
+      </div>
+    </SettingsRow>
   );
 }

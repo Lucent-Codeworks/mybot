@@ -464,6 +464,8 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
         </SettingsSection>
         <BotProfileSettings
           bot={representative.bot ?? null}
+          environmentId={representative.environmentId}
+          folder={representative.workspaceRoot}
           disabled={!canEditGroup}
           onChange={(bot) => void updateBot(bot)}
         />

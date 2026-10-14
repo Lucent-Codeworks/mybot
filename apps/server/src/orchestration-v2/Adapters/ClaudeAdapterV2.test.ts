@@ -226,7 +226,12 @@ describe("ClaudeAdapterV2 runtime query policy", () => {
       nativeThreadId: "bot-thread",
       resume: false,
       cwd: "/workspace",
-      bot: { name: "Scout", role: "Daily tech scout", instructions: "Check bookmarks." },
+      bot: {
+        name: "Scout",
+        role: "Daily tech scout",
+        instructions: "Check bookmarks.",
+        folder: "/bots/scout",
+      },
     });
     const systemPrompt = options.systemPrompt as { readonly append?: string };
     assert.include(systemPrompt.append ?? "", "<bot_profile>");

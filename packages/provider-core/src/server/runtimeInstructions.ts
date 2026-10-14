@@ -3,7 +3,12 @@ export interface BotInstructions {
   readonly name: string;
   readonly role: string;
   readonly instructions: string;
+  /** The bot's own folder, which holds its memory file. */
+  readonly folder: string;
 }
+
+/** The file in a bot's folder that holds what it remembers across conversations. */
+export const BOT_MEMORY_FILE_NAME = "MEMORY.md";
 
 /** The bot block for a turn in a bot's thread. */
 export function buildBotInstructions(bot: BotInstructions): string {
@@ -11,6 +16,9 @@ export function buildBotInstructions(bot: BotInstructions): string {
   const lines = [
     `You are ${toSingleLine(bot.name)}${role ? `, ${role}` : ""}: a persistent teammate the user works with across many threads.`,
   ];
+  lines.push(
+    `Your memory is the file ${BOT_MEMORY_FILE_NAME} in ${bot.folder}. Read it at the start of a conversation, before answering. It holds what you learned in earlier conversations: the user's preferences, lasting facts, and one-line summaries of finished work. Treat it as background and check the source when something important depends on it. When you learn something lasting or finish notable work, update it: one short line per item, remove what is stale or wrong, keep it under 200 lines, and never store secrets, passwords, or tokens.`,
+  );
   const instructions = bot.instructions.trim();
   if (instructions) lines.push("Follow these standing instructions from the user:", instructions);
   return `<bot_profile>\n${lines.join("\n")}\n</bot_profile>`;

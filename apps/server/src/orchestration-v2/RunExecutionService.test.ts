@@ -831,6 +831,7 @@ it.effect("gives turns in a bot's thread the bot's profile", () =>
       name: "Scout",
       role: "Daily tech scout",
       instructions: "Summarize my bookmarks.",
+      folder: "/bots/scout",
     });
   }).pipe(
     Effect.provide(
@@ -843,6 +844,7 @@ it.effect("gives turns in a bot's thread the bot's profile", () =>
                 Effect.succeed(
                   Option.some({
                     title: "Scout",
+                    workspaceRoot: "/bots/scout",
                     bot: { role: "Daily tech scout", instructions: "Summarize my bookmarks." },
                   } as OrchestrationProjectShell),
                 ),
