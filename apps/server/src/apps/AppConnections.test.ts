@@ -1,11 +1,15 @@
 // @effect-diagnostics nodeBuiltinImport:off
 import * as NodeFS from "node:fs";
+import * as NodeHttp from "node:http";
 import * as NodeModule from "node:module";
 import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { describe, expect, it } from "@effect/vitest";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
@@ -46,6 +50,42 @@ const echoApp = {
     args: [echoAppPath],
   },
 };
+
+// The same echo app over Streamable HTTP, answering with event streams, behind a token.
+const startHttpEchoApp = Effect.acquireRelease(
+  Effect.promise(
+    () =>
+      new Promise<NodeHttp.Server>((resolve) => {
+        const httpServer = NodeHttp.createServer(async (request, response) => {
+          if (request.headers.authorization !== "Bearer secret") {
+            response.writeHead(401).end();
+            return;
+          }
+          const server = new Server(
+            { name: "echo", version: "1.0.0" },
+            { capabilities: { tools: {} } },
+          );
+          server.setRequestHandler(ListToolsRequestSchema, async () => ({
+            tools: [{ name: "echo", inputSchema: { type: "object" } }],
+          }));
+          server.setRequestHandler(CallToolRequestSchema, async (call) => ({
+            content: [{ type: "text", text: `echo: ${String(call.params.arguments?.text)}` }],
+          }));
+          const transport = new StreamableHTTPServerTransport({});
+          await server.connect(transport as Parameters<typeof server.connect>[0]);
+          await transport.handleRequest(request, response);
+        });
+        httpServer.listen(0, "127.0.0.1", () => resolve(httpServer));
+      }),
+  ),
+  (httpServer) =>
+    Effect.promise(() => new Promise<void>((resolve) => httpServer.close(() => resolve()))),
+).pipe(
+  Effect.map((httpServer) => {
+    const address = httpServer.address();
+    return `http://127.0.0.1:${typeof address === "object" && address ? address.port : 0}/mcp`;
+  }),
+);
 
 const layerTest = AppConnections.layer.pipe(
   Layer.provideMerge(ServerSecretStore.layer),
@@ -103,5 +143,27 @@ describe("AppConnections", () => {
       expect(error.message).toContain("Could not connect to Broken.");
       expect((yield* apps.list).connections).toEqual([]);
     }).pipe(Effect.provide(layerTest)),
+  );
+
+  it.live("connects an app over HTTP with its access token", () =>
+    Effect.gen(function* () {
+      const url = yield* startHttpEchoApp;
+      const apps = yield* AppConnections.AppConnections;
+
+      const refused = yield* apps
+        .add({ name: "Echo Web", transport: { type: "http", url, bearerToken: "wrong" } })
+        .pipe(Effect.flip);
+      expect(refused.message).toContain("refused access");
+
+      const added = yield* apps.add({
+        name: "Echo Web",
+        transport: { type: "http", url, bearerToken: "secret" },
+      });
+      expect(added.connections).toEqual([
+        expect.objectContaining({ id: "echo-web", toolCount: 1, error: null }),
+      ]);
+      const result = yield* apps.call("echo-web", "echo", { text: "web" });
+      expect(result.content).toEqual([{ type: "text", text: "echo: web" }]);
+    }).pipe(Effect.scoped, Effect.provide(layerTest)),
   );
 });

@@ -5,13 +5,7 @@ import {
   type AppConnectionList,
   type AppConnectionSummary,
 } from "@t3tools/contracts";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import {
-  getDefaultEnvironment,
-  StdioClientTransport,
-} from "@modelcontextprotocol/sdk/client/stdio.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+import * as HostProcess from "@t3tools/shared/HostProcess";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -20,6 +14,7 @@ import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
 
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
+import { connectMcp, type McpConnection } from "./mcpClient.ts";
 
 /**
  * Apps a user connected for their bots. Each app is an MCP server; MyBot
@@ -108,48 +103,37 @@ const failWith = (prefix: string) => (cause: unknown) =>
   new AppConnectionError({ message: `${prefix} ${describeError(cause)}` });
 
 interface Connected {
-  readonly client: Client;
+  readonly client: McpConnection;
   readonly tools: ReadonlyArray<AppTool>;
 }
 
-const connect = (connection: StoredConnection) =>
+const connect = (connection: StoredConnection, platform: NodeJS.Platform) =>
   Effect.tryPromise({
     try: async (signal) => {
-      const { transport: config } = connection;
-      if (config.type === "http" && !URL.canParse(config.url)) {
-        throw new Error(`${config.url} is not a URL.`);
-      }
-      // The SDK's transport classes declare optional fields without `| undefined`,
-      // which exactOptionalPropertyTypes rejects; they are Transports at runtime.
-      const transport = (config.type === "http"
-        ? new StreamableHTTPClientTransport(new URL(config.url), {
-            requestInit: config.bearerToken
-              ? { headers: { Authorization: `Bearer ${config.bearerToken}` } }
-              : {},
-          })
-        : new StdioClientTransport({
-            command: config.command,
-            args: [...config.args],
-            env: { ...getDefaultEnvironment(), ...config.env },
-            stderr: "ignore",
-          })) as unknown as Transport;
-      const client = new Client({ name: "mybot", version: "1.0.0" });
+      const client = await connectMcp(
+        connection.transport,
+        { signal, timeoutMs: CONNECT_TIMEOUT_MS },
+        platform,
+      );
       try {
-        const options = { signal, timeout: CONNECT_TIMEOUT_MS };
-        await client.connect(transport, options);
         const tools: Array<AppTool> = [];
-        let cursor: string | undefined;
+        let cursor: unknown;
         do {
-          const page = await client.listTools(cursor ? { cursor } : {}, options);
-          for (const tool of page.tools) {
+          const page = await client.request(
+            "tools/list",
+            typeof cursor === "string" ? { cursor } : {},
+            { signal, timeoutMs: CONNECT_TIMEOUT_MS },
+          );
+          for (const tool of Array.isArray(page.tools) ? page.tools : []) {
+            if (typeof tool?.name !== "string") continue;
             tools.push({
               name: tool.name,
-              description: tool.description ?? "",
+              description: typeof tool.description === "string" ? tool.description : "",
               inputSchema: tool.inputSchema,
             });
           }
           cursor = page.nextCursor;
-        } while (cursor && tools.length < 500);
+        } while (typeof cursor === "string" && tools.length < 500);
         return { client, tools } satisfies Connected;
       } catch (error) {
         await client.close().catch(() => undefined);
@@ -164,6 +148,7 @@ const closeClient = (connected: Connected) =>
 
 const make = Effect.gen(function* () {
   const secrets = yield* ServerSecretStore.ServerSecretStore;
+  const platform = yield* HostProcess.Platform;
   const writeLock = yield* Semaphore.make(1);
   // One shared connection attempt per app; a failed attempt is dropped so the next use retries.
   const clients = new Map<string, Effect.Effect<Connected, AppConnectionError>>();
@@ -207,7 +192,7 @@ const make = Effect.gen(function* () {
     Effect.gen(function* () {
       let attempt = clients.get(connection.id);
       if (!attempt) {
-        attempt = yield* Effect.cached(connect(connection));
+        attempt = yield* Effect.cached(connect(connection, platform));
         clients.set(connection.id, attempt);
       }
       return yield* attempt.pipe(
@@ -277,7 +262,7 @@ const make = Effect.gen(function* () {
               name: input.name,
               transport: input.transport,
             };
-            const live = yield* connect(connection);
+            const live = yield* connect(connection, platform);
             yield* write([...connections, connection]).pipe(
               Effect.tapError(() => closeClient(live)),
             );
@@ -331,18 +316,18 @@ const make = Effect.gen(function* () {
         }
         const result = yield* Effect.tryPromise({
           try: (signal) =>
-            live.client.callTool({ name: tool, arguments: args }, undefined, {
-              signal,
-              timeout: CALL_TIMEOUT_MS,
-              resetTimeoutOnProgress: true,
-            }),
+            live.client.request(
+              "tools/call",
+              { name: tool, arguments: args },
+              { signal, timeoutMs: CALL_TIMEOUT_MS },
+            ),
           catch: failWith(`${connection.name} failed to run ${tool}.`),
         }).pipe(
           // A transport failure may mean the app went away; reconnect on next use.
           Effect.tapError(() => forget(id)),
         );
         return {
-          content: "content" in result ? result.content : result.toolResult,
+          content: result.content ?? [],
           ...(result.structuredContent === undefined
             ? {}
             : { structuredContent: result.structuredContent }),
