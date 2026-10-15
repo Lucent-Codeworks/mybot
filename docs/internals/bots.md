@@ -35,6 +35,11 @@ instead of adding each app to each provider's MCP config, works the same for eve
 the tool list (part of Claude's query key) stable when apps are added or removed. Configs, including
 tokens and environment values, live in the server secret store and never reach clients.
 
+A group chat is a bot whose profile has `members`. Its block replaces the handoff roster with a
+host role: it relays each message to member bots with `t3_thread_launch`/`t3_thread_send` and quotes
+their replies. Members stay ordinary bots in their own threads, so no orchestration change was
+needed; group chats are left out of other bots' rosters.
+
 ## Telegram
 
 `apps/server/src/channels/TelegramChannel.ts` long-polls the Bot API from the host, so it needs no

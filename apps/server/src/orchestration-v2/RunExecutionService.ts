@@ -1409,7 +1409,8 @@ export const layer: Layer.Layer<
                       ),
                     ),
                   )).flatMap((shell) =>
-                  shell.bot && shell.id !== botProject.id
+                  // Group chats host conversations; they take no handoffs themselves.
+                  shell.bot && shell.bot.members === undefined && shell.id !== botProject.id
                     ? [{ name: shell.title, role: shell.bot.role, projectId: shell.id }]
                     : [],
                 ),

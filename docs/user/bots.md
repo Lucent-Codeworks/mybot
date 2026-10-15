@@ -48,6 +48,14 @@ with that bot, using its instructions, memory, and model, and the first bot
 reports back with the result. You can also ask for it directly, for example
 "ask Inbox to sort today's mail".
 
+## Group chats
+
+A group chat lets you talk to several bots in one conversation. Choose **New
+bot**, then **Group chat**, and pick its bots. Each message goes to the bots you
+name, or to the ones whose job fits, and every answer appears under the bot's
+name. Each bot keeps its own conversation for the group, so it remembers what
+was said. Change the group's bots in its settings.
+
 ## Sign a bot into websites
 
 Bots browse in a shared browser that keeps its logins, so a site you sign into

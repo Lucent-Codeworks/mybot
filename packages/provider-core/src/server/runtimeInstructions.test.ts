@@ -103,4 +103,24 @@ describe("buildBotInstructions", () => {
     expect(block).toContain("- Inbox (Inbox triage): projectId project-inbox");
     expect(block).toContain("call t3_thread_launch with that projectId");
   });
+
+  it("hosts a group chat with its member bots", () => {
+    const block = buildBotInstructions({
+      name: "Team",
+      role: "Group chat",
+      instructions: "",
+      folder: "/bots/team",
+      skillsFolder: "/mybot/skills",
+      teammates: [
+        { name: "Scout", role: "Research", projectId: "project-scout" },
+        { name: "Inbox", role: "Inbox triage", projectId: "project-inbox" },
+      ],
+      members: ["project-scout"],
+    });
+    expect(block).toContain("This is a group chat between the user and these bots");
+    expect(block).toContain("- Scout (Research): projectId project-scout");
+    expect(block).not.toContain("project-inbox");
+    expect(block).toContain("use t3_thread_send to that threadId");
+    expect(block).not.toContain("To hand off");
+  });
 });
