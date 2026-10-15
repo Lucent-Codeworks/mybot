@@ -6,6 +6,9 @@ describe("the bot marketplace", () => {
   it("has unique templates whose skills are well-formed and uniquely named", () => {
     const ids = BOT_TEMPLATES.map((template) => template.id);
     expect(new Set(ids).size).toBe(ids.length);
+    // Names are what the marketplace and the sidebar show, so two bots never share one.
+    const names = BOT_TEMPLATES.map((template) => template.name);
+    expect(new Set(names).size).toBe(names.length);
     const skillNames = BOT_TEMPLATES.flatMap((template) => template.skills.map((s) => s.name));
     expect(new Set(skillNames).size).toBe(skillNames.length);
     for (const template of BOT_TEMPLATES) {
