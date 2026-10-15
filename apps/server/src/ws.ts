@@ -1814,6 +1814,8 @@ const layerWsRpc = (
         [WS_METHODS.appConnectionsList]: (_input) => appConnections.list,
         [WS_METHODS.appConnectionsAdd]: (input) => appConnections.add(input),
         [WS_METHODS.appConnectionsRemove]: (input) => appConnections.remove(input.id),
+        [WS_METHODS.appConnectionsSignIn]: (input) =>
+          appConnections.signIn(input.id, input.redirectBaseUrl),
         [WS_METHODS.scheduledTasksList]: (_input) =>
           scheduledTasks.list().pipe(Effect.map(withVisibleWebhookUrls)),
         [WS_METHODS.scheduledTasksSubscribe]: (_input) =>

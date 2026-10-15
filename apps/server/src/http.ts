@@ -29,6 +29,7 @@ import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";
 import { OtlpTracer, OtlpSerialization } from "effect/observability";
 
 import * as ServerConfig from "./config.ts";
+import { APP_SIGN_IN_CALLBACK_PATH } from "./apps/mcpOAuth.ts";
 import { ASSET_ROUTE_PREFIX, readMcpAppHtml, resolveAsset } from "./assets/AssetAccess.ts";
 import { statMediaFile, streamMediaFile, type OpenMediaFile } from "./assets/MediaFile.ts";
 import {
@@ -397,7 +398,11 @@ export const layerOtlpTracesProxyRoute = HttpRouter.add(
   ),
 );
 
-const UNTRACED_REQUEST_PATHS: ReadonlySet<string> = new Set([OTLP_TRACES_PROXY_PATH]);
+// The app sign-in callback's query carries an authorization code.
+const UNTRACED_REQUEST_PATHS: ReadonlySet<string> = new Set([
+  OTLP_TRACES_PROXY_PATH,
+  APP_SIGN_IN_CALLBACK_PATH,
+]);
 
 // Skips the HTTP server span for UNTRACED_REQUEST_PATHS. That span starts
 // before routing, so a route handler cannot skip it. TracerDisabledWhen is one

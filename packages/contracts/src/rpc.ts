@@ -265,9 +265,12 @@ import {
 } from "./scheduledTask.ts";
 import {
   AppConnectionAddInput,
+  AppConnectionAddResult,
   AppConnectionError,
   AppConnectionList,
   AppConnectionRemoveInput,
+  AppConnectionSignInInput,
+  AppConnectionSignInResult,
 } from "./appConnections.ts";
 import {
   BotTelegramConnectInput,
@@ -405,6 +408,7 @@ export const WS_METHODS = {
   appConnectionsList: "appConnections.list",
   appConnectionsAdd: "appConnections.add",
   appConnectionsRemove: "appConnections.remove",
+  appConnectionsSignIn: "appConnections.signIn",
 
   // Bot channels
   botsTelegramStatus: "bots.telegram.status",
@@ -1260,13 +1264,19 @@ const WsAppConnectionsListRpc = Rpc.make(WS_METHODS.appConnectionsList, {
 
 const WsAppConnectionsAddRpc = Rpc.make(WS_METHODS.appConnectionsAdd, {
   payload: AppConnectionAddInput,
-  success: AppConnectionList,
+  success: AppConnectionAddResult,
   error: Schema.Union([AppConnectionError, EnvironmentAuthorizationError]),
 });
 
 const WsAppConnectionsRemoveRpc = Rpc.make(WS_METHODS.appConnectionsRemove, {
   payload: AppConnectionRemoveInput,
   success: AppConnectionList,
+  error: Schema.Union([AppConnectionError, EnvironmentAuthorizationError]),
+});
+
+const WsAppConnectionsSignInRpc = Rpc.make(WS_METHODS.appConnectionsSignIn, {
+  payload: AppConnectionSignInInput,
+  success: AppConnectionSignInResult,
   error: Schema.Union([AppConnectionError, EnvironmentAuthorizationError]),
 });
 
@@ -1436,6 +1446,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsAppConnectionsListRpc,
   WsAppConnectionsAddRpc,
   WsAppConnectionsRemoveRpc,
+  WsAppConnectionsSignInRpc,
   WsBotsTelegramStatusRpc,
   WsBotsTelegramConnectRpc,
   WsBotsTelegramDisconnectRpc,

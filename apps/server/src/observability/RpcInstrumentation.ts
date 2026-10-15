@@ -87,6 +87,7 @@ const RPC_AGGREGATES = {
   [WS_METHODS.appConnectionsList]: "apps",
   [WS_METHODS.appConnectionsAdd]: "apps",
   [WS_METHODS.appConnectionsRemove]: "apps",
+  [WS_METHODS.appConnectionsSignIn]: "apps",
   [WS_METHODS.scheduledTasksList]: "scheduledTasks",
   [WS_METHODS.scheduledTasksSubscribe]: "scheduledTasks",
   [WS_METHODS.scheduledTasksUpsert]: "scheduledTasks",
