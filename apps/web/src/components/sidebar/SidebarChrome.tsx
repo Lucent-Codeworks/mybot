@@ -45,9 +45,11 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
 
   return (
     // The titlebar row, not a padded SidebarHeader: it aligns to the window controls.
+    // The bottom padding gives the banner extra height while the content box stays
+    // titlebar-sized, so the brand keeps lining up with the fixed sidebar toggle.
     <div
       className={cn(
-        "relative flex h-[var(--workspace-topbar-height)] shrink-0 flex-row items-center gap-2 pr-3",
+        "relative flex h-[calc(var(--workspace-topbar-height)+0.75rem)] shrink-0 flex-row items-center gap-2 pr-3 pb-3",
         isElectron && "drag-region",
       )}
     >
@@ -125,7 +127,7 @@ function SidebarBrandMark({ onBackdrop }: { onBackdrop: boolean }) {
   return (
     // Center the visible capitals, without the font's ascender/descender space.
     // Padding keeps ascenders and round-letter overshoot inside the truncation clip.
-    <span className="inline-flex min-w-0 items-baseline text-sm font-medium tracking-tight">
+    <span className="inline-flex min-w-0 items-baseline text-xl font-semibold tracking-tight">
       <span
         className={cn(
           "truncate [text-box:trim-both_cap_alphabetic] supports-[text-box:trim-both_cap_alphabetic]:py-1",
