@@ -493,6 +493,21 @@ jobs:
       # injects into the runner's own Node: tsdown's cross-target download path
       # runs `tar` on a drive-letter path on Windows, which GNU tar reads as a
       # remote host, and a cross-built macOS binary cannot be smoke-tested.
+      # Apple silicon refuses to open an app whose signature is broken ("damaged").
+      - name: Verify macOS app signature
+        if: inputs.platform == 'mac'
+        shell: bash
+        run: |
+          set -euo pipefail
+          zip_path="$(ls release/*.zip | head -n 1)"
+          verify_dir="$RUNNER_TEMP/verify-mac-app"
+          rm -rf "$verify_dir"
+          mkdir -p "$verify_dir"
+          ditto -x -k "$zip_path" "$verify_dir"
+          app_path="$(find "$verify_dir" -maxdepth 2 -name '*.app' -print -quit)"
+          codesign --verify --deep --strict --verbose=2 "$app_path"
+          codesign --display --verbose=2 "$app_path" 2>&1 | grep -E "^(Identifier|Signature|TeamIdentifier)" || true
+
       - name: Build CLI single-executable
         if: inputs.cli_archive
         shell: bash

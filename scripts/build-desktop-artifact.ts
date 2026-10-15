@@ -2851,7 +2851,14 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
           role: "Viewer",
         },
       ],
-      ...(signed ? { sign: path.join(repoRoot, "scripts/sign-macos.ts") } : {}),
+      // Without a Developer ID, sign ad hoc. Packaging rewrites Electron's
+      // Info.plist and resources, which breaks the signature it ships with,
+      // and Apple silicon reports an app with a broken signature as damaged.
+      // Ad hoc signatures carry no Team ID, so the hardened runtime's library
+      // validation would refuse the app's own frameworks; keep it for signed builds.
+      ...(signed
+        ? { sign: path.join(repoRoot, "scripts/sign-macos.ts") }
+        : { identity: "-", hardenedRuntime: false }),
       ...(macPasskeySigning
         ? {
             entitlements: macPasskeySigning.entitlementsPath,
