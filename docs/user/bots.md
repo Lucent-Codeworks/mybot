@@ -107,9 +107,9 @@ Apps marked **Community** use a helper made by the community rather than the
 app's maker. Some apps list a requirement before you connect, such as a paid
 plan or an admin who must turn on access.
 
-Gmail, Google Calendar, Drive, Docs, and Sheets connect through Composio: sign in
-to Composio once, and it asks you to approve each Google app (or any of its
-other apps) the first time a bot uses it. If you'd rather not use Composio,
+Apps marked **Via Composio**, such as Gmail, Google Calendar, Drive, Docs, and
+Sheets, connect through Composio: sign in to Composio once, and it asks you to
+approve each app the first time a bot uses it. If you'd rather not use Composio,
 **Google Workspace (advanced)** connects with your own Google Cloud OAuth client.
 
 **Outlook & Microsoft 365** runs on this computer. After connecting it, ask a
