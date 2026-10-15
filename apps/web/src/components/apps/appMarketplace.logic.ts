@@ -23,13 +23,18 @@ const BY_CATEGORY: ReadonlyArray<MarketplaceSection> = APP_CATEGORIES.map((categ
   presets: APP_CATALOG.filter((preset) => preset.category === category),
 })).filter((section) => section.presets.length > 0);
 
-/** The chips above the catalog, in order. */
-export const MARKETPLACE_FILTERS: ReadonlyArray<{ value: MarketplaceFilter; label: string }> = [
-  { value: "all", label: "All" },
-  { value: "popular", label: "Popular" },
+/** The category list beside the catalog, in order, with how many apps each holds. */
+export const MARKETPLACE_FILTERS: ReadonlyArray<{
+  value: MarketplaceFilter;
+  label: string;
+  count: number;
+}> = [
+  { value: "all", label: "All apps", count: APP_CATALOG.length },
+  { value: "popular", label: "Popular", count: POPULAR.presets.length },
   ...BY_CATEGORY.map((section) => ({
     value: section.title as AppCategory,
     label: section.title,
+    count: section.presets.length,
   })),
 ];
 

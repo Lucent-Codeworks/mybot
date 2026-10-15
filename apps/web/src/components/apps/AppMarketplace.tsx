@@ -61,7 +61,7 @@ export function AddAppDialog(props: AddAppDialogProps) {
         if (!open) props.onClose();
       }}
     >
-      <DialogPopup className={choice === null ? "sm:max-w-4xl" : "sm:max-w-lg"}>
+      <DialogPopup className={choice === null ? "sm:max-w-5xl" : "sm:max-w-lg"}>
         {choice === null ? (
           <AppPicker connected={connected} onChoose={setChoice} onCancel={props.onClose} />
         ) : choice === "custom" ? (
@@ -96,6 +96,10 @@ function AppPicker(props: {
     [deferredQuery, filter],
   );
   const searching = deferredQuery.trim() !== "";
+  const chooseFilter = (value: MarketplaceFilter) => {
+    setFilter(value);
+    setQuery("");
+  };
 
   return (
     <>
@@ -121,63 +125,88 @@ function AppPicker(props: {
             }}
           />
         </InputGroup>
-        <ToggleGroup
-          aria-label="Category"
-          variant="default"
-          size="xs"
-          className="flex-wrap"
-          value={searching ? [] : [filter]}
-          onValueChange={(next) => {
-            const value = next[0] as MarketplaceFilter | undefined;
-            if (!value) return;
-            setFilter(value);
-            setQuery("");
-          }}
-        >
-          {MARKETPLACE_FILTERS.map((option) => (
-            <Toggle key={option.value} value={option.value} variant="pill">
-              {option.label}
-            </Toggle>
-          ))}
-        </ToggleGroup>
+        {/* Narrow windows have no room for the category list beside the apps. */}
+        <div className="sm:hidden">
+          <Select
+            value={searching ? null : filter}
+            onValueChange={(value) => value && chooseFilter(value as MarketplaceFilter)}
+          >
+            <SelectTrigger aria-label="Category">
+              <SelectValue placeholder="All apps" />
+            </SelectTrigger>
+            <SelectPopup>
+              {MARKETPLACE_FILTERS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectPopup>
+          </Select>
+        </div>
       </DialogHeader>
       <DialogPanel>
-        <div className="flex flex-col gap-5">
-          {sections.map((section) => (
-            <section key={section.title} className="flex flex-col gap-2">
-              <h3 className="font-medium text-muted-foreground text-xs">{section.title}</h3>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {section.presets.map((preset) => (
-                  <AppCard
-                    key={preset.id}
-                    preset={preset}
-                    connected={props.connected.has(preset.id)}
-                    onChoose={() => props.onChoose(preset)}
-                  />
-                ))}
+        <div className="flex gap-5">
+          <nav
+            aria-label="Categories"
+            className="sticky top-0 hidden w-52 shrink-0 self-start sm:block"
+          >
+            <ToggleGroup
+              aria-label="Category"
+              orientation="vertical"
+              variant="nav"
+              size="sm"
+              className="w-full"
+              value={searching ? [] : [filter]}
+              onValueChange={(next) => {
+                const value = next[0] as MarketplaceFilter | undefined;
+                if (value) chooseFilter(value);
+              }}
+            >
+              {MARKETPLACE_FILTERS.map((option) => (
+                <Toggle key={option.value} value={option.value}>
+                  <span className="truncate">{option.label}</span>
+                  <span className="text-muted-foreground text-xs tabular-nums">{option.count}</span>
+                </Toggle>
+              ))}
+            </ToggleGroup>
+          </nav>
+          <div className="flex min-w-0 flex-1 flex-col gap-5">
+            {sections.map((section) => (
+              <section key={section.title} className="flex flex-col gap-2">
+                <h3 className="font-medium text-muted-foreground text-xs">{section.title}</h3>
+                <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                  {section.presets.map((preset) => (
+                    <AppCard
+                      key={preset.id}
+                      preset={preset}
+                      connected={props.connected.has(preset.id)}
+                      onChoose={() => props.onChoose(preset)}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
+            <section className="flex flex-col gap-2">
+              <h3 className="font-medium text-muted-foreground text-xs">
+                {sections.length === 0 ? "Can't find it?" : "Other"}
+              </h3>
+              <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                <button
+                  type="button"
+                  className={MARKETPLACE_CARD_CLASSNAME}
+                  onClick={() => props.onChoose("custom")}
+                >
+                  <AppLogo presetId={null} />
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className="font-medium text-sm">Custom</span>
+                    <span className="text-muted-foreground text-xs">
+                      Connect any app with an MCP server, by web address or local command.
+                    </span>
+                  </span>
+                </button>
               </div>
             </section>
-          ))}
-          <section className="flex flex-col gap-2">
-            <h3 className="font-medium text-muted-foreground text-xs">
-              {sections.length === 0 ? "Can't find it?" : "Other"}
-            </h3>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              <button
-                type="button"
-                className={MARKETPLACE_CARD_CLASSNAME}
-                onClick={() => props.onChoose("custom")}
-              >
-                <AppLogo presetId={null} />
-                <span className="flex min-w-0 flex-col gap-0.5">
-                  <span className="font-medium text-sm">Custom</span>
-                  <span className="text-muted-foreground text-xs">
-                    Connect any app with an MCP server, by web address or local command.
-                  </span>
-                </span>
-              </button>
-            </div>
-          </section>
+          </div>
         </div>
       </DialogPanel>
       <DialogFooter>
