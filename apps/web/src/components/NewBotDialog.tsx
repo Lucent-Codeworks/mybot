@@ -135,21 +135,8 @@ function NewBotDialog({ environmentId }: { environmentId: EnvironmentId }) {
           if (!open) close();
         }}
       >
-        <DialogPopup className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>New bot</DialogTitle>
-            <DialogDescription>
-              Start from a ready-made bot, or describe your own. You can change everything later.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogPanel>
-            <BotMarketplace onChoose={choose} onGroup={chooseGroup} />
-          </DialogPanel>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={close}>
-              Cancel
-            </Button>
-          </DialogFooter>
+        <DialogPopup className="sm:max-w-5xl">
+          <BotMarketplace onChoose={choose} onGroup={chooseGroup} onCancel={close} />
         </DialogPopup>
       </Dialog>
     );

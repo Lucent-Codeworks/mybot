@@ -10,9 +10,10 @@ folders and files stay on disk.
 ## Create a bot
 
 Choose **New bot** under **Bots** in the sidebar, or run **New bot** from the
-command palette. Pick a ready-made bot from the marketplace, such as a morning
-briefing, a research analyst, an inbox assistant, or an expense tracker, or
-start from scratch. A ready-made bot comes with its job, instructions, icon,
+command palette. Pick a ready-made bot from the marketplace, or start from
+scratch. The marketplace has bots for work, money, health, home, learning, and
+hobbies; search it by what you want done, such as "meal planner" or "invoices",
+or browse a category. A ready-made bot comes with its job, instructions, icon,
 and starter skills; you can change any of them before or after creating it.
 Then choose the model it should use. Any provider you have set up works.
 
