@@ -49,7 +49,7 @@ export function SidebarStageBackdrop({ variant }: { variant: SidebarStageBackdro
   return (
     <div
       aria-hidden
-      className="sidebar-stage-backdrop pointer-events-none absolute inset-x-0 top-0 z-0 h-20 select-none overflow-hidden"
+      className="sidebar-stage-backdrop pointer-events-none absolute inset-x-0 top-0 z-0 h-24 select-none overflow-hidden"
     >
       <StageBackdropArt variant={variant} />
     </div>
