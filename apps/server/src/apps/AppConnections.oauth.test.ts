@@ -259,7 +259,7 @@ describe("AppConnections OAuth", () => {
       fake.revokeAccessTokens();
       const refused = yield* apps.call("secure-echo", "echo", { text: "no" }).pipe(Effect.flip);
       expect(refused.message).toBe(
-        "Secure Echo needs the user to sign in again in Settings → Integrations → Connected apps.",
+        "Secure Echo needs the user to sign in again in Settings → Apps.",
       );
       expect((yield* apps.list).connections).toEqual([
         expect.objectContaining({ id: "secure-echo", status: "needs-sign-in" }),

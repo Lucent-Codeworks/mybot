@@ -174,7 +174,7 @@ const usesSignIn = (connection: StoredConnection) =>
   !connection.transport.bearerToken;
 
 const needsSignInMessage = (name: string) =>
-  `${name} needs the user to sign in again in Settings → Integrations → Connected apps.`;
+  `${name} needs the user to sign in again in Settings → Apps.`;
 
 const describeError = (cause: unknown) =>
   cause instanceof Error && cause.message ? cause.message : "The app did not respond.";
@@ -535,7 +535,7 @@ const make = Effect.gen(function* () {
     Effect.map((connections) => ({ connections })),
   );
 
-  const signInMessage = "Start signing in again from Settings → Integrations → Connected apps.";
+  const signInMessage = "Start signing in again from Settings → Apps.";
 
   return AppConnections.of({
     list,

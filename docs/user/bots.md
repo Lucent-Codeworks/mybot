@@ -83,7 +83,7 @@ for it with a private form.
 ## Connect apps
 
 Connect your apps so bots can use them directly instead of clicking through
-websites. Open **Settings → Integrations → Connected apps** and choose **Add
+websites. Choose **Apps** in the sidebar (or **Settings → Apps**) and choose **Add
 app**. Pick an app from the list, such as Dialpad, Telnyx, Twilio, n8n, or
 Activepieces, or choose **Custom** to connect any app that offers an MCP server
 by its web address or a local command. MyBot checks the connection before

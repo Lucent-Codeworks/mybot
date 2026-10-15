@@ -15,6 +15,7 @@ import {
   MonitorIcon,
   MoonIcon,
   PaletteIcon,
+  PlugIcon,
   RotateCcwIcon,
   SettingsIcon,
   SquarePenIcon,
@@ -982,6 +983,28 @@ function OpenCommandPaletteDialog(props: {
     icon: <BotIcon className={ITEM_ICON_CLASS} />,
     run: async () => {
       requestNewBot();
+    },
+  });
+
+  actionItems.push({
+    kind: "action",
+    value: "action:apps",
+    searchTerms: [
+      "apps",
+      "connect app",
+      "connected apps",
+      "integrations",
+      "mcp",
+      "dialpad",
+      "twilio",
+      "telnyx",
+      "n8n",
+      "activepieces",
+    ],
+    title: "Connect an app",
+    icon: <PlugIcon className={ITEM_ICON_CLASS} />,
+    run: async () => {
+      await navigate({ to: "/settings/apps" });
     },
   });
 

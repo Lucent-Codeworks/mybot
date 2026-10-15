@@ -14,6 +14,7 @@ import {
 
 export type SettingsPath =
   | "/settings/projects"
+  | "/settings/apps"
   | "/settings/general"
   | "/settings/diagnostics"
   | "/settings/appearance"
@@ -93,6 +94,7 @@ export interface SettingsSearchAvailability {
 export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/diagnostics": "Diagnostics",
   "/settings/projects": "Bot",
+  "/settings/apps": "Apps",
   "/settings/general": "General",
   "/settings/appearance": "Appearance",
   "/settings/keybindings": "Keybindings",
@@ -562,6 +564,14 @@ export const SETTINGS_SEARCH_ITEMS = [
     providerSettingsOnly: true,
   },
   {
+    id: "connected-apps",
+    title: "Connected apps",
+    to: "/settings/apps",
+    searchTerms: [
+      "apps integrations mcp connect sign in dialpad twilio telnyx n8n activepieces phone sms automation",
+    ],
+  },
+  {
     id: "agent-browser-access",
     title: "Agent browser access",
     to: "/settings/integrations",
@@ -772,6 +782,8 @@ const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScop
   "/settings/keybindings": null,
   "/settings/providers": null,
   "/settings/integrations": null,
+  // Apps belong to the host environment, whatever the scope selection.
+  "/settings/apps": null,
   "/settings/storage": "environment-defaults",
   "/settings/connections": "connections",
   "/settings/scheduled-tasks": null,
