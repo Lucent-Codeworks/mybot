@@ -6,29 +6,77 @@ import type { AppConnectionAddInput, ProjectIconColor } from "@t3tools/contracts
  * of secret fields are sent to the server once and never shown again.
  */
 
-export interface AppPresetField {
+interface AppPresetFieldBase {
   readonly key: string;
   readonly label: string;
-  /** Shown as a password input and kept out of the connection's display. */
-  readonly secret?: boolean;
-  /** An empty optional field is left out. */
-  readonly optional?: boolean;
-  readonly placeholder?: string;
-  readonly default?: string;
   readonly help?: string;
 }
 
+/**
+ * A form field. Every value is a string: a toggle is "true" when on and empty
+ * when off, a select holds one of its option values.
+ */
+export type AppPresetField =
+  | (AppPresetFieldBase & {
+      /** "secret" is a password input kept out of the connection's display. */
+      readonly kind?: "text" | "secret";
+      /** An empty optional field is left out. */
+      readonly optional?: boolean;
+      readonly placeholder?: string;
+      readonly default?: string;
+    })
+  | (AppPresetFieldBase & {
+      readonly kind: "select";
+      readonly options: ReadonlyArray<{ readonly value: string; readonly label: string }>;
+      readonly default: string;
+    })
+  | (AppPresetFieldBase & { readonly kind: "toggle"; readonly default?: boolean });
+
 export type AppPresetTransport = AppConnectionAddInput["transport"];
+
+export const APP_CATEGORIES = [
+  "Email & calendar",
+  "Docs & files",
+  "Chat & meetings",
+  "Projects & development",
+  "Sales & support",
+  "Payments & finance",
+  "Marketing & social",
+  "Phone & SMS",
+  "Search & web",
+  "Travel & home",
+  "Automation",
+] as const;
+export type AppCategory = (typeof APP_CATEGORIES)[number];
+
+/**
+ * How the user connects: signs in through the browser, pastes a key, runs the
+ * app on this computer, or nothing at all.
+ */
+export type AppConnectionKind = "sign-in" | "api-key" | "local" | "open";
 
 export interface AppPreset {
   readonly id: string;
   readonly name: string;
   readonly summary: string;
-  readonly category: "Phone & messaging" | "Automation";
-  readonly icon: { readonly name: string; readonly color: ProjectIconColor };
+  readonly category: AppCategory;
+  /** The tile color when there is no brand logo. */
+  readonly color: ProjectIconColor;
   readonly docsUrl: string;
   /** Something the user should know before connecting, such as an access requirement. */
   readonly note?: string;
+  readonly connection: AppConnectionKind;
+  /** What a local app needs installed on this computer. */
+  readonly requires?: "node" | "uv" | "docker";
+  /** Only works on these operating systems. */
+  readonly platforms?: ReadonlyArray<"darwin">;
+  /** Run by the app's maker or a service company, not a community package. */
+  readonly official: boolean;
+  readonly popular?: true;
+  /** Extra search words, such as products the app also covers. */
+  readonly keywords?: ReadonlyArray<string>;
+  /** Connects through an app aggregator instead of its own server. */
+  readonly via?: "composio";
   readonly fields: ReadonlyArray<AppPresetField>;
   /** Builds the transport from trimmed field values; required fields are non-empty. */
   readonly transport: (values: Readonly<Record<string, string>>) => AppPresetTransport;
@@ -36,15 +84,1289 @@ export interface AppPreset {
 
 const withoutTrailingSlash = (url: string) => url.replace(/\/+$/, "");
 
+const oauth = (url: string) => (): AppPresetTransport => ({ type: "http", url, auth: "oauth" });
+
+const open = (url: string) => (): AppPresetTransport => ({ type: "http", url, auth: "none" });
+
+/** A fixed key field sent as a bearer token. */
+const bearer =
+  (url: string, key = "apiKey") =>
+  (values: Readonly<Record<string, string>>): AppPresetTransport => ({
+    type: "http",
+    url,
+    bearerToken: values[key] ?? "",
+    auth: "token",
+  });
+
+/** Signs in (or connects openly) unless the optional key field is filled. */
+const tokenOptional =
+  (url: string, otherwise: "oauth" | "none", key = "apiKey", tokenUrl = url) =>
+  (values: Readonly<Record<string, string>>): AppPresetTransport =>
+    values[key]
+      ? { type: "http", url: tokenUrl, bearerToken: values[key], auth: "token" }
+      : { type: "http", url, auth: otherwise };
+
+const optionalKeyField = (help: string): AppPresetField => ({
+  key: "apiKey",
+  label: "API key",
+  kind: "secret",
+  optional: true,
+  help,
+});
+
+/** Env entries for the fields that have a value. */
+const envOf = (
+  values: Readonly<Record<string, string>>,
+  mapping: Readonly<Record<string, string>>,
+): Record<string, string> => {
+  const env: Record<string, string> = {};
+  for (const [variable, key] of Object.entries(mapping)) {
+    const value = values[key];
+    if (value) env[variable] = value;
+  }
+  return env;
+};
+
+const COMPOSIO_URL = "https://connect.composio.dev/mcp";
+
+/** Google apps reach Composio's single sign-in. */
+const viaComposio = (
+  id: string,
+  name: string,
+  summary: string,
+  category: AppCategory,
+  keywords: ReadonlyArray<string>,
+  popular?: true,
+): AppPreset => ({
+  id,
+  name,
+  summary,
+  category,
+  color: "blue",
+  docsUrl: "https://docs.composio.dev",
+  note: "Connect once through Composio; it also covers your other apps. Composio asks you to sign in to Google the first time a bot uses it.",
+  connection: "sign-in",
+  official: true,
+  via: "composio",
+  keywords: ["google", "composio", ...keywords],
+  ...(popular ? { popular } : {}),
+  fields: [],
+  transport: oauth(COMPOSIO_URL),
+});
+
 export const APP_CATALOG: ReadonlyArray<AppPreset> = [
+  // Email & calendar
+  viaComposio(
+    "gmail",
+    "Gmail",
+    "Read, search, draft, and send your Gmail.",
+    "Email & calendar",
+    ["email", "mail", "inbox"],
+    true,
+  ),
+  viaComposio(
+    "google-calendar",
+    "Google Calendar",
+    "Check your schedule, find free time, and add events.",
+    "Email & calendar",
+    ["calendar", "events", "meetings", "schedule"],
+    true,
+  ),
+  {
+    id: "outlook",
+    name: "Outlook & Microsoft 365",
+    summary: "Mail, calendar, OneDrive, Excel, OneNote, and To Do from your Microsoft account.",
+    category: "Email & calendar",
+    color: "blue",
+    docsUrl: "https://github.com/Softeria/ms-365-mcp-server",
+    note: "After connecting, ask a bot to sign in to Microsoft. It shows a code to enter at microsoft.com/devicelogin. Some work accounts block this app; ask your IT admin. Teams and SharePoint need a work or school account.",
+    connection: "local",
+    requires: "node",
+    official: false,
+    popular: true,
+    keywords: [
+      "microsoft",
+      "office",
+      "email",
+      "mail",
+      "calendar",
+      "teams",
+      "onedrive",
+      "excel",
+      "onenote",
+      "todo",
+      "sharepoint",
+      "contacts",
+    ],
+    fields: [
+      {
+        key: "account",
+        label: "Account type",
+        kind: "select",
+        default: "personal",
+        options: [
+          { value: "personal", label: "Personal (Outlook.com, Hotmail)" },
+          { value: "work", label: "Work or school" },
+        ],
+      },
+      {
+        key: "readOnly",
+        label: "Read only",
+        kind: "toggle",
+        help: "Bots can read but not send, change, or delete anything.",
+      },
+    ],
+    transport: (values) => ({
+      type: "stdio",
+      command: "npx",
+      args: [
+        "-y",
+        "@softeria/ms-365-mcp-server",
+        ...(values.account === "work" ? ["--org-mode"] : []),
+        ...(values.readOnly ? ["--read-only"] : []),
+      ],
+      ...(values.account === "work" ? {} : { env: { MS365_MCP_TENANT_ID: "consumers" } }),
+    }),
+  },
+  {
+    id: "google-workspace",
+    name: "Google Workspace (advanced)",
+    summary:
+      "Gmail, Calendar, Drive, Docs, Sheets, Slides, Tasks, and Contacts with your own Google app.",
+    category: "Email & calendar",
+    color: "blue",
+    docsUrl: "https://github.com/taylorwilsdon/google_workspace_mcp",
+    note: "You create a Desktop OAuth client in Google Cloud Console first, which takes about 15 minutes. While the Google app is in testing mode, sign-ins expire after 7 days.",
+    connection: "local",
+    requires: "uv",
+    official: false,
+    keywords: [
+      "google",
+      "gmail",
+      "calendar",
+      "drive",
+      "docs",
+      "sheets",
+      "slides",
+      "tasks",
+      "contacts",
+    ],
+    fields: [
+      { key: "clientId", label: "OAuth client ID", placeholder: "…apps.googleusercontent.com" },
+      { key: "clientSecret", label: "OAuth client secret", kind: "secret" },
+    ],
+    transport: (values) => ({
+      type: "stdio",
+      command: "uvx",
+      args: ["workspace-mcp", "--tool-tier", "core"],
+      env: envOf(values, {
+        GOOGLE_OAUTH_CLIENT_ID: "clientId",
+        GOOGLE_OAUTH_CLIENT_SECRET: "clientSecret",
+      }),
+    }),
+  },
+  {
+    id: "email",
+    name: "Email (IMAP & SMTP)",
+    summary: "Read and send mail from any email provider.",
+    category: "Email & calendar",
+    color: "sky",
+    docsUrl: "https://github.com/Wh1isper/mcp-email-server",
+    connection: "local",
+    requires: "uv",
+    official: false,
+    keywords: ["mail", "imap", "smtp", "icloud", "fastmail", "yahoo", "proton"],
+    fields: [
+      { key: "address", label: "Email address", placeholder: "you@example.com" },
+      {
+        key: "password",
+        label: "Password",
+        kind: "secret",
+        help: "Gmail and iCloud need an app password, not your normal one.",
+      },
+      { key: "imapHost", label: "IMAP server", placeholder: "imap.example.com" },
+      { key: "imapPort", label: "IMAP port", default: "993" },
+      { key: "smtpHost", label: "SMTP server", placeholder: "smtp.example.com" },
+      { key: "smtpPort", label: "SMTP port", default: "465" },
+    ],
+    transport: (values) => ({
+      type: "stdio",
+      command: "uvx",
+      args: ["mcp-email-server@latest", "stdio"],
+      env: envOf(values, {
+        MCP_EMAIL_SERVER_EMAIL_ADDRESS: "address",
+        MCP_EMAIL_SERVER_PASSWORD: "password",
+        MCP_EMAIL_SERVER_IMAP_HOST: "imapHost",
+        MCP_EMAIL_SERVER_IMAP_PORT: "imapPort",
+        MCP_EMAIL_SERVER_SMTP_HOST: "smtpHost",
+        MCP_EMAIL_SERVER_SMTP_PORT: "smtpPort",
+      }),
+    }),
+  },
+  {
+    id: "calendly",
+    name: "Calendly",
+    summary: "See event types and availability, book or cancel meetings, and make booking links.",
+    category: "Email & calendar",
+    color: "blue",
+    docsUrl: "https://developer.calendly.com/calendly-mcp-server",
+    note: "Calendly's sign-in hasn't been tested with MyBot yet. If it fails, connect Calendly through Zapier or Composio instead.",
+    connection: "sign-in",
+    official: true,
+    keywords: ["scheduling", "booking", "meetings"],
+    fields: [],
+    transport: oauth("https://mcp.calendly.com"),
+  },
+  {
+    id: "cal-com",
+    name: "Cal.com",
+    summary: "Manage bookings, event types, and schedules.",
+    category: "Email & calendar",
+    color: "gray",
+    docsUrl: "https://cal.com/docs/mcp-server.md",
+    connection: "sign-in",
+    official: true,
+    keywords: ["calcom", "scheduling", "booking", "meetings"],
+    fields: [],
+    transport: oauth("https://mcp.cal.com/mcp"),
+  },
+
+  // Docs & files
+  viaComposio(
+    "google-drive",
+    "Google Drive",
+    "Find, read, and organize files in your Drive.",
+    "Docs & files",
+    ["drive", "files", "storage"],
+  ),
+  viaComposio(
+    "google-docs",
+    "Google Docs",
+    "Read, write, and edit your documents.",
+    "Docs & files",
+    ["docs", "documents", "writing"],
+  ),
+  viaComposio(
+    "google-sheets",
+    "Google Sheets",
+    "Read and update your spreadsheets.",
+    "Docs & files",
+    ["sheets", "spreadsheets", "excel"],
+  ),
+  {
+    id: "notion",
+    name: "Notion",
+    summary: "Search, read, create, and update pages and databases.",
+    category: "Docs & files",
+    color: "gray",
+    docsUrl: "https://developers.notion.com/docs/get-started-with-mcp",
+    connection: "sign-in",
+    official: true,
+    popular: true,
+    keywords: ["notes", "wiki", "docs", "databases"],
+    fields: [],
+    transport: oauth("https://mcp.notion.com/mcp"),
+  },
+  {
+    id: "atlassian",
+    name: "Atlassian (Jira & Confluence)",
+    summary: "Work with Jira issues, Confluence pages, service desk tickets, and Loom videos.",
+    category: "Docs & files",
+    color: "blue",
+    docsUrl:
+      "https://support.atlassian.com/atlassian-rovo-mcp-server/docs/getting-started-with-the-atlassian-remote-mcp-server/",
+    note: "Uses Atlassian Rovo credits, and your Atlassian admin can restrict access.",
+    connection: "sign-in",
+    official: true,
+    popular: true,
+    keywords: ["jira", "confluence", "loom", "rovo", "service management", "issues", "wiki"],
+    fields: [],
+    transport: oauth("https://mcp.atlassian.com/v2/mcp"),
+  },
+  {
+    id: "airtable",
+    name: "Airtable",
+    summary: "Read and update records in your bases.",
+    category: "Docs & files",
+    color: "yellow",
+    docsUrl: "https://support.airtable.com/docs/using-the-airtable-mcp-server",
+    connection: "sign-in",
+    official: true,
+    keywords: ["database", "spreadsheet"],
+    fields: [],
+    transport: oauth("https://mcp.airtable.com/mcp"),
+  },
+  {
+    id: "evernote",
+    name: "Evernote",
+    summary: "Search, read, and write your notes.",
+    category: "Docs & files",
+    color: "green",
+    docsUrl: "https://help.evernote.com/hc/en-us/articles/51596325640339",
+    note: "Needs a paid Evernote plan.",
+    connection: "sign-in",
+    official: true,
+    keywords: ["notes"],
+    fields: [],
+    transport: oauth("https://mcp.evernote.com"),
+  },
+  {
+    id: "obsidian",
+    name: "Obsidian",
+    summary: "Read, write, and search the notes in your vault.",
+    category: "Docs & files",
+    color: "purple",
+    docsUrl: "https://github.com/bitbonsai/mcpvault",
+    note: "Obsidian doesn't need to be running.",
+    connection: "local",
+    requires: "node",
+    official: false,
+    keywords: ["notes", "markdown", "vault"],
+    fields: [
+      {
+        key: "vault",
+        label: "Vault folder",
+        placeholder: "/Users/you/Documents/Vault",
+        help: "The full path to the vault's folder on this computer.",
+      },
+    ],
+    transport: (values) => ({
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "@bitbonsai/mcpvault@latest", values.vault ?? ""],
+    }),
+  },
+  {
+    id: "apple-notes",
+    name: "Apple Notes",
+    summary: "Search, read, and write your Apple Notes.",
+    category: "Docs & files",
+    color: "amber",
+    docsUrl: "https://github.com/sweetrb/apple-notes-mcp",
+    note: "macOS asks you to let MyBot control Notes the first time.",
+    connection: "local",
+    requires: "node",
+    platforms: ["darwin"],
+    official: false,
+    keywords: ["notes", "icloud", "mac"],
+    fields: [],
+    transport: () => ({ type: "stdio", command: "npx", args: ["-y", "apple-notes-mcp@2.15.1"] }),
+  },
+  {
+    id: "apple-reminders",
+    name: "Apple Reminders",
+    summary: "Read, add, and complete your reminders.",
+    category: "Docs & files",
+    color: "orange",
+    docsUrl: "https://github.com/FradSer/mcp-server-apple-reminders",
+    note: "macOS asks you to let MyBot use Reminders the first time.",
+    connection: "local",
+    requires: "node",
+    platforms: ["darwin"],
+    official: false,
+    keywords: ["reminders", "todo", "tasks", "icloud", "mac"],
+    fields: [],
+    transport: () => ({ type: "stdio", command: "npx", args: ["-y", "mcp-server-apple-events"] }),
+  },
+  {
+    id: "files",
+    name: "Files on this computer",
+    summary: "Read, search, and write files in a folder you choose.",
+    category: "Docs & files",
+    color: "gray",
+    docsUrl: "https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem",
+    connection: "local",
+    requires: "node",
+    official: true,
+    keywords: ["filesystem", "folder", "documents", "local"],
+    fields: [
+      {
+        key: "folder",
+        label: "Folder",
+        placeholder: "/Users/you/Documents",
+        help: "Bots can only reach files inside this folder.",
+      },
+    ],
+    transport: (values) => ({
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "@modelcontextprotocol/server-filesystem", values.folder ?? ""],
+    }),
+  },
+  {
+    id: "miro",
+    name: "Miro",
+    summary: "Read boards and add stickies, shapes, and diagrams.",
+    category: "Docs & files",
+    color: "yellow",
+    docsUrl: "https://developers.miro.com/docs/miro-mcp",
+    connection: "sign-in",
+    official: true,
+    keywords: ["whiteboard", "boards", "diagrams"],
+    fields: [],
+    transport: oauth("https://mcp.miro.com/"),
+  },
+
+  // Chat & meetings
+  {
+    id: "slack",
+    name: "Slack",
+    summary: "Read channels, threads, and DMs, search messages, and optionally post.",
+    category: "Chat & meetings",
+    color: "fuchsia",
+    docsUrl:
+      "https://github.com/korotovsky/slack-mcp-server/blob/master/docs/03-configuration-and-usage.md",
+    note: "You create a Slack app in your workspace and copy its user OAuth token. Slack's own MCP server doesn't allow apps like MyBot yet.",
+    connection: "local",
+    requires: "node",
+    official: false,
+    popular: true,
+    keywords: ["chat", "messages", "channels"],
+    fields: [
+      { key: "token", label: "User OAuth token", kind: "secret", placeholder: "xoxp-…" },
+      { key: "post", label: "Let bots post messages", kind: "toggle" },
+    ],
+    transport: (values) => ({
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "slack-mcp-server@latest", "--transport", "stdio"],
+      env: {
+        SLACK_MCP_XOXP_TOKEN: values.token ?? "",
+        ...(values.post ? { SLACK_MCP_ADD_MESSAGE_TOOL: "true" } : {}),
+      },
+    }),
+  },
+  {
+    id: "discord",
+    name: "Discord",
+    summary: "Read and send messages and manage channels in your server.",
+    category: "Chat & meetings",
+    color: "indigo",
+    docsUrl: "https://github.com/SaseQ/discord-mcp",
+    note: "You create a Discord bot, add it to your server, and paste its token.",
+    connection: "local",
+    requires: "docker",
+    official: false,
+    keywords: ["chat", "community", "server"],
+    fields: [
+      { key: "token", label: "Bot token", kind: "secret" },
+      {
+        key: "guildId",
+        label: "Server ID",
+        optional: true,
+        help: "Bots use this server when they don't name one.",
+      },
+    ],
+    transport: (values) => ({
+      type: "stdio",
+      command: "docker",
+      args: [
+        "run",
+        "--rm",
+        "-i",
+        "-e",
+        "DISCORD_TOKEN",
+        ...(values.guildId ? ["-e", "DISCORD_GUILD_ID"] : []),
+        "saseq/discord-mcp:latest",
+      ],
+      env: envOf(values, { DISCORD_TOKEN: "token", DISCORD_GUILD_ID: "guildId" }),
+    }),
+  },
+  {
+    id: "whatsapp-business",
+    name: "WhatsApp Business",
+    summary: "Send WhatsApp messages and templates from your business account.",
+    category: "Chat & meetings",
+    color: "green",
+    docsUrl: "https://developers.facebook.com/documentation/mcp/whatsapp-business-tools-mcp",
+    note: "In beta for development and testing. Needs a Meta developer account with a WhatsApp-enabled app; personal WhatsApp accounts can't connect.",
+    connection: "sign-in",
+    official: true,
+    keywords: ["whatsapp", "meta", "messages", "chat"],
+    fields: [],
+    transport: oauth("https://mcp.facebook.com/whatsapp_business_tools"),
+  },
+  {
+    id: "fireflies",
+    name: "Fireflies.ai",
+    summary: "Search meeting transcripts and summaries.",
+    category: "Chat & meetings",
+    color: "violet",
+    docsUrl: "https://docs.fireflies.ai/getting-started/mcp-configuration",
+    connection: "sign-in",
+    official: true,
+    keywords: ["meetings", "transcripts", "notes", "recordings"],
+    fields: [],
+    transport: oauth("https://api.fireflies.ai/mcp"),
+  },
+  {
+    id: "granola",
+    name: "Granola",
+    summary: "Search and read your meeting notes.",
+    category: "Chat & meetings",
+    color: "lime",
+    docsUrl: "https://docs.granola.ai/help-center/sharing/integrations/mcp",
+    connection: "sign-in",
+    official: true,
+    keywords: ["meetings", "notes", "transcripts"],
+    fields: [],
+    transport: oauth("https://mcp.granola.ai/mcp"),
+  },
+  {
+    id: "otter",
+    name: "Otter.ai",
+    summary: "Search and read your meeting transcripts.",
+    category: "Chat & meetings",
+    color: "sky",
+    docsUrl: "https://otter.ai",
+    note: "Read-only.",
+    connection: "sign-in",
+    official: true,
+    keywords: ["meetings", "transcripts", "notes"],
+    fields: [],
+    transport: oauth("https://mcp.otter.ai/mcp"),
+  },
+  {
+    id: "read-ai",
+    name: "Read AI",
+    summary: "Search meeting reports, transcripts, and action items.",
+    category: "Chat & meetings",
+    color: "violet",
+    docsUrl: "https://support.read.ai/hc/en-us/articles/54786334602003",
+    connection: "sign-in",
+    official: true,
+    keywords: ["meetings", "transcripts", "notes"],
+    fields: [],
+    transport: oauth("https://api.read.ai/mcp"),
+  },
+
+  // Projects & development
+  {
+    id: "linear",
+    name: "Linear",
+    summary: "Find, create, and update issues, projects, and comments.",
+    category: "Projects & development",
+    color: "indigo",
+    docsUrl: "https://linear.app/docs/mcp",
+    connection: "sign-in",
+    official: true,
+    popular: true,
+    keywords: ["issues", "tickets", "projects"],
+    fields: [],
+    transport: oauth("https://mcp.linear.app/mcp"),
+  },
+  {
+    id: "trello",
+    name: "Trello",
+    summary: "Read and update boards, lists, and cards.",
+    category: "Projects & development",
+    color: "blue",
+    docsUrl:
+      "https://support.atlassian.com/trello/docs/connect-trello-to-ai-assistants-with-trello-mcp/",
+    connection: "sign-in",
+    official: true,
+    keywords: ["boards", "cards", "kanban", "tasks"],
+    fields: [],
+    transport: oauth("https://mcp.trello.com/v1"),
+  },
+  {
+    id: "monday",
+    name: "monday.com",
+    summary: "Read and update boards, items, and updates.",
+    category: "Projects & development",
+    color: "rose",
+    docsUrl: "https://github.com/mondaycom/mcp",
+    connection: "sign-in",
+    official: true,
+    keywords: ["monday", "boards", "tasks", "projects"],
+    fields: [],
+    transport: oauth("https://mcp.monday.com/mcp"),
+  },
+  {
+    id: "clickup",
+    name: "ClickUp",
+    summary: "Find, create, and update tasks, docs, and comments.",
+    category: "Projects & development",
+    color: "violet",
+    docsUrl: "https://developer.clickup.com/docs/connect-an-ai-assistant-to-clickups-mcp-server",
+    note: "Free plans allow 100 requests a day, and ClickUp may ask you to sign in again often.",
+    connection: "sign-in",
+    official: true,
+    keywords: ["tasks", "projects", "docs"],
+    fields: [],
+    transport: oauth("https://mcp.clickup.com/mcp"),
+  },
+  {
+    id: "todoist",
+    name: "Todoist",
+    summary: "Read, add, and complete your tasks.",
+    category: "Projects & development",
+    color: "red",
+    docsUrl: "https://github.com/Doist/todoist-ai",
+    connection: "sign-in",
+    official: true,
+    keywords: ["tasks", "todo", "reminders"],
+    fields: [],
+    transport: oauth("https://ai.todoist.net/mcp"),
+  },
+  {
+    id: "asana",
+    name: "Asana",
+    summary: "Find, create, and update tasks and projects.",
+    category: "Projects & development",
+    color: "rose",
+    docsUrl: "https://github.com/roychri/mcp-server-asana",
+    connection: "local",
+    requires: "node",
+    official: false,
+    keywords: ["tasks", "projects"],
+    fields: [
+      {
+        key: "token",
+        label: "Personal access token",
+        kind: "secret",
+        help: "Create one in Asana's developer console.",
+      },
+    ],
+    transport: (values) => ({
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "@roychri/mcp-server-asana"],
+      env: envOf(values, { ASANA_ACCESS_TOKEN: "token" }),
+    }),
+  },
+  {
+    id: "github",
+    name: "GitHub",
+    summary: "Work with repositories, issues, pull requests, and code.",
+    category: "Projects & development",
+    color: "gray",
+    docsUrl: "https://github.com/github/github-mcp-server",
+    connection: "api-key",
+    official: true,
+    popular: true,
+    keywords: ["git", "code", "issues", "pull requests", "repositories"],
+    fields: [
+      {
+        key: "token",
+        label: "Personal access token",
+        kind: "secret",
+        placeholder: "github_pat_…",
+        help: "Create one in GitHub under Settings → Developer settings → Personal access tokens.",
+      },
+    ],
+    transport: bearer("https://api.githubcopilot.com/mcp/", "token"),
+  },
+  {
+    id: "gitlab",
+    name: "GitLab",
+    summary: "Work with projects, issues, merge requests, and pipelines.",
+    category: "Projects & development",
+    color: "orange",
+    docsUrl: "https://docs.gitlab.com/user/model_context_protocol/mcp_server/",
+    note: "A GitLab admin must turn on the MCP server.",
+    connection: "sign-in",
+    official: true,
+    keywords: ["git", "code", "issues", "merge requests", "ci"],
+    fields: [
+      {
+        key: "url",
+        label: "GitLab URL",
+        default: "https://gitlab.com",
+        help: "Change it for a self-managed GitLab.",
+      },
+    ],
+    transport: (values) => ({
+      type: "http",
+      url: `${withoutTrailingSlash(values.url ?? "")}/api/v4/mcp`,
+      auth: "oauth",
+    }),
+  },
+  {
+    id: "sentry",
+    name: "Sentry",
+    summary: "Look into errors, issues, and releases.",
+    category: "Projects & development",
+    color: "purple",
+    docsUrl: "https://github.com/getsentry/sentry-mcp",
+    connection: "sign-in",
+    official: true,
+    keywords: ["errors", "monitoring", "crashes"],
+    fields: [],
+    transport: oauth("https://mcp.sentry.dev/mcp"),
+  },
+  {
+    id: "cloudflare",
+    name: "Cloudflare",
+    summary: "Manage your Cloudflare account: DNS, Workers, and more.",
+    category: "Projects & development",
+    color: "orange",
+    docsUrl: "https://github.com/cloudflare/mcp",
+    connection: "sign-in",
+    official: true,
+    keywords: ["dns", "workers", "hosting", "cdn"],
+    fields: [],
+    transport: oauth("https://mcp.cloudflare.com/mcp"),
+  },
+  {
+    id: "netlify",
+    name: "Netlify",
+    summary: "Create, deploy, and manage your sites.",
+    category: "Projects & development",
+    color: "teal",
+    docsUrl: "https://docs.netlify.com/build/build-with-ai/netlify-mcp-server/",
+    connection: "sign-in",
+    official: true,
+    keywords: ["hosting", "deploy", "websites"],
+    fields: [],
+    transport: oauth("https://netlify-mcp.netlify.app/mcp"),
+  },
+  {
+    id: "supabase",
+    name: "Supabase",
+    summary: "Query and manage your Supabase projects and databases.",
+    category: "Projects & development",
+    color: "emerald",
+    docsUrl: "https://supabase.com/docs/guides/getting-started/mcp",
+    note: "In beta.",
+    connection: "sign-in",
+    official: true,
+    keywords: ["database", "postgres", "backend"],
+    fields: [],
+    transport: oauth("https://mcp.supabase.com/mcp"),
+  },
+  {
+    id: "neon",
+    name: "Neon",
+    summary: "Query and manage your Neon Postgres databases.",
+    category: "Projects & development",
+    color: "emerald",
+    docsUrl: "https://neon.com/docs/ai/neon-mcp-server",
+    connection: "sign-in",
+    official: true,
+    keywords: ["database", "postgres"],
+    fields: [],
+    transport: oauth("https://mcp.neon.tech/mcp"),
+  },
+  {
+    id: "aws",
+    name: "AWS",
+    summary: "Look into and manage your AWS resources.",
+    category: "Projects & development",
+    color: "amber",
+    docsUrl: "https://docs.aws.amazon.com/agent-toolkit/latest/userguide/oauth-authentication.html",
+    note: "Your IAM user needs the AWSMCPSignInOAuthAccessPolicy policy. Sign-ins last up to 12 hours.",
+    connection: "sign-in",
+    official: true,
+    keywords: ["amazon", "cloud", "s3", "ec2", "lambda"],
+    fields: [],
+    transport: oauth("https://aws-mcp.us-east-1.api.aws/mcp"),
+  },
+  {
+    id: "postgres",
+    name: "PostgreSQL",
+    summary: "Explore and query a Postgres database.",
+    category: "Projects & development",
+    color: "sky",
+    docsUrl: "https://github.com/crystaldba/postgres-mcp",
+    connection: "local",
+    requires: "uv",
+    official: false,
+    keywords: ["database", "sql", "postgres"],
+    fields: [
+      {
+        key: "uri",
+        label: "Database URL",
+        kind: "secret",
+        placeholder: "postgresql://user:password@host:5432/db",
+      },
+      {
+        key: "allowChanges",
+        label: "Allow changes",
+        kind: "toggle",
+        help: "Off, bots can only read. On, they can change data and tables.",
+      },
+    ],
+    transport: (values) => ({
+      type: "stdio",
+      command: "uvx",
+      args: [
+        "postgres-mcp",
+        values.allowChanges ? "--access-mode=unrestricted" : "--access-mode=restricted",
+      ],
+      env: envOf(values, { DATABASE_URI: "uri" }),
+    }),
+  },
+  {
+    id: "posthog",
+    name: "PostHog",
+    summary: "Query analytics, feature flags, and experiments.",
+    category: "Projects & development",
+    color: "amber",
+    docsUrl: "https://posthog.com/docs/model-context-protocol",
+    connection: "sign-in",
+    official: true,
+    keywords: ["analytics", "feature flags", "product"],
+    fields: [],
+    transport: oauth("https://mcp.posthog.com/mcp"),
+  },
+  {
+    id: "datadog",
+    name: "Datadog",
+    summary: "Look into logs, metrics, monitors, and incidents.",
+    category: "Projects & development",
+    color: "purple",
+    docsUrl: "https://docs.datadoghq.com/bits_ai/mcp_server/setup/",
+    note: "Your Datadog org admin must turn on MCP access. This connects to the US1 site.",
+    connection: "sign-in",
+    official: true,
+    keywords: ["monitoring", "logs", "metrics", "observability"],
+    fields: [],
+    transport: oauth("https://mcp.datadoghq.com/api/unstable/mcp-server/mcp?toolsets=all"),
+  },
+  {
+    id: "grafana-cloud",
+    name: "Grafana Cloud",
+    summary: "Search dashboards, query metrics and logs, and look into alerts.",
+    category: "Projects & development",
+    color: "orange",
+    docsUrl: "https://grafana.com/docs/grafana-cloud/ai-tools/mcp-servers/cloud-mcp/",
+    note: "In preview.",
+    connection: "sign-in",
+    official: true,
+    keywords: ["monitoring", "dashboards", "metrics", "observability"],
+    fields: [],
+    transport: oauth("https://mcp.grafana.com/mcp"),
+  },
+  {
+    id: "grafana",
+    name: "Grafana (self-hosted)",
+    summary: "Search dashboards, query data sources, and look into alerts on your Grafana.",
+    category: "Projects & development",
+    color: "orange",
+    docsUrl: "https://github.com/grafana/mcp-grafana",
+    connection: "local",
+    requires: "uv",
+    official: true,
+    keywords: ["monitoring", "dashboards", "metrics", "observability"],
+    fields: [
+      { key: "url", label: "Grafana URL", placeholder: "https://grafana.example.com" },
+      {
+        key: "token",
+        label: "Service account token",
+        kind: "secret",
+        help: "Create one in Grafana under Administration → Service accounts.",
+      },
+    ],
+    transport: (values) => ({
+      type: "stdio",
+      command: "uvx",
+      args: ["mcp-grafana"],
+      env: envOf(values, { GRAFANA_URL: "url", GRAFANA_SERVICE_ACCOUNT_TOKEN: "token" }),
+    }),
+  },
+  {
+    id: "docker-hub",
+    name: "Docker Hub",
+    summary: "Search images and manage your repositories.",
+    category: "Projects & development",
+    color: "blue",
+    docsUrl: "https://github.com/docker/hub-mcp",
+    connection: "local",
+    requires: "docker",
+    official: true,
+    keywords: ["containers", "images"],
+    fields: [
+      { key: "username", label: "Docker Hub username" },
+      {
+        key: "token",
+        label: "Personal access token",
+        kind: "secret",
+        help: "Create one in Docker Hub under Account settings → Personal access tokens.",
+      },
+    ],
+    transport: (values) => ({
+      type: "stdio",
+      command: "docker",
+      args: [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "HUB_PAT_TOKEN",
+        "mcp/dockerhub",
+        "--transport=stdio",
+        `--username=${values.username}`,
+      ],
+      env: envOf(values, { HUB_PAT_TOKEN: "token" }),
+    }),
+  },
+  {
+    id: "context7",
+    name: "Context7",
+    summary: "Up-to-date documentation and code examples for programming libraries.",
+    category: "Projects & development",
+    color: "emerald",
+    docsUrl: "https://github.com/upstash/context7",
+    connection: "open",
+    official: true,
+    keywords: ["docs", "libraries", "code", "upstash"],
+    fields: [optionalKeyField("Raises the free rate limit. Get one at context7.com.")],
+    transport: tokenOptional("https://mcp.context7.com/mcp", "none"),
+  },
+
+  // Sales & support
+  {
+    id: "hubspot",
+    name: "HubSpot",
+    summary: "Find and update contacts, companies, deals, and tickets.",
+    category: "Sales & support",
+    color: "orange",
+    docsUrl: "https://developers.hubspot.com/mcp",
+    connection: "local",
+    requires: "node",
+    official: true,
+    popular: true,
+    keywords: ["crm", "sales", "contacts", "deals", "marketing"],
+    fields: [
+      {
+        key: "token",
+        label: "Private app access token",
+        kind: "secret",
+        placeholder: "pat-…",
+        help: "Create a private app in HubSpot under Settings → Integrations → Private Apps.",
+      },
+    ],
+    transport: (values) => ({
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "@hubspot/mcp-server"],
+      env: envOf(values, { PRIVATE_APP_ACCESS_TOKEN: "token" }),
+    }),
+  },
+  {
+    id: "pipedrive",
+    name: "Pipedrive",
+    summary: "Find and update deals, people, organizations, and activities.",
+    category: "Sales & support",
+    color: "green",
+    docsUrl: "https://support.pipedrive.com/en/article/mcp",
+    note: "In beta.",
+    connection: "sign-in",
+    official: true,
+    keywords: ["crm", "sales", "deals"],
+    fields: [],
+    transport: oauth("https://mcp.pipedrive.ai/mcp"),
+  },
+  {
+    id: "attio",
+    name: "Attio",
+    summary: "Find and update records, lists, notes, and tasks in your CRM.",
+    category: "Sales & support",
+    color: "gray",
+    docsUrl: "https://docs.attio.com/mcp/overview",
+    connection: "sign-in",
+    official: true,
+    keywords: ["crm", "sales", "contacts"],
+    fields: [],
+    transport: oauth("https://mcp.attio.com/mcp"),
+  },
+  {
+    id: "close",
+    name: "Close",
+    summary: "Find and update leads, contacts, and opportunities.",
+    category: "Sales & support",
+    color: "blue",
+    docsUrl: "https://help.close.com/docs/mcp-server",
+    connection: "sign-in",
+    official: true,
+    keywords: ["crm", "sales", "leads"],
+    fields: [],
+    transport: oauth("https://mcp.close.com/mcp"),
+  },
+  {
+    id: "intercom",
+    name: "Intercom",
+    summary: "Search conversations, contacts, and help articles.",
+    category: "Sales & support",
+    color: "blue",
+    docsUrl: "https://developers.intercom.com/docs/guides/mcp",
+    note: "Bots can't send replies your customers see.",
+    connection: "sign-in",
+    official: true,
+    keywords: ["support", "help desk", "customers", "chat"],
+    fields: [
+      {
+        key: "region",
+        label: "Region",
+        kind: "select",
+        default: "us",
+        options: [
+          { value: "us", label: "United States" },
+          { value: "eu", label: "Europe" },
+        ],
+      },
+    ],
+    transport: (values) => ({
+      type: "http",
+      url:
+        values.region === "eu" ? "https://mcp.eu.intercom.com/mcp" : "https://mcp.intercom.com/mcp",
+      auth: "oauth",
+    }),
+  },
+
+  // Payments & finance
+  {
+    id: "stripe",
+    name: "Stripe",
+    summary: "Look up customers, payments, and invoices, and create payment links.",
+    category: "Payments & finance",
+    color: "indigo",
+    docsUrl: "https://docs.stripe.com/mcp",
+    note: "Refunds and payouts need your approval through a link Stripe sends.",
+    connection: "sign-in",
+    official: true,
+    popular: true,
+    keywords: ["payments", "billing", "invoices", "subscriptions"],
+    fields: [],
+    transport: oauth("https://mcp.stripe.com"),
+  },
+  {
+    id: "paypal",
+    name: "PayPal",
+    summary: "Create invoices and look up orders, payments, and disputes.",
+    category: "Payments & finance",
+    color: "blue",
+    docsUrl: "https://developer.paypal.com/ai-tools/mcp-server",
+    connection: "sign-in",
+    official: true,
+    keywords: ["payments", "invoices"],
+    fields: [],
+    transport: oauth("https://mcp.paypal.com/mcp"),
+  },
+  {
+    id: "square",
+    name: "Square",
+    summary: "Work with payments, orders, catalog, customers, and inventory.",
+    category: "Payments & finance",
+    color: "gray",
+    docsUrl: "https://developer.squareup.com/docs/mcp",
+    connection: "local",
+    requires: "node",
+    official: true,
+    keywords: ["payments", "pos", "orders", "inventory"],
+    fields: [
+      {
+        key: "token",
+        label: "Access token",
+        kind: "secret",
+        help: "From your app in the Square Developer Console.",
+      },
+      { key: "sandbox", label: "Use the sandbox", kind: "toggle", help: "For test payments only." },
+    ],
+    transport: (values) => ({
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "square-mcp-server", "start"],
+      env: {
+        ACCESS_TOKEN: values.token ?? "",
+        ...(values.sandbox ? { SANDBOX: "true" } : { PRODUCTION: "true" }),
+      },
+    }),
+  },
+  {
+    id: "shopify",
+    name: "Shopify",
+    summary: "Manage your store's products, orders, and customers.",
+    category: "Payments & finance",
+    color: "green",
+    docsUrl: "https://github.com/GeLi2001/shopify-mcp",
+    note: "You create a custom app in your Shopify admin and copy its client ID and secret.",
+    connection: "local",
+    requires: "node",
+    official: false,
+    keywords: ["store", "ecommerce", "orders", "products"],
+    fields: [
+      { key: "domain", label: "Store domain", placeholder: "your-store.myshopify.com" },
+      { key: "clientId", label: "Client ID" },
+      { key: "clientSecret", label: "Client secret", kind: "secret" },
+    ],
+    transport: (values) => ({
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "shopify-mcp", "--domain", values.domain ?? ""],
+      env: envOf(values, {
+        SHOPIFY_CLIENT_ID: "clientId",
+        SHOPIFY_CLIENT_SECRET: "clientSecret",
+        MYSHOPIFY_DOMAIN: "domain",
+      }),
+    }),
+  },
+  {
+    id: "xero",
+    name: "Xero",
+    summary: "Work with invoices, contacts, accounts, and reports.",
+    category: "Payments & finance",
+    color: "sky",
+    docsUrl: "https://github.com/XeroAPI/xero-mcp-server",
+    note: "Needs a Xero Custom Connection, a paid Xero developer feature.",
+    connection: "local",
+    requires: "node",
+    official: true,
+    keywords: ["accounting", "invoices", "bookkeeping"],
+    fields: [
+      { key: "clientId", label: "Client ID" },
+      { key: "clientSecret", label: "Client secret", kind: "secret" },
+    ],
+    transport: (values) => ({
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "@xeroapi/xero-mcp-server@latest"],
+      env: envOf(values, { XERO_CLIENT_ID: "clientId", XERO_CLIENT_SECRET: "clientSecret" }),
+    }),
+  },
+
+  // Marketing & social
+  {
+    id: "canva",
+    name: "Canva",
+    summary: "Search, create, and export your designs.",
+    category: "Marketing & social",
+    color: "cyan",
+    docsUrl: "https://www.canva.dev/docs/apps/mcp/access/",
+    connection: "sign-in",
+    official: true,
+    keywords: ["design", "graphics", "presentations"],
+    fields: [],
+    transport: oauth("https://mcp.canva.com/mcp"),
+  },
+  {
+    id: "webflow",
+    name: "Webflow",
+    summary: "Update your sites, pages, and CMS content.",
+    category: "Marketing & social",
+    color: "blue",
+    docsUrl: "https://developers.webflow.com/mcp/reference/how-it-works",
+    connection: "sign-in",
+    official: true,
+    keywords: ["website", "cms"],
+    fields: [],
+    transport: oauth("https://mcp.webflow.com/mcp"),
+  },
+  {
+    id: "wordpress",
+    name: "WordPress.com",
+    summary: "Read and manage posts, pages, and comments on your sites.",
+    category: "Marketing & social",
+    color: "sky",
+    docsUrl: "https://wordpress.com/support/model-context-protocol-mcp-settings/",
+    note: "Turn on MCP access in WordPress.com under Preferences → AI and MCP.",
+    connection: "sign-in",
+    official: true,
+    keywords: ["blog", "website", "posts"],
+    fields: [],
+    transport: oauth("https://public-api.wordpress.com/wpcom/v2/mcp/v1"),
+  },
+  {
+    id: "wix",
+    name: "Wix",
+    summary: "Manage your Wix sites, content, and store.",
+    category: "Marketing & social",
+    color: "gray",
+    docsUrl: "https://dev.wix.com/docs/sdk/articles/use-the-wix-mcp/about-the-wix-mcp",
+    connection: "sign-in",
+    official: true,
+    keywords: ["website", "store"],
+    fields: [],
+    transport: oauth("https://mcp.wix.com/mcp"),
+  },
+  {
+    id: "mailchimp-transactional",
+    name: "Mailchimp Transactional",
+    summary: "Send emails and check delivery through Mandrill.",
+    category: "Marketing & social",
+    color: "yellow",
+    docsUrl:
+      "https://mailchimp.com/developer/transactional/guides/how-to-use-mailchimps-transactional-messaging-mcp",
+    connection: "api-key",
+    official: true,
+    keywords: ["mandrill", "email", "newsletter"],
+    fields: [{ key: "apiKey", label: "Mandrill API key", kind: "secret" }],
+    transport: bearer("https://mandrillapp.com/mcp"),
+  },
+  {
+    id: "x",
+    name: "X (read-only)",
+    summary: "Search posts and read profiles on X.",
+    category: "Marketing & social",
+    color: "gray",
+    docsUrl: "https://docs.x.com/tools/mcp",
+    connection: "api-key",
+    official: true,
+    keywords: ["twitter", "social", "posts"],
+    fields: [
+      {
+        key: "apiKey",
+        label: "Bearer token",
+        kind: "secret",
+        help: "Your app's bearer token from the X developer portal.",
+      },
+    ],
+    transport: bearer("https://api.x.com/mcp"),
+  },
+  {
+    id: "reddit",
+    name: "Reddit (read-only)",
+    summary: "Browse subreddits, search posts, and read comments.",
+    category: "Marketing & social",
+    color: "orange",
+    docsUrl: "https://github.com/karanb192/reddit-mcp-buddy",
+    connection: "local",
+    requires: "node",
+    official: false,
+    keywords: ["social", "forums", "posts"],
+    fields: [],
+    transport: () => ({ type: "stdio", command: "npx", args: ["-y", "reddit-mcp-buddy"] }),
+  },
+  {
+    id: "youtube",
+    name: "YouTube",
+    summary: "Search videos and read details, transcripts, and channel info.",
+    category: "Marketing & social",
+    color: "red",
+    docsUrl: "https://github.com/ZubeidHendricks/youtube-mcp-server",
+    connection: "local",
+    requires: "node",
+    official: false,
+    keywords: ["video", "transcripts"],
+    fields: [
+      {
+        key: "apiKey",
+        label: "YouTube API key",
+        kind: "secret",
+        help: "Create one in Google Cloud Console with the YouTube Data API turned on.",
+      },
+    ],
+    transport: (values) => ({
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "zubeid-youtube-mcp-server"],
+      env: envOf(values, { YOUTUBE_API_KEY: "apiKey" }),
+    }),
+  },
+
+  // Phone & SMS
   {
     id: "dialpad",
     name: "Dialpad",
     summary: "Calls, messages, contacts, and call summaries from your Dialpad account.",
-    category: "Phone & messaging",
-    icon: { name: "phone", color: "violet" },
+    category: "Phone & SMS",
+    color: "violet",
     docsUrl: "https://developers.dialpad.com/docs/dialpad-mcp-server",
-    note: "Dialpad's MCP server is in an early access program; without access, Dialpad refuses the connection. You sign in with Dialpad in your browser, and sessions last 24 hours.",
+    note: "Dialpad's MCP server is in an early access program; without access, Dialpad refuses the connection. Sessions last 24 hours.",
+    connection: "sign-in",
+    official: true,
+    keywords: ["phone", "calls", "sms", "voice"],
     fields: [
       {
         key: "url",
@@ -60,44 +1382,47 @@ export const APP_CATALOG: ReadonlyArray<AppPreset> = [
     id: "telnyx",
     name: "Telnyx",
     summary: "Send messages, place calls, and manage numbers with your Telnyx API key.",
-    category: "Phone & messaging",
-    icon: { name: "message-square", color: "emerald" },
+    category: "Phone & SMS",
+    color: "emerald",
     docsUrl: "https://developers.telnyx.com/docs/development/mcp/remote-mcp",
+    connection: "api-key",
+    official: true,
+    keywords: ["phone", "calls", "sms", "voice", "numbers"],
     fields: [
       {
         key: "apiKey",
         label: "API key",
-        secret: true,
+        kind: "secret",
         placeholder: "KEY…",
         help: "Create one in the Telnyx portal under API Keys.",
       },
     ],
-    transport: (values) => ({
-      type: "http",
-      url: "https://api.telnyx.com/v2/mcp",
-      bearerToken: values.apiKey ?? "",
-      auth: "token",
-    }),
+    transport: bearer("https://api.telnyx.com/v2/mcp"),
   },
   {
     id: "telnyx-read-only",
     name: "Telnyx (read-only)",
     summary: "Look up your Telnyx numbers, messages, and calls without changing anything.",
-    category: "Phone & messaging",
-    icon: { name: "eye", color: "emerald" },
+    category: "Phone & SMS",
+    color: "emerald",
     docsUrl: "https://developers.telnyx.com/docs/development/mcp/remote-mcp",
-    note: "You sign in with Telnyx in your browser.",
+    connection: "sign-in",
+    official: true,
+    keywords: ["phone", "calls", "sms", "numbers"],
     fields: [],
-    transport: () => ({ type: "http", url: "https://api.telnyx.com/v2/ai/mcp", auth: "oauth" }),
+    transport: oauth("https://api.telnyx.com/v2/ai/mcp"),
   },
   {
     id: "twilio",
     name: "Twilio",
     summary: "Messaging, voice, and numbers through Twilio's APIs.",
-    category: "Phone & messaging",
-    icon: { name: "phone-call", color: "red" },
+    category: "Phone & SMS",
+    color: "red",
     docsUrl: "https://github.com/twilio-labs/mcp",
-    note: "Runs Twilio's MCP server with npx, so this computer needs Node.js.",
+    connection: "local",
+    requires: "node",
+    official: true,
+    keywords: ["phone", "calls", "sms", "voice", "whatsapp"],
     fields: [
       { key: "accountSid", label: "Account SID", placeholder: "AC…" },
       {
@@ -106,7 +1431,7 @@ export const APP_CATALOG: ReadonlyArray<AppPreset> = [
         placeholder: "SK…",
         help: "Create an API key in the Twilio Console under API keys & tokens.",
       },
-      { key: "apiSecret", label: "API secret", secret: true },
+      { key: "apiSecret", label: "API secret", kind: "secret" },
       {
         key: "services",
         label: "Services",
@@ -130,20 +1455,304 @@ export const APP_CATALOG: ReadonlyArray<AppPreset> = [
       ],
     }),
   },
+
+  // Search & web
+  {
+    id: "brave-search",
+    name: "Brave Search",
+    summary: "Search the web, news, images, and videos.",
+    category: "Search & web",
+    color: "orange",
+    docsUrl: "https://github.com/brave/brave-search-mcp-server",
+    connection: "local",
+    requires: "node",
+    official: true,
+    keywords: ["search", "web", "news"],
+    fields: [
+      {
+        key: "apiKey",
+        label: "Brave Search API key",
+        kind: "secret",
+        help: "Get one at api-dashboard.search.brave.com.",
+      },
+    ],
+    transport: (values) => ({
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "@brave/brave-search-mcp-server", "--transport", "stdio"],
+      env: envOf(values, { BRAVE_API_KEY: "apiKey" }),
+    }),
+  },
+  {
+    id: "exa",
+    name: "Exa",
+    summary: "Search the web and read pages, built for AI research.",
+    category: "Search & web",
+    color: "blue",
+    docsUrl: "https://exa.ai/docs/reference/exa-mcp",
+    connection: "open",
+    official: true,
+    keywords: ["search", "web", "research"],
+    fields: [optionalKeyField("Works free without one; a key raises the limits.")],
+    transport: tokenOptional("https://mcp.exa.ai/mcp", "none"),
+  },
+  {
+    id: "perplexity",
+    name: "Perplexity",
+    summary: "Ask Perplexity to search and research with cited answers.",
+    category: "Search & web",
+    color: "teal",
+    docsUrl: "https://github.com/perplexityai/modelcontextprotocol",
+    connection: "api-key",
+    official: true,
+    keywords: ["search", "research", "answers"],
+    fields: [{ key: "apiKey", label: "API key", kind: "secret", placeholder: "pplx-…" }],
+    transport: bearer("https://api.perplexity.ai/mcp"),
+  },
+  {
+    id: "tavily",
+    name: "Tavily",
+    summary: "Search the web and extract content from pages.",
+    category: "Search & web",
+    color: "blue",
+    docsUrl: "https://docs.tavily.com/documentation/mcp",
+    connection: "sign-in",
+    official: true,
+    keywords: ["search", "web", "research", "crawl"],
+    fields: [optionalKeyField("Leave empty to sign in with Tavily in your browser.")],
+    transport: tokenOptional("https://mcp.tavily.com/mcp", "oauth"),
+  },
+  {
+    id: "firecrawl",
+    name: "Firecrawl",
+    summary: "Scrape, crawl, and search websites into clean text.",
+    category: "Search & web",
+    color: "orange",
+    docsUrl: "https://github.com/firecrawl/firecrawl-mcp-server",
+    connection: "sign-in",
+    official: true,
+    keywords: ["scrape", "crawl", "web", "extract"],
+    fields: [optionalKeyField("Leave empty to sign in with Firecrawl in your browser.")],
+    transport: tokenOptional(
+      "https://mcp.firecrawl.dev/v2/mcp-oauth",
+      "oauth",
+      "apiKey",
+      "https://mcp.firecrawl.dev/v2/mcp",
+    ),
+  },
+  {
+    id: "cloudflare-browser",
+    name: "Cloudflare Browser",
+    summary: "Fetch web pages as text or markdown, and take screenshots.",
+    category: "Search & web",
+    color: "orange",
+    docsUrl: "https://github.com/cloudflare/mcp-server-cloudflare",
+    connection: "sign-in",
+    official: true,
+    keywords: ["browser", "fetch", "screenshots", "web"],
+    fields: [],
+    transport: oauth("https://browser.mcp.cloudflare.com/mcp"),
+  },
+  {
+    id: "fetch",
+    name: "Fetch",
+    summary: "Read any web page as text.",
+    category: "Search & web",
+    color: "gray",
+    docsUrl: "https://github.com/modelcontextprotocol/servers/tree/main/src/fetch",
+    connection: "local",
+    requires: "uv",
+    official: true,
+    keywords: ["web", "pages", "download"],
+    fields: [],
+    transport: () => ({ type: "stdio", command: "uvx", args: ["mcp-server-fetch"] }),
+  },
+  {
+    id: "playwright",
+    name: "Playwright browser",
+    summary: "Open websites in a browser, click, type, and fill in forms.",
+    category: "Search & web",
+    color: "green",
+    docsUrl: "https://github.com/microsoft/playwright-mcp",
+    connection: "local",
+    requires: "node",
+    official: true,
+    keywords: ["browser", "automation", "web", "forms"],
+    fields: [],
+    transport: () => ({
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "@playwright/mcp@latest", "--headless"],
+    }),
+  },
+  {
+    id: "aws-knowledge",
+    name: "AWS Knowledge",
+    summary: "Search AWS documentation and guidance.",
+    category: "Search & web",
+    color: "amber",
+    docsUrl: "https://awslabs.github.io/mcp/servers/aws-knowledge-mcp-server",
+    connection: "open",
+    official: true,
+    keywords: ["amazon", "docs", "documentation", "cloud"],
+    fields: [],
+    transport: open("https://knowledge-mcp.global.api.aws"),
+  },
+  {
+    id: "cloudflare-docs",
+    name: "Cloudflare Docs",
+    summary: "Search Cloudflare's documentation.",
+    category: "Search & web",
+    color: "orange",
+    docsUrl: "https://github.com/cloudflare/mcp-server-cloudflare",
+    connection: "open",
+    official: true,
+    keywords: ["docs", "documentation"],
+    fields: [],
+    transport: open("https://docs.mcp.cloudflare.com/mcp"),
+  },
+
+  // Travel & home
+  {
+    id: "kiwi",
+    name: "Kiwi.com flights",
+    summary: "Search flights and get booking links.",
+    category: "Travel & home",
+    color: "teal",
+    docsUrl: "https://mcp.kiwi.com",
+    connection: "open",
+    official: true,
+    keywords: ["flights", "travel", "airfare", "trips"],
+    fields: [],
+    transport: open("https://mcp.kiwi.com"),
+  },
+  {
+    id: "home-assistant",
+    name: "Home Assistant",
+    summary: "Check and control the lights, sensors, and devices in your home.",
+    category: "Travel & home",
+    color: "sky",
+    docsUrl: "https://www.home-assistant.io/integrations/mcp_server",
+    note: "Add the Model Context Protocol Server integration in Home Assistant first.",
+    connection: "api-key",
+    official: true,
+    keywords: ["smart home", "lights", "devices", "automation"],
+    fields: [
+      {
+        key: "url",
+        label: "Home Assistant URL",
+        placeholder: "http://homeassistant.local:8123",
+      },
+      {
+        key: "token",
+        label: "Long-lived access token",
+        kind: "secret",
+        help: "Create one in Home Assistant under your profile → Security.",
+      },
+    ],
+    transport: (values) => ({
+      type: "http",
+      url: `${withoutTrailingSlash(values.url ?? "")}/api/mcp`,
+      bearerToken: values.token ?? "",
+      auth: "token",
+    }),
+  },
+
+  // Automation
+  {
+    id: "composio",
+    name: "Composio",
+    summary:
+      "One sign-in for Gmail, Google Calendar, Drive, Sheets, Outlook, Slack, and hundreds more.",
+    category: "Automation",
+    color: "gray",
+    docsUrl: "https://docs.composio.dev",
+    note: "Each app connects the first time a bot uses it; Composio shows a link to approve it.",
+    connection: "sign-in",
+    official: true,
+    popular: true,
+    keywords: ["google", "gmail", "drive", "dropbox", "box", "salesforce", "zoom", "aggregator"],
+    fields: [],
+    transport: oauth(COMPOSIO_URL),
+  },
+  {
+    id: "zapier",
+    name: "Zapier",
+    summary: "Use actions from 8,000+ apps you set up in Zapier.",
+    category: "Automation",
+    color: "orange",
+    docsUrl: "https://docs.zapier.com/mcp/overview/how-connections-work",
+    note: "Each tool call uses 2 Zapier tasks.",
+    connection: "sign-in",
+    official: true,
+    popular: true,
+    keywords: ["zaps", "workflows", "aggregator"],
+    fields: [optionalKeyField("Leave empty to sign in with Zapier in your browser.")],
+    transport: tokenOptional("https://mcp.zapier.com/api/v1/connect", "oauth"),
+  },
+  {
+    id: "pipedream",
+    name: "Pipedream",
+    summary: "Use actions from 2,800+ apps through Pipedream.",
+    category: "Automation",
+    color: "green",
+    docsUrl: "https://pipedream.com/docs/connect/mcp/users",
+    connection: "sign-in",
+    official: true,
+    keywords: ["workflows", "aggregator"],
+    fields: [],
+    transport: oauth("https://mcp.pipedream.net/v2"),
+  },
+  {
+    id: "make",
+    name: "Make",
+    summary: "Run your on-demand Make scenarios as tools.",
+    category: "Automation",
+    color: "purple",
+    docsUrl: "https://developers.make.com/mcp-server",
+    connection: "sign-in",
+    official: true,
+    keywords: ["integromat", "scenarios", "workflows"],
+    fields: [],
+    transport: oauth("https://mcp.make.com"),
+  },
+  {
+    id: "klavis",
+    name: "Klavis Strata",
+    summary: "Reach many apps through one Klavis connection.",
+    category: "Automation",
+    color: "indigo",
+    docsUrl: "https://www.klavis.ai/docs",
+    connection: "api-key",
+    official: true,
+    keywords: ["aggregator", "strata"],
+    fields: [
+      {
+        key: "apiKey",
+        label: "Token",
+        kind: "secret",
+        help: "From your Klavis dashboard.",
+      },
+    ],
+    transport: bearer("https://strata.klavis.ai/mcp/"),
+  },
   {
     id: "n8n",
     name: "n8n",
     summary: "Run the n8n workflows you made available to MCP clients.",
     category: "Automation",
-    icon: { name: "workflow", color: "rose" },
+    color: "rose",
     docsUrl: "https://docs.n8n.io/advanced-ai/accessing-n8n-mcp-server/",
     note: "Turn on instance-level MCP in n8n under Settings → Instance-level MCP.",
+    connection: "sign-in",
+    official: true,
+    keywords: ["workflows"],
     fields: [
       { key: "url", label: "n8n URL", placeholder: "https://n8n.example.com" },
       {
         key: "accessToken",
         label: "Access token",
-        secret: true,
+        kind: "secret",
         optional: true,
         help: "From Settings → Instance-level MCP → Connect a client. Leave empty to sign in with n8n in your browser.",
       },
@@ -160,9 +1769,11 @@ export const APP_CATALOG: ReadonlyArray<AppPreset> = [
     name: "Activepieces",
     summary: "Use your Activepieces flows and pieces as tools.",
     category: "Automation",
-    icon: { name: "puzzle", color: "purple" },
+    color: "purple",
     docsUrl: "https://www.activepieces.com/docs/mcp/overview",
-    note: "You sign in with Activepieces in your browser.",
+    connection: "sign-in",
+    official: true,
+    keywords: ["workflows", "flows"],
     fields: [
       {
         key: "url",
@@ -178,22 +1789,33 @@ export const APP_CATALOG: ReadonlyArray<AppPreset> = [
 export const findAppPreset = (id: string): AppPreset | undefined =>
   APP_CATALOG.find((preset) => preset.id === id);
 
+/** The preset a card actually connects: the aggregator's for cards that go through one. */
+export const appPresetTarget = (preset: AppPreset): AppPreset =>
+  (preset.via ? findAppPreset(preset.via) : undefined) ?? preset;
+
 /** The value a field starts with in the form. */
-export const appPresetFieldDefault = (field: AppPresetField) => field.default ?? "";
+export const appPresetFieldDefault = (field: AppPresetField): string =>
+  field.kind === "toggle" ? (field.default ? "true" : "") : (field.default ?? "");
+
+/** Toggles are off when empty, so they are never missing. */
+const isOptional = (field: AppPresetField) =>
+  field.kind === "toggle" || (field.kind !== "select" && field.optional === true);
 
 /**
  * The add input for a preset filled with `values`, or the first missing
- * required field. Values are trimmed; empty optional fields are dropped.
+ * required field. Values are trimmed; empty optional fields are dropped. A
+ * card that connects through an aggregator adds the aggregator itself.
  */
 export function buildAppConnectionInput(
-  preset: AppPreset,
+  card: AppPreset,
   values: Readonly<Record<string, string>>,
   options: { readonly name?: string; readonly redirectBaseUrl?: string } = {},
 ): { readonly input: AppConnectionAddInput } | { readonly missing: AppPresetField } {
+  const preset = appPresetTarget(card);
   const trimmed: Record<string, string> = {};
   for (const field of preset.fields) {
     const value = (values[field.key] ?? "").trim();
-    if (value === "" && !field.optional) return { missing: field };
+    if (value === "" && !isOptional(field)) return { missing: field };
     if (value !== "") trimmed[field.key] = value;
   }
   return {

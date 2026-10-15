@@ -70,6 +70,8 @@ const TokensJson = Schema.fromJsonString(Schema.Record(Schema.String, StoredToke
 const ClientsJson = Schema.fromJsonString(Schema.Record(Schema.String, OAuthClient));
 
 const CONNECT_TIMEOUT_MS = 20_000;
+/** A local app's first start downloads its package (npx, uvx, docker), which can take minutes. */
+const LOCAL_CONNECT_TIMEOUT_MS = 3 * 60_000;
 const CALL_TIMEOUT_MS = 5 * 60_000;
 const SIGN_IN_TTL_MS = 10 * 60_000;
 /** Refresh a little before the server's expiry, so a request does not race it. */
@@ -174,7 +176,7 @@ const usesSignIn = (connection: StoredConnection) =>
   !connection.transport.bearerToken;
 
 const needsSignInMessage = (name: string) =>
-  `${name} needs the user to sign in again in Settings → Integrations → Connected apps.`;
+  `${name} needs the user to sign in again in Settings → Apps.`;
 
 const describeError = (cause: unknown) =>
   cause instanceof Error && cause.message ? cause.message : "The app did not respond.";
@@ -214,11 +216,13 @@ const connect = (
 ) =>
   Effect.tryPromise({
     try: async (signal) => {
+      const timeoutMs =
+        connection.transport.type === "stdio" ? LOCAL_CONNECT_TIMEOUT_MS : CONNECT_TIMEOUT_MS;
       const client = await connectMcp(
         connection.transport.type === "http"
           ? { ...connection.transport, accessTokens }
           : connection.transport,
-        { signal, timeoutMs: CONNECT_TIMEOUT_MS },
+        { signal, timeoutMs },
         platform,
       );
       try {
@@ -228,7 +232,7 @@ const connect = (
           const page = await client.request(
             "tools/list",
             typeof cursor === "string" ? { cursor } : {},
-            { signal, timeoutMs: CONNECT_TIMEOUT_MS },
+            { signal, timeoutMs },
           );
           for (const tool of Array.isArray(page.tools) ? page.tools : []) {
             if (typeof tool?.name !== "string") continue;
@@ -535,7 +539,7 @@ const make = Effect.gen(function* () {
     Effect.map((connections) => ({ connections })),
   );
 
-  const signInMessage = "Start signing in again from Settings → Integrations → Connected apps.";
+  const signInMessage = "Start signing in again from Settings → Apps.";
 
   return AppConnections.of({
     list,

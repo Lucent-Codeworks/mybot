@@ -1,4 +1,4 @@
-import { PlusIcon, SettingsIcon, SquarePenIcon } from "lucide-react";
+import { PlugIcon, PlusIcon, SettingsIcon, SquarePenIcon } from "lucide-react";
 import { memo, useState, type MouseEvent as ReactMouseEvent } from "react";
 
 import { cn } from "../../lib/utils";
@@ -32,6 +32,8 @@ export const SidebarBots = memo(function SidebarBots(props: {
   onNewChat: (bot: SidebarProjectSnapshot) => void;
   onSettings: (event: ReactMouseEvent<HTMLElement>, bot: SidebarProjectSnapshot) => void;
   onNewBot: () => void;
+  /** Opens the apps the bots can use. */
+  onApps: () => void;
 }) {
   const [expanded, setExpanded] = useState(true);
   return (
@@ -91,6 +93,12 @@ export const SidebarBots = memo(function SidebarBots(props: {
             <SidebarMenuButton onClick={props.onNewBot}>
               <PlusIcon />
               <span>New bot</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={props.onApps}>
+              <PlugIcon />
+              <span>Apps</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

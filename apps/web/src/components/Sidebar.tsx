@@ -4634,6 +4634,7 @@ export default function Sidebar() {
                   openProjectSettings(bot);
                 }}
                 onNewBot={requestNewBot}
+                onApps={() => void router.navigate({ to: "/settings/apps" })}
               />
             )}
           </SidebarGroup>

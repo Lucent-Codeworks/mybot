@@ -743,6 +743,9 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       assert.deepStrictEqual(win.files, DESKTOP_FILE_EXCLUSIONS);
       assert.deepStrictEqual(winWithoutWslRuntime.files, win.files);
       assert.notProperty(mac.mac as Record<string, unknown>, "sign");
+      // Unsigned builds are signed ad hoc so Apple silicon doesn't report them as damaged.
+      assert.propertyVal(mac.mac as Record<string, unknown>, "identity", "-");
+      assert.propertyVal(mac.mac as Record<string, unknown>, "hardenedRuntime", false);
       assert.propertyVal(
         (mac.mac as Record<string, unknown>).extendInfo as Record<string, unknown>,
         "NSLocalNetworkUsageDescription",
