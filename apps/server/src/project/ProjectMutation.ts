@@ -1,11 +1,19 @@
 import { type ProjectMutation } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 
-import { ProjectBotRequiredError, type ProjectService } from "./ProjectService.ts";
+import * as BuiltInMyBot from "../bots/BuiltInMyBot.ts";
+import {
+  ProjectBotRequiredError,
+  ProjectBuiltInError,
+  type ProjectService,
+} from "./ProjectService.ts";
 
-type ProjectMutations = Pick<ProjectService["Service"], "create" | "delete" | "update">;
+type ProjectMutations = Pick<ProjectService["Service"], "create" | "delete" | "update" | "getById">;
 
-/** Every project is a bot, so a create needs a bot profile and an update cannot remove it. */
+/**
+ * Every project is a bot, so a create needs a bot profile and an update cannot
+ * remove it. The built-in MyBot cannot be deleted or replaced.
+ */
 export const projectMutationOperation = Effect.fn("projectMutationOperation")(function* (
   projects: ProjectMutations,
   mutation: ProjectMutation,
@@ -14,6 +22,12 @@ export const projectMutationOperation = Effect.fn("projectMutationOperation")(fu
     case "project.create":
       if (mutation.bot == null) {
         return yield* new ProjectBotRequiredError({ projectId: mutation.projectId });
+      }
+      if (mutation.bot.orchestrator === true) {
+        return yield* new ProjectBuiltInError({
+          projectId: mutation.projectId,
+          reason: "orchestrator",
+        });
       }
       return yield* projects.create({
         commandId: mutation.commandId,
@@ -30,10 +44,11 @@ export const projectMutationOperation = Effect.fn("projectMutationOperation")(fu
         ...(mutation.scripts === undefined ? {} : { scripts: mutation.scripts }),
       });
 
-    case "project.update":
+    case "project.update": {
       if (mutation.bot === null) {
         return yield* new ProjectBotRequiredError({ projectId: mutation.projectId });
       }
+      const bot = yield* BuiltInMyBot.guardedBotProfile(projects, mutation.projectId, mutation.bot);
       return yield* projects.update({
         commandId: mutation.commandId,
         projectId: mutation.projectId,
@@ -44,11 +59,13 @@ export const projectMutationOperation = Effect.fn("projectMutationOperation")(fu
           : { defaultModelSelection: mutation.defaultModelSelection }),
         ...(mutation.projectIcon === undefined ? {} : { projectIcon: mutation.projectIcon }),
         ...(mutation.faviconPath === undefined ? {} : { faviconPath: mutation.faviconPath }),
-        ...(mutation.bot === undefined ? {} : { bot: mutation.bot }),
+        ...(bot === undefined ? {} : { bot }),
         ...(mutation.scripts === undefined ? {} : { scripts: mutation.scripts }),
       });
+    }
 
     case "project.delete":
+      yield* BuiltInMyBot.assertDeletable(projects, mutation.projectId);
       return yield* projects.delete({
         commandId: mutation.commandId,
         projectId: mutation.projectId,

@@ -379,6 +379,13 @@ export function summarizeT3ToolCalls(
       label = phrase("Used", "use", quantity(apps, "connected app"));
       break;
     }
+    case "bot-message": {
+      const bots = new Set(
+        selected.map((call) => id(call.output?.projectId) ?? id(call.input?.to)?.toLowerCase()),
+      ).size;
+      label = phrase("Messaged", "message", quantity(bots, "bot"));
+      break;
+    }
   }
   return { label, failedCount };
 }

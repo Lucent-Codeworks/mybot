@@ -11,7 +11,7 @@ import { Button } from "../components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "../components/ui/empty";
 import { SidebarInset } from "../components/ui/sidebar";
 import { WorkspacePageHeader } from "../components/WorkspacePageHeader";
-import { useBotsByRecentUse } from "../hooks/useBotChat";
+import { useBotsForNewChat } from "../hooks/useBotChat";
 import { useNewThreadHandler } from "../hooks/useHandleNewThread";
 import { useAllEnvironmentShellsBootstrapped } from "../state/entities";
 import { useEnvironments } from "../state/environments";
@@ -36,7 +36,7 @@ function ChatIndexRouteView() {
  * Falls back to a new-bot hero when no bot exists yet.
  */
 function IndexDraftLanding() {
-  const bots = useBotsByRecentUse();
+  const bots = useBotsForNewChat();
   const bootstrapped = useAllEnvironmentShellsBootstrapped();
   const handleNewThread = useNewThreadHandler();
   const router = useRouter();
@@ -46,26 +46,26 @@ function IndexDraftLanding() {
   const startingRef = useRef(false);
   const [startState, setStartState] = useState({ failed: false, retryRequest: 0 });
 
-  const mostRecentBot = bootstrapped ? (bots[0] ?? null) : null;
+  const defaultBot = bootstrapped ? (bots[0] ?? null) : null;
 
   useEffect(() => {
     // Starting a draft after the user has left would replace the page they picked.
-    if (mostRecentBot === null || startingRef.current || !isStillOnIndex()) {
+    if (defaultBot === null || startingRef.current || !isStillOnIndex()) {
       return;
     }
     startingRef.current = true;
-    void handleNewThread(scopeProjectRef(mostRecentBot.environmentId, mostRecentBot.id), {
+    void handleNewThread(scopeProjectRef(defaultBot.environmentId, defaultBot.id), {
       replace: true,
     }).catch(() => {
       startingRef.current = false;
       setStartState((state) => ({ ...state, failed: true }));
     });
-  }, [handleNewThread, mostRecentBot, startState.retryRequest]);
+  }, [handleNewThread, defaultBot, startState.retryRequest]);
 
   if (!bootstrapped) {
     return null;
   }
-  if (mostRecentBot !== null) {
+  if (defaultBot !== null) {
     return startState.failed ? (
       <DraftStartError
         onRetry={() => {

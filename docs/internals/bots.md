@@ -15,7 +15,7 @@ project left at startup, including legacy imports, while keeping its folder on d
 Everything a bot does differently reaches the agent as text: `buildBotInstructions`
 (`packages/provider-core/src/server/runtimeInstructions.ts`) renders a `<bot_profile>` block that
 `RunExecutionService` attaches to every turn in a bot's thread, and each adapter adds next to its
-runtime instructions. Memory, skills, routines, handoffs, and the draft-before-acting rule are
+runtime instructions. Memory, skills, routines, and the draft-before-acting rule are
 instructions plus plain files the agent already knows how to use, so they work for every provider
 without per-adapter tools. Add new bot behavior here before reaching for a new MCP tool.
 
@@ -26,11 +26,25 @@ Two constraints follow from Claude fixing its system prompt when a query starts:
 - Memory (`MEMORY.md` in the bot's folder) is read by the agent, never pasted into the block. Pasting
   it would restart Claude's query and break prompt caching every time the bot learned something.
 
-## Handoffs
+## Bot messages
 
-The block lists the user's other bots, and a bot hands work over with `t3_thread_launch` into the
-other bot's project. A launch into another bot's project starts on that bot's model and never with a
-broader runtime mode than that bot's own, so handed-off work runs as the receiving bot.
+The block lists the user's other bots by name, and a bot asks another with the `bot_message` MCP
+tool ([`BotMessaging`](../../apps/server/src/bots/BotMessaging.ts)). Each sender and receiver pair
+has one standing conversation in the receiving bot's project, under a thread id derived from the two
+project ids, so the receiver remembers earlier messages; an archived or deleted one is skipped for
+the next numbered id, because a deleted thread's id must never be created again. The conversation
+starts on the receiving bot's model and never with broader modes than its own or the sender's, so
+the work runs as the receiving bot. The sender waits for the final reply; a receiver that stops on
+the user returns `waiting_on_user` instead of timing out silently. In-flight waits are tracked per
+bot in memory, and a message that would close a loop (or exceed four bots in one chain) is refused,
+since the receiver's conversation would queue behind the very wait it answers.
+
+## Built-in MyBot
+
+[`BuiltInMyBot`](../../apps/server/src/bots/BuiltInMyBot.ts) creates one bot with
+`bot.orchestrator` at startup when none exists. Its block tells it to route requests to the bot
+whose job fits. Entry points (RPC, HTTP, CLI, MCP) refuse deleting it, keep its flag through
+updates, and refuse or strip the flag anywhere else, so there is only ever one.
 
 ## Connected apps
 
@@ -40,10 +54,10 @@ instead of adding each app to each provider's MCP config, works the same for eve
 the tool list (part of Claude's query key) stable when apps are added or removed. Configs, including
 tokens and environment values, live in the server secret store and never reach clients.
 
-A group chat is a bot whose profile has `members`. Its block replaces the handoff roster with a
-host role: it relays each message to member bots with `t3_thread_launch`/`t3_thread_send` and quotes
-their replies. Members stay ordinary bots in their own threads, so no orchestration change was
-needed; group chats are left out of other bots' rosters.
+A group chat is a bot whose profile has `members`. Its block replaces the roster with a host role:
+it relays each message to member bots with `bot_message` and quotes their replies. Members stay
+ordinary bots in their own threads; group chats are left out of other bots' rosters and cannot
+receive `bot_message`.
 
 ## Telegram
 

@@ -21,10 +21,12 @@ export const failProjectMutation = Effect.fn("environment.projects.failMutation"
   cause:
     | ProjectService.ProjectServiceError
     | ProjectService.ProjectBotRequiredError
+    | ProjectService.ProjectBuiltInError
     | ServerRuntimeStartup.ServerRuntimeStartupError,
 ) {
   if (
     cause._tag === "ProjectBotRequiredError" ||
+    cause._tag === "ProjectBuiltInError" ||
     cause._tag === "ProjectNotFoundError" ||
     cause._tag === "ProjectConflictError" ||
     cause._tag === "ProjectNotEmptyError"

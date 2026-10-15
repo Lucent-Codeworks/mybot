@@ -445,23 +445,26 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
           />
         ) : null}
         <ProjectDefaultsSettings category="project" />
-        <SettingsSection title="Danger">
-          <SettingsRow
-            title="Delete bot"
-            description="Deletes this bot and its conversations. Its files stay on disk."
-            control={
-              <Button
-                size="sm"
-                variant="destructive-outline"
-                disabled={!canEditGroup}
-                onClick={() => void removeMembers(group.memberProjects)}
-              >
-                <Trash2Icon />
-                Delete bot
-              </Button>
-            }
-          />
-        </SettingsSection>
+        {/* The built-in MyBot routes work to the other bots, so it stays. */}
+        {representative.bot?.orchestrator === true ? null : (
+          <SettingsSection title="Danger">
+            <SettingsRow
+              title="Delete bot"
+              description="Deletes this bot and its conversations. Its files stay on disk."
+              control={
+                <Button
+                  size="sm"
+                  variant="destructive-outline"
+                  disabled={!canEditGroup}
+                  onClick={() => void removeMembers(group.memberProjects)}
+                >
+                  <Trash2Icon />
+                  Delete bot
+                </Button>
+              }
+            />
+          </SettingsSection>
+        )}
       </SettingsPageContainer>
 
       <ProjectFaviconPickerDialog

@@ -97,6 +97,18 @@ export class ProjectBotRequiredError extends Schema.TaggedError<ProjectBotRequir
   }
 }
 
+/** The built-in MyBot cannot be deleted, and no other bot can take its place. */
+export class ProjectBuiltInError extends Schema.TaggedError<ProjectBuiltInError>()(
+  "ProjectBuiltInError",
+  { projectId: Schema.optional(ProjectId), reason: Schema.Literals(["delete", "orchestrator"]) },
+) {
+  override get message(): string {
+    return this.reason === "delete"
+      ? "MyBot is built in and can't be deleted."
+      : "Only the built-in MyBot can be the orchestrator.";
+  }
+}
+
 export class ProjectOperationError extends Schema.TaggedError<ProjectOperationError>()(
   "ProjectOperationError",
   {

@@ -64,6 +64,7 @@ import * as EnvironmentTheme from "./environmentTheme.ts";
 import * as Keybindings from "./keybindings.ts";
 import * as ServerRuntimeStartup from "./serverRuntimeStartup.ts";
 import * as PlainProjectCleanup from "./project/PlainProjectCleanup.ts";
+import * as BuiltInMyBot from "./bots/BuiltInMyBot.ts";
 import * as AgentAwarenessRelay from "./relay/AgentAwarenessRelay.ts";
 import { hasCloudPublicConfig } from "./cloud/publicConfig.ts";
 import * as ServerSettings from "./serverSettings.ts";
@@ -920,6 +921,8 @@ const layerMakeServer = Layer.unwrap(
       HeapSnapshot.layer,
       // Runs after startup's own project work, so it also sees legacy imports.
       PlainProjectCleanup.layer,
+      // A bot, so the cleanup above never removes it.
+      BuiltInMyBot.layer,
     );
 
     return layerServerApplication.pipe(

@@ -7,7 +7,7 @@ export interface BotInstructions {
   readonly folder: string;
   /** The skills folder every bot shares. */
   readonly skillsFolder: string;
-  /** The user's other bots, which this bot can hand work to. */
+  /** The user's other bots, which this bot can message. */
   readonly teammates?: ReadonlyArray<{
     readonly name: string;
     readonly role: string;
@@ -15,6 +15,8 @@ export interface BotInstructions {
   }>;
   /** Set for a group chat: the bots (projectIds) this bot hosts the conversation with. */
   readonly members?: ReadonlyArray<string> | undefined;
+  /** The built-in MyBot, which routes the user's requests to the other bots. */
+  readonly orchestrator?: boolean | undefined;
 }
 
 /** The file in a bot's folder that holds what it remembers across conversations. */
@@ -49,7 +51,7 @@ export function buildBotInstructions(bot: BotInstructions): string {
   const roster = (teammates: NonNullable<BotInstructions["teammates"]>) =>
     teammates.map(
       (teammate) =>
-        `- ${toSingleLine(teammate.name)}${teammate.role ? ` (${toSingleLine(teammate.role)})` : ""}: projectId ${teammate.projectId}`,
+        `- ${toSingleLine(teammate.name)}${teammate.role ? ` (${toSingleLine(teammate.role)})` : ""}`,
     );
   if (bot.members !== undefined) {
     lines.push(
@@ -57,14 +59,24 @@ export function buildBotInstructions(bot: BotInstructions): string {
       ...(members.length > 0
         ? roster(members)
         : ["- (no bots yet: ask the user to add some in this group's settings)"]),
-      "For each user message, choose who answers: the bots the user names, otherwise the ones whose job fits, or every bot when the user addresses the group. Send each chosen bot the message with the context it needs from this chat. The first time you message a bot here, call t3_thread_launch with its projectId and keep the threadId it returns; after that, use t3_thread_send to that threadId so the bot remembers the chat. Message the chosen bots in parallel, then use t3_thread_wait and t3_thread_read to collect their replies, and pass one bot's reply to another when it asks for their input.",
-      "Reply with each bot's answer under its name, in its own words: **Name:** answer. Do not answer for a bot. Add a short line of your own only to connect or summarize answers. When a bot needs the user, such as a question or an approval, relay it with the bot's name.",
+      "For each user message, choose who answers: the bots the user names, otherwise the ones whose job fits, or every bot when the user addresses the group. Send each chosen bot the message with bot_message, by name, with the context it needs from this chat; each bot keeps one conversation with you, so it remembers the chat. Message the chosen bots in parallel, and pass one bot's reply to another when it asks for their input.",
+      "Reply with each bot's answer under its name, quoting its reply: **Name:** answer. Do not answer for a bot. Add a short line of your own only to connect or summarize answers. When a bot is waiting on the user, such as for a question or an approval, say so with the bot's name and the conversation where they answer.",
     );
-  } else if (bot.teammates && bot.teammates.length > 0) {
+  } else {
+    if (bot.orchestrator === true) {
+      lines.push(
+        "You are MyBot, the user's main assistant. For each request, decide whether to do it yourself or to involve the bot whose job fits, with bot_message; for work that spans several bots, coordinate them and report back. When no bot fits a kind of work the user will want again, offer to create one with t3_project_create, always with a bot profile and only once the user agrees. Set up recurring work as routines with schedule_task.",
+      );
+    }
+    if (bot.teammates && bot.teammates.length > 0) {
+      lines.push(
+        "The user's other bots, which you can ask or hand work to when it fits their job better than yours:",
+        ...roster(bot.teammates),
+        "To ask a bot something or hand it work, call bot_message with its name and everything it needs in message; it runs as that bot, with its own instructions, memory, and model, and its reply comes back to you. Keep talking to a bot with bot_message: it is the same conversation, so it remembers. Tell the user when you involve another bot, and when one is waiting on the user, tell them where to answer.",
+      );
+    }
     lines.push(
-      "The user's other bots, which you can hand work to when it fits their job better than yours:",
-      ...roster(bot.teammates),
-      "To hand off, call t3_thread_launch with that projectId and the full task in message; it runs as that bot, with its own instructions, memory, and model. Follow it with t3_thread_wait and t3_thread_read, then report back. Tell the user when you hand work off.",
+      'A message that starts with "Message from <Name> (bot)" comes from another of the user\'s bots: answer it in your reply, which goes back to that bot.',
     );
   }
   lines.push(

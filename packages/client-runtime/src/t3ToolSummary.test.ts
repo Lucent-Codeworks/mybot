@@ -23,6 +23,16 @@ describe("summarizeT3ToolCalls", () => {
     ).toEqual({ label, failedCount: 0 });
   });
 
+  it("counts the distinct bots messaged", () => {
+    expect(
+      summarizeT3ToolCalls("bot-message", [
+        completed({ to: "Inbox" }, { projectId: "project-inbox" }),
+        completed({ to: "inbox" }, { projectId: "project-inbox" }),
+        completed({ to: "Scout" }, { projectId: "project-scout" }),
+      ]).label,
+    ).toBe("Messaged 2 bots");
+  });
+
   it("counts answered requests rather than pretending every request contains one question", () => {
     expect(
       summarizeT3ToolCalls("question-respond", [

@@ -91,7 +91,7 @@ describe("buildBotInstructions", () => {
     expect(block).toContain("/mybot/skills/<short-name>/SKILL.md");
   });
 
-  it("lists teammates the bot can hand work to", () => {
+  it("lists teammates the bot can message with bot_message", () => {
     const block = buildBotInstructions({
       name: "Scout",
       role: "",
@@ -100,8 +100,29 @@ describe("buildBotInstructions", () => {
       skillsFolder: "/mybot/skills",
       teammates: [{ name: "Inbox", role: "Inbox triage", projectId: "project-inbox" }],
     });
-    expect(block).toContain("- Inbox (Inbox triage): projectId project-inbox");
-    expect(block).toContain("call t3_thread_launch with that projectId");
+    expect(block).toContain("- Inbox (Inbox triage)\n");
+    expect(block).not.toContain("project-inbox");
+    expect(block).toContain("call bot_message with its name");
+    expect(block).toContain('"Message from <Name> (bot)" comes from another');
+    expect(block).not.toContain("t3_thread_launch");
+    expect(block).not.toContain("You are MyBot, the user's main assistant.");
+  });
+
+  it("tells the built-in MyBot to route work to the other bots", () => {
+    const block = buildBotInstructions({
+      name: "MyBot",
+      role: "Your assistant",
+      instructions: "",
+      folder: "/bots/mybot",
+      skillsFolder: "/mybot/skills",
+      orchestrator: true,
+      teammates: [{ name: "Inbox", role: "Inbox triage", projectId: "project-inbox" }],
+    });
+    expect(block).toContain(
+      "You are MyBot, the user's main assistant. For each request, decide whether to do it yourself or to involve the bot whose job fits, with bot_message;",
+    );
+    expect(block).toContain("offer to create one with t3_project_create");
+    expect(block).toContain("- Inbox (Inbox triage)");
   });
 
   it("hosts a group chat with its member bots", () => {
@@ -118,9 +139,10 @@ describe("buildBotInstructions", () => {
       members: ["project-scout"],
     });
     expect(block).toContain("This is a group chat between the user and these bots");
-    expect(block).toContain("- Scout (Research): projectId project-scout");
-    expect(block).not.toContain("project-inbox");
-    expect(block).toContain("use t3_thread_send to that threadId");
-    expect(block).not.toContain("To hand off");
+    expect(block).toContain("- Scout (Research)\n");
+    expect(block).not.toContain("Inbox");
+    expect(block).toContain("Send each chosen bot the message with bot_message, by name");
+    expect(block).not.toContain("t3_thread_send");
+    expect(block).not.toContain("Message from <Name>");
   });
 });
