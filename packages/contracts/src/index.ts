@@ -51,6 +51,7 @@ export * from "./resourceTelemetry.ts";
 export * from "./usage.ts";
 export * from "./scheduledTask.ts";
 export * from "./botChannels.ts";
+export * from "./appConnections.ts";
 export * from "./resourceTelemetry.ts";
 export * from "./rpc.ts";
 export * from "./secretRequest.ts";

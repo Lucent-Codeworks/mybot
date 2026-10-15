@@ -52,6 +52,8 @@ import {
   DeviceStandardToolkit,
 } from "./toolkits/device/tools.ts";
 import * as HtmlHandlers from "./toolkits/html/handlers.ts";
+import * as AppsHandlers from "./toolkits/apps/handlers.ts";
+import { AppsToolkit } from "./toolkits/apps/tools.ts";
 import { HtmlPreviewTool, HtmlPreviewToolkit, HtmlRenderToolkit } from "./toolkits/html/tools.ts";
 
 /** Where an MCP client discovers how to sign in (RFC 9728), at this request's own origin. */
@@ -861,4 +863,5 @@ export const layer = Layer.mergeAll(
   layerPreviewControlsRegistration,
   layerDeviceToolkit,
   layerHtmlToolkit,
+  toolkitRegistration(AppsToolkit, AppsHandlers.layer),
 ).pipe(Layer.provideMerge(layerMcpTransport));

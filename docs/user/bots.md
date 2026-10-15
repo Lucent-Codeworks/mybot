@@ -59,6 +59,17 @@ leaves the page open and tells you what to do. Open its browser tab, choose
 bot. Never send passwords or codes in a chat; a bot that needs an API key asks
 for it with a private form.
 
+## Connect apps
+
+Connect your apps so bots can use them directly instead of clicking through
+websites. An app connects through its MCP server: open **Settings →
+Integrations → Connected apps**, choose **Add app**, and give it a web address
+(with an access token if the app needs one) or a local command to run. MyBot
+checks the connection before saving it, and tokens stay on your computer.
+
+Every bot can use every connected app. Bots still show you a draft and wait for
+your go-ahead before an app sends, posts, buys, or deletes anything.
+
 ## Memory
 
 Each bot keeps a `MEMORY.md` file in its folder. It reads the file at the start

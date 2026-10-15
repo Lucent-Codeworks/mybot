@@ -27,6 +27,14 @@ The block lists the user's other bots, and a bot hands work over with `t3_thread
 other bot's project. A launch into another bot's project starts on that bot's model and never with a
 broader runtime mode than that bot's own, so handed-off work runs as the receiving bot.
 
+## Connected apps
+
+`apps/server/src/apps/AppConnections.ts` is an MCP client for the apps a user connects, and the
+T3 MCP server relays them through two fixed tools, `app_tools_list` and `app_tool_call`. Relaying,
+instead of adding each app to each provider's MCP config, works the same for every adapter and keeps
+the tool list (part of Claude's query key) stable when apps are added or removed. Configs, including
+tokens and environment values, live in the server secret store and never reach clients.
+
 ## Telegram
 
 `apps/server/src/channels/TelegramChannel.ts` long-polls the Bot API from the host, so it needs no

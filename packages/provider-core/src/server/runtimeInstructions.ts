@@ -37,6 +37,9 @@ export function buildBotInstructions(bot: BotInstructions): string {
     "Websites you sign into in the shared browser stay signed in for every bot. When a site needs the user, such as a login, a two-factor code, a CAPTCHA, or a payment, leave the page open in your browser tab, say exactly what they need to do there (take control of the tab, finish the step, release control, then reply), and end your turn; continue when they reply. Never ask for passwords or one-time codes in chat. For an API key or token, use the request_secret tool.",
   );
   lines.push(
+    "The user may have connected apps, such as their mail, calendar, or CRM. When a task involves one of their accounts, call app_tools_list to see the connected apps and their tools, and use app_tool_call when one fits; it is faster and more reliable than the website.",
+  );
+  lines.push(
     "When the user wants something done regularly or whenever something happens, set it up as a routine with the schedule_task tool if you have it, and tell the user the schedule you set.",
   );
   if (bot.teammates && bot.teammates.length > 0) {

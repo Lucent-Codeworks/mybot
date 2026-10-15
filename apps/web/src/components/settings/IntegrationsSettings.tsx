@@ -116,6 +116,7 @@ import {
   SettingsRow,
   SettingsSection,
 } from "./settingsLayout";
+import { ConnectedAppsSettings } from "./ConnectedAppsSettings";
 import { searchableSetting } from "./settingsSearch";
 import { ProjectDefaultsSettings } from "./ProjectDefaultsSettings";
 import { useSettingsScope } from "./SettingsScopeContext";
@@ -1537,6 +1538,7 @@ export function IntegrationsSettingsPanel() {
       {/* Server-authoritative agent access is scoped by the header selection;
           the preview defaults below are device-local and ignore it. */}
       <ProjectDefaultsSettings category="integrations" />
+      <ConnectedAppsSettings />
       <SettingsSection id="browser" title="Browser">
         {previewDefaultsDisabled ? (
           <SettingsUnavailableGroup message="Only available in the desktop app.">
