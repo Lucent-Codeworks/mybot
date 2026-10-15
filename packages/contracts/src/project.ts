@@ -534,6 +534,9 @@ export const ProjectCreateNewInput = Schema.Struct({
   /** Set to create a bot instead of a plain project. */
   bot: Schema.optional(BotProfile),
   defaultModelSelection: Schema.optional(ModelSelection),
+  projectIcon: Schema.optional(ProjectIconOverride),
+  /** A marketplace template whose starter skills are installed with the bot. */
+  templateId: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(64))),
 });
 export type ProjectCreateNewInput = typeof ProjectCreateNewInput.Type;
 

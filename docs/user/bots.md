@@ -7,8 +7,11 @@ same kind of work again and again without repeating yourself.
 ## Create a bot
 
 Choose **New bot** under **Bots** in the sidebar, or run **New bot** from the
-command palette. Give it a name, a job (for example "Daily tech scout"), its
-instructions, and the model it should use. Any provider you have set up works.
+command palette. Pick a ready-made bot from the marketplace, such as a morning
+briefing, a research analyst, an inbox assistant, or an expense tracker, or
+start from scratch. A ready-made bot comes with its job, instructions, icon,
+and starter skills; you can change any of them before or after creating it.
+Then choose the model it should use. Any provider you have set up works.
 
 MyBot creates a folder for the bot in its data directory and opens a new
 conversation with it.

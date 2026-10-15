@@ -1689,7 +1689,7 @@ function OpenCommandPaletteDialog(props: {
   actionItems.push({
     kind: "action",
     value: "action:new-bot",
-    searchTerms: ["new bot", "create bot", "teammate", "assistant"],
+    searchTerms: ["new bot", "create bot", "teammate", "assistant", "marketplace", "template"],
     title: "New bot",
     icon: <BotIcon className={ITEM_ICON_CLASS} />,
     run: async () => {
