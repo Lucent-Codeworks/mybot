@@ -316,7 +316,6 @@ describe("KeybindingsSettings.logic", () => {
     expect(options).toEqual(
       expect.arrayContaining([
         "chat.new",
-        "threadPanel.toggle",
         "rightPanel.toggleMaximized",
         "composer.cycleHost",
         "thread.stop",
@@ -324,6 +323,7 @@ describe("KeybindingsSettings.logic", () => {
         "script.setup-db.run",
       ]),
     );
+    expect(options).not.toContain("threadPanel.toggle");
     for (const command of ["thread.stop", "composer.cycleHost"]) {
       expect(DEFAULT_RESOLVED_KEYBINDINGS.some((binding) => binding.command === command)).toBe(
         false,

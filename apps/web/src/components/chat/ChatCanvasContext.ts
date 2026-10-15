@@ -1,6 +1,5 @@
 import { createContext, useContext } from "react";
 import type { ChatCanvasPreview, resolveChatCanvasLayout } from "./chatCanvasLayout";
-import type { PreviewMiniPlayerObstacles } from "../preview/previewMiniPlayerLayout";
 
 export const ChatCanvasContext = createContext<{
   container: { width: number; height: number };
@@ -10,9 +9,6 @@ export const ChatCanvasContext = createContext<{
   reportPreview: (preview: ChatCanvasPreview) => void;
   clearPreview: (key: string) => void;
   registerTimeline: (element: HTMLElement | null) => void;
-  reportDetailsCard: (card: PreviewMiniPlayerObstacles["detailsCard"]) => void;
-  /** Height reserved above the details card, such as the open find bar. */
-  detailsCardTopInset: number;
 } | null>(null);
 
 export const useChatCanvas = () => useContext(ChatCanvasContext);

@@ -2235,11 +2235,12 @@ const layerWsRpc = (
                 Effect.forkScoped,
               ),
           ),
+        // MyBot has no plain projects, so there is no Scratch project to make.
         [WS_METHODS.projectsEnsureScratch]: () =>
-          managedFolders.ensureScratchProject.pipe(
-            Effect.mapError(
-              (cause) => new OrchestrationDispatchCommandError({ message: cause.message, cause }),
-            ),
+          Effect.fail(
+            new OrchestrationDispatchCommandError({
+              message: new ProjectService.ProjectBotRequiredError({}).message,
+            }),
           ),
         [WS_METHODS.projectsCreateNew]: (input) =>
           managedFolders
@@ -2316,7 +2317,8 @@ const layerWsRpc = (
                 new ProjectMutationError({
                   commandId: mutation.commandId,
                   message:
-                    cause._tag === "ProjectNotEmptyError"
+                    cause._tag === "ProjectNotEmptyError" ||
+                    cause._tag === "ProjectBotRequiredError"
                       ? cause.message
                       : "Failed to mutate project.",
                   cause,

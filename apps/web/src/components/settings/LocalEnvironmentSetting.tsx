@@ -70,7 +70,7 @@ export function LocalEnvironmentSetting() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {enabled
-                ? "MyBot will restart without running a server on this computer. Any agents and terminals running here will stop, and other devices will no longer be able to connect to this computer. Your projects, history, and remote environments are unaffected."
+                ? "MyBot will restart without running a server on this computer. Any agents and terminals running here will stop, and other devices will no longer be able to connect to this computer. Your bots, history, and remote environments are unaffected."
                 : "MyBot will restart and start running a server on this computer again."}
             </AlertDialogDescription>
           </AlertDialogHeader>

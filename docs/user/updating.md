@@ -27,7 +27,7 @@ below.
 ## Before you update
 
 Server updates restart the connection and can interrupt active agents and
-terminal commands. Saved threads, settings, and project files remain.
+terminal commands. Saved threads, settings, and bot files remain.
 
 **Settings → General → Continue threads after restarts** is on by default.
 It resumes supported active threads after an update, crash, or machine

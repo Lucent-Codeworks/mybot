@@ -83,6 +83,20 @@ export class ProjectNotEmptyError extends Schema.TaggedError<ProjectNotEmptyErro
   }
 }
 
+/**
+ * MyBot has no plain projects: every project is a bot. Entry points (RPC, HTTP,
+ * CLI, MCP, named-project creation) raise this when asked for a project without
+ * a bot profile, or to remove one. ProjectService itself stays profile-agnostic.
+ */
+export class ProjectBotRequiredError extends Schema.TaggedError<ProjectBotRequiredError>()(
+  "ProjectBotRequiredError",
+  { projectId: Schema.optional(ProjectId) },
+) {
+  override get message(): string {
+    return "MyBot only has bots: give the project a bot profile.";
+  }
+}
+
 export class ProjectOperationError extends Schema.TaggedError<ProjectOperationError>()(
   "ProjectOperationError",
   {

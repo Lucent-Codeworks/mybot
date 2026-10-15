@@ -1,5 +1,4 @@
 import { ThreadFind, ThreadFindCanvas, type ThreadFindControls } from "./chat/ThreadFindProvider";
-import { THREAD_FIND_BAR_RESERVED_HEIGHT } from "./chat/ThreadFindBar";
 import { usageLimitRecoveryBannerItem } from "./chat/UsageLimitRecoveryBanner";
 import { resolveDraftHeroState, shouldDockDraftHeroForSubmission } from "./ChatView.logic";
 import * as DateTime from "effect/DateTime";
@@ -15,8 +14,6 @@ import {
   timelineHasEphemeralPreviewUrls,
 } from "./ChatView.logic";
 import { useLoadBalancedEnvironment } from "../hooks/useLoadBalancedEnvironment";
-import { useScratchProject } from "../hooks/useScratchProject";
-import { isScratchProject } from "@t3tools/client-runtime/state/projects";
 import {
   latestExecutedRun,
   latestRootProviderFailure,
@@ -40,7 +37,6 @@ import {
 import { useAttachmentUploadStore } from "../lib/attachmentUploadQueue";
 import {
   AuthOrchestrationOperateScope,
-  AuthSettingsWriteScope,
   AuthPreviewOperateScope,
   AuthTerminalReadScope,
   AuthTerminalOperateScope,
@@ -50,7 +46,6 @@ import {
   DEFAULT_MODEL,
   isProviderNativeSubagentThread,
   type ChatAttachment as ContractChatAttachment,
-  EnvironmentAuthorizationError,
   type EnvironmentId,
   type MessageId,
   type ModelSelection,
@@ -65,7 +60,6 @@ import {
   type ThreadId,
   type RunId,
   type RuntimeRequestId,
-  type KeybindingCommand,
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   ProviderInteractionMode,
   ProviderDriverKind,
@@ -75,7 +69,6 @@ import {
   TerminalOpenInput,
 } from "@t3tools/contracts";
 import { type EnvironmentConnectionPresentation } from "@t3tools/client-runtime/connection";
-import { deriveThreadTitleSeed } from "@t3tools/client-runtime/operations";
 import {
   wasBootstrapThreadDeleted,
   wasBootstrapThreadNotCreated,
@@ -161,7 +154,6 @@ import {
   squashAtomCommandFailure,
   type AtomCommandResult,
 } from "@t3tools/client-runtime/state/runtime";
-import * as Cause from "effect/Cause";
 import { AsyncResult } from "effect/reactivity";
 import { isElectron } from "../env";
 import { readLocalApi } from "../localApi";
@@ -215,8 +207,6 @@ import {
   DEFAULT_THREAD_TERMINAL_ID,
   MAX_TERMINALS_PER_GROUP,
   type ChatMessage,
-  isBrowserPreviewAttachment,
-  isImageAttachment,
   type SessionPhase,
   type Thread,
 } from "../types";
@@ -228,15 +218,10 @@ import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useTurnDiffSummaries } from "../hooks/useTurnDiffSummaries";
 import { FileMetadataThreadProvider } from "../hooks/FileMetadataThreadProvider";
 import { usePreviewPanelInlineSize } from "../hooks/usePreviewPanelInlineSize";
-import {
-  RIGHT_PANEL_INLINE_LAYOUT_MEDIA_QUERY,
-  type ThreadPanelPresentation,
-} from "../rightPanelLayout";
-import { PopoverCreateHandle } from "./ui/popover";
+import { RIGHT_PANEL_INLINE_LAYOUT_MEDIA_QUERY } from "../rightPanelLayout";
 import {
   selectActiveRightPanel,
   selectActiveRightPanelSurface,
-  selectThreadPanelOpen,
   selectThreadRightPanelState,
   type RightPanelSurface,
   useRightPanelStore,
@@ -285,17 +270,7 @@ import {
 import { cn, randomUUID } from "~/lib/utils";
 import { COLLAPSED_SIDEBAR_TITLEBAR_INSET_CLASS } from "~/workspaceTitlebar";
 import { stackedThreadToast, toastManager } from "./ui/toast";
-import {
-  decodeProjectScriptKeybindingRule,
-  keybindingValueForCommand,
-} from "~/lib/projectScriptKeybindings";
-import { type NewProjectScriptInput } from "./ProjectScriptsControl";
-import {
-  buildProjectScript,
-  commandForProjectScript,
-  nextProjectScriptId,
-  projectScriptIdFromCommand,
-} from "~/projectScripts";
+import { projectScriptIdFromCommand } from "~/projectScripts";
 import { newMessageId, newThreadId } from "~/lib/utils";
 import { registerFaviconProjectForThread } from "~/browserFaviconStore";
 import { getProviderModelCapabilities } from "../providerModels";
@@ -415,13 +390,8 @@ import { ChatHeader } from "./chat/ChatHeader";
 import { useRemoteOpenState } from "~/remoteOpen";
 import { shouldShowOpenInPicker } from "./chat/OpenInPicker.logic";
 import { useOpenFavoriteEditorShortcut } from "./chat/OpenInPickerShortcut";
-import {
-  PanelLayoutControls,
-  type PanelLayoutControlsProps,
-  RightPanelMaximizeControl,
-} from "./chat/PanelLayoutControls";
+import { PanelLayoutControls, RightPanelMaximizeControl } from "./chat/PanelLayoutControls";
 import { expandedImageKey, type ExpandedImagePreview } from "./chat/ExpandedImagePreview";
-import { ThreadDetailsPanel, type ThreadDetailsPanelProps } from "./chat/ThreadDetailsPanel";
 import { NoActiveThreadState } from "./NoActiveThreadState";
 import {
   type EnvironmentOption,
@@ -483,8 +453,6 @@ import {
   shouldReleaseTimelineAnchorForToolActivity,
   shouldRenderPreviewMiniPlayer,
   getStartedThreadModelChangeBlockReason,
-  LAST_INVOKED_SCRIPT_BY_PROJECT_KEY,
-  LastInvokedScriptByProjectSchema,
   type LocalDispatchSnapshot,
   cloneComposerImageForRetry,
   deriveLockedProvider,
@@ -1455,15 +1423,6 @@ export default function ChatView(props: ChatViewProps) {
       currentRouteThreadKeyRef.current = null;
     };
   }, [routeThreadKey]);
-  const updateProjectScriptSettings = useAtomCommand(serverEnvironment.updateSettings, {
-    reportFailure: false,
-  });
-  const upsertKeybinding = useAtomCommand(serverEnvironment.upsertKeybinding, {
-    reportFailure: false,
-  });
-  const removeKeybinding = useAtomCommand(serverEnvironment.removeKeybinding, {
-    reportFailure: false,
-  });
   const openTerminal = useAtomCommand(terminalEnvironment.open, "terminal open");
   const writeTerminal = useAtomCommand(terminalEnvironment.write, "terminal write");
   const closeTerminalMutation = useAtomCommand(terminalEnvironment.close, "terminal close");
@@ -1685,9 +1644,6 @@ export default function ChatView(props: ChatViewProps) {
   const clearComposerDraftContent = useComposerDraftStore((store) => store.clearComposerContent);
   const setDraftThreadContext = useComposerDraftStore((store) => store.setDraftThreadContext);
   const getDraftSession = useComposerDraftStore((store) => store.getDraftSession);
-  const setLogicalProjectDraftThreadId = useComposerDraftStore(
-    (store) => store.setLogicalProjectDraftThreadId,
-  );
   const promptRef = useRef("");
   const composerImagesRef = useRef<ComposerImageAttachment[]>([]);
   const composerFilesRef = useRef<ComposerFileAttachment[]>([]);
@@ -1767,7 +1723,6 @@ export default function ChatView(props: ChatViewProps) {
   const shouldUsePlanSidebarSheet = useMediaQuery(RIGHT_PANEL_INLINE_LAYOUT_MEDIA_QUERY);
   const isMobileViewport = useMediaQuery("max-sm");
   const [workspaceLayoutElement, setWorkspaceLayoutElement] = useState<HTMLDivElement | null>(null);
-  const threadPanelPopoverAnchorRef = useRef<HTMLElement | null>(null);
   // Tracks whether the user explicitly dismissed the sidebar for the active turn.
   // When set, the thread-change reset effect will open the sidebar instead of closing it.
   // Used by "Implement in a new thread" to carry the sidebar-open intent across navigation.
@@ -1777,11 +1732,6 @@ export default function ChatView(props: ChatViewProps) {
   const [attachmentPreviewHandoffByMessageId, setAttachmentPreviewHandoffByMessageId] = useState<
     Record<string, string[]>
   >({});
-  const [lastInvokedScriptByProjectId, setLastInvokedScriptByProjectId] = useLocalStorage(
-    LAST_INVOKED_SCRIPT_BY_PROJECT_KEY,
-    {},
-    LastInvokedScriptByProjectSchema,
-  );
   const legendListRef = useRef<LegendListRef | null>(null);
   const getTimelineScrollableNode = useCallback(
     () => legendListRef.current?.getScrollableNode() ?? null,
@@ -2198,16 +2148,6 @@ export default function ChatView(props: ChatViewProps) {
   const canMaximizeRightPanel = rightPanelOpen && !shouldUsePlanSidebarSheet;
   const rightPanelMaximized = canMaximizeRightPanel && rightPanelState.maximized === true;
   const inlineRightPanelOwnsTitleBar = rightPanelOpen && !shouldUsePlanSidebarSheet;
-  const [threadPanelPresentation, setThreadPanelPresentation] =
-    useState<ThreadPanelPresentation>("inline");
-  const [threadPanelPopoverHandle] = useState(PopoverCreateHandle);
-  const threadPanelOpen = useRightPanelStore((state) =>
-    selectThreadPanelOpen(
-      state.threadPanelVisibilityByThreadKey,
-      activeThreadRef,
-      threadPanelPresentation,
-    ),
-  );
 
   useEffect(() => {
     if (!activeThreadRef || !previewSessionsReady) return;
@@ -2441,13 +2381,6 @@ export default function ChatView(props: ChatViewProps) {
     },
     [navigate, setEnvironmentEnabled],
   );
-  const { scratchWorkspaceRootFor, openScratchProject } = useScratchProject();
-  const activeProjectIsScratch =
-    activeProject !== null &&
-    isScratchProject(
-      activeProject,
-      environmentById.get(activeProject.environmentId)?.serverConfig?.scratchWorkspaceRoot ?? null,
-    );
   const logicalProjectEnvironments = useMemo(() => {
     if (!activeProject) return [];
     const envs: EnvironmentOption[] = [];
@@ -2461,32 +2394,13 @@ export default function ChatView(props: ChatViewProps) {
         machine: resolveEnvironmentMachineKind(environment?.serverConfig ?? null),
       });
     };
-    if (activeProjectIsScratch && draftId) {
-      // Each machine keeps its own "No project" folder at its own path, so they
-      // never group as one logical project. Offer every machine that has one.
-      for (const environment of environments) {
-        const scratchRoot = scratchWorkspaceRootFor(environment.environmentId);
-        // Keep the current machine visible so an offline source can still switch away.
-        if (scratchRoot === null && environment.environmentId !== activeProject.environmentId)
-          continue;
-        const scratchProject =
-          environment.environmentId === activeProject.environmentId
-            ? activeProject
-            : allProjects.find(
-                (p) =>
-                  p.environmentId === environment.environmentId && isScratchProject(p, scratchRoot),
-              );
-        pushEnvironment(environment.environmentId, scratchProject?.id ?? null);
-      }
-    } else {
-      const logicalKey = deriveLogicalProjectKey(activeProject);
-      const seen = new Set<string>();
-      for (const p of allProjects) {
-        if (seen.has(p.environmentId)) continue;
-        if (deriveLogicalProjectKey(p) !== logicalKey) continue;
-        seen.add(p.environmentId);
-        pushEnvironment(p.environmentId, p.id);
-      }
+    const logicalKey = deriveLogicalProjectKey(activeProject);
+    const seen = new Set<string>();
+    for (const p of allProjects) {
+      if (seen.has(p.environmentId)) continue;
+      if (deriveLogicalProjectKey(p) !== logicalKey) continue;
+      seen.add(p.environmentId);
+      pushEnvironment(p.environmentId, p.id);
     }
     // Sort: primary first, then alphabetical
     envs.sort((a, b) => {
@@ -2494,20 +2408,9 @@ export default function ChatView(props: ChatViewProps) {
       return a.label.localeCompare(b.label);
     });
     return envs;
-  }, [
-    activeProject,
-    activeProjectIsScratch,
-    allProjects,
-    draftId,
-    environments,
-    primaryEnvironmentId,
-    environmentById,
-    scratchWorkspaceRootFor,
-  ]);
+  }, [activeProject, allProjects, primaryEnvironmentId, environmentById]);
   const hasMultipleEnvironments = logicalProjectEnvironments.length > 1;
-  // Auto balance retargets to an existing project; a machine's "No project"
-  // folder may not exist until it is picked.
-  const canAutoBalanceEnvironments = hasMultipleEnvironments && !activeProjectIsScratch;
+  const canAutoBalanceEnvironments = hasMultipleEnvironments;
   const activeEnvironmentOption =
     logicalProjectEnvironments.find(
       (environment) => environment.environmentId === activeThread?.environmentId,
@@ -3914,16 +3817,6 @@ export default function ChatView(props: ChatViewProps) {
           : "Auto balance"
     : undefined;
 
-  // The machine an in-flight switch is heading to; a newer switch replaces it.
-  const environmentChangeRef = useRef<{ readonly environmentId: EnvironmentId } | null>(null);
-  const [isEnvironmentChanging, setIsEnvironmentChanging] = useState(false);
-  useLayoutEffect(() => {
-    return () => {
-      environmentChangeRef.current = null;
-      setIsEnvironmentChanging(false);
-    };
-  }, [draftId, activeProjectKey]);
-
   const onEnvironmentChange = useCallback(
     (nextEnvironmentId: EnvironmentId) => {
       if (envLocked || !draftId || sendInFlightRef.current) return;
@@ -3933,69 +3826,25 @@ export default function ChatView(props: ChatViewProps) {
         (env) => env.environmentId === nextEnvironmentId,
       );
       if (!target) return;
-      const request = { environmentId: target.environmentId };
-      environmentChangeRef.current = request;
-      setIsEnvironmentChanging(false);
-      const retarget = (project: (typeof allProjects)[number]) => {
-        const currentDraft = getDraftSession(draftId);
-        if (
-          environmentChangeRef.current !== request ||
-          sendInFlightRef.current ||
-          !currentDraft ||
-          currentDraft.promotedTo ||
-          currentDraft.environmentId !== originalDraft.environmentId ||
-          currentDraft.projectId !== originalDraft.projectId
-        )
-          return;
-        const projectRef = scopeProjectRef(target.environmentId, project.id);
-        if (activeProjectIsScratch) {
-          // Scratch projects are machine-local, so move their logical mapping too.
-          setLogicalProjectDraftThreadId(deriveLogicalProjectKey(project), projectRef, draftId, {
-            environmentSelection: "manual",
-            loadBalancedEnvironmentId: null,
-          });
-        } else {
-          setDraftThreadContext(draftId, {
-            projectRef,
-            environmentSelection: "manual",
-            loadBalancedEnvironmentId: null,
-          });
-        }
-      };
-      const finish = () => {
-        if (environmentChangeRef.current === request) {
-          environmentChangeRef.current = null;
-          setIsEnvironmentChanging(false);
-        }
-      };
-      if (target.projectId !== null) {
-        const project = allProjects.find(
-          (project) =>
-            project.environmentId === target.environmentId && project.id === target.projectId,
-        );
-        if (project) retarget(project);
-        finish();
-        return;
-      }
-      // Keep send disabled until the destination Scratch project is ready.
-      setIsEnvironmentChanging(true);
-      void openScratchProject(target.environmentId, "Could not switch machine")
-        .then((project) => {
-          if (project) retarget(project);
-        })
-        .finally(finish);
+      const project = allProjects.find(
+        (project) =>
+          project.environmentId === target.environmentId && project.id === target.projectId,
+      );
+      if (!project) return;
+      setDraftThreadContext(draftId, {
+        projectRef: scopeProjectRef(target.environmentId, project.id),
+        environmentSelection: "manual",
+        loadBalancedEnvironmentId: null,
+      });
     },
     [
-      activeProjectIsScratch,
       allProjects,
       draftId,
       envLocked,
       getDraftSession,
       logicalProjectEnvironments,
-      openScratchProject,
       sendInFlightRef,
       setDraftThreadContext,
-      setLogicalProjectDraftThreadId,
     ],
   );
 
@@ -4428,16 +4277,9 @@ export default function ChatView(props: ChatViewProps) {
         cwd?: string;
         env?: Record<string, string>;
         preferNewTerminal?: boolean;
-        rememberAsLastInvoked?: boolean;
       },
     ) => {
       if (!hasTerminalWriteAccess() || !activeThreadId || !activeProject || !activeThread) return;
-      if (options?.rememberAsLastInvoked !== false) {
-        setLastInvokedScriptByProjectId((current) => {
-          if (current[activeProject.id] === script.id) return current;
-          return { ...current, [activeProject.id]: script.id };
-        });
-      }
       const targetCwd = options?.cwd ?? activeProject.workspaceRoot;
       const baseTerminalId =
         terminalUiState.activeTerminalId || activeKnownTerminalIds[0] || DEFAULT_THREAD_TERMINAL_ID;
@@ -4542,7 +4384,6 @@ export default function ChatView(props: ChatViewProps) {
       setThreadError,
       storeNewTerminal,
       storeSetActiveTerminal,
-      setLastInvokedScriptByProjectId,
       environmentId,
       openTerminal,
       openPreview,
@@ -4561,250 +4402,13 @@ export default function ChatView(props: ChatViewProps) {
     runProjectScriptRef.current = runProjectScript;
   }, [runProjectScript]);
   const runShellCommand = useCallback((command: string) => {
-    void runProjectScriptRef.current(
-      {
-        id: "chat-code-block",
-        name: "Chat code block",
-        command,
-        icon: "play",
-      },
-      { rememberAsLastInvoked: false },
-    );
+    void runProjectScriptRef.current({
+      id: "chat-code-block",
+      name: "Chat code block",
+      command,
+      icon: "play",
+    });
   }, []);
-
-  const supportsProjectSettingsOverrides =
-    environmentById.get(environmentId)?.serverConfig?.environment.capabilities
-      .projectSettingsOverrides === true;
-  const persistProjectScripts = useCallback(
-    async (input: {
-      projectId: ProjectId;
-      projectCwd: string;
-      previousScripts: ReadonlyArray<ProjectScript>;
-      nextScripts: ReadonlyArray<ProjectScript>;
-      keybinding: NewProjectScriptInput["keybinding"];
-      keybindingCommand: KeybindingCommand | null;
-    }): Promise<AtomCommandResult<void, unknown>> => {
-      const previousKeybinding = keybindingValueForCommand(
-        appAtomRegistry.get(serverEnvironment.configValueAtom(environmentId))?.keybindings ?? [],
-        input.keybindingCommand,
-      );
-      const isDeletingScript = !input.nextScripts.some(
-        (script) => commandForProjectScript(script.id) === input.keybindingCommand,
-      );
-      const changesKeybinding =
-        isElectron &&
-        input.keybinding !== undefined &&
-        (input.keybinding?.trim() || null) !== previousKeybinding &&
-        (!isDeletingScript || readEnvironmentScope(environmentId, AuthSettingsWriteScope));
-      if (changesKeybinding && !readEnvironmentScope(environmentId, AuthSettingsWriteScope)) {
-        return AsyncResult.failure(
-          Cause.fail(
-            new EnvironmentAuthorizationError({
-              requiredScope: AuthSettingsWriteScope,
-              message: "This connection cannot change keyboard shortcuts.",
-            }),
-          ),
-        );
-      }
-      const keybindingRule = changesKeybinding
-        ? decodeProjectScriptKeybindingRule({
-            keybinding: input.keybinding,
-            command: input.keybindingCommand,
-          })
-        : null;
-      const updateResult = mapAtomCommandResult(
-        await updateProjectScriptSettings({
-          environmentId,
-          input: {
-            // The canonical key on servers that understand it; the legacy
-            // per-project map is still translated on older ones.
-            patch: supportsProjectSettingsOverrides
-              ? {
-                  projectSettingsOverrides: {
-                    [input.projectId]: {
-                      ...settings.projectSettingsOverrides[input.projectId],
-                      defaultProjectScripts: input.nextScripts,
-                    },
-                  },
-                }
-              : {
-                  projectScriptOverrides: {
-                    [input.projectId]: input.nextScripts,
-                  },
-                },
-          },
-        }),
-        () => undefined,
-      );
-      if (updateResult._tag === "Failure") {
-        return updateResult;
-      }
-
-      if (!changesKeybinding) return updateResult;
-      if (!readEnvironmentScope(environmentId, AuthSettingsWriteScope)) {
-        return AsyncResult.failure(
-          Cause.fail(
-            new EnvironmentAuthorizationError({
-              requiredScope: AuthSettingsWriteScope,
-              message: isDeletingScript
-                ? "The script was deleted, but its keyboard shortcut could not be removed because permission changed."
-                : "The script was saved, but this connection can no longer change keyboard shortcuts.",
-            }),
-          ),
-        );
-      }
-
-      if (!isElectron) return updateResult;
-
-      const scriptId = input.keybindingCommand
-        ? projectScriptIdFromCommand(input.keybindingCommand)
-        : null;
-      if (!keybindingRule && !input.previousScripts.some((script) => script.id === scriptId)) {
-        return updateResult;
-      }
-      const retainedElsewhere =
-        !input.nextScripts.some((script) => script.id === scriptId) &&
-        (settings.defaultProjectScripts.some((script) => script.id === scriptId) ||
-          Object.entries(settings.projectSettingsOverrides).some(
-            ([projectId, entry]) =>
-              projectId !== input.projectId &&
-              entry.defaultProjectScripts?.some((script) => script.id === scriptId),
-          ) ||
-          allProjects.some(
-            (other) =>
-              other.environmentId === environmentId &&
-              other.id !== input.projectId &&
-              resolveProjectScripts(settings, other).some((script) => script.id === scriptId),
-          ));
-      if (!keybindingRule && retainedElsewhere) return updateResult;
-
-      const previousRules = (
-        environmentById.get(environmentId)?.serverConfig?.keybindings ?? []
-      ).flatMap((binding) => {
-        if (binding.command !== input.keybindingCommand || binding.whenAst) return [];
-        const previous = decodeProjectScriptKeybindingRule({
-          keybinding: keybindingValueForCommand([binding], input.keybindingCommand),
-          command: input.keybindingCommand,
-        });
-        return previous ? [previous] : [];
-      });
-      const previous = previousRules.at(-1);
-      for (const rule of keybindingRule ? previousRules.slice(0, -1) : previousRules) {
-        const result = await removeKeybinding({ environmentId, input: rule });
-        if (result._tag === "Failure") return mapAtomCommandResult(result, () => undefined);
-      }
-      return keybindingRule
-        ? mapAtomCommandResult(
-            await upsertKeybinding({
-              environmentId,
-              input:
-                previous && previous.key !== keybindingRule.key
-                  ? { ...keybindingRule, replace: previous }
-                  : keybindingRule,
-            }),
-            () => undefined,
-          )
-        : updateResult;
-    },
-    [
-      allProjects,
-      environmentById,
-      environmentId,
-      removeKeybinding,
-      settings,
-      supportsProjectSettingsOverrides,
-      updateProjectScriptSettings,
-      upsertKeybinding,
-    ],
-  );
-  const saveProjectScript = useCallback(
-    async (input: NewProjectScriptInput): Promise<AtomCommandResult<void, unknown>> => {
-      if (!activeProject) {
-        return AsyncResult.success(undefined);
-      }
-      const nextId = nextProjectScriptId(
-        input.name,
-        activeProjectScripts.map((script) => script.id),
-      );
-      const nextScript = buildProjectScript(nextId, input);
-      const nextScripts = [...activeProjectScripts, nextScript];
-
-      return persistProjectScripts({
-        projectId: activeProject.id,
-        projectCwd: activeProject.workspaceRoot,
-        previousScripts: activeProjectScripts,
-        nextScripts,
-        keybinding: input.keybinding,
-        keybindingCommand: commandForProjectScript(nextId),
-      });
-    },
-    [activeProject, activeProjectScripts, persistProjectScripts],
-  );
-  const updateProjectScript = useCallback(
-    async (
-      scriptId: string,
-      input: NewProjectScriptInput,
-    ): Promise<AtomCommandResult<void, unknown>> => {
-      if (!activeProject) {
-        return AsyncResult.success(undefined);
-      }
-      const existingScript = activeProjectScripts.find((script) => script.id === scriptId);
-      if (!existingScript) {
-        return AsyncResult.failure(Cause.fail(new Error("Script not found.")));
-      }
-
-      const updatedScript = buildProjectScript(existingScript.id, input);
-      const nextScripts = activeProjectScripts.map((script) =>
-        script.id === scriptId ? updatedScript : script,
-      );
-
-      return persistProjectScripts({
-        projectId: activeProject.id,
-        projectCwd: activeProject.workspaceRoot,
-        previousScripts: activeProjectScripts,
-        nextScripts,
-        keybinding: input.keybinding,
-        keybindingCommand: commandForProjectScript(scriptId),
-      });
-    },
-    [activeProject, activeProjectScripts, persistProjectScripts],
-  );
-  const deleteProjectScript = useCallback(
-    async (scriptId: string): Promise<AtomCommandResult<void, unknown>> => {
-      if (!activeProject) {
-        return AsyncResult.success(undefined);
-      }
-      const nextScripts = activeProjectScripts.filter((script) => script.id !== scriptId);
-
-      const deletedName = activeProjectScripts.find((s) => s.id === scriptId)?.name;
-
-      const result = await persistProjectScripts({
-        projectId: activeProject.id,
-        projectCwd: activeProject.workspaceRoot,
-        previousScripts: activeProjectScripts,
-        nextScripts,
-        keybinding: null,
-        keybindingCommand: commandForProjectScript(scriptId),
-      });
-      if (result._tag === "Success") {
-        toastManager.add({
-          type: "success",
-          title: `Deleted action "${deletedName ?? "Unknown"}"`,
-        });
-      } else if (!isAtomCommandInterrupted(result)) {
-        const error = squashAtomCommandFailure(result);
-        toastManager.add(
-          stackedThreadToast({
-            type: "error",
-            title: "Could not delete action",
-            description: error instanceof Error ? error.message : "An unexpected error occurred.",
-          }),
-        );
-      }
-      return result;
-    },
-    [activeProject, activeProjectScripts, persistProjectScripts],
-  );
 
   const handleRuntimeModeChange = useCallback(
     (mode: RuntimeMode) => {
@@ -5205,10 +4809,6 @@ export default function ChatView(props: ChatViewProps) {
     }
     useRightPanelStore.getState().toggleVisibility(activeThreadRef);
   }, [activeThreadRef, closePreviewPanel, rightPanelOpen]);
-  const toggleThreadPanel = useCallback(() => {
-    if (!activeThreadRef) return;
-    useRightPanelStore.getState().toggleThreadPanel(activeThreadRef, threadPanelPresentation);
-  }, [activeThreadRef, threadPanelPresentation]);
   // A thread started for a link the OS opened shows its browser maximized, like a browser window.
   useEffect(() => {
     if (!canMaximizeRightPanel) return;
@@ -6685,7 +6285,7 @@ export default function ChatView(props: ChatViewProps) {
     ? !canOperateThread
       ? "This connection cannot change threads."
       : !activeProject
-        ? "Choose a project before compacting"
+        ? "Choose a bot before compacting"
         : !manualCompactionProviderAvailable
           ? "Compaction is unavailable for this provider"
           : "Compacting is unavailable right now"
@@ -6992,13 +6592,6 @@ export default function ChatView(props: ChatViewProps) {
         return;
       }
 
-      if (command === "threadPanel.toggle") {
-        event.preventDefault();
-        event.stopPropagation();
-        toggleThreadPanel();
-        return;
-      }
-
       if (command === "rightPanel.close") {
         // Nothing open: leave the event alone so the shortcut keeps its
         // native meaning (close window on desktop, close tab in a browser).
@@ -7098,10 +6691,8 @@ export default function ChatView(props: ChatViewProps) {
         event.preventDefault();
         event.stopPropagation();
         if (event.repeat) return;
-        // Step from where a pending switch is heading, so repeated presses keep advancing.
-        const currentId = environmentChangeRef.current?.environmentId ?? environmentId;
         const index = logicalProjectEnvironments.findIndex(
-          (env) => env.environmentId === currentId,
+          (env) => env.environmentId === environmentId,
         );
         const next = logicalProjectEnvironments[(index + 1) % logicalProjectEnvironments.length];
         if (next) onEnvironmentChange(next.environmentId);
@@ -7207,7 +6798,6 @@ export default function ChatView(props: ChatViewProps) {
     isThreadFindActive,
     toggleRightPanel,
     toggleRightPanelMaximized,
-    toggleThreadPanel,
     toggleTerminalVisibility,
     composerRef,
     draftId,
@@ -7660,7 +7250,6 @@ export default function ChatView(props: ChatViewProps) {
       isRevertingCheckpoint ||
       !clientSettingsHydrated ||
       threadDetailLoading ||
-      environmentChangeRef.current !== null ||
       sendInFlightRef.current ||
       feedbackUploadsInFlightRef.current.has(routeThreadKey)
     ) {
@@ -8081,8 +7670,8 @@ export default function ChatView(props: ChatViewProps) {
       toastManager.add(
         stackedThreadToast({
           type: "warning",
-          title: "Choose a project first",
-          description: "This draft no longer points to an available project.",
+          title: "Choose a bot first",
+          description: "This draft no longer points to an available bot.",
         }),
       );
       return;
@@ -9819,71 +9408,17 @@ export default function ChatView(props: ChatViewProps) {
       </Suspense>
     ) : null
   ) : null;
-  const threadDetailsPanelProps: ThreadDetailsPanelProps = {
-    anchor: threadPanelPopoverAnchorRef,
-    handle: threadPanelPopoverHandle,
-    onPresentationChange: setThreadPanelPresentation,
-    environmentId: activeThread.environmentId,
-    threadId: activeThread.id,
-    ...(draftId ? { draftId } : {}),
-    activeProjectScripts: activeProject ? activeProjectScripts : undefined,
-    preferredScriptId: activeProject
-      ? (lastInvokedScriptByProjectId[activeProject.id] ?? null)
-      : null,
-    keybindings,
-    availableEditors,
-    showOpenInPicker,
-    workspaceRoot: activeProjectCwd,
-    envLocked,
-    availableEnvironments: logicalProjectEnvironments,
-    autoEnvironmentLabel,
-    onAutoEnvironment:
-      draftId &&
-      !envLocked &&
-      canAutoBalanceEnvironments &&
-      loadBalancingSettings.loadBalancingEnabled
-        ? onAutoEnvironment
-        : undefined,
-    onEnvironmentChange,
-    onRunProjectScript: runProjectScript,
-    onAddProjectScript: saveProjectScript,
-    onUpdateProjectScript: updateProjectScript,
-    onDeleteProjectScript: deleteProjectScript,
-  };
-  const panelToggleControlProps = {
-    terminalAvailable: activeProject !== null,
-    terminalOpen: terminalUiState.terminalOpen,
-    terminalShortcutLabel: shortcutLabelForCommand(keybindings, "terminal.toggle"),
-    threadPanelOpen,
-    threadPanelPresentation,
-    threadPanelPopoverHandle,
-    threadPanelShortcutLabel: shortcutLabelForCommand(keybindings, "threadPanel.toggle"),
-    rightPanelAvailable: activeProject !== null,
-    rightPanelOpen,
-    rightPanelShortcutLabel: shortcutLabelForCommand(keybindings, "rightPanel.toggle"),
-    onToggleTerminal: toggleTerminalVisibility,
-    onToggleThreadPanel: toggleThreadPanel,
-    onToggleRightPanel: toggleRightPanel,
-  } satisfies PanelLayoutControlsProps;
   const panelToggleControls = (
     <PanelLayoutControls
-      {...panelToggleControlProps}
-      showThreadPanelControl={!inlineRightPanelOwnsTitleBar}
+      terminalAvailable={activeProject !== null}
+      terminalOpen={terminalUiState.terminalOpen}
+      terminalShortcutLabel={shortcutLabelForCommand(keybindings, "terminal.toggle")}
+      rightPanelAvailable={activeProject !== null}
+      rightPanelOpen={rightPanelOpen}
+      rightPanelShortcutLabel={shortcutLabelForCommand(keybindings, "rightPanel.toggle")}
+      onToggleTerminal={toggleTerminalVisibility}
+      onToggleRightPanel={toggleRightPanel}
     />
-  );
-  const threadPanelHeaderControl = (
-    <div
-      // Inset from the chat header's edge, not the window's: --workspace-controls-right also
-      // clears the native window buttons, which sit over the right panel, not this header.
-      className="absolute top-[var(--workspace-controls-top)] right-[calc(env(safe-area-inset-right)+0.75rem)] z-50 flex h-[var(--workspace-topbar-height)] items-center [-webkit-app-region:no-drag]"
-      data-workspace-titlebar-controls
-    >
-      <PanelLayoutControls
-        {...panelToggleControlProps}
-        showTerminalControl={false}
-        showRightPanelControl={false}
-      />
-    </div>
   );
   const panelLayoutControls = (
     <div
@@ -9963,7 +9498,6 @@ export default function ChatView(props: ChatViewProps) {
       >
         {/* Top bar */}
         <header
-          ref={threadPanelPopoverAnchorRef}
           data-chat-header
           className={cn(
             "relative bg-background [[data-panel-animations=true]_&]:motion-safe:transition-[padding-left] [[data-panel-animations=true]_&]:motion-safe:duration-(--panel-animation-duration) [[data-panel-animations=true]_&]:motion-safe:ease-out",
@@ -9985,7 +9519,6 @@ export default function ChatView(props: ChatViewProps) {
             />
           ) : null}
           {!rightPanelControlsAtRoot && !rightPanelControlsInPanel ? panelLayoutControls : null}
-          {inlineRightPanelOwnsTitleBar ? threadPanelHeaderControl : null}
           <ChatHeader
             activeThreadEnvironmentId={activeThread.environmentId}
             activeThreadId={activeThread.id}
@@ -10016,7 +9549,7 @@ export default function ChatView(props: ChatViewProps) {
             }}
             controlsRef={threadFindControlsRef}
             onOpenChange={setIsThreadFindActive}
-            detailsCardTopInset={isThreadFindActive ? THREAD_FIND_BAR_RESERVED_HEIGHT : 0}
+            findBarOpen={isThreadFindActive}
             composerOverlayElement={isDraftHeroState ? null : composerOverlayElement}
             data-chat-workspace-drop-target="true"
             onDragEnter={workspaceFileDropHandlers.onDragEnter}
@@ -10316,15 +9849,13 @@ export default function ChatView(props: ChatViewProps) {
                               sendDisabledReason={
                                 !canOperateThread
                                   ? "This connection cannot change threads."
-                                  : isEnvironmentChanging
-                                    ? "Preparing machine"
-                                    : isRevertingCheckpoint
-                                      ? "Rewinding conversation"
-                                      : feedbackUploading
-                                        ? "Sending feedback"
-                                        : threadDetailLoading
-                                          ? "Messages loading"
-                                          : null
+                                  : isRevertingCheckpoint
+                                    ? "Rewinding conversation"
+                                    : feedbackUploading
+                                      ? "Sending feedback"
+                                      : threadDetailLoading
+                                        ? "Messages loading"
+                                        : null
                               }
                               queuedRunsControl={queuedRunsControl}
                               bannerItems={composerBannerItems}
@@ -10497,8 +10028,6 @@ export default function ChatView(props: ChatViewProps) {
                 miniPlayer={activePreviewMiniPlayer}
               />
             ) : null}
-
-            <ThreadDetailsPanel {...threadDetailsPanelProps} />
           </ThreadFindCanvas>
           {/* end chat column */}
         </div>

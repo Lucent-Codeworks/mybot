@@ -39,6 +39,8 @@ interface HarnessOptions {
   readonly crypto?: (real: Crypto.Crypto) => Crypto.Crypto;
 }
 
+const bot = { role: "", instructions: "" };
+
 /** The service over a real ProjectService, with its data dir at `baseDir`. */
 const layer = (baseDir: string, options?: HarnessOptions) =>
   ManagedProjectFolders.layer.pipe(
@@ -95,51 +97,6 @@ it.effect("offers a Scratch folder under the data dir", () =>
   ),
 );
 
-it.effect("creates one Scratch project, even for concurrent first requests", () =>
-  withScratch(() =>
-    Effect.gen(function* () {
-      const scratch = yield* ManagedProjectFolders.ManagedProjectFolders;
-      const projects = yield* ProjectService.ProjectService;
-      // Without handling the losing creates' conflicts, eight racers fail.
-      const racers = yield* Effect.all(
-        Array.from({ length: 8 }, () => scratch.ensureScratchProject),
-        { concurrency: "unbounded" },
-      );
-      const again = yield* scratch.ensureScratchProject;
-      assert.deepEqual(
-        new Set(racers.map((result) => result.projectId)),
-        new Set([again.projectId]),
-      );
-
-      const snapshot = yield* projects.snapshot;
-      const scratchProjects = snapshot.projects.filter(
-        (project) => project.workspaceRoot === scratch.scratchRoot,
-      );
-      assert.lengthOf(scratchProjects, 1);
-      assert.equal(scratchProjects[0]?.title, "No project");
-      assert.deepEqual(scratchProjects[0]?.projectIcon, {
-        kind: "lucide",
-        name: "message-square-dashed",
-        color: "gray",
-      });
-    }),
-  ),
-);
-
-it.effect("recreates the Scratch folder after it is deleted", () =>
-  withScratch(() =>
-    Effect.gen(function* () {
-      const scratch = yield* ManagedProjectFolders.ManagedProjectFolders;
-      const fileSystem = yield* FileSystem.FileSystem;
-      const { projectId } = yield* scratch.ensureScratchProject;
-      yield* fileSystem.remove(scratch.scratchRoot, { recursive: true });
-
-      assert.equal((yield* scratch.ensureScratchProject).projectId, projectId);
-      assert.isTrue(yield* fileSystem.exists(scratch.scratchRoot));
-    }),
-  ),
-);
-
 it.effect("starts a named project with a README and an icon, and suffixes a taken name", () =>
   withScratch(({ baseDir }) =>
     Effect.gen(function* () {
@@ -150,8 +107,8 @@ it.effect("starts a named project with a README and an icon, and suffixes a take
       const root = path.resolve(baseDir, "projects");
       assert.equal(folders.namedProjectsRoot, root);
 
-      const first = yield* folders.createNamedProject({ name: "Pinball Stats" });
-      const second = yield* folders.createNamedProject({ name: "pinball stats" });
+      const first = yield* folders.createNamedProject({ name: "Pinball Stats", bot });
+      const second = yield* folders.createNamedProject({ name: "pinball stats", bot });
 
       assert.equal(first.workspaceRoot, path.join(root, "pinball-stats"));
       assert.equal(second.workspaceRoot, path.join(root, "pinball-stats-2"));
@@ -167,6 +124,22 @@ it.effect("starts a named project with a README and an icon, and suffixes a take
       );
       assert.include(icon, ">PS</text>");
       assert.isFalse(yield* fileSystem.exists(path.join(first.workspaceRoot, ".git")));
+    }),
+  ),
+);
+
+it.effect("refuses a named project without a bot, before making its folder", () =>
+  withScratch(({ baseDir }) =>
+    Effect.gen(function* () {
+      const folders = yield* ManagedProjectFolders.ManagedProjectFolders;
+      const projects = yield* ProjectService.ProjectService;
+      const fileSystem = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+
+      const failure = yield* Effect.flip(folders.createNamedProject({ name: "Plain" }));
+      assert.equal(failure._tag, "ProjectBotRequiredError");
+      assert.isFalse(yield* fileSystem.exists(path.resolve(baseDir, "projects", "plain")));
+      assert.deepEqual((yield* projects.snapshot).projects, []);
     }),
   ),
 );
@@ -254,7 +227,7 @@ it.effect("gives concurrent named projects with the same name distinct folders",
       const folders = yield* ManagedProjectFolders.ManagedProjectFolders;
       const projects = yield* ProjectService.ProjectService;
       const created = yield* Effect.all(
-        Array.from({ length: 4 }, () => folders.createNamedProject({ name: "Race" })),
+        Array.from({ length: 4 }, () => folders.createNamedProject({ name: "Race", bot })),
         { concurrency: "unbounded" },
       );
 
@@ -289,7 +262,7 @@ it.effect("keeps a folder that another project owns when the create conflicts", 
       });
       yield* fileSystem.remove(taken, { recursive: true });
 
-      const failure = yield* Effect.flip(folders.createNamedProject({ name: "Taken" }));
+      const failure = yield* Effect.flip(folders.createNamedProject({ name: "Taken", bot }));
 
       assert.equal(failure._tag, "NamedProjectCreateError");
       assert.equal(failure.message, "Failed to create the project.");
@@ -311,7 +284,7 @@ it.effect("removes the folder when the project create is rejected for another re
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
 
-        const failure = yield* Effect.flip(folders.createNamedProject({ name: "Rejected" }));
+        const failure = yield* Effect.flip(folders.createNamedProject({ name: "Rejected", bot }));
 
         assert.equal(failure._tag, "NamedProjectCreateError");
         assert.deepEqual(yield* fileSystem.readDirectory(path.resolve(baseDir, "projects")), []);
@@ -347,7 +320,7 @@ it.effect("removes the folder when the create is cancelled before the project ex
           const path = yield* Path.Path;
 
           const fiber = yield* folders
-            .createNamedProject({ name: "Cancelled" })
+            .createNamedProject({ name: "Cancelled", bot })
             .pipe(Effect.forkChild);
           yield* Deferred.await(scaffolded);
           assert.deepEqual(yield* fileSystem.readDirectory(path.resolve(baseDir, "projects")), [

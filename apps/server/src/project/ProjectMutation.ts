@@ -1,16 +1,20 @@
 import { type ProjectMutation } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 
-import { type ProjectService } from "./ProjectService.ts";
+import { ProjectBotRequiredError, type ProjectService } from "./ProjectService.ts";
 
 type ProjectMutations = Pick<ProjectService["Service"], "create" | "delete" | "update">;
 
+/** Every project is a bot, so a create needs a bot profile and an update cannot remove it. */
 export const projectMutationOperation = Effect.fn("projectMutationOperation")(function* (
   projects: ProjectMutations,
   mutation: ProjectMutation,
 ) {
   switch (mutation.type) {
     case "project.create":
+      if (mutation.bot == null) {
+        return yield* new ProjectBotRequiredError({ projectId: mutation.projectId });
+      }
       return yield* projects.create({
         commandId: mutation.commandId,
         projectId: mutation.projectId,
@@ -22,11 +26,14 @@ export const projectMutationOperation = Effect.fn("projectMutationOperation")(fu
         ...(mutation.defaultModelSelection === undefined
           ? {}
           : { defaultModelSelection: mutation.defaultModelSelection }),
-        ...(mutation.bot === undefined ? {} : { bot: mutation.bot }),
+        bot: mutation.bot,
         ...(mutation.scripts === undefined ? {} : { scripts: mutation.scripts }),
       });
 
     case "project.update":
+      if (mutation.bot === null) {
+        return yield* new ProjectBotRequiredError({ projectId: mutation.projectId });
+      }
       return yield* projects.update({
         commandId: mutation.commandId,
         projectId: mutation.projectId,

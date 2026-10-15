@@ -36,7 +36,7 @@ terminal afterwards. **Remove** takes it off again.
 
 ### Windows Subsystem for Linux
 
-Choose a WSL distro in **Settings → Connections** to run agents and projects
+Choose a WSL distro in **Settings → Connections** to run agents and bots
 there. Install the provider CLIs inside that distro. MyBot installs its own
 server runtime there automatically; the first launch after an app update can
 take longer.

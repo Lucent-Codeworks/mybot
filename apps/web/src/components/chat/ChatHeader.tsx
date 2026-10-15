@@ -26,7 +26,6 @@ import { toastManager } from "../ui/toast";
 import { useThreadActionMenu } from "~/hooks/useThreadActionMenu";
 import { readLocalApi } from "~/localApi";
 import { threadEnvironment } from "../../state/threads";
-import { useAtomCommand } from "../../state/use-atom-command";
 import { useOrchestrationCommand } from "../../state/use-orchestration-command";
 import { readEnvironmentScope, useEnvironmentScope } from "../../state/session";
 import { ProjectFavicon } from "../ProjectFavicon";
@@ -132,7 +131,7 @@ export const ChatHeader = memo(function ChatHeader({
     if (!list || !parentThreadLink) return;
     // Measure the untruncated labels, including a collapsed parent's hidden
     // text, so expanding and collapsing never change the fit calculation.
-    // Width-capped labels (the project) never grow, so their overflow is skipped.
+    // Width-capped labels (the bot) never grow, so their overflow is skipped.
     const measure = () => {
       const gap = Number.parseFloat(getComputedStyle(list).columnGap) || 0;
       const width = Array.from(list.children).reduce(
@@ -271,12 +270,12 @@ export const ChatHeader = memo(function ChatHeader({
         const api = readLocalApi();
         if (!api) return;
         void api.contextMenu
-          .show([{ id: "project-settings", label: "Project settings", icon: "settings" }], {
+          .show([{ id: "bot-settings", label: "Bot settings", icon: "settings" }], {
             x: event.clientX,
             y: event.clientY,
           })
           .then((action) => {
-            if (action === "project-settings") onOpenProjectSettings?.();
+            if (action === "bot-settings") onOpenProjectSettings?.();
           });
         return;
       }
@@ -310,9 +309,9 @@ export const ChatHeader = memo(function ChatHeader({
         ariaLabel="Thread breadcrumb"
         className="flex-1 overflow-clip [overflow-clip-margin:2px]"
       >
-        {/* The project always leads the header: knowing which project a
-            thread lives in is priority zero, and the thread title alone
-            doesn't answer it. */}
+        {/* The bot always leads the header: knowing which bot a chat is
+            with is priority zero, and the chat title alone doesn't answer
+            it. */}
         {activeProject ? (
           <>
             <WorkspaceBreadcrumbItem className="shrink">
@@ -321,7 +320,7 @@ export const ChatHeader = memo(function ChatHeader({
                   render={
                     <button
                       type="button"
-                      aria-label={`New thread in ${activeProjectName}`}
+                      aria-label={`New chat with ${activeProjectName}`}
                       onClick={onNewThreadInProject}
                       className="inline-flex min-w-0 max-w-full cursor-pointer items-center gap-1.5 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                     />
@@ -332,7 +331,7 @@ export const ChatHeader = memo(function ChatHeader({
                     {activeProjectName}
                   </WorkspaceBreadcrumbText>
                 </TooltipTrigger>
-                <TooltipPopup side="top">New thread in {activeProjectName}</TooltipPopup>
+                <TooltipPopup side="top">New chat with {activeProjectName}</TooltipPopup>
               </Tooltip>
             </WorkspaceBreadcrumbItem>
             <WorkspaceBreadcrumbSeparator>

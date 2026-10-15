@@ -45,10 +45,11 @@ interface SettingsScopeMenuProps {
 }
 
 /**
- * "Applying settings for <project> across <environment>" at the top of a settings
- * page. The two pickers are the targets a change is written to. A project is
- * the same project on every environment, so the environment alone decides
- * where a project override is written.
+ * "Applying settings for <bot> across <environment>" at the top of a settings
+ * page. The two pickers are the targets a change is written to. A bot is the
+ * same bot on every environment, so the environment alone decides where a
+ * bot override is written. The bot picker lists `groups`, which settings
+ * limits to bots (see `useSettingsProjectGroups`).
  */
 export function SettingsScopeSentence() {
   const scope = useOptionalSettingsScope();
@@ -193,9 +194,9 @@ function ProjectScopeMenu({ value, groups, onChange }: SettingsScopeMenuProps) {
   const selected = groups.find((group) => group.projectKey === value.project);
   return (
     <ScopeMenu
-      ariaLabel="Project scope"
+      ariaLabel="Bot scope"
       icon={selected ? <ProjectFavicon project={selected} className="size-3.5 shrink-0" /> : null}
-      label={selected?.displayName ?? (value.project ? "Unavailable project" : "All projects")}
+      label={selected?.displayName ?? (value.project ? "Unavailable bot" : "All bots")}
     >
       <MenuRadioGroup
         value={projectAxisValue(value)}
@@ -205,7 +206,7 @@ function ProjectScopeMenu({ value, groups, onChange }: SettingsScopeMenuProps) {
       >
         <MenuRadioItem value={ALL_PROJECTS_VALUE} closeOnClick>
           <span className="flex min-w-0 items-center gap-2">
-            <span className="min-w-0 flex-1 truncate">All projects</span>
+            <span className="min-w-0 flex-1 truncate">All bots</span>
             <MenuRadioItemIndicator />
           </span>
         </MenuRadioItem>

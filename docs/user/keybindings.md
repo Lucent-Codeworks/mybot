@@ -40,7 +40,7 @@ in Settings.
 
 With a hardware keyboard, use `Cmd+1` through `Cmd+9` to open the first nine
 displayed threads. The shortcuts follow the current list filters and order.
-`Cmd+K` opens the command palette to search commands, projects, and threads.
+`Cmd+K` opens the command palette to search commands, bots, and threads.
 Use the arrow keys and Return to choose a result, or `Cmd+1` through `Cmd+9` to
 choose directly. Escape or `Cmd+K` closes the palette. Start a search with `>`
 to show only actions.
@@ -73,8 +73,6 @@ Invalid rules are ignored; if the file cannot be parsed, MyBot uses defaults.
 
 Each rule requires a `key` shortcut and a `command` ID. An optional `when`
 expression restricts when it runs.
-
-Project scripts use `script.{id}.run`, such as `script.test.run`.
 
 ## Key syntax
 
@@ -132,10 +130,9 @@ terminals so native undo keeps working there.
 `navigation.back` (`mod+[` by default) and `navigation.forward` (`mod+]`) move
 through the pages you have visited, like a browser's back and forward buttons.
 
-`chat.new` may ask you to choose a project when there is more than one.
-`chat.newLocal` skips that chooser. Both use your
-[new-thread defaults](./thread-sidebar.md#start-a-thread). `chat.newWithoutProject`
-(`mod+alt+n`) starts a thread [without a project](./thread-sidebar.md#start-without-a-project).
+`chat.new` and `chat.newLocal` open a chat with the bot you are talking to,
+otherwise the bot you used most recently; with no bots they open
+**New bot**. Both use your [new-thread defaults](./thread-sidebar.md#start-a-thread).
 
 ## Reserved shortcuts
 

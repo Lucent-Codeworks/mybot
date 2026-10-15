@@ -3,7 +3,12 @@
 A bot is a project with a `bot` profile (`BotProfile` in `packages/contracts/src/project.ts`). Its
 name, icon, and model are the project's title, icon, and `defaultModelSelection` project setting
 override; its conversations are the project's threads. There is no separate bot aggregate, so every
-project feature (threads, scripts, settings overrides, scheduled tasks) works for bots unchanged.
+project feature (threads, settings overrides, scheduled tasks) works for bots unchanged.
+
+Every project is a bot. `ProjectService` stays profile-agnostic; its entry points (RPC, HTTP, CLI,
+MCP) refuse a project without a bot profile with `ProjectBotRequiredError`, and
+[`PlainProjectCleanup`](../../apps/server/src/project/PlainProjectCleanup.ts) deletes any plain
+project left at startup, including legacy imports, while keeping its folder on disk.
 
 ## Behavior lives in the bot block
 

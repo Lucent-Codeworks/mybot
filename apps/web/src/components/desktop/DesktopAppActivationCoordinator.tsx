@@ -1,21 +1,16 @@
-import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
 import type { DesktopAppActivationRequest } from "@t3tools/contracts";
 import { useEffect, useEffectEvent, useRef } from "react";
 
 import { handleDesktopAppActivationRequest } from "../../desktopAppActivation";
 import { useNewThreadHandler } from "../../hooks/useHandleNewThread";
-import { findProjectByPath, inferProjectTitleFromPath } from "../../lib/projectPaths";
-import { newProjectId } from "../../lib/utils";
-import { readProjects, waitForProject } from "../../state/entities";
+import { findProjectByPath } from "../../lib/projectPaths";
+import { readProjects } from "../../state/entities";
 import { usePrimaryEnvironment } from "../../state/environments";
-import { projectEnvironment } from "../../state/projects";
 import { useEnvironmentQuery } from "../../state/query";
 import { environmentShell } from "../../state/shell";
-import { useAtomCommand } from "../../state/use-atom-command";
 
 export function DesktopAppActivationCoordinator() {
   const primaryEnvironment = usePrimaryEnvironment();
-  const createProject = useAtomCommand(projectEnvironment.create, { reportFailure: false });
   const openThread = useNewThreadHandler();
   const queueRef = useRef(Promise.resolve());
   const activation = window.desktopBridge?.appActivation;
@@ -46,30 +41,11 @@ export function DesktopAppActivationCoordinator() {
       },
       findProject: (environmentId, workspaceRoot) =>
         findProjectByPath(
-          readProjects().filter((project) => project.environmentId === environmentId),
+          readProjects().filter(
+            (project) => project.environmentId === environmentId && project.bot != null,
+          ),
           workspaceRoot,
         ) ?? null,
-      createProject: async (environmentId, workspaceRoot) => {
-        const projectId = newProjectId();
-        const result = await createProject({
-          environmentId,
-          input: {
-            projectId,
-            title: inferProjectTitleFromPath(workspaceRoot),
-            workspaceRoot,
-            createWorkspaceRootIfMissing: false,
-            defaultModelSelection: null,
-          },
-        });
-        if (result._tag === "Failure") {
-          const error = squashAtomCommandFailure(result);
-          throw error instanceof Error ? error : new Error("MyBot could not add the project.");
-        }
-        return projectId;
-      },
-      waitForProject: async (projectRef) => {
-        await waitForProject(projectRef);
-      },
       openThread: (projectRef) => openThread(projectRef),
     }),
   );

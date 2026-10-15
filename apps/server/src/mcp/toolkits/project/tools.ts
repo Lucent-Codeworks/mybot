@@ -63,7 +63,7 @@ const ProjectReadTool = Tool.make("t3_project_read", {
 const ProjectCreateTool = Tool.make("t3_project_create", {
   ...shared,
   description:
-    "Register a project directory through the existing project service. Set createWorkspaceRootIfMissing to create a directory. Omit workspaceRoot to start a new project from just its title: the app makes a folder for it in its own projects folder, with a README and an icon. Set bot ({role, instructions}) with defaultModelSelection to create a bot: a named teammate whose profile every turn in its threads receives. Only create a bot when the user asks for one or agrees to it. Each call creates a new request; an existing registered workspace is rejected.",
+    "Create a bot. In MyBot every project is a bot: a named teammate whose profile every turn in its threads receives, so bot ({role, instructions}) is required. Set defaultModelSelection for the model its threads start with. Omit workspaceRoot to start the bot from just its title: the app makes a folder for it in its own projects folder, with a README, a memory file, and an icon. Or pass workspaceRoot to give the bot an existing directory; set createWorkspaceRootIfMissing to create it. Only create a bot when the user asks for one or agrees to it. Each call creates a new request; an existing registered workspace is rejected.",
   parameters: Schema.Struct({
     ...ProjectCreatePayload.fields,
     workspaceRoot: Schema.optional(ProjectCreatePayload.fields.workspaceRoot),
@@ -73,7 +73,7 @@ const ProjectCreateTool = Tool.make("t3_project_create", {
 const ProjectUpdateTool = Tool.make("t3_project_update", {
   ...shared,
   description:
-    "Update a registered project's settings. Omitted fields are preserved. Set bot to edit a bot's role and instructions, or bot:null to turn it back into a plain project. Uses the same project service as the app.",
+    "Update a bot's settings. Omitted fields are preserved. Set bot to edit its role and instructions; bot:null is rejected because every project is a bot. Uses the same project service as the app.",
   parameters: Schema.Struct({ projectId: ProjectId, ...ProjectUpdatePayload.fields }),
 }).annotate(Tool.Destructive, true);
 const ProjectDeleteTool = Tool.make("t3_project_delete", {
@@ -85,15 +85,9 @@ const ProjectDeleteTool = Tool.make("t3_project_delete", {
 const ThreadLaunchTool = Tool.make("t3_thread_launch", {
   ...shared,
   description:
-    "Create an ordinary TOP-LEVEL thread. Use this when the user requests independent work or a new thread; use delegate_task for child subagents. The thread runs in its project's folder. Omit projectId/modelSelection/modes to inherit those settings from the calling thread; a caller outside a MyBot thread must pass projectId and gets the project's default model. Set scratch:true instead of projectId for a thread without a project: it runs in the environment's Scratch folder. Put the task in message. Each call creates a new launch with no retry key; retain threadId and use t3_thread_read/t3_thread_wait to follow preparation. To link a thread for the user, write `[title](t3-thread://v1/<threadId>)` with the threadId exactly as returned, not URL-encoded; MyBot shows the thread's current title. After errors or lost responses, inspect t3_thread_list before retrying. Attachments must be pending uploads. The new thread may not run with broader runtime or interaction modes than the caller: the calling MyBot thread's own modes, or the permission mode an outside agent was approved with.",
+    "Create an ordinary TOP-LEVEL thread. Use this when the user requests independent work or a new thread; use delegate_task for child subagents. The thread runs in its project's folder. Omit projectId/modelSelection/modes to inherit those settings from the calling thread; a caller outside a MyBot thread must pass projectId and gets the project's default model. Put the task in message. Each call creates a new launch with no retry key; retain threadId and use t3_thread_read/t3_thread_wait to follow preparation. To link a thread for the user, write `[title](t3-thread://v1/<threadId>)` with the threadId exactly as returned, not URL-encoded; MyBot shows the thread's current title. After errors or lost responses, inspect t3_thread_list before retrying. Attachments must be pending uploads. The new thread may not run with broader runtime or interaction modes than the caller: the calling MyBot thread's own modes, or the permission mode an outside agent was approved with.",
   parameters: Schema.Struct({
     projectId: Schema.optional(ProjectId),
-    scratch: Schema.optional(
-      Schema.Boolean.annotate({
-        description:
-          "Launch without a project, in the environment's Scratch project. Not with projectId.",
-      }),
-    ),
     title: TrimmedNonEmptyString,
     modelSelection: Schema.optional(ModelSelection),
     runtimeMode: Schema.optional(RuntimeMode),
@@ -116,7 +110,6 @@ const ThreadLaunchTool = Tool.make("t3_thread_launch", {
   dependencies: [
     ...shared.dependencies,
     ThreadLaunchService.ThreadLaunchService,
-    ManagedProjectFolders.ManagedProjectFolders,
     FileSystem.FileSystem,
     ServerConfig.ServerConfig,
     ServerSettings.ServerSettingsService,

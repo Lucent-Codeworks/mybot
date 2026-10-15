@@ -9,20 +9,16 @@ type CommandPaletteContentProps = Omit<ComponentProps<typeof Command>, "children
   readonly escapeLabel?: ReactNode;
   readonly footerActionLabel?: ReactNode;
   readonly footerTrailing?: ReactNode;
-  readonly inputAccessory?: ReactNode;
   readonly inputProps: ComponentProps<typeof CommandInput>;
-  /**
-   * How tall the results panel may grow: the palette's list, a taller file list, or the whole
-   * dialog body (for modes that lay out their own status and empty states).
-   */
-  readonly panelSize?: "list" | "tall-list" | "fill";
+  /** How tall the results panel may grow: the palette's list or a taller file list. */
+  readonly panelSize?: "list" | "tall-list";
   readonly showBackHint?: boolean;
   readonly testId?: string;
 };
 
 /**
  * Shared command palette chrome. Palette modes provide their query behavior,
- * results, and optional input accessory while retaining one input, panel, and
+ * results, and footer actions while retaining one input, panel, and
  * keyboard-hint gutter.
  */
 export function CommandPaletteContent({
@@ -30,7 +26,6 @@ export function CommandPaletteContent({
   escapeLabel = "Close",
   footerActionLabel,
   footerTrailing,
-  inputAccessory,
   inputProps,
   panelSize = "list",
   showBackHint,
@@ -49,17 +44,10 @@ export function CommandPaletteContent({
   return (
     <div className="contents" data-testid={testId}>
       <Command {...commandProps}>
-        <div className="relative">
-          <CommandInput {...inputProps} ref={inputRef} />
-          {inputAccessory}
-        </div>
+        <CommandInput {...inputProps} ref={inputRef} />
         <CommandPanel
           className={
-            panelSize === "fill"
-              ? "flex min-h-0 flex-1 flex-col"
-              : panelSize === "tall-list"
-                ? "max-h-[min(34rem,76vh)]"
-                : "max-h-[min(28rem,70vh)]"
+            panelSize === "tall-list" ? "max-h-[min(34rem,76vh)]" : "max-h-[min(28rem,70vh)]"
           }
         >
           {children}

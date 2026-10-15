@@ -333,8 +333,7 @@ Launches one ordinary top-level thread through the app's launch service. The
 thread runs in its project's folder.
 
 Pass the task in `message`. Project, model, and modes inherit when omitted.
-`scratch: true` launches without a project, in a folder of its own under the
-environment's Scratch project. The new thread may not run with broader runtime or
+The new thread may not run with broader runtime or
 interaction modes than the caller. Launch has no retry key, so inspect existing threads after a failed or lost response before
 launching again. `create_threads` remains the batch option.
 

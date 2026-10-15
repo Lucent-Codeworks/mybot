@@ -8,7 +8,6 @@ import {
   type CommandId,
   type EnvironmentId,
   isProviderDriverKind,
-  ProjectId,
   type MessageId,
   type ModelSelection,
   type OrchestrationV2ProjectedTurnItem,
@@ -39,7 +38,6 @@ import {
 import { presentThreadShell } from "@t3tools/client-runtime/state/shell";
 import { type ChatMessage, isImageAttachment, type SessionPhase, type Thread } from "../types";
 import { type ComposerImageAttachment, type DraftThreadState } from "../composerDraftStore";
-import * as Schema from "effect/Schema";
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { environmentThreadShells, environmentThreadDetails } from "../state/threads";
 import { waitForAtomValue } from "../state/waitForAtomValue";
@@ -57,7 +55,6 @@ import {
   type ProviderInstanceEntry,
 } from "../providerInstances";
 
-export const LAST_INVOKED_SCRIPT_BY_PROJECT_KEY = "t3code:last-invoked-script-by-project";
 export const MAX_HIDDEN_MOUNTED_TERMINAL_THREADS = 10;
 
 export const ENVIRONMENT_RECONNECT_WARNING_GRACE_MS = 2_000;
@@ -112,8 +109,6 @@ export function codexArtifactTemplatePromptToAppend(
     ? null
     : codexArtifactTemplateUsePrompt(template);
 }
-
-export const LastInvokedScriptByProjectSchema = Schema.Record(ProjectId, Schema.String);
 
 export function resolveEffectiveInteractionMode(input: {
   planModeEnabled: boolean;

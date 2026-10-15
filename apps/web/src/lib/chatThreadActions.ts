@@ -70,16 +70,3 @@ export function resolveThreadActionProjectRef(
   }
   return context.defaultProjectRef;
 }
-
-// New threads inherit only the *project* from the current context.
-export async function startNewThreadFromContext(
-  context: ChatThreadActionContext,
-): Promise<boolean> {
-  const projectRef = resolveThreadActionProjectRef(context);
-  if (!projectRef) {
-    return false;
-  }
-
-  await context.handleNewThread(projectRef);
-  return true;
-}

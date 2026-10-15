@@ -85,6 +85,28 @@ export function transitionFirstRunGateState(
   return { decision: event.decision, stalled: false };
 }
 
+/**
+ * Only bots are something to chat with, so first-run judges the workspace by
+ * its bots and their threads. Leftover plain projects (an older server's cwd
+ * bootstrap, say) and their threads are never user state.
+ */
+export function selectFirstRunBotWorkspace<
+  Project extends { readonly id: string; readonly environmentId: string; readonly bot?: unknown },
+  Thread extends { readonly projectId: string; readonly environmentId: string },
+>(
+  projects: ReadonlyArray<Project>,
+  threads: ReadonlyArray<Thread>,
+): { readonly bots: ReadonlyArray<Project>; readonly threads: ReadonlyArray<Thread> } {
+  const bots = projects.filter((project) => project.bot != null);
+  const botKeys = new Set(bots.map((bot) => `${bot.environmentId}\u0000${bot.id}`));
+  return {
+    bots,
+    threads: threads.filter((thread) =>
+      botKeys.has(`${thread.environmentId}\u0000${thread.projectId}`),
+    ),
+  };
+}
+
 /** Only a project and thread created by this startup count as a fresh nonempty workspace. */
 export function isFreshFirstRunWorkspace(input: FirstRunWorkspaceInput): boolean {
   if (input.projects.length > 1 || input.threads.length > 1) {

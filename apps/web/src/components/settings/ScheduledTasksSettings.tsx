@@ -362,14 +362,14 @@ function ScheduledTaskEnvironmentSection({
           {taskId && !linkedTask ? (
             <SettingsRow
               title="Task unavailable"
-              description="This task no longer exists or is outside the selected project scope."
+              description="This task no longer exists or is outside the selected bot scope."
               role="status"
             />
           ) : null}
           {tasks.length === 0 ? (
             <SettingsRow
               title="No scheduled tasks"
-              description="No tasks match this environment and project selection."
+              description="No tasks match this environment and bot selection."
             />
           ) : (
             tasks.map((task) => (
@@ -865,7 +865,7 @@ function ScheduledTaskEditorDialog({
       !projects.some((project) => project.id === selectedProjectId) ||
       selection === null
     ) {
-      reportFailure("Scheduled task is incomplete", "Add a title, prompt, project, and model.");
+      reportFailure("Scheduled task is incomplete", "Add a title, prompt, bot, and model.");
       return;
     }
     const schedule = scheduleFromDraft(draft);
@@ -1013,7 +1013,7 @@ function ScheduledTaskEditorDialog({
               />
             </Field>
 
-            <Field label="Project" htmlFor="scheduled-task-project">
+            <Field label="Bot" htmlFor="scheduled-task-project">
               <Select
                 value={selectedProjectId}
                 onValueChange={(projectId) =>
@@ -1021,7 +1021,7 @@ function ScheduledTaskEditorDialog({
                 }
               >
                 <SelectTrigger size="sm" id="scheduled-task-project">
-                  <SelectValue placeholder="Select a project">{selectedProject?.title}</SelectValue>
+                  <SelectValue placeholder="Select a bot">{selectedProject?.title}</SelectValue>
                 </SelectTrigger>
                 <SelectPopup>
                   {projects.map((project) => (

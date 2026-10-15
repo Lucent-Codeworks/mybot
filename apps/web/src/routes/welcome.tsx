@@ -4,9 +4,8 @@ import { EnvironmentId } from "@t3tools/contracts";
 import * as Schema from "effect/Schema";
 import * as Option from "effect/Option";
 
-import { NoProjectsHero } from "../components/NoProjectsHero";
+import { NoBotsHero } from "../components/NoBotsHero";
 import { WelcomeWizard } from "../components/onboarding/WelcomeWizard";
-import { useNewThreadHandler } from "../hooks/useHandleNewThread";
 
 const decodeEnvironmentId = Schema.decodeOption(EnvironmentId);
 
@@ -32,7 +31,6 @@ function WelcomeRouteView() {
   // Never reopen setup while the destination route is still loading.
   const isWelcomeRoute = useLocation({ select: (location) => location.pathname === "/welcome" });
   const [dismissed, setDismissed] = useState(false);
-  const openNewThread = useNewThreadHandler();
   // An authenticated gate means a primary server is serving this app —
   // desktop, `npx t3`, or a dev server — and that server is "this machine"
   // no matter what hostname the browser used. Only hosted-static has no
@@ -40,19 +38,13 @@ function WelcomeRouteView() {
   const localAvailable = authGateState.status === "authenticated";
   return (
     <>
-      <NoProjectsHero />
+      <NoBotsHero />
       {isWelcomeRoute && !dismissed ? (
         <WelcomeWizard
           localAvailable={localAvailable}
           resumeEnvironmentId={resumeEnvironmentId}
-          onDone={async (projectRef) => {
+          onDone={async () => {
             setDismissed(true);
-            if (projectRef !== undefined) {
-              await openNewThread(projectRef, { replace: true }).catch(() =>
-                navigate({ to: "/", replace: true }),
-              );
-              return;
-            }
             await navigate({ to: "/", replace: true });
           }}
         />

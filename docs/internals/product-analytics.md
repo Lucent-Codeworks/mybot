@@ -1,5 +1,9 @@
 # Product analytics
 
+MyBot does not send product events yet: `server.ts` provides the no-op `AnalyticsService.layerTest`,
+and `AnalyticsService.layer` has no default PostHog key. To turn analytics on, give MyBot its own
+PostHog project key and switch `server.ts` back to `AnalyticsService.layer`.
+
 The server owns PostHog delivery, opt-out, and identity for every connected client.
 [Identity selection](../../apps/server/src/telemetry/Identify.ts) hashes an available
 provider account ID, falling back to an installation-scoped ID. This identity can

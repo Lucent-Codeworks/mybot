@@ -8,7 +8,6 @@ import {
 
 const baseState: ThreadActionMenuState = {
   canOperate: true,
-  projectFilter: null,
   isPinned: false,
   isSettled: false,
   autoSettleEnabled: true,
@@ -98,36 +97,15 @@ describe("buildThreadActionMenuItems", () => {
     ).toEqual(["rename", "mark-unread", "copy", "project-settings", "archive", "delete"]);
   });
 
-  it("groups project settings with utility actions before archive", () => {
+  it("groups bot settings with utility actions before archive", () => {
     const items = buildThreadActionMenuItems(baseState);
     const copyIndex = items.findIndex((item) => item.id === "copy");
     expect(items[copyIndex + 1]).toMatchObject({
       id: "project-settings",
-      label: "Project settings",
+      label: "Bot settings",
       icon: "settings",
     });
     expect(items[copyIndex + 2]?.id).toBe("archive");
-  });
-
-  it("offers project filtering only for surfaces with a scoped thread list", () => {
-    expect(ids(baseState)).not.toContain("filter-by-project");
-    expect(
-      buildThreadActionMenuItems({
-        ...baseState,
-        projectFilter: { label: "Beta Project", isActive: false },
-      }).find((item) => item.id === "filter-by-project"),
-    ).toMatchObject({ label: "Filter by Beta Project", icon: "folder-tree" });
-  });
-
-  it("offers the way back to all projects once the list is scoped", () => {
-    const items = buildThreadActionMenuItems({
-      ...baseState,
-      projectFilter: { label: "Beta Project", isActive: true },
-    });
-    const filterIndex = items.findIndex((candidate) => candidate.id === "filter-by-project");
-    expect(items[filterIndex]).toMatchObject({ label: "Show all projects", icon: "folder-tree" });
-    expect(items[filterIndex - 1]?.id).toBe("mark-unread");
-    expect(items[filterIndex + 1]?.id).toBe("auto-settle");
   });
 
   it("flips lifecycle labels with thread state", () => {
@@ -218,7 +196,7 @@ describe("buildDraftActionMenuItems", () => {
     expect(noCopy[0]).toMatchObject({ id: "copy", disabled: true, children: [] });
   });
 
-  it("drops project settings without a project and keeps discard last", () => {
+  it("drops bot settings without a bot and keeps discard last", () => {
     const items = buildDraftActionMenuItems({ hasPath: true, hasProject: false });
     expect(items.map((item) => item.id)).toEqual(["copy", "discard"]);
     expect(items.at(-1)).toMatchObject({ label: "Discard draft", destructive: true });

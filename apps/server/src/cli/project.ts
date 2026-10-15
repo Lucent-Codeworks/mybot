@@ -483,6 +483,8 @@ const projectAddCommand = Command.make("add", {
           projectId,
           title,
           workspaceRoot,
+          // Every MyBot project is a bot; the user fills in its profile in the app.
+          bot: { role: "", instructions: "" },
         });
         return `Added project ${projectId} (${title}) at ${workspaceRoot}.`;
       }),

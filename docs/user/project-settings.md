@@ -1,8 +1,8 @@
-# Settings and project overrides
+# Settings and bot overrides
 
 On web and desktop, the "Applying settings for …" sentence at the top of Settings pages picks
-the project and environment a change applies to. Pages that only hold device preferences, such as
-Appearance, don't show it. They start at **All projects** and **All environments**
+the bot and environment a change applies to. Pages that only hold device preferences, such as
+Appearance, don't show it. They start at **All bots** and **All environments**
 and stay selected as you move between categories or search for a setting.
 
 Preferences saved on this device, such as appearance, confirmations and browser profiles, always
@@ -10,33 +10,33 @@ show and ignore the selection. Everything else is stored on a server. Choose one
 edit its settings, or leave **All environments** to edit every connected environment at once.
 Offline environments keep their current values; this is a bulk edit, not a synced global default.
 
-Choose a project to override settings for it on the selected environments. A layers icon beside
+Choose a bot to override settings for it on the selected environments. A layers icon beside
 each server row's title shows where the value comes from: the built-in default, the environment,
-or a project override. Click it to see that chain on every selected environment. An override can
-be reset to inherit again. Settings that cannot be overridden by a project are shown read-only
-while a project is selected.
+or a bot override. Click it to see that chain on every selected environment. An override can
+be reset to inherit again. Settings that cannot be overridden by a bot are shown read-only
+while a bot is selected.
 
 When the selected environments disagree, the control shows **Mixed** in place of a value and the
 layers icon turns amber. Picking a value applies it to every selected environment.
 
-Changing an environment value never touches a project's own override. When projects override the
+Changing an environment value never touches a bot's own override. When bots override the
 setting you are editing, the layers icon counts them and the chain lists each one with its value:
-click a project to jump to it, or **Reset all** to make those projects follow the environment
+click a bot to jump to it, or **Reset all** to make those bots follow the environment
 again.
 
 Providers and diagnostics are per machine: they show one environment at a time, the primary
 one until you pick another. Every other setting fans out to the selection.
 
-With a project selected, a provider's switch in **Settings → Providers** turns it on or off for
-that project only, in either direction: a provider off on the machine can be used in one project,
-and one on everywhere can be kept out of another. That project's model pickers follow the switch,
+With a bot selected, a provider's switch in **Settings → Providers** turns it on or off for
+that bot only, in either direction: a provider off on the machine can be used by one bot,
+and one on everywhere can be kept from another. That bot's model pickers follow the switch,
 and no new turn there can start on a provider it turned off, including queued messages and
 follow-ups from delegated tasks. A turn already running when the switch flips finishes. A delegated
-task's result still lands in its parent thread, which sees it on its next turn. Reset returns the project to the
+task's result still lands in its parent thread, which sees it on its next turn. Reset returns the bot to the
 machine's setting. Every other provider setting stays per machine.
 
-On mobile, open **Settings** and use the filter in its header to choose connected environments
-and a project. The filter stays available in server-setting pages. With **All projects** selected,
+The mobile app still shows bots as projects. On mobile, open **Settings** and use the filter in
+its header to choose connected environments and a project. The filter stays available in server-setting pages. With **All projects** selected,
 the **Server settings** categories and auto-settle controls in **Thread behavior** edit the
 selected environments' defaults. Choosing a project edits its overrides on the selected
 environments. Use **Use defaults** in a page to remove that page's project overrides.
@@ -50,8 +50,8 @@ and other phone-only settings ignore the filter.
 
 Open **Settings → Scheduled tasks** to create recurring tasks or manage existing
 ones across your connected environments. Use the settings filter to narrow the
-list by environment or project. Each task runs on the environment you choose,
-using its project and model settings. Fixed-time schedules use that
+list by environment or bot. Each task runs on the environment you choose,
+using its bot and model settings. Fixed-time schedules use that
 environment's time zone, which may differ from your phone's.
 
 You can edit, pause, resume, run immediately, or delete a task from the list.
@@ -96,14 +96,13 @@ than** on the task.
 ## Defaults and inheritance
 
 General contains the model for new threads. Integrations controls agent browser access. The
-same rows edit environment defaults or project overrides depending on the project crumb.
+same rows edit environment defaults or bot overrides depending on the bot you picked.
 
-The Project category, shown while a project is selected, holds the project's name, icon, actions,
-folder and removal. Actions belong to a project: editing them creates the project's own list
-on each selected environment, and reset returns to the environment's shared list. A project's
-`t3.json` actions can be imported there.
+The **Bot** category, shown while a bot is selected, holds the bot's name, icon, job,
+instructions, memory, Telegram connection, and **Delete bot**. Deleting a bot deletes its
+conversations; the files in its folder stay on disk. See [Bots](./bots.md).
 
-Settings resolve in one order: a project override, then the environment setting, then the
+Settings resolve in one order: a bot override, then the environment setting, then the
 built-in default. Leave a setting on **Inherit** to let the next tier decide.
 Browser access changes apply when an agent session next starts.
 
@@ -117,14 +116,14 @@ enabled rules immediately.
 Browser captures and rotated logs have separate retention periods. Expired capture links stop
 working. Current logs, message attachments, and browser profiles are kept.
 
-## Project icons
+## Bot icons
 
-Select the project and open Project to choose an icon, emoji, monogram, or image. The choice
+Select the bot and open **Bot** to choose an icon, emoji, monogram, or image. The choice
 appears on connected clients. Choose **Automatic** to let
 MyBot detect an icon again.
 
 Choose **Monogram** in the icon picker to set one or two letters or numbers and a color.
 
 When no image is found, web and desktop show a two-character monogram with a color
-from the icon palette, derived from the saved project name. For example, `Nebula` becomes `NA`,
+from the icon palette, derived from the bot's name. For example, `Nebula` becomes `NA`,
 `Silver Orchard` becomes `SO`, and `M7 Forge` becomes `M7`.

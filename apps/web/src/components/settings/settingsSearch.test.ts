@@ -380,8 +380,7 @@ describe("searchSettings", () => {
   it.each([
     ["default model", "default-model", "/settings/general"],
     ["agent browser access", "agent-browser-access", "/settings/integrations"],
-    ["actions", "project-actions", "/settings/projects"],
-    ["project overview", "project-overview", "/settings/projects"],
+    ["bot overview", "project-overview", "/settings/projects"],
   ])("routes %s to its owning category", (query, id, to) => {
     expect(searchSettings(query)[0]).toMatchObject({ id, to });
   });
@@ -454,7 +453,7 @@ describe("settings search targets", () => {
     const streaming = getSettingsSearchTargetScope("response-streaming")!;
     expect(streaming.scope).toBe("project-defaults");
     expect(isSettingsSearchScopeAvailable(streaming.scope, "project")).toBe(true);
-    for (const id of ["legacy-plan-mode", "legacy-context-window-indicator", "legacy-sidebar"]) {
+    for (const id of ["legacy-plan-mode", "legacy-context-window-indicator"]) {
       expect(getSettingsSearchTargetScope(id)!.scope).toBeNull();
     }
   });

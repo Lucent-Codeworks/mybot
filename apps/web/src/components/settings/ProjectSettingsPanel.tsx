@@ -42,7 +42,6 @@ import {
   canPickExternalProjectFavicon,
   ProjectFaviconPickerDialog,
 } from "./ProjectFaviconPickerDialog";
-import { ProjectActionsSettings } from "./ProjectActionsSettings";
 import { BotProfileSettings } from "./BotProfileSettings";
 import { ProjectDefaultsSettings } from "./ProjectDefaultsSettings";
 import { projectGroupTitleNeedsUpdate } from "./ProjectSettingsPanel.logic";
@@ -58,7 +57,7 @@ function memberKey(member: { environmentId: string; id: string }): string {
   return `${member.environmentId}:${member.id}`;
 }
 
-/** `project` is the Projects page shortcut: the new-thread defaults people change most. */
+/** `project` is the Bot page shortcut: the bot's model for new threads. */
 export type ProjectSettingsCategory = "general" | "integrations" | "project";
 
 export function ProjectSettingsPanel({
@@ -86,15 +85,15 @@ export function ProjectSettingsPanel({
     return (
       <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
         {groups.length === 0
-          ? "Add a project from the sidebar to configure it here."
-          : "This project is no longer available."}
+          ? "Create a bot to configure it here."
+          : "This bot is no longer available."}
       </div>
     );
   }
   if (members.length === 0)
     return (
       <p className="p-8 text-sm text-muted-foreground">
-        This checkout is no longer available in the selected project and environment.
+        This bot is not available on the selected environment.
       </p>
     );
   const scopedGroup = {
@@ -169,7 +168,7 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
       const result = AsyncResult.failure<void, Error>(
         Cause.fail(
           new Error(
-            `This connection cannot change projects in ${denied.environmentLabel ?? "this environment"}.`,
+            `This connection cannot change bots in ${denied.environmentLabel ?? "this environment"}.`,
           ),
         ),
       );
@@ -236,7 +235,7 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
     async (nextTitle: string, wasEdited: boolean) => {
       const title = nextTitle.trim();
       if (!title) {
-        toastManager.add({ type: "warning", title: "Project title cannot be empty" });
+        toastManager.add({ type: "warning", title: "Bot name cannot be empty" });
         return;
       }
       if (
@@ -248,7 +247,7 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
       ) {
         return;
       }
-      await updateAllMembers({ title }, "Failed to rename project");
+      await updateAllMembers({ title }, "Failed to rename bot");
     },
     [group.memberProjects, updateAllMembers],
   );
@@ -264,7 +263,7 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
       savingFaviconRef.current = true;
       setIsSavingFavicon(true);
       try {
-        await updateAllMembers(input, "Failed to update project icon");
+        await updateAllMembers(input, "Failed to update bot icon");
       } finally {
         savingFaviconRef.current = false;
         setIsSavingFavicon(false);
@@ -273,31 +272,16 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
     [updateAllMembers],
   );
 
-  // Clearing the profile discards the job and instructions, so ask first.
   const updateBot = useCallback(
-    async (bot: BotProfile | null) => {
-      if (bot === null && representative.bot) {
-        const api = readLocalApi();
-        if (!api) return;
-        const confirmed = await settlePromise(() =>
-          api.dialogs.confirm(
-            [
-              `Make "${group.displayName}" a plain project?`,
-              "Its job and instructions are deleted. Its threads stay.",
-            ].join("\n"),
-            { variant: "destructive" },
-          ),
-        );
-        if (confirmed._tag === "Failure" || !confirmed.value) return;
-      }
+    async (bot: BotProfile) => {
       await updateAllMembers({ bot }, "Failed to update bot");
     },
-    [group.displayName, representative.bot, updateAllMembers],
+    [updateAllMembers],
   );
 
   const removeMembers = useCallback(
     async (members: ReadonlyArray<SidebarProjectGroupMember>) => {
-      if (checkProjectAccess(members, "Failed to remove project")) return;
+      if (checkProjectAccess(members, "Failed to delete bot")) return;
       const api = readLocalApi();
       if (!api) return;
 
@@ -305,39 +289,27 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
       const projectThreads = threads.filter((thread) =>
         memberKeys.has(`${thread.environmentId}:${thread.projectId}`),
       );
-      const singleMember = members.length === 1 ? members[0]! : null;
-      const targetLabel = singleMember?.title ?? group.displayName;
       const confirmed = await settlePromise(() =>
         api.dialogs.confirm(
           [
+            `Delete bot "${group.displayName}"?`,
             projectThreads.length > 0
-              ? `Remove project "${targetLabel}" and delete its ${projectThreads.length} thread${projectThreads.length === 1 ? "" : "s"}?`
-              : `Remove project "${targetLabel}"?`,
-            ...(singleMember
-              ? [
-                  `Path: ${singleMember.workspaceRoot}`,
-                  ...(singleMember.environmentLabel
-                    ? [`Environment: ${singleMember.environmentLabel}`]
-                    : []),
-                ]
-              : [`This removes ${members.length} project entries.`]),
-            ...(projectThreads.length > 0
-              ? [
-                  "This permanently clears conversation history for those threads and any archived threads.",
-                ]
-              : ["This permanently clears any archived conversation history."]),
-            "This removes only the project entries, not the files on disk.",
+              ? `Its ${projectThreads.length} conversation${projectThreads.length === 1 ? " is" : "s are"} deleted, including archived ones.`
+              : "Its conversations are deleted, including archived ones.",
+            ...(members.length === 1
+              ? [`Its files stay on disk at ${members[0]!.workspaceRoot}.`]
+              : ["Its files stay on disk."]),
             "This action cannot be undone.",
           ].join("\n"),
           { variant: "destructive" },
         ),
       );
       if (confirmed._tag === "Failure" || !confirmed.value) return;
-      if (checkProjectAccess(members, "Failed to remove project")) return;
+      if (checkProjectAccess(members, "Failed to delete bot")) return;
 
       const draftStore = useComposerDraftStore.getState();
       for (const member of members) {
-        if (checkProjectAccess([member], "Failed to remove project")) return;
+        if (checkProjectAccess([member], "Failed to delete bot")) return;
         const memberThreads = projectThreads.filter(
           (thread) =>
             thread.environmentId === member.environmentId && thread.projectId === member.id,
@@ -353,7 +325,7 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
           () => undefined,
         );
         if (result._tag === "Failure") {
-          reportFailure(`Failed to remove "${member.title}"`, result);
+          reportFailure(`Failed to delete "${member.title}"`, result);
           return;
         }
         const projectRef = scopeProjectRef(member.environmentId, member.id);
@@ -379,24 +351,24 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
         <Alert variant="info">
           <InfoIcon aria-hidden />
           <AlertDescription>
-            Can't find a setting? Keep this project picked above and hop to any other settings page.
+            Can't find a setting? Keep this bot picked above and hop to any other settings page.
           </AlertDescription>
         </Alert>
-        <SettingsSection id="project-overview" title="Project" hideTitle>
+        <SettingsSection id="project-overview" title="Bot" hideTitle>
           {!canEditGroup ? (
             <p className="px-3 py-2 text-sm text-muted-foreground sm:px-4">
-              This connection cannot change this project.
+              This connection cannot change this bot.
             </p>
           ) : null}
           <SettingsRow
             title="Name"
-            description="The name for this project in the sidebar and thread lists."
+            description="The name for this bot in the sidebar and conversation lists."
             control={
               <Input
                 key={`${group.projectKey}:${group.displayName}`}
                 size="sm"
                 className="w-full sm:w-64"
-                aria-label="Project name"
+                aria-label="Bot name"
                 disabled={!canEditGroup}
                 defaultValue={group.displayName}
                 onChange={() => {
@@ -414,7 +386,7 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
             }
           />
           <SettingsRow
-            title="Project icon"
+            title="Icon"
             description={
               projectIcon?.kind === "lucide"
                 ? `${projectIcon.name} · ${projectIcon.color}`
@@ -429,7 +401,7 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
                 (member) => member.faviconPath != null || member.projectIcon != null,
               ) ? (
                 <SettingResetButton
-                  label="project icon"
+                  label="bot icon"
                   disabled={isSavingFavicon || !canEditGroup}
                   onClick={() => void setProjectIcon({ faviconPath: null, projectIcon: null })}
                 />
@@ -442,7 +414,7 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
                   size="sm"
                   variant="outline"
                   type="button"
-                  aria-label="Choose a project icon"
+                  aria-label="Choose a bot icon"
                   disabled={isSavingFavicon || !canEditGroup}
                   onClick={() => setIconPickerOpen(true)}
                 >
@@ -452,7 +424,7 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
                   size="sm"
                   variant="outline"
                   type="button"
-                  aria-label="Choose a project icon file"
+                  aria-label="Choose a bot icon file"
                   disabled={isSavingFavicon || !canEditGroup}
                   onClick={() => setFaviconPickerOpen(true)}
                 >
@@ -462,20 +434,21 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
             }
           />
         </SettingsSection>
-        <BotProfileSettings
-          bot={representative.bot ?? null}
-          environmentId={representative.environmentId}
-          projectId={representative.id}
-          folder={representative.workspaceRoot}
-          disabled={!canEditGroup}
-          onChange={(bot) => void updateBot(bot)}
-        />
+        {representative.bot ? (
+          <BotProfileSettings
+            bot={representative.bot}
+            environmentId={representative.environmentId}
+            projectId={representative.id}
+            folder={representative.workspaceRoot}
+            disabled={!canEditGroup}
+            onChange={(bot) => void updateBot(bot)}
+          />
+        ) : null}
         <ProjectDefaultsSettings category="project" />
-        <ProjectActionsSettings />
         <SettingsSection title="Danger">
           <SettingsRow
-            title="Remove project"
-            description="Deletes the project entry and its threads. Files on disk are not touched."
+            title="Delete bot"
+            description="Deletes this bot and its conversations. Its files stay on disk."
             control={
               <Button
                 size="sm"
@@ -484,7 +457,7 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
                 onClick={() => void removeMembers(group.memberProjects)}
               >
                 <Trash2Icon />
-                Remove project
+                Delete bot
               </Button>
             }
           />

@@ -3,7 +3,7 @@ import type { BotProfile, EnvironmentId, ProjectId } from "@t3tools/contracts";
 import * as Option from "effect/Option";
 import { AsyncResult } from "effect/reactivity";
 import { useNavigate } from "@tanstack/react-router";
-import { BotIcon, BotOffIcon, CalendarClockIcon, SendIcon } from "lucide-react";
+import { CalendarClockIcon, SendIcon } from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -26,41 +26,17 @@ import { Textarea } from "../ui/textarea";
 import { SettingsRow, SettingsSection } from "./settingsLayout";
 import { useUpdateScopedSettings } from "./useScopedSettings";
 
-/**
- * A project's bot profile. A plain project can become a bot, and a bot can
- * go back to being a plain project; its threads stay either way.
- */
+/** A bot's profile: its job, instructions, memory and channels. */
 export function BotProfileSettings(props: {
-  bot: BotProfile | null;
+  bot: BotProfile;
   environmentId: EnvironmentId;
   projectId: ProjectId;
   folder: string;
   disabled: boolean;
-  onChange: (bot: BotProfile | null) => void;
+  onChange: (bot: BotProfile) => void;
 }) {
   const { bot, disabled, onChange } = props;
   const navigate = useNavigate();
-  if (bot === null) {
-    return (
-      <SettingsSection title="Bot">
-        <SettingsRow
-          title="Make this a bot"
-          description="Give this project a job and standing instructions that every conversation follows."
-          control={
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={disabled}
-              onClick={() => onChange({ role: "", instructions: "" })}
-            >
-              <BotIcon />
-              Make a bot
-            </Button>
-          }
-        />
-      </SettingsSection>
-    );
-  }
   return (
     <SettingsSection title={bot.members === undefined ? "Bot" : "Group chat"}>
       {bot.members === undefined ? null : (
@@ -142,16 +118,6 @@ export function BotProfileSettings(props: {
       />
       <BotMemoryRow environmentId={props.environmentId} folder={props.folder} disabled={disabled} />
       <BotTelegramRow environmentId={props.environmentId} projectId={props.projectId} />
-      <SettingsRow
-        title="Stop being a bot"
-        description="Keeps the project and its threads, without the job and instructions."
-        control={
-          <Button size="sm" variant="outline" disabled={disabled} onClick={() => onChange(null)}>
-            <BotOffIcon />
-            Make a plain project
-          </Button>
-        }
-      />
     </SettingsSection>
   );
 }

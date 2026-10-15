@@ -7,7 +7,6 @@ import type { SnoozePreset } from "@t3tools/client-runtime/state/thread-settled"
  * remains data-driven.
  */
 export type ThreadActionMenuId =
-  | "filter-by-project"
   | "project-settings"
   | "pin"
   | "unpin"
@@ -44,7 +43,7 @@ export function buildDraftActionMenuItems(options: {
       children: options.hasPath ? [{ id: "copy-path", label: "Path", icon: "folder" }] : [],
     },
     ...(options.hasProject
-      ? [{ id: "project-settings" as const, label: "Project settings", icon: "settings" }]
+      ? [{ id: "project-settings" as const, label: "Bot settings", icon: "settings" }]
       : []),
     {
       id: "discard",
@@ -58,15 +57,6 @@ export function buildDraftActionMenuItems(options: {
 
 export interface ThreadActionMenuState {
   readonly canOperate: boolean;
-  /**
-   * Project scoping for the thread list. Null on surfaces with no scoped
-   * list behind the menu (the chat header), where the item must not show.
-   */
-  readonly projectFilter: {
-    readonly label: string;
-    /** True when the list is already scoped to this thread's project. */
-    readonly isActive: boolean;
-  } | null;
   readonly isPinned: boolean;
   readonly isSettled: boolean;
   /** False while the user has turned automatic settlement off for this thread. */
@@ -151,17 +141,6 @@ export function buildThreadActionMenuItems(
         ]
       : []),
     { id: "mark-unread", label: "Mark unread", icon: "mail-open" },
-    ...(state.projectFilter
-      ? [
-          {
-            id: "filter-by-project" as const,
-            label: state.projectFilter.isActive
-              ? "Show all projects"
-              : `Filter by ${state.projectFilter.label}`,
-            icon: "folder-tree",
-          },
-        ]
-      : []),
     // A submenu with the current option checked, not a one-shot action:
     // this is a setting, and it sits with the other per-thread settings
     // rather than the lifecycle verbs above. Disabled keeps long-running
@@ -197,7 +176,7 @@ export function buildThreadActionMenuItems(
         { id: "copy-thread-id", label: "Thread ID", icon: "hash" },
       ],
     },
-    { id: "project-settings", label: "Project settings", icon: "settings" },
+    { id: "project-settings", label: "Bot settings", icon: "settings" },
     // Archive removes the thread from the sidebar while keeping its
     // conversation under Settings > Archived threads — distinct from Settle
     // (stays visible in the Settled shelf) and Delete (clears history for

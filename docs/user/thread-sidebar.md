@@ -1,30 +1,20 @@
 # Working with threads
 
-Use a new thread for a separate task. Threads work directly in their project's folder.
+Use a new thread for a separate task. Every thread is a conversation with a bot
+and works in that bot's folder.
 
 ## Start a thread
 
-On web and desktop, a new thread keeps the current project and carries your model
-and mode selections, unless the destination project has its own model default.
+On web and desktop, choose **New chat** in the sidebar or press `mod+n`. The
+chat opens with the bot you have selected or are talking to, otherwise the bot
+you used most recently. With no bots yet, it opens **New bot** instead. To pick
+a bot, hover it in the sidebar and choose the pen icon, run **New chat with...**
+from the command palette, or choose another bot in a new thread's heading.
 
-When you change a new thread's project, MyBot stays in the current environment
-if that project exists there. Otherwise it selects an environment that has it.
-
-### Start without a project
-
-A thread does not need a project. To start one without a project, click **or
-start without a project** under a new thread's heading, pick **No project** from
-the project menu in that heading or from **New thread in...** in the command
-palette, or press `mod+alt+n`. On mobile, pick **No project** from the project
-list. It starts on your current machine; before sending, pick another machine
-from the machine menu to move it there. To move a draft into a project, pick the
-project in the heading.
-
-Each thread without a project works in its own folder under `~/.t3/scratch` (the
-`scratch` folder of your T3 data directory), named after its date, the first words
-of its first message, and a short id, like
-`2026-09-25-convert-these-pngs-to-webp-a1b2c3d4`. Deleting a thread keeps its
-folder, so the files the agent wrote stay until you delete them.
+A new thread carries your model and mode selections, unless the bot has its own
+model default. When you change a new thread's bot, MyBot stays in the current
+environment if that bot exists there. Otherwise it selects an environment that
+has it.
 
 ### Start in the background
 
@@ -33,7 +23,7 @@ on Windows and Linux to start a new thread and immediately open another draft.
 
 To send the same prompt to several models on web or desktop, **Shift-click** models
 in a new thread's model picker to add or remove them. A regular click returns to a
-single model. Each selection starts a separate thread in the same project folder
+single model. Each selection starts a separate thread in the same bot folder
 while you stay in the new thread composer.
 
 ## Pin and reorder threads

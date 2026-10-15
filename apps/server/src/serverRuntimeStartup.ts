@@ -212,6 +212,8 @@ const resolveAutoBootstrapWelcomeTargets = Effect.gen(function* () {
       projectId: ProjectId.make(yield* randomUUID),
       title: path.basename(serverConfig.cwd) || "project",
       workspaceRoot: serverConfig.cwd,
+      // Every MyBot project is a bot; the user fills in its profile in the app.
+      bot: { role: "", instructions: "" },
     });
     const shell = yield* threads.getShellSnapshot();
     const existingThread = shell.threads.find(

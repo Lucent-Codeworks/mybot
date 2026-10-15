@@ -2,7 +2,7 @@
 
 MyBot can run installed ACP commands or coding agents from the official
 [ACP Registry](https://agentclientprotocol.com/get-started/registry). Registry agents bring their
-own models, tools, and sign-in, while MyBot provides projects, threads, and task
+own models, tools, and sign-in, while MyBot provides bots, threads, and task
 delegation.
 
 Google Antigravity is available through its official `antigravity-acp` Registry entry. Add it like
@@ -89,7 +89,7 @@ running. Commands the agent names with a `$` prefix appear in MyBot's `$` skill 
 ## Native sessions
 
 When an agent advertises ACP session listing and import support, expand its provider card,
-choose a project, and select **List sessions**. Importing one creates a deterministic T3 thread
+choose a bot, and select **List sessions**. Importing one creates a deterministic T3 thread
 backed by that native session. Importing the same agent session again returns the existing thread,
 including when another client performs the import.
 

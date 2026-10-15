@@ -2,7 +2,6 @@ import { assert, describe, it } from "vite-plus/test";
 import {
   compileResolvedKeybindingsConfig,
   DEFAULT_RESOLVED_KEYBINDINGS,
-  mergeWithDefaultKeybindings,
 } from "@t3tools/shared/keybindings";
 
 import {
@@ -125,11 +124,6 @@ const DEFAULT_BINDINGS = compile([
   {
     shortcut: modShortcut("p"),
     command: "filePicker.toggle",
-    whenAst: whenNot(whenIdentifier("terminalFocus")),
-  },
-  {
-    shortcut: modShortcut("f", { shiftKey: true }),
-    command: "projectSearch.toggle",
     whenAst: whenNot(whenIdentifier("terminalFocus")),
   },
   {
@@ -475,10 +469,6 @@ describe("shortcutLabelForCommand", () => {
       "⌘P",
     );
     assert.strictEqual(
-      shortcutLabelForCommand(DEFAULT_BINDINGS, "projectSearch.toggle", "MacIntel"),
-      "⇧⌘F",
-    );
-    assert.strictEqual(
       shortcutLabelForCommand(DEFAULT_BINDINGS, "modelPicker.toggle", "Linux"),
       "Ctrl+Shift+M",
     );
@@ -741,55 +731,6 @@ describe("chat/editor shortcuts", () => {
     );
   });
 
-  it("toggles the thread panel by default without taking terminal keystrokes", () => {
-    for (const platform of ["MacIntel", "Win32", "Linux"]) {
-      const input = event({
-        key: "b",
-        metaKey: platform === "MacIntel",
-        ctrlKey: platform !== "MacIntel",
-        shiftKey: true,
-      });
-      assert.strictEqual(
-        resolveShortcutCommand(input, DEFAULT_RESOLVED_KEYBINDINGS, {
-          platform,
-          context: { terminalFocus: false, editableFocus: true },
-        }),
-        "threadPanel.toggle",
-      );
-      assert.isNull(
-        resolveShortcutCommand(input, DEFAULT_RESOLVED_KEYBINDINGS, {
-          platform,
-          context: { terminalFocus: true },
-        }),
-      );
-    }
-  });
-
-  it("preserves a user-configured thread panel shortcut instead of its default", () => {
-    const bindings = mergeWithDefaultKeybindings(
-      compile([
-        {
-          shortcut: modShortcut("b", { altKey: true, shiftKey: true }),
-          command: "threadPanel.toggle",
-        },
-      ]),
-    );
-
-    assert.strictEqual(
-      resolveShortcutCommand(
-        event({ key: "b", metaKey: true, altKey: true, shiftKey: true }),
-        bindings,
-        { platform: "MacIntel" },
-      ),
-      "threadPanel.toggle",
-    );
-    assert.isNull(
-      resolveShortcutCommand(event({ key: "b", metaKey: true, shiftKey: true }), bindings, {
-        platform: "MacIntel",
-      }),
-    );
-  });
-
   it("matches themeEditor.toggle on macOS and Windows", () => {
     assert.strictEqual(
       resolveShortcutCommand(
@@ -823,23 +764,6 @@ describe("chat/editor shortcuts", () => {
         context: { terminalFocus: true },
       }),
       "filePicker.toggle",
-    );
-  });
-
-  it("matches projectSearch.toggle shortcut outside terminal focus", () => {
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "f", metaKey: true, shiftKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-      "projectSearch.toggle",
-    );
-    assert.notStrictEqual(
-      resolveShortcutCommand(event({ key: "f", metaKey: true, shiftKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: true },
-      }),
-      "projectSearch.toggle",
     );
   });
 });

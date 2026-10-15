@@ -92,7 +92,7 @@ export interface SettingsSearchAvailability {
  */
 export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/diagnostics": "Diagnostics",
-  "/settings/projects": "Project",
+  "/settings/projects": "Bot",
   "/settings/general": "General",
   "/settings/appearance": "Appearance",
   "/settings/keybindings": "Keybindings",
@@ -154,23 +154,23 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "project-defaults",
-    title: "Project defaults and overrides",
+    title: "Bot defaults and overrides",
     to: "/settings/general",
     scope: "project-defaults",
-    searchTerms: ["model workspace environments projects inheritance checkout"],
+    searchTerms: ["model workspace environments bots inheritance"],
   },
   {
     id: "project-overview",
-    title: "Project overview",
+    title: "Bot overview",
     to: "/settings/projects",
-    searchTerms: ["name icon emoji image checkout remove delete"],
+    searchTerms: ["name icon emoji image job instructions memory telegram delete"],
   },
   {
     id: "default-model",
     title: "Default model",
     to: "/settings/general",
     scope: "project-defaults",
-    searchTerms: ["new thread project provider reasoning effort"],
+    searchTerms: ["new thread bot provider reasoning effort"],
   },
   {
     id: "default-permissions",
@@ -278,12 +278,6 @@ export const SETTINGS_SEARCH_ITEMS = [
     id: "composer-context",
     title: "Composer context",
     to: "/settings/appearance",
-  },
-  {
-    id: "project-order",
-    title: "Project order",
-    to: "/settings/general",
-    searchTerms: ["sort projects sidebar manual created recent"],
   },
   {
     id: "snooze-limited-threads",
@@ -401,13 +395,6 @@ export const SETTINGS_SEARCH_ITEMS = [
     ],
   },
   {
-    id: "add-project-starts-in",
-    title: "Add project starts in",
-    to: "/settings/general",
-    scope: "environment-defaults",
-    searchTerms: ["base directory folder browser path home"],
-  },
-  {
     id: "unpin-confirmation",
     title: "Unpin confirmation",
     to: "/settings/general",
@@ -497,12 +484,6 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["composer meter usage tokens circle old"],
   },
   {
-    id: "legacy-sidebar",
-    title: "Sidebar (legacy)",
-    to: "/settings/general",
-    searchTerms: ["project thread tree old flat list"],
-  },
-  {
     id: "keybindings",
     title: "Keybindings",
     to: "/settings/keybindings",
@@ -585,7 +566,7 @@ export const SETTINGS_SEARCH_ITEMS = [
     title: "Agent browser access",
     to: "/settings/integrations",
     scope: "project-defaults",
-    searchTerms: ["allow disable enable open drive preview tools sessions project override"],
+    searchTerms: ["allow disable enable open drive preview tools sessions bot override"],
   },
   {
     id: "device-hosts",
@@ -672,12 +653,6 @@ export const SETTINGS_SEARCH_ITEMS = [
     title: "Auto-show floating preview",
     to: "/settings/integrations",
     searchTerms: ["agent opens browser device simulator pop into view hide"],
-  },
-  {
-    id: "project-actions",
-    title: "Actions",
-    to: "/settings/projects",
-    searchTerms: ["commands scripts setup run dev server import"],
   },
   {
     id: "environment-icon",
@@ -771,14 +746,14 @@ export const SETTINGS_SEARCH_ITEMS = [
     title: "Load balancing",
     to: "/settings/connections",
     searchTerms: [
-      "automatic machine environment resources cpu memory capacity preference weight shared projects",
+      "automatic machine environment resources cpu memory capacity preference weight shared bots",
     ],
   },
   {
     id: "archive",
     title: "Archived threads",
     to: "/settings/archived",
-    searchTerms: ["restore reopen deleted history projects"],
+    searchTerms: ["restore reopen deleted history bots"],
   },
 ] as const satisfies ReadonlyArray<SettingsSearchItem>;
 
