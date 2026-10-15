@@ -168,7 +168,7 @@ function namedProjectReadme(name: string): string {
     "",
     `# ${name}`,
     "",
-    "Created in [MyBot](https://t3.codes).",
+    "Created in [MyBot](https://github.com/Lucent-Codeworks/mybot).",
     "",
   ].join("\n");
 }

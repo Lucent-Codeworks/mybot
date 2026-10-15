@@ -21,7 +21,7 @@ import { StandalonePage, StandalonePageHeader } from "../ui/standalone-page";
 
 const OPENER_STORAGE_KEY = "t3code:prompt-link-opener";
 const Opener = Schema.NullOr(Schema.Literals(["app", "browser"]));
-const DOWNLOAD_URL = "https://t3.codes/download";
+const DOWNLOAD_URL = "https://github.com/Lucent-Codeworks/mybot/releases";
 
 interface LinkSummary {
   readonly prompt: LinkedPrompt | null;

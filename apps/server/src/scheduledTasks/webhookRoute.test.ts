@@ -202,7 +202,7 @@ describe("webhook route", () => {
   );
 
   // Live clock: the server checks proofs against real time.
-  it.live("trusts no relay headers on an environment not linked to T3 Connect", () =>
+  it.live("trusts no relay headers on an environment not linked to MyBot Connect", () =>
     Effect.gen(function* () {
       const received: Array<WebhookTriggerRequest> = [];
       const { handler, dispose } = handlerFor((request) => {

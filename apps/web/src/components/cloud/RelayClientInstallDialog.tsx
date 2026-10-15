@@ -69,8 +69,8 @@ export function RelayClientInstallDialog() {
           </DialogTitle>
           <DialogDescription>
             {isInstalling
-              ? "MyBot is preparing this environment for secure access through T3 Connect."
-              : "MyBot needs the relay client to make this environment available through T3 Connect."}
+              ? "MyBot is preparing this environment for secure access through MyBot Connect."
+              : "MyBot needs the relay client to make this environment available through MyBot Connect."}
           </DialogDescription>
         </DialogHeader>
         <DialogPanel scrollFade={false}>

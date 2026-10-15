@@ -75,8 +75,7 @@ export const T3ProjectFile = Schema.Struct({
       .check(Schema.isMaxLength(T3_PROJECT_FILE_MAX_SCRIPTS)),
   ),
 }).annotate({
-  title: "T3 project file",
-  description:
-    "Checked-in project configuration for MyBot (t3.json at the repository root). See https://t3.codes for documentation.",
+  title: "MyBot project file",
+  description: "Checked-in project configuration for MyBot (t3.json at the repository root).",
 });
 export type T3ProjectFile = typeof T3ProjectFile.Type;

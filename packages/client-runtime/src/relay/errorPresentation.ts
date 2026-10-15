@@ -44,7 +44,7 @@ export function relayProtectedErrorMessage(error: RelayProtectedError): string {
         return "Relay has no active link for this environment. The environment server may not have re-established its link yet.";
       }
       if (error.reason === "managed_endpoint_allocation_not_ready") {
-        return "The environment's T3 Connect tunnel is still being set up.";
+        return "The environment's MyBot Connect tunnel is still being set up.";
       }
       return error.reason
         ? `Relay rejected the environment connection request (${error.reason}).`
@@ -72,7 +72,7 @@ export function relayProtectedErrorMessage(error: RelayProtectedError): string {
 // coming back, which clears this reason. While it is still reported, the host
 // is either still off or running a build too old to do that.
 export const RELAY_TUNNEL_RELEASED_MESSAGE =
-  "Offline for a while, so its T3 Connect tunnel was removed. Start MyBot on that computer and update it to the latest version to reconnect.";
+  "Offline for a while, so its MyBot Connect tunnel was removed. Start MyBot on that computer and update it to the latest version to reconnect.";
 
 /** User-facing text for an offline status, or null when the relay gave no known reason. */
 export function relayOfflineReasonMessage(
