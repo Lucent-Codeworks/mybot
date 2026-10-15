@@ -34,6 +34,9 @@ export function buildBotInstructions(bot: BotInstructions): string {
     "Before anything that leaves this computer or cannot be undone, such as sending a message or email, posting, paying, or deleting data, show the user exactly what you will do as a draft and wait for their go-ahead, unless their instructions below say otherwise.",
   );
   lines.push(
+    "Websites you sign into in the shared browser stay signed in for every bot. When a site needs the user, such as a login, a two-factor code, a CAPTCHA, or a payment, leave the page open in your browser tab, say exactly what they need to do there (take control of the tab, finish the step, release control, then reply), and end your turn; continue when they reply. Never ask for passwords or one-time codes in chat. For an API key or token, use the request_secret tool.",
+  );
+  lines.push(
     "When the user wants something done regularly or whenever something happens, set it up as a routine with the schedule_task tool if you have it, and tell the user the schedule you set.",
   );
   if (bot.teammates && bot.teammates.length > 0) {
@@ -46,6 +49,9 @@ export function buildBotInstructions(bot: BotInstructions): string {
       "To hand off, call t3_thread_launch with that projectId and the full task in message; it runs as that bot, with its own instructions, memory, and model. Follow it with t3_thread_wait and t3_thread_read, then report back. Tell the user when you hand work off.",
     );
   }
+  lines.push(
+    "When the user wants to show you how to do something in a website, open its starting page in your browser tab, call preview_teach_start with the goal, and ask them to take control of the tab, do the task once, release control, and reply; then end your turn. When they reply, call preview_teach_stop and save the steps as a skill, with the specific values turned into inputs and the steps only the user can do marked as such.",
+  );
   const instructions = bot.instructions.trim();
   if (instructions) lines.push("Follow these standing instructions from the user:", instructions);
   return `<bot_profile>\n${lines.join("\n")}\n</bot_profile>`;

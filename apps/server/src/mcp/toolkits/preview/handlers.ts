@@ -12,6 +12,8 @@ import {
   type PreviewAutomationOperation,
   type PreviewAutomationOpenInput,
   type PreviewAutomationRecordingStatus,
+  type PreviewAutomationTeachResult,
+  type PreviewAutomationTeachStatus,
   type PreviewAutomationResizeResult,
   type PreviewAutomationSelectResult,
   type PreviewAutomationSetColorSchemeResult,
@@ -246,6 +248,12 @@ const handlers = {
   ),
   preview_recording_start: McpToolAccess.actsAsCaller((input) =>
     invokeTargeted<PreviewAutomationRecordingStatus>("recordingStart", input ?? {}),
+  ),
+  preview_teach_start: McpToolAccess.actsAsCaller((input) =>
+    invokeTargeted<PreviewAutomationTeachStatus>("teachStart", input),
+  ),
+  preview_teach_stop: McpToolAccess.actsAsCaller((input) =>
+    invokeTargeted<PreviewAutomationTeachResult>("teachStop", input ?? {}),
   ),
   preview_recording_stop: McpToolAccess.actsAsCaller((input) =>
     Effect.gen(function* () {

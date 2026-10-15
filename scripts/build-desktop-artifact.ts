@@ -3872,7 +3872,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     license: "MIT",
     // Required by the .deb control file.
     homepage: "https://github.com/Lucent-Codeworks/mybot",
-    author: "T3 Tools",
+    author: "Lucent Codeworks",
     main: "apps/desktop/dist-electron/boot.cjs",
     build: yield* createBuildConfig(
       options.platform,

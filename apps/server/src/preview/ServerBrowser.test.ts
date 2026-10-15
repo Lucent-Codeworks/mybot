@@ -9,6 +9,7 @@ import {
   ThreadId,
   type PreviewAutomationSnapshot,
   type PreviewAutomationStatus,
+  type PreviewAutomationTeachResult,
 } from "@t3tools/contracts";
 import * as Clock from "effect/Clock";
 import * as Effect from "effect/Effect";
@@ -1483,6 +1484,65 @@ it.live("a session's own tab stays its default while other sessions' tabs are li
   ).pipe(Effect.provide(layer)),
 );
 
+it.live("a lesson records only what the user does while they control the tab", () =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      const { browser, broker, tabId } = yield* ready;
+      yield* broker.invoke({
+        scope,
+        tabId,
+        operation: "teachStart",
+        input: { goal: "file an expense" },
+      });
+      const page = contexts[0]!.page;
+      const report = (target: string) => clipboardBinding!({ page }, { kind: "click", target });
+      report('button "Before"');
+      const viewer = yield* browser.attachViewer(viewerInput(tabId, true));
+      yield* viewer.input({ type: "takeControl" });
+      report('button "New expense"');
+      page.emit("framenavigated", page);
+      yield* viewer.input({ type: "releaseControl" });
+      report('button "After"');
+      const lesson = yield* broker.invoke<PreviewAutomationTeachResult>({
+        scope,
+        tabId,
+        operation: "teachStop",
+        input: {},
+      });
+      expect(lesson.goal).toBe("file an expense");
+      expect(lesson.steps).toEqual([
+        'Clicked button "New expense"',
+        expect.stringMatching(/^Went to /),
+      ]);
+      // A lesson ends once; stopping again says so.
+      const again = yield* broker
+        .invoke<PreviewAutomationTeachResult>({ scope, tabId, operation: "teachStop", input: {} })
+        .pipe(Effect.flip);
+      expect(again).toMatchObject({ reason: expect.stringContaining("No lesson is running") });
+    }),
+  ).pipe(Effect.provide(layer)),
+);
+
+it.live(
+  "a bot's tab runs headless in its profile even while a desktop window could render it",
+  () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const broker = yield* Broker.PreviewAutomationBroker;
+        yield* ServerBrowser.ServerBrowser;
+        yield* Effect.yieldNow;
+        desktopRendersNext = true;
+        yield* broker.invoke<PreviewAutomationStatus>({
+          scope,
+          operation: "open",
+          input: { reuseExistingTab: false, show: false },
+        });
+        expect(desktopConnections).toHaveLength(0);
+        expect(contextRequests.at(-1)).toEqual({ profileId: "default", isolated: false });
+      }),
+    ).pipe(Effect.provide(layer)),
+);
+
 it.live(
   "preview_open picks a reported profile by id or name and defaults to the reported one",
   () =>
@@ -1539,11 +1599,12 @@ it.live(
     ).pipe(Effect.provide(layer)),
 );
 
-it.live("an agent tab keeps throwaway storage when no client reported profiles", () =>
+it.live("an agent tab keeps the persistent default profile when no client reported profiles", () =>
   Effect.scoped(
     Effect.gen(function* () {
       yield* ready;
-      expect(contextRequests).toEqual([{ profileId: "default", isolated: true }]);
+      // After a restart with the window closed, bots keep their logins.
+      expect(contextRequests).toEqual([{ profileId: "default", isolated: false }]);
     }),
   ).pipe(Effect.provide(layer)),
 );

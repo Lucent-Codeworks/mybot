@@ -61,11 +61,13 @@ export function usePreviewAvailable(environmentId: EnvironmentId | null): boolea
 export function rendersServerTabNatively(
   environmentId: EnvironmentId,
   primaryEnvironmentId: EnvironmentId | null,
-  snapshot: Pick<PreviewSessionSnapshot, "runtime"> | null | undefined,
+  snapshot: Pick<PreviewSessionSnapshot, "runtime" | "automationOwner"> | null | undefined,
 ): boolean {
   return (
     isElectron &&
     snapshot?.runtime === "server" &&
+    // A bot's tab runs headless in the server's own profile, so it is streamed.
+    snapshot.automationOwner === undefined &&
     primaryEnvironmentId !== null &&
     environmentId === primaryEnvironmentId
   );
@@ -73,7 +75,7 @@ export function rendersServerTabNatively(
 
 export function useRendersServerTabNatively(
   environmentId: EnvironmentId,
-  snapshot: Pick<PreviewSessionSnapshot, "runtime"> | null | undefined,
+  snapshot: Pick<PreviewSessionSnapshot, "runtime" | "automationOwner"> | null | undefined,
 ): boolean {
   return rendersServerTabNatively(environmentId, useAtomValue(primaryEnvironmentIdAtom), snapshot);
 }

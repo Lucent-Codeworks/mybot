@@ -45,6 +45,17 @@ with that bot, using its instructions, memory, and model, and the first bot
 reports back with the result. You can also ask for it directly, for example
 "ask Inbox to sort today's mail".
 
+## Sign a bot into websites
+
+Bots browse in a shared browser that keeps its logins, so a site you sign into
+for one bot works for all of them, even while the MyBot window is closed.
+
+When a site needs you, such as a login, a two-factor code, or a CAPTCHA, the bot
+leaves the page open and tells you what to do. Open its browser tab, choose
+**Take control**, finish the step, choose **Release control**, and reply to the
+bot. Never send passwords or codes in a chat; a bot that needs an API key asks
+for it with a private form.
+
 ## Memory
 
 Each bot keeps a `MEMORY.md` file in its folder. It reads the file at the start
@@ -53,6 +64,17 @@ short notes on finished work. It is told never to store passwords or tokens.
 
 You can read and edit the memory in the bot's settings. Remove anything that is
 wrong or out of date; the bot uses what is there from its next conversation.
+
+## Teach a bot a task
+
+Show a bot how to do something in a website once, and it saves the steps as a
+skill. Ask it, for example, "let me show you how to file an expense". The bot
+opens the starting page in its browser tab and asks you to take over. Choose
+**Take control**, do the task once, choose **Release control**, and reply.
+
+Only what you do while in control is recorded. Passwords and one-time codes are
+recorded as steps you do yourself, without their values. Afterwards the bot
+writes a skill it can repeat, with the details you entered turned into inputs.
 
 ## Skills
 

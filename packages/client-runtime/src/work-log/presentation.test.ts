@@ -557,8 +557,8 @@ describe("resolveWorkEntryToolPresentation", () => {
       "Stopping recording the preview browser",
       "Stopped recording the preview browser",
     ],
-    ["t3_thread_read", "Reading a T3 thread", "Read a T3 thread"],
-    ["t3_thread_send", "Sending to a T3 thread", "Sent to a T3 thread"],
+    ["t3_thread_read", "Reading a MyBot thread", "Read a MyBot thread"],
+    ["t3_thread_send", "Sending to a MyBot thread", "Sent to a MyBot thread"],
   ])("preserves verb forms and the rest of %s's label", (tool, running, completed) => {
     const entry = { label: `t3-code.${tool}` };
     expect(
