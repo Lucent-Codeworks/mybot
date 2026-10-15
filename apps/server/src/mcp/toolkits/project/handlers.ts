@@ -13,6 +13,7 @@ import * as Claims from "../../../orchestration-v2/AttachmentClaims.ts";
 import * as Project from "../../../project/ProjectService.ts";
 import * as ManagedProjectFolders from "../../../project/ManagedProjectFolders.ts";
 import * as McpToolAccess from "../../McpToolAccess.ts";
+import * as BuiltInMyBot from "../../../bots/BuiltInMyBot.ts";
 import * as ServerSettings from "../../../serverSettings.ts";
 import { runtimeModeRank } from "../../../orchestration-v2/DispatchModeLimit.ts";
 import { newCommandId, readCaller, resolveProjectId, unavailable } from "../../threadAccess.ts";
@@ -180,7 +181,8 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
   t3_project_create: McpToolAccess.writesEnvironment(({ workspaceRoot, ...input }) =>
     Effect.gen(function* () {
       const projects = yield* Project.ProjectService;
-      const bot = input.bot;
+      // Only startup creates the built-in MyBot.
+      const bot = BuiltInMyBot.withoutOrchestrator(input.bot);
       if (bot == null) return yield* botRequired();
       if (workspaceRoot === undefined) {
         // Reject what this mode would otherwise drop silently.
@@ -237,10 +239,17 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
           : Option.getOrUndefined(
               yield* projects.getById(input.projectId).pipe(Effect.mapError(unavailable)),
             )?.bot;
+      // The built-in MyBot keeps its flag; no other bot can take it.
+      const bot =
+        input.bot === undefined
+          ? undefined
+          : existing?.orchestrator === true
+            ? { ...input.bot, orchestrator: true }
+            : BuiltInMyBot.withoutOrchestrator(input.bot);
       return yield* projects
         .update({
           ...input,
-          ...(input.bot === undefined ? {} : { bot: withoutAgentAutoReview(input.bot, existing) }),
+          ...(bot === undefined ? {} : { bot: withoutAgentAutoReview(bot, existing) }),
           commandId: yield* newCommandId(),
         })
         .pipe(Effect.mapError(projectFailure));
@@ -249,6 +258,13 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
   t3_project_delete: McpToolAccess.writesEnvironment((input) =>
     Effect.gen(function* () {
       const projects = yield* Project.ProjectService;
+      yield* BuiltInMyBot.assertDeletable(projects, input.projectId).pipe(
+        Effect.mapError((error) =>
+          error._tag === "ProjectBuiltInError"
+            ? new OrchestratorMcpFailure({ code: "invalid_request", message: error.message })
+            : unavailable(),
+        ),
+      );
       return yield* projects
         .delete({ ...input, commandId: yield* newCommandId() })
         .pipe(Effect.mapError(projectFailure));

@@ -24,11 +24,26 @@ export function useBotsByRecentUse(): ReadonlyArray<EnvironmentProject> {
 }
 
 /**
- * Starts a new chat. With a bot, with that bot; otherwise with the most
- * recently used bot. With no bots at all, opens the New bot dialog.
+ * Every bot in the order a new chat picks one: the built-in MyBot first,
+ * then the rest by recent use.
+ */
+export function useBotsForNewChat(): ReadonlyArray<EnvironmentProject> {
+  const bots = useBotsByRecentUse();
+  return useMemo(
+    () => [
+      ...bots.filter((bot) => bot.bot?.orchestrator === true),
+      ...bots.filter((bot) => bot.bot?.orchestrator !== true),
+    ],
+    [bots],
+  );
+}
+
+/**
+ * Starts a new chat. With a bot, with that bot; otherwise with MyBot, or the
+ * most recently used bot. With no bots at all, opens the New bot dialog.
  */
 export function useStartBotChat() {
-  const bots = useBotsByRecentUse();
+  const bots = useBotsForNewChat();
   const handleNewThread = useNewThreadHandler();
   return useCallback(
     async (botRef?: ScopedProjectRef | null): Promise<void> => {

@@ -588,6 +588,7 @@ function summaryActionPriority(action: ToolGroupAction | T3McpToolSummaryAction)
     case "attachment-discard":
     case "attachment-send":
     case "app-call":
+    case "bot-message":
       return 0;
     case "other":
     case "update":

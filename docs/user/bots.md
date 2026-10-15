@@ -45,11 +45,21 @@ database", and the reviewer applies them too.
 
 ## Bots working together
 
-Each bot knows your other bots and their jobs. When a request fits another
-bot's job better, it hands the task over: the work runs as a new conversation
-with that bot, using its instructions, memory, and model, and the first bot
-reports back with the result. You can also ask for it directly, for example
-"ask Inbox to sort today's mail".
+Each bot knows your other bots and their jobs, and can message them. When a
+request fits another bot's job better, it asks that bot and reports back with
+the answer. The other bot works with its own instructions, memory, and model,
+in one standing conversation with the bot that asked, so it remembers earlier
+requests; you can open that conversation in its bot's list. If it needs your
+approval or an answer, the first bot tells you where to go. You can also ask
+for it directly, for example "ask Inbox to sort today's mail".
+
+## MyBot
+
+MyBot is your built-in assistant, created when MyBot first starts. Ask it
+anything: it does the work itself or brings in the bot whose job fits, and
+coordinates several bots when a task spans them. When none of your bots fits
+work you will want again, it offers to create one. MyBot can't be deleted, but
+you can change its model and instructions like any other bot's.
 
 ## Group chats
 

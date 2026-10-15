@@ -166,6 +166,8 @@ export const BotProfile = Schema.Struct({
   instructions: Schema.String.check(Schema.isMaxLength(20_000)),
   /** A reviewer model approves the bot's clearly safe actions and leaves the rest for the user. */
   autoReview: Schema.optional(Schema.Boolean),
+  /** The built-in MyBot that routes work to the other bots; there is exactly one, and it cannot be deleted. */
+  orchestrator: Schema.optional(Schema.Boolean),
   /** Makes the bot a group chat that hosts the conversation with these bots. */
   members: Schema.optional(Schema.Array(ProjectId).check(Schema.isMaxLength(12))),
 });

@@ -9,11 +9,15 @@ import { Button } from "../ui/button";
 import { CollapsibleSectionHeader } from "../ui/collapsible-section-header";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "../ui/sidebar";
 
-/** The project groups that are bots, in sidebar order. */
+const isOrchestrator = (group: SidebarProjectSnapshot) =>
+  group.memberProjects.some((member) => member.bot?.orchestrator === true);
+
+/** The project groups that are bots, in sidebar order, with the built-in MyBot first. */
 export function botGroups(
   groups: ReadonlyArray<SidebarProjectSnapshot>,
 ): ReadonlyArray<SidebarProjectSnapshot> {
-  return groups.filter((group) => group.memberProjects.some((member) => member.bot != null));
+  const bots = groups.filter((group) => group.memberProjects.some((member) => member.bot != null));
+  return [...bots.filter(isOrchestrator), ...bots.filter((group) => !isOrchestrator(group))];
 }
 
 /**

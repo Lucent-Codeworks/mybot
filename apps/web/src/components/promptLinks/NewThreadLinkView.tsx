@@ -9,7 +9,7 @@ import { type ReactNode, useEffect, useEffectEvent, useRef, useState } from "rea
 import { useComposerDraftStore } from "~/composerDraftStore";
 import { isElectron } from "~/env";
 import { useNewThreadHandler } from "~/hooks/useHandleNewThread";
-import { useBotsByRecentUse } from "~/hooks/useBotChat";
+import { useBotsForNewChat } from "~/hooks/useBotChat";
 import { useEnvironments } from "~/state/environments";
 import { allReachableShellsLiveAtom } from "~/state/shell";
 
@@ -38,7 +38,7 @@ export function NewThreadLinkView({ link }: { readonly link: NewThreadLink }) {
   const locationKey = useLocation({ select: (location) => location.state.__TSR_key ?? "" });
   // The link needs every reachable machine's threads to find the bot used last.
   const ready = useAtomValue(allReachableShellsLiveAtom);
-  const bots = useBotsByRecentUse();
+  const bots = useBotsForNewChat();
   const { environments } = useEnvironments();
   const handleNewThread = useNewThreadHandler();
   const [state, setState] = useState<LinkState>(() =>

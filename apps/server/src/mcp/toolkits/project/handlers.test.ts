@@ -448,3 +448,114 @@ it("never lets an agent grant Auto Review, and drops it when an agent rewrites t
   ).toEqual({ role: "Inbox", instructions: "Send anything." });
   expect(ProjectHandlers.withoutAgentAutoReview(null, reviewed)).toBeNull();
 });
+
+it.effect("agents can't delete the built-in MyBot, drop its flag, or give it to another bot", () =>
+  Effect.gen(function* () {
+    const providerInstanceId = ProviderInstanceId.make("codex");
+    const myBotId = ProjectId.make("project:mybot");
+    const otherId = ProjectId.make("project:other");
+    const caller = {
+      id: ThreadId.make("source-thread"),
+      projectId: myBotId,
+      providerInstanceId,
+      modelSelection: { instanceId: providerInstanceId, model: "gpt-5" },
+      runtimeMode: "full-access",
+      interactionMode: "default",
+      activeRunId: "active-run",
+      archivedAt: null,
+      deletedAt: null,
+    } as OrchestrationV2ThreadShell;
+    const record = (id: ProjectId, bot: ProjectRecord["bot"]) =>
+      ({
+        id,
+        title: "Bot",
+        workspaceRoot: "/projects/bot",
+        defaultModelSelection: null,
+        bot,
+        scripts: [],
+        createdAt: "2026-10-01T00:00:00.000Z",
+        updatedAt: "2026-10-01T00:00:00.000Z",
+        deletedAt: null,
+      }) satisfies ProjectRecord;
+    const updates: Array<unknown> = [];
+    const deletes: Array<ProjectId> = [];
+    const layerDependencies = Layer.mergeAll(
+      ServerSettings.layerTest(),
+      NodeCrypto.layer,
+      Layer.succeed(McpInvocationContext.McpInvocationContext, {
+        environmentId: EnvironmentId.make("environment"),
+        requestNamespace: "session",
+        thread: { threadId: caller.id, providerSessionId: "session", providerInstanceId },
+        client: undefined,
+        issuedAt: 0,
+        capabilities: new Set(["orchestration" as const]),
+      }),
+      Layer.mock(ThreadManagement.ThreadManagementService)({
+        getThreadShell: () => Effect.succeed(caller),
+      }),
+      Layer.mock(ThreadLaunch.ThreadLaunchService)({}),
+      Layer.mock(Project.ProjectService)({
+        getById: (id) =>
+          Effect.succeed(
+            Option.some(
+              id === myBotId
+                ? record(id, { role: "Your assistant", instructions: "", orchestrator: true })
+                : record(id, { role: "Inbox", instructions: "" }),
+            ),
+          ),
+        update: (input) =>
+          Effect.sync(() => {
+            updates.push(input.bot);
+            return record(input.projectId, input.bot ?? null);
+          }),
+        delete: (input) =>
+          Effect.sync(() => {
+            deletes.push(input.projectId);
+            return record(input.projectId, null);
+          }),
+      }),
+      Layer.mock(ManagedProjectFolders.ManagedProjectFolders)({
+        scratchRoot: "/scratch",
+        namedProjectsRoot: "/projects",
+      }),
+      NodeServices.layer,
+      ServerConfig.layerTest(process.cwd(), { prefix: "t3-builtin-mybot-" }).pipe(
+        Layer.provide(NodeServices.layer),
+      ),
+    );
+    const toolkit = yield* ProjectToolkit.pipe(
+      Effect.provide(
+        McpToolAccess.HandlersLayer.layer(ProjectHandlers.layer).pipe(
+          Layer.provide(layerDependencies),
+        ),
+      ),
+    );
+    const call = <Name extends "t3_project_delete" | "t3_project_update">(
+      name: Name,
+      params: Parameters<typeof toolkit.handle<Name>>[1],
+    ) =>
+      toolkit
+        .handle(name, params)
+        .pipe(Stream.unwrap, Stream.runCollect, Effect.provide(layerDependencies));
+
+    const deleted = yield* call("t3_project_delete", { projectId: myBotId, force: true });
+    expect(deleted.at(-1)?.result).toMatchObject({
+      code: "invalid_request",
+      message: "MyBot is built in and can't be deleted.",
+    });
+    expect(deletes).toEqual([]);
+
+    yield* call("t3_project_update", {
+      projectId: myBotId,
+      bot: { role: "Chief of staff", instructions: "" },
+    });
+    yield* call("t3_project_update", {
+      projectId: otherId,
+      bot: { role: "Inbox", instructions: "", orchestrator: true },
+    });
+    expect(updates).toEqual([
+      { role: "Chief of staff", instructions: "", orchestrator: true },
+      { role: "Inbox", instructions: "" },
+    ]);
+  }),
+);

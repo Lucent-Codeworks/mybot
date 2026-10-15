@@ -55,7 +55,8 @@ export type T3McpToolSummaryAction =
   | "html-preview"
   | "html-render"
   | "app-list"
-  | "app-call";
+  | "app-call"
+  | "bot-message";
 
 export interface T3McpToolDefinition {
   readonly displayName: string;
@@ -296,6 +297,7 @@ const T3_MCP_TOOLS: Readonly<Record<string, T3McpToolDefinition>> = {
   html_render: tool(["Render", "Rendering", "Rendered", "an HTML page"], "html-render"),
   app_tools_list: tool(["List", "Listing", "Listed", "connected app tools"], "app-list"),
   app_tool_call: tool(["Use", "Using", "Used", "a connected app"], "app-call"),
+  bot_message: tool(["Message", "Messaging", "Messaged", "a bot"], "bot-message"),
 };
 
 /**

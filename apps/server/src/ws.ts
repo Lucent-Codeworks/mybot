@@ -184,6 +184,7 @@ import * as WorkspacePaths from "./workspace/WorkspacePaths.ts";
 import * as ProjectService from "./project/ProjectService.ts";
 import * as ManagedProjectFolders from "./project/ManagedProjectFolders.ts";
 import { projectMutationOperation } from "./project/ProjectMutation.ts";
+import * as BuiltInMyBot from "./bots/BuiltInMyBot.ts";
 import * as ServerEnvironment from "./environment/ServerEnvironment.ts";
 import * as DirectEndpoints from "./environment/DirectEndpoints.ts";
 import * as RemoteOpenTargets from "./environment/RemoteOpenTargets.ts";
@@ -2244,7 +2245,12 @@ const layerWsRpc = (
           ),
         [WS_METHODS.projectsCreateNew]: (input) =>
           managedFolders
-            .createNamedProject(input)
+            // Only startup creates the built-in MyBot.
+            .createNamedProject(
+              input.bot === undefined
+                ? input
+                : { ...input, bot: BuiltInMyBot.withoutOrchestrator(input.bot) },
+            )
             .pipe(
               Effect.mapError(
                 (cause) => new OrchestrationDispatchCommandError({ message: cause.message, cause }),
@@ -2318,7 +2324,8 @@ const layerWsRpc = (
                   commandId: mutation.commandId,
                   message:
                     cause._tag === "ProjectNotEmptyError" ||
-                    cause._tag === "ProjectBotRequiredError"
+                    cause._tag === "ProjectBotRequiredError" ||
+                    cause._tag === "ProjectBuiltInError"
                       ? cause.message
                       : "Failed to mutate project.",
                   cause,
