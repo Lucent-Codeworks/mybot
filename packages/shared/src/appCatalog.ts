@@ -1,176 +1,49 @@
-import type { AppConnectionAddInput, ProjectIconColor } from "@t3tools/contracts";
+import type { AppConnectionAddInput } from "@t3tools/contracts";
 
-/**
- * The app catalog: ready-made connections for popular apps. Each preset lists
- * the fields the user fills in and turns them into an MCP transport. Values
- * of secret fields are sent to the server once and never shown again.
- */
+import { PRODUCTIVITY_APPS } from "./appCatalog/productivity.ts";
+import { DEVELOPER_APPS } from "./appCatalog/developer.ts";
+import { BUSINESS_APPS } from "./appCatalog/business.ts";
+import { MARKETING_APPS } from "./appCatalog/marketing.ts";
+import { EVERYDAY_APPS } from "./appCatalog/everyday.ts";
+import {
+  APP_CATEGORIES,
+  type AppCategory,
+  type AppConnectionKind,
+  type AppPreset,
+  type AppPresetField,
+  type AppPresetTransport,
+  bearer,
+  COMPOSIO_URL,
+  envOf,
+  oauth,
+  open,
+  optionalKeyField,
+  tokenOptional,
+  viaComposio,
+  withoutTrailingSlash,
+} from "./appCatalog/model.ts";
 
-interface AppPresetFieldBase {
-  readonly key: string;
-  readonly label: string;
-  readonly help?: string;
-}
+export { APP_CATEGORIES };
+export type { AppCategory, AppConnectionKind, AppPreset, AppPresetField, AppPresetTransport };
 
-/**
- * A form field. Every value is a string: a toggle is "true" when on and empty
- * when off, a select holds one of its option values.
- */
-export type AppPresetField =
-  | (AppPresetFieldBase & {
-      /** "secret" is a password input kept out of the connection's display. */
-      readonly kind?: "text" | "secret";
-      /** An empty optional field is left out. */
-      readonly optional?: boolean;
-      readonly placeholder?: string;
-      readonly default?: string;
-    })
-  | (AppPresetFieldBase & {
-      readonly kind: "select";
-      readonly options: ReadonlyArray<{ readonly value: string; readonly label: string }>;
-      readonly default: string;
-    })
-  | (AppPresetFieldBase & { readonly kind: "toggle"; readonly default?: boolean });
-
-export type AppPresetTransport = AppConnectionAddInput["transport"];
-
-export const APP_CATEGORIES = [
-  "Email & calendar",
-  "Docs & files",
-  "Chat & meetings",
-  "Projects & development",
-  "Sales & support",
-  "Payments & finance",
-  "Marketing & social",
-  "Phone & SMS",
-  "Search & web",
-  "Travel & home",
-  "Automation",
-] as const;
-export type AppCategory = (typeof APP_CATEGORIES)[number];
-
-/**
- * How the user connects: signs in through the browser, pastes a key, runs the
- * app on this computer, or nothing at all.
- */
-export type AppConnectionKind = "sign-in" | "api-key" | "local" | "open";
-
-export interface AppPreset {
-  readonly id: string;
-  readonly name: string;
-  readonly summary: string;
-  readonly category: AppCategory;
-  /** The tile color when there is no brand logo. */
-  readonly color: ProjectIconColor;
-  readonly docsUrl: string;
-  /** Something the user should know before connecting, such as an access requirement. */
-  readonly note?: string;
-  readonly connection: AppConnectionKind;
-  /** What a local app needs installed on this computer. */
-  readonly requires?: "node" | "uv" | "docker";
-  /** Only works on these operating systems. */
-  readonly platforms?: ReadonlyArray<"darwin">;
-  /** Run by the app's maker or a service company, not a community package. */
-  readonly official: boolean;
-  readonly popular?: true;
-  /** Extra search words, such as products the app also covers. */
-  readonly keywords?: ReadonlyArray<string>;
-  /** Connects through an app aggregator instead of its own server. */
-  readonly via?: "composio";
-  readonly fields: ReadonlyArray<AppPresetField>;
-  /** Builds the transport from trimmed field values; required fields are non-empty. */
-  readonly transport: (values: Readonly<Record<string, string>>) => AppPresetTransport;
-}
-
-const withoutTrailingSlash = (url: string) => url.replace(/\/+$/, "");
-
-const oauth = (url: string) => (): AppPresetTransport => ({ type: "http", url, auth: "oauth" });
-
-const open = (url: string) => (): AppPresetTransport => ({ type: "http", url, auth: "none" });
-
-/** A fixed key field sent as a bearer token. */
-const bearer =
-  (url: string, key = "apiKey") =>
-  (values: Readonly<Record<string, string>>): AppPresetTransport => ({
-    type: "http",
-    url,
-    bearerToken: values[key] ?? "",
-    auth: "token",
-  });
-
-/** Signs in (or connects openly) unless the optional key field is filled. */
-const tokenOptional =
-  (url: string, otherwise: "oauth" | "none", key = "apiKey", tokenUrl = url) =>
-  (values: Readonly<Record<string, string>>): AppPresetTransport =>
-    values[key]
-      ? { type: "http", url: tokenUrl, bearerToken: values[key], auth: "token" }
-      : { type: "http", url, auth: otherwise };
-
-const optionalKeyField = (help: string): AppPresetField => ({
-  key: "apiKey",
-  label: "API key",
-  kind: "secret",
-  optional: true,
-  help,
-});
-
-/** Env entries for the fields that have a value. */
-const envOf = (
-  values: Readonly<Record<string, string>>,
-  mapping: Readonly<Record<string, string>>,
-): Record<string, string> => {
-  const env: Record<string, string> = {};
-  for (const [variable, key] of Object.entries(mapping)) {
-    const value = values[key];
-    if (value) env[variable] = value;
-  }
-  return env;
-};
-
-const COMPOSIO_URL = "https://connect.composio.dev/mcp";
-
-/** Google apps reach Composio's single sign-in. */
-const viaComposio = (
-  id: string,
-  name: string,
-  summary: string,
-  category: AppCategory,
-  keywords: ReadonlyArray<string>,
-  popular?: true,
-): AppPreset => ({
-  id,
-  name,
-  summary,
-  category,
-  color: "blue",
-  docsUrl: "https://docs.composio.dev",
-  note: "Connect once through Composio; it also covers your other apps. Composio asks you to sign in to Google the first time a bot uses it.",
-  connection: "sign-in",
-  official: true,
-  via: "composio",
-  keywords: ["google", "composio", ...keywords],
-  ...(popular ? { popular } : {}),
-  fields: [],
-  transport: oauth(COMPOSIO_URL),
-});
-
-export const APP_CATALOG: ReadonlyArray<AppPreset> = [
+/** The first catalog, as it shipped. */
+const CORE_APPS: ReadonlyArray<AppPreset> = [
   // Email & calendar
   viaComposio(
     "gmail",
     "Gmail",
     "Read, search, draft, and send your Gmail.",
     "Email & calendar",
-    ["email", "mail", "inbox"],
-    true,
+    ["google", "email", "mail", "inbox"],
+    { popular: true, service: "Google" },
   ),
   viaComposio(
     "google-calendar",
     "Google Calendar",
     "Check your schedule, find free time, and add events.",
     "Email & calendar",
-    ["calendar", "events", "meetings", "schedule"],
-    true,
+    ["google", "calendar", "events", "meetings", "schedule"],
+    { popular: true, service: "Google" },
   ),
   {
     id: "outlook",
@@ -337,21 +210,24 @@ export const APP_CATALOG: ReadonlyArray<AppPreset> = [
     "Google Drive",
     "Find, read, and organize files in your Drive.",
     "Docs & files",
-    ["drive", "files", "storage"],
+    ["google", "drive", "files", "storage"],
+    { service: "Google" },
   ),
   viaComposio(
     "google-docs",
     "Google Docs",
     "Read, write, and edit your documents.",
     "Docs & files",
-    ["docs", "documents", "writing"],
+    ["google", "docs", "documents", "writing"],
+    { service: "Google" },
   ),
   viaComposio(
     "google-sheets",
     "Google Sheets",
     "Read and update your spreadsheets.",
     "Docs & files",
-    ["sheets", "spreadsheets", "excel"],
+    ["google", "sheets", "spreadsheets", "excel"],
+    { service: "Google" },
   ),
   {
     id: "notion",
@@ -1231,7 +1107,7 @@ export const APP_CATALOG: ReadonlyArray<AppPreset> = [
     id: "canva",
     name: "Canva",
     summary: "Search, create, and export your designs.",
-    category: "Marketing & social",
+    category: "Design & media",
     color: "cyan",
     docsUrl: "https://www.canva.dev/docs/apps/mcp/access/",
     connection: "sign-in",
@@ -1784,6 +1660,15 @@ export const APP_CATALOG: ReadonlyArray<AppPreset> = [
     ],
     transport: (values) => ({ type: "http", url: values.url ?? "", auth: "oauth" }),
   },
+];
+
+export const APP_CATALOG: ReadonlyArray<AppPreset> = [
+  ...CORE_APPS,
+  ...PRODUCTIVITY_APPS,
+  ...DEVELOPER_APPS,
+  ...BUSINESS_APPS,
+  ...MARKETING_APPS,
+  ...EVERYDAY_APPS,
 ];
 
 export const findAppPreset = (id: string): AppPreset | undefined =>

@@ -17,7 +17,10 @@ describe("marketplaceSections", () => {
     expect(titles[0]).toBe("Popular");
     expect(titles.slice(1)).toEqual(MARKETPLACE_FILTERS.slice(2).map((filter) => filter.label));
     expect(ids("", "popular")).toContain("gmail");
-    expect(ids("", "Phone & SMS")).toEqual(["dialpad", "telnyx", "telnyx-read-only", "twilio"]);
+    expect(ids("", "Phone & SMS")).toEqual(
+      expect.arrayContaining(["dialpad", "telnyx", "telnyx-read-only", "twilio"]),
+    );
+    expect(ids("", "Phone & SMS")).not.toContain("gmail");
   });
 
   it("searches names, keywords, and categories with every word, names first", () => {
