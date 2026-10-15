@@ -12,15 +12,13 @@ export type EnvironmentIdentificationPillLabel = "Dev" | "Nightly";
 // more horizontal canvas instead of zooming the scene.
 const STAGE_BACKDROP_VIEW_BOX = "0 0 8192 96";
 
+/** Nightly builds get the night sky; every other build, releases included, the blueprint art. */
 export function resolveSidebarStageBackdropVariant(
   stageLabel: string,
   enabled = true,
 ): SidebarStageBackdropVariant | null {
   if (!enabled) return null;
-  const normalized = stageLabel.trim().toLowerCase();
-  if (normalized === "nightly") return "nightly";
-  if (normalized === "dev") return "dev";
-  return null;
+  return stageLabel.trim().toLowerCase() === "nightly" ? "nightly" : "dev";
 }
 
 export function resolveEnvironmentIdentificationPillLabel(

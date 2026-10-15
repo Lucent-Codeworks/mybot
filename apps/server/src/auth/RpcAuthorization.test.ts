@@ -75,6 +75,19 @@ describe("RPC authorization scopes", () => {
     }
   });
 
+  it("lets readers list connected apps but only settings writers change or sign in to them", () => {
+    expect(requiredScopeForRpcMethod(WS_METHODS.appConnectionsList)).toBe(
+      AuthOrchestrationReadScope,
+    );
+    for (const method of [
+      WS_METHODS.appConnectionsAdd,
+      WS_METHODS.appConnectionsRemove,
+      WS_METHODS.appConnectionsSignIn,
+    ]) {
+      expect(requiredScopeForRpcMethod(method)).toBe(AuthSettingsWriteScope);
+    }
+  });
+
   it("allows relay status reads without granting relay installation access", () => {
     expect(requiredScopeForRpcMethod(WS_METHODS.cloudGetRelayClientStatus)).toBe(
       AuthRelayReadScope,

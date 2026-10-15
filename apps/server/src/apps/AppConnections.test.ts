@@ -109,6 +109,9 @@ describe("AppConnections", () => {
         expect.objectContaining({
           id: "echo-tools",
           name: "Echo Tools",
+          // The command only: arguments and environment may hold secrets.
+          target: process.execPath,
+          status: "ready",
           toolCount: 1,
           error: null,
         }),
@@ -164,6 +167,57 @@ describe("AppConnections", () => {
       ]);
       const result = yield* apps.call("echo-web", "echo", { text: "web" });
       expect(result.content).toEqual([{ type: "text", text: "echo: web" }]);
+    }).pipe(Effect.scoped, Effect.provide(layerTest)),
+  );
+
+  it.live("uses the protocol version the app chose for every later request", () =>
+    Effect.gen(function* () {
+      // Like Telnyx: it answers initialize with its version and refuses requests without it.
+      const url = yield* Effect.acquireRelease(
+        Effect.promise(
+          () =>
+            new Promise<NodeHttp.Server>((resolve) => {
+              const httpServer = NodeHttp.createServer((request, response) => {
+                let body = "";
+                request.on("data", (chunk) => (body += chunk));
+                request.on("end", () => {
+                  const message = JSON.parse(body) as { id?: number; method: string };
+                  const reply = (payload: object, status = 200) =>
+                    response
+                      .writeHead(status, { "content-type": "application/json" })
+                      .end(JSON.stringify({ jsonrpc: "2.0", id: message.id ?? null, ...payload }));
+                  if (message.method === "initialize") {
+                    reply({ result: { protocolVersion: "2099-01-01", capabilities: {} } });
+                  } else if (request.headers["mcp-protocol-version"] !== "2099-01-01") {
+                    reply(
+                      { error: { code: -32000, message: "Unsupported protocol version" } },
+                      400,
+                    );
+                  } else if (message.method === "tools/list") {
+                    reply({
+                      result: { tools: [{ name: "ping", inputSchema: { type: "object" } }] },
+                    });
+                  } else {
+                    response.writeHead(202).end();
+                  }
+                });
+              });
+              httpServer.listen(0, "127.0.0.1", () => resolve(httpServer));
+            }),
+        ),
+        (httpServer) =>
+          Effect.promise(() => new Promise<void>((resolve) => httpServer.close(() => resolve()))),
+      ).pipe(
+        Effect.map((httpServer) => {
+          const address = httpServer.address();
+          return `http://127.0.0.1:${typeof address === "object" && address ? address.port : 0}/mcp`;
+        }),
+      );
+      const apps = yield* AppConnections.AppConnections;
+      const added = yield* apps.add({ name: "Versioned", transport: { type: "http", url } });
+      expect(added.connections).toEqual([
+        expect.objectContaining({ id: "versioned", toolCount: 1, error: null }),
+      ]);
     }).pipe(Effect.scoped, Effect.provide(layerTest)),
   );
 });

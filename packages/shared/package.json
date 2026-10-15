@@ -131,6 +131,10 @@
       "types": "./src/projectScripts.ts",
       "import": "./src/projectScripts.ts"
     },
+    "./appCatalog": {
+      "types": "./src/appCatalog.ts",
+      "import": "./src/appCatalog.ts"
+    },
     "./botTemplates": {
       "types": "./src/botTemplates.ts",
       "import": "./src/botTemplates.ts"

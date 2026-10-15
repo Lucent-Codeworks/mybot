@@ -1332,6 +1332,12 @@ export function createServerEnvironmentAtoms<R, E>(
       scheduler: configScheduler,
       concurrency: configConcurrency,
     }),
+    signInAppConnection: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:app-connections:sign-in",
+      tag: WS_METHODS.appConnectionsSignIn,
+      scheduler: configScheduler,
+      concurrency: configConcurrency,
+    }),
     upsertScheduledTask: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:server:scheduled-task:upsert",
       tag: WS_METHODS.scheduledTasksUpsert,

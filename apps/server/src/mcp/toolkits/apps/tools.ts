@@ -18,7 +18,7 @@ const dependencies = [
 
 const AppToolsListTool = Tool.make("app_tools_list", {
   description:
-    "List the apps the user connected to MyBot, such as mail, calendar, or a CRM, and their tools. Without app, returns each app with its tool names and descriptions; with app, also returns each tool's input schema. Prefer a connected app over doing the same task in the browser.",
+    "List the apps the user connected to MyBot, such as mail, calendar, or a CRM, and their tools. Without app, returns each app with its tool names and descriptions; with app, also returns each tool's input schema. Prefer a connected app over doing the same task in the browser. An app with an error cannot be used until it is fixed; when it needs the user to sign in, tell them where.",
   parameters: Schema.Struct({ app: Schema.optional(AppId) }),
   success: Schema.Struct({
     apps: Schema.Array(

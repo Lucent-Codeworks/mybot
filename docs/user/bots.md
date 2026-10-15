@@ -83,10 +83,25 @@ for it with a private form.
 ## Connect apps
 
 Connect your apps so bots can use them directly instead of clicking through
-websites. An app connects through its MCP server: open **Settings →
-Integrations → Connected apps**, choose **Add app**, and give it a web address
-(with an access token if the app needs one) or a local command to run. MyBot
-checks the connection before saving it, and tokens stay on your computer.
+websites. Open **Settings → Integrations → Connected apps** and choose **Add
+app**. Pick an app from the list, such as Dialpad, Telnyx, Twilio, n8n, or
+Activepieces, or choose **Custom** to connect any app that offers an MCP server
+by its web address or a local command. MyBot checks the connection before
+saving it, and keys and tokens stay on your computer.
+
+Some apps sign in through your browser. MyBot opens the app's sign-in page;
+approve access there, then come back to MyBot. When a sign-in expires and
+cannot be renewed, the app shows **Sign in** in Connected apps and bots tell
+you it needs signing in again. Dialpad sessions last 24 hours.
+
+A few apps have requirements of their own:
+
+- **Dialpad** connects only for accounts in Dialpad's MCP early access program.
+  Accounts outside the US may need a regional address from api@dialpad.com.
+- **Twilio** runs Twilio's MCP server on this computer with `npx`, so Node.js
+  must be installed. Choose which Twilio APIs to load under **Services**.
+- **n8n** needs instance-level MCP turned on in n8n. Paste an access token, or
+  leave it empty to sign in through the browser.
 
 Every bot can use every connected app. Bots still show you a draft and wait for
 your go-ahead before an app sends, posts, buys, or deletes anything.

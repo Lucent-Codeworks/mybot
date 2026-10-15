@@ -11,10 +11,34 @@ import * as NodeReadline from "node:readline";
  * executable cannot load.
  */
 
-const PROTOCOL_VERSION = "2025-06-18";
+/** The newest MCP version we speak; the app answers with the version both sides then use. */
+const PROTOCOL_VERSION = "2025-11-25";
+
+/** OAuth access for an HTTP app; see mcpOAuth.ts. */
+export interface McpAccessTokens {
+  /** The current access token, refreshed first if it expired; undefined before sign-in. */
+  readonly token: () => Promise<string | undefined>;
+  /** A new access token after the app refused the current one; undefined when the user must sign in again. */
+  readonly refresh: () => Promise<string | undefined>;
+}
+
+/** The app answered 401: it needs a (new) token or a browser sign-in. */
+export class McpAuthorizationError extends Error {
+  /** The app's `WWW-Authenticate` header, which may point at its OAuth metadata. */
+  readonly wwwAuthenticate: string | null;
+  constructor(message: string, wwwAuthenticate: string | null) {
+    super(message);
+    this.wwwAuthenticate = wwwAuthenticate;
+  }
+}
 
 export type McpTransportConfig =
-  | { readonly type: "http"; readonly url: string; readonly bearerToken?: string | undefined }
+  | {
+      readonly type: "http";
+      readonly url: string;
+      readonly bearerToken?: string | undefined;
+      readonly accessTokens?: McpAccessTokens | undefined;
+    }
   | {
       readonly type: "stdio";
       readonly command: string;
@@ -38,6 +62,8 @@ export interface McpConnection {
 
 interface Session extends McpConnection {
   readonly notify: (method: string) => Promise<void>;
+  /** Records the protocol version the app chose in its initialize answer. */
+  readonly useProtocolVersion: (version: string) => void;
 }
 
 interface JsonRpcMessage {
@@ -171,6 +197,7 @@ function connectStdio(
         write({ id, method, params });
       }),
     notify: async (method) => write({ method }),
+    useProtocolVersion: () => undefined,
     close: async () => {
       failAll(new Error("The app connection closed."));
       child.stdin.end();
@@ -212,28 +239,57 @@ async function readEventStream(
 
 function connectHttp(config: Extract<McpTransportConfig, { type: "http" }>): Session {
   const url = new URL(config.url);
+  const accessTokens = config.accessTokens;
   let sessionId: string | null = null;
+  let token: string | undefined = config.bearerToken || undefined;
   let nextId = 1;
+  // Requests after initialize carry the version the app chose in its answer.
+  let protocolVersion: string | null = null;
   const headers = () => ({
     "content-type": "application/json",
     accept: "application/json, text/event-stream",
-    "mcp-protocol-version": PROTOCOL_VERSION,
-    ...(config.bearerToken ? { authorization: `Bearer ${config.bearerToken}` } : {}),
+    ...(protocolVersion ? { "mcp-protocol-version": protocolVersion } : {}),
+    ...(token ? { authorization: `Bearer ${token}` } : {}),
     ...(sessionId ? { "mcp-session-id": sessionId } : {}),
   });
   const post = async (message: Record<string, unknown>, signal: AbortSignal) => {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: headers(),
-      body: JSON.stringify({ jsonrpc: "2.0", ...message }),
-      signal,
-    });
-    if (!response.ok) {
+    const send = () =>
+      fetch(url, {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ jsonrpc: "2.0", ...message }),
+        signal,
+      });
+    if (accessTokens) token = await accessTokens.token();
+    let response = await send();
+    if (response.status === 401 && accessTokens && token !== undefined) {
+      // The token expired or was revoked early: refresh once and retry.
       await response.body?.cancel().catch(() => undefined);
+      token = await accessTokens.refresh();
+      if (token !== undefined) response = await send();
+    }
+    if (!response.ok) {
+      // Only a JSON-RPC error message from the body is shown; nothing else of it.
+      const reason =
+        response.status === 401
+          ? (await response.body?.cancel().catch(() => undefined), null)
+          : parseMessage(await response.text().catch(() => ""));
+      if (response.status === 401) {
+        throw new McpAuthorizationError(
+          accessTokens
+            ? "The app needs you to sign in."
+            : "The app refused access (HTTP 401). Check its access token.",
+          response.headers.get("www-authenticate"),
+        );
+      }
       throw new Error(
-        response.status === 401 || response.status === 403
-          ? `The app refused access (HTTP ${response.status}). Check its access token.`
-          : `The app answered HTTP ${response.status}.`,
+        response.status === 403
+          ? "The app refused access (HTTP 403). Your account may not have access to it."
+          : `The app answered HTTP ${response.status}${
+              typeof reason?.error?.message === "string"
+                ? `: ${reason.error.message.slice(0, 200)}`
+                : "."
+            }`,
       );
     }
     sessionId = response.headers.get("mcp-session-id") ?? sessionId;
@@ -252,6 +308,9 @@ function connectHttp(config: Extract<McpTransportConfig, { type: "http" }>): Ses
       const message = parseMessage(await response.text());
       if (!message) throw new Error("The app's answer was not JSON-RPC.");
       return resultOf(message);
+    },
+    useProtocolVersion: (version) => {
+      protocolVersion = version;
     },
     notify: async (method) => {
       const response = await post({ method }, AbortSignal.timeout(10_000));
@@ -277,7 +336,7 @@ export async function connectMcp(
   }
   const connection = config.type === "http" ? connectHttp(config) : connectStdio(config, platform);
   try {
-    await connection.request(
+    const initialized = await connection.request(
       "initialize",
       {
         protocolVersion: PROTOCOL_VERSION,
@@ -285,6 +344,11 @@ export async function connectMcp(
         clientInfo: { name: "mybot", version: "1.0.0" },
       },
       options,
+    );
+    connection.useProtocolVersion(
+      typeof initialized.protocolVersion === "string"
+        ? initialized.protocolVersion
+        : PROTOCOL_VERSION,
     );
     await connection.notify("notifications/initialized");
     return connection;

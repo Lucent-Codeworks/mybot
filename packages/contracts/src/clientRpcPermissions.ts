@@ -13,6 +13,7 @@ export const CLIENT_GUARDED_RPC_SCOPES = {
   [WS_METHODS.serverCheckOtlpEndpoint]: AuthSettingsWriteScope,
   [WS_METHODS.appConnectionsAdd]: AuthSettingsWriteScope,
   [WS_METHODS.appConnectionsRemove]: AuthSettingsWriteScope,
+  [WS_METHODS.appConnectionsSignIn]: AuthSettingsWriteScope,
   [WS_METHODS.botsTelegramConnect]: AuthOrchestrationOperateScope,
   [WS_METHODS.botsTelegramDisconnect]: AuthOrchestrationOperateScope,
   [WS_METHODS.scheduledTasksUpsert]: AuthOrchestrationOperateScope,

@@ -52,7 +52,20 @@ updates, and refuse or strip the flag anywhere else, so there is only ever one.
 T3 MCP server relays them through two fixed tools, `app_tools_list` and `app_tool_call`. Relaying,
 instead of adding each app to each provider's MCP config, works the same for every adapter and keeps
 the tool list (part of Claude's query key) stable when apps are added or removed. Configs, including
-tokens and environment values, live in the server secret store and never reach clients.
+tokens and environment values, live in the server secret store and never reach clients; summaries
+show only a URL's host or a command without its arguments, since both can carry keys.
+
+`mcpClient.ts` and `mcpOAuth.ts` are hand-written instead of using `@modelcontextprotocol/sdk`: the
+server ships as a single executable that cannot load the SDK's file-backed dependencies (the SDK is
+a test-only devDependency). HTTP apps that answer 401 sign in with the MCP authorization flow
+(protected resource and authorization server metadata, dynamic client registration, PKCE, and a
+`resource` indicator). The browser returns to `GET /oauth/apps/callback` on the origin the client
+reported (`redirectBaseUrl`), so local, LAN, and Tailscale origins all work without a fixed public
+URL. That route has no session check: the single-use, ten-minute `state` is the credential, and
+pending sign-ins live in memory, so a restart only means signing in again. The route is untraced
+because its query carries the code. A refused refresh drops the tokens and marks the app
+needs-sign-in rather than removing it. `packages/shared/src/appCatalog.ts` is the data-only list of
+presets the Add app dialog offers.
 
 A group chat is a bot whose profile has `members`. Its block replaces the roster with a host role:
 it relays each message to member bots with `bot_message` and quotes their replies. Members stay
