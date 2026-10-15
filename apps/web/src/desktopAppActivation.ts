@@ -26,11 +26,6 @@ export interface DesktopAppActivationDependencies {
     environmentId: EnvironmentId,
     workspaceRoot: string,
   ) => DesktopAppActivationProject | null;
-  readonly createProject: (
-    environmentId: EnvironmentId,
-    workspaceRoot: string,
-  ) => Promise<ProjectId>;
-  readonly waitForProject: (projectRef: ScopedProjectRef) => Promise<void>;
   readonly openThread: (
     projectRef: ScopedProjectRef,
   ) => Promise<{ readonly threadId: ThreadId } | null>;
@@ -76,18 +71,14 @@ export async function handleDesktopAppActivationRequest(
     );
   }
 
-  let projectId = dependencies.findProject(target.environmentId, request.workspaceRoot)?.id ?? null;
-  if (projectId === null) {
-    try {
-      projectId = await dependencies.createProject(target.environmentId, request.workspaceRoot);
-      await dependencies.waitForProject({ environmentId: target.environmentId, projectId });
-    } catch (error) {
-      return failure(
-        request.requestId,
-        "project-create-failed",
-        errorMessage(error, "MyBot could not add the project."),
-      );
-    }
+  // Only a bot's own folder opens; MyBot does not turn other folders into bots.
+  const projectId = dependencies.findProject(target.environmentId, request.workspaceRoot)?.id;
+  if (projectId === undefined) {
+    return failure(
+      request.requestId,
+      "project-create-failed",
+      "That folder is not a bot. Create a bot in MyBot, or open a bot's folder.",
+    );
   }
 
   try {
@@ -99,7 +90,7 @@ export async function handleDesktopAppActivationRequest(
       return failure(
         request.requestId,
         "thread-open-failed",
-        "MyBot could not open a new thread for the project.",
+        "MyBot could not open a new chat with the bot.",
       );
     }
     return {
@@ -113,7 +104,7 @@ export async function handleDesktopAppActivationRequest(
     return failure(
       request.requestId,
       "thread-open-failed",
-      errorMessage(error, "MyBot could not open a new thread for the project."),
+      errorMessage(error, "MyBot could not open a new chat with the bot."),
     );
   }
 }

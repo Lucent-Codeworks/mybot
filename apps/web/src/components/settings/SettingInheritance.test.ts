@@ -34,7 +34,7 @@ describe("settingInheritanceLayers", () => {
       "enableAgentBrowserAccess",
     );
     expect(layers.map((layer) => [layer.label, layer.value, layer.effective])).toEqual([
-      ["Project", "On", true],
+      ["Bot", "On", true],
       ["Laptop", "Off", false],
       ["Default", "On", false],
     ]);

@@ -35,7 +35,7 @@ variable. Pi reads `~/.pi/agent/sessions`, or the `sessions` directory under
 To include sessions saved through `--session-dir` or Pi's `sessionDir` setting, set this environment
 variable to the same directory. Pi includes recorded tool and summary costs under `Tools/summaries`.
 Use absolute paths or `~/` paths in the account's environment settings; relative environment paths
-depend on each project's working directory and cannot be reliably discovered by Usage. Accounts
+depend on each bot's working directory and cannot be reliably discovered by Usage. Accounts
 sharing a history directory count once.
 
 When your app and server support different providers, usage totals may cover only the providers

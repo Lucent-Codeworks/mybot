@@ -29,6 +29,12 @@ function projectFailure(error: Project.ProjectServiceError) {
   return new OrchestratorMcpFailure({ code: "invalid_request", message });
 }
 
+const botRequired = () =>
+  new OrchestratorMcpFailure({
+    code: "invalid_request",
+    message: new Project.ProjectBotRequiredError({}).message,
+  });
+
 const access = Effect.gen(function* () {
   yield* readCaller();
   return yield* Project.ProjectService;
@@ -65,24 +71,7 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
             code: "invalid_request",
             message: "A new thread accepts only pending attachment uploads.",
           });
-        if (input.scratch === true && input.projectId !== undefined)
-          return yield* new OrchestratorMcpFailure({
-            code: "invalid_request",
-            message: "scratch:true picks its own project; omit projectId.",
-          });
-        const projectId =
-          input.scratch === true
-            ? (yield* ManagedProjectFolders.ManagedProjectFolders.pipe(
-                Effect.flatMap((folders) => folders.ensureScratchProject),
-                Effect.mapError(
-                  (error) =>
-                    new OrchestratorMcpFailure({
-                      code: "orchestration_error",
-                      message: error.message,
-                    }),
-                ),
-              )).projectId
-            : yield* resolveProjectId(context, input.projectId);
+        const projectId = yield* resolveProjectId(context, input.projectId);
         const readProject = Project.ProjectService.pipe(
           Effect.flatMap((projects) => projects.getById(projectId)),
           Effect.mapError(unavailable),
@@ -90,10 +79,7 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
         );
         // Handing work to another bot runs it as that bot: on the bot's own
         // model, and never with broader permissions than the bot's own.
-        const otherProject =
-          input.scratch !== true && projectId !== caller?.projectId
-            ? yield* readProject
-            : undefined;
+        const otherProject = projectId !== caller?.projectId ? yield* readProject : undefined;
         const botSettings = otherProject?.bot
           ? resolveProjectSettings(
               yield* ServerSettings.ServerSettingsService.pipe(
@@ -194,6 +180,8 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
   t3_project_create: McpToolAccess.writesEnvironment(({ workspaceRoot, ...input }) =>
     Effect.gen(function* () {
       const projects = yield* Project.ProjectService;
+      const bot = input.bot;
+      if (bot == null) return yield* botRequired();
       if (workspaceRoot === undefined) {
         // Reject what this mode would otherwise drop silently.
         if (input.scripts !== undefined || input.createWorkspaceRootIfMissing !== undefined)
@@ -206,7 +194,7 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
         const created = yield* folders
           .createNamedProject({
             name: input.title,
-            ...(input.bot ? { bot: withoutAgentAutoReview(input.bot, null)! } : {}),
+            bot: withoutAgentAutoReview(bot, null)!,
             ...(input.defaultModelSelection
               ? { defaultModelSelection: input.defaultModelSelection }
               : {}),
@@ -231,7 +219,7 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
       return yield* projects
         .create({
           ...input,
-          ...(input.bot === undefined ? {} : { bot: withoutAgentAutoReview(input.bot, null) }),
+          bot: withoutAgentAutoReview(bot, null),
           workspaceRoot,
           commandId,
           projectId: ProjectId.make(commandId),
@@ -241,6 +229,7 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
   ),
   t3_project_update: McpToolAccess.writesEnvironment((input) =>
     Effect.gen(function* () {
+      if (input.bot === null) return yield* botRequired();
       const projects = yield* Project.ProjectService;
       const existing =
         input.bot === undefined

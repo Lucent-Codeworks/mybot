@@ -60,9 +60,7 @@ const bootstrapFdFlag = Flag.Int("bootstrap-fd").pipe(
   Flag.optional,
 );
 const autoBootstrapProjectFromCwdFlag = Flag.Boolean("auto-bootstrap-project-from-cwd").pipe(
-  Flag.withDescription(
-    "Create a project for the current working directory on startup when missing.",
-  ),
+  Flag.withDescription("Create a bot for the current working directory on startup when missing."),
   Flag.optional,
 );
 const logWebSocketEventsFlag = Flag.Boolean("log-websocket-events").pipe(
@@ -373,7 +371,8 @@ export const resolveServerConfig = (
         normalizedFlags.autoBootstrapProjectFromCwd,
         Option.fromUndefinedOr(env.autoBootstrapProjectFromCwd),
       ),
-      () => mode === "web",
+      // Off unless asked for: MyBot only has bots, and the cwd is rarely meant to be one.
+      () => false,
     );
     const logWebSocketEvents = Option.getOrElse(
       resolveOptionPrecedence(

@@ -137,8 +137,8 @@ export function shouldOpenDefaultBrowserProfileFromMenuClick(
 
 const SURFACE_DISABLED_REASONS = {
   browser: "Browser previews are only available in the MyBot desktop app.",
-  terminal: "Terminal surfaces are only available from a project thread.",
-  files: "Files are only available when a project is open.",
+  terminal: "Terminal surfaces are only available from a chat.",
+  files: "Files are only available from a chat.",
   device: "Devices are only available from a thread.",
 } as const;
 
@@ -157,8 +157,8 @@ const LAUNCHER_SHORTCUT_BLOCKING_LAYERS = [
 /** One-line unavailability hints for the empty-state rows. */
 const SURFACE_UNAVAILABLE_HINTS = {
   browser: "Only available in the desktop app.",
-  terminal: "Available when a project is open.",
-  files: "Available when a project is open.",
+  terminal: "Available from a chat.",
+  files: "Available from a chat.",
   device: "Available from a thread.",
 } as const;
 

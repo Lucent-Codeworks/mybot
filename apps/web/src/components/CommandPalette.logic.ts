@@ -1,9 +1,4 @@
-import {
-  type EnvironmentId,
-  type FilesystemBrowseEntry,
-  type KeybindingCommand,
-  THREAD_JUMP_KEYBINDING_COMMANDS,
-} from "@t3tools/contracts";
+import { type KeybindingCommand, THREAD_JUMP_KEYBINDING_COMMANDS } from "@t3tools/contracts";
 import type { SidebarThreadSortOrder } from "@t3tools/contracts/settings";
 import * as Arr from "effect/Array";
 import * as Result from "effect/Result";
@@ -17,29 +12,16 @@ export const RECENT_THREAD_LIMIT = 12;
 export const ITEM_ICON_CLASS = "size-4 text-icon-muted";
 export const ADDON_ICON_CLASS = "size-4";
 
-export function browseInputEndPaddingClass(input: {
-  readonly willCreateProjectPath: boolean;
-  readonly hasHighlightedBrowseItem: boolean;
-}): string {
-  if (input.willCreateProjectPath) {
-    return "*:data-[slot=autocomplete-input]:pe-38!";
-  }
-  if (input.hasHighlightedBrowseItem) {
-    return "*:data-[slot=autocomplete-input]:pe-30!";
-  }
-  return "*:data-[slot=autocomplete-input]:pe-24!";
-}
-
 /**
- * The global search overlay hosts three mutually exclusive surfaces: the
- * command palette (⌘K), the project file picker (⌘P), and project content
- * search (⇧⌘F). One reducer owns open/mode state so the surfaces can never
- * stack and re-triggering a mode's shortcut toggles it closed.
+ * The global search overlay hosts two mutually exclusive surfaces: the
+ * command palette (⌘K) and the file picker (⌘P). One reducer owns open/mode
+ * state so the surfaces can never stack and re-triggering a mode's shortcut
+ * toggles it closed.
  */
-export type SearchOverlayMode = "command" | "files" | "content";
+export type SearchOverlayMode = "command" | "files";
 
 export type CommandPaletteOpenIntent =
-  | { readonly kind: "add-project" | "new-thread-in" | "change-theme" }
+  | { readonly kind: "change-theme" }
   | { readonly kind: "search"; readonly query: string };
 
 export interface CommandPaletteUiState {
@@ -52,8 +34,6 @@ export type CommandPaletteUiAction =
   | { readonly _tag: "SetOpen"; readonly open: boolean }
   | { readonly _tag: "ToggleMode"; readonly mode: SearchOverlayMode }
   | { readonly _tag: "OpenSearch"; readonly query: string }
-  | { readonly _tag: "OpenAddProject" }
-  | { readonly _tag: "OpenNewThreadIn" }
   | { readonly _tag: "OpenChangeTheme" }
   | { readonly _tag: "ClearOpenIntent" };
 
@@ -76,10 +56,6 @@ export function reduceCommandPaletteUiState(
         mode: "command",
         openIntent: { kind: "search", query: action.query },
       };
-    case "OpenAddProject":
-      return { open: true, mode: "command", openIntent: { kind: "add-project" } };
-    case "OpenNewThreadIn":
-      return { open: true, mode: "command", openIntent: { kind: "new-thread-in" } };
     case "OpenChangeTheme":
       return { open: true, mode: "command", openIntent: { kind: "change-theme" } };
     case "ClearOpenIntent":
@@ -209,29 +185,11 @@ export function enumerateCommandPaletteItems(
   });
 }
 
-export type CommandPaletteMode = "root" | "root-browse" | "submenu" | "submenu-browse";
-
-// A project as the palette shows it. `displayName` is the group label shared by
-// the same folder's projects across environments. Keep `title`
-// as the real project title: the automatic project icon is derived from it, and
-// every other surface uses the real title, so overriding it desyncs the icon.
+// A bot as the palette shows it. `displayName` is the group label shared by
+// the same bot across environments. Keep `title` as the real title: the
+// automatic icon is derived from it, and every other surface uses the real
+// title, so overriding it desyncs the icon.
 export type CommandPaletteProject = Project & { readonly displayName: string };
-
-export function buildCommandPaletteProjectMetadata(input: {
-  readonly projects: ReadonlyArray<Pick<Project, "environmentId" | "title" | "workspaceRoot">>;
-  readonly locationByEnvironmentId: ReadonlyMap<EnvironmentId, { readonly label: string }>;
-}) {
-  const searchTerms: string[] = [];
-  const environmentLabels = new Set<string>();
-
-  for (const project of input.projects) {
-    const label = input.locationByEnvironmentId.get(project.environmentId)?.label ?? "Remote";
-    searchTerms.push(project.title, project.workspaceRoot, label);
-    environmentLabels.add(label);
-  }
-
-  return { searchTerms, environmentLabels: [...environmentLabels] };
-}
 
 export function buildProjectActionItems(input: {
   projects: ReadonlyArray<CommandPaletteProject>;
@@ -245,14 +203,9 @@ export function buildProjectActionItems(input: {
   return input.projects.map((project) => ({
     kind: "action",
     value: `${input.valuePrefix}:${project.environmentId}:${project.id}`,
-    searchTerms: [
-      project.displayName,
-      project.title,
-      project.workspaceRoot,
-      ...(input.searchTerms?.(project) ?? []),
-    ],
+    searchTerms: [project.displayName, project.title, ...(input.searchTerms?.(project) ?? [])],
     title: project.displayName,
-    description: input.renderDescription?.(project) ?? project.workspaceRoot,
+    description: input.renderDescription?.(project),
     icon: input.icon(project),
     ...(input.shortcutCommand !== undefined ? { shortcutCommand: input.shortcutCommand } : {}),
     run: async () => {
@@ -400,7 +353,7 @@ export function filterCommandPaletteGroups(input: {
   activeGroups: ReadonlyArray<CommandPaletteGroup>;
   query: string;
   isInSubmenu: boolean;
-  projectSearchItems: ReadonlyArray<CommandPaletteActionItem>;
+  botSearchItems: ReadonlyArray<CommandPaletteActionItem>;
   settingsSearchItems?: ReadonlyArray<CommandPaletteActionItem>;
   threadSearchItems: ReadonlyArray<CommandPaletteActionItem>;
 }): CommandPaletteGroup[] {
@@ -425,11 +378,11 @@ export function filterCommandPaletteGroups(input: {
 
   const searchableGroups = [...baseGroups];
   if (!input.isInSubmenu && !isActionsFilter) {
-    if (input.projectSearchItems.length > 0) {
+    if (input.botSearchItems.length > 0) {
       searchableGroups.push({
-        value: "projects-search",
-        label: "Projects",
-        items: input.projectSearchItems,
+        value: "bots-search",
+        label: "Bots",
+        items: input.botSearchItems,
       });
     }
     if (input.settingsSearchItems && input.settingsSearchItems.length > 0) {
@@ -478,58 +431,6 @@ export function filterCommandPaletteGroups(input: {
   });
 }
 
-export function buildBrowseGroups(input: {
-  browseEntries: ReadonlyArray<FilesystemBrowseEntry>;
-  browseQuery: string;
-  canBrowseUp: boolean;
-  upIcon: ReactNode;
-  directoryIcon: ReactNode;
-  browseUp: () => void | Promise<void>;
-  browseTo: (name: string) => void | Promise<void>;
-}): CommandPaletteGroup[] {
-  const items: CommandPaletteActionItem[] = [];
-
-  if (input.canBrowseUp) {
-    items.push({
-      kind: "action",
-      value: "browse:up",
-      searchTerms: [input.browseQuery, ".."],
-      title: "..",
-      icon: input.upIcon,
-      keepOpen: true,
-      run: async () => {
-        await input.browseUp();
-      },
-    });
-  }
-
-  for (const entry of input.browseEntries) {
-    items.push({
-      kind: "action",
-      value: `browse:${entry.fullPath}`,
-      searchTerms: [input.browseQuery, entry.fullPath, entry.name],
-      title: entry.name,
-      icon: input.directoryIcon,
-      keepOpen: true,
-      run: async () => {
-        await input.browseTo(entry.name);
-      },
-    });
-  }
-
-  return [{ value: "directories", label: "Directories", items }];
-}
-
-export function getCommandPaletteMode(input: {
-  currentView: CommandPaletteView | null;
-  isBrowsing: boolean;
-}): CommandPaletteMode {
-  if (input.currentView) {
-    return input.isBrowsing ? "submenu-browse" : "submenu";
-  }
-  return input.isBrowsing ? "root-browse" : "root";
-}
-
 export function buildRootGroups(input: {
   actionItems: ReadonlyArray<CommandPaletteActionItem | CommandPaletteSubmenuItem>;
   recentThreadItems: ReadonlyArray<CommandPaletteActionItem>;
@@ -548,15 +449,6 @@ export function buildRootGroups(input: {
   return groups;
 }
 
-export function getCommandPaletteInputPlaceholder(mode: CommandPaletteMode): string {
-  switch (mode) {
-    case "root":
-      return "Search commands, projects, and threads...";
-    case "root-browse":
-      return "Enter project path (e.g. ~/projects/my-app)";
-    case "submenu":
-      return "Search...";
-    case "submenu-browse":
-      return "Enter path (e.g. ~/projects/my-app)";
-  }
+export function getCommandPaletteInputPlaceholder(isSubmenu: boolean): string {
+  return isSubmenu ? "Search..." : "Search commands, bots, and threads...";
 }

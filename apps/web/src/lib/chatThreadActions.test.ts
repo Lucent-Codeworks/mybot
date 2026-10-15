@@ -5,12 +5,11 @@ import {
   ProviderInstanceId,
   type ModelSelection,
 } from "@t3tools/contracts";
-import { describe, expect, it, vi } from "vite-plus/test";
+import { describe, expect, it } from "vite-plus/test";
 import {
   resolveThreadActionProjectRef,
   hasExplicitComposerModelSelection,
   resolveNewThreadModelSelectionOverride,
-  startNewThreadFromContext,
   type ChatThreadActionContext,
 } from "./chatThreadActions";
 
@@ -120,36 +119,5 @@ describe("chatThreadActions", () => {
     );
 
     expect(projectRef).toEqual(scopeProjectRef(ENVIRONMENT_ID, PROJECT_ID));
-  });
-
-  it("inherits only the project from context", async () => {
-    const handleNewThread = vi.fn<ChatThreadActionContext["handleNewThread"]>(async () => {});
-
-    const didStart = await startNewThreadFromContext(
-      createContext({
-        activeThread: {
-          environmentId: ENVIRONMENT_ID,
-          projectId: PROJECT_ID,
-        },
-        handleNewThread,
-      }),
-    );
-
-    expect(didStart).toBe(true);
-    expect(handleNewThread).toHaveBeenCalledWith(scopeProjectRef(ENVIRONMENT_ID, PROJECT_ID));
-  });
-
-  it("does not start a thread when there is no project context", async () => {
-    const handleNewThread = vi.fn<ChatThreadActionContext["handleNewThread"]>(async () => {});
-
-    const didStart = await startNewThreadFromContext(
-      createContext({
-        defaultProjectRef: null,
-        handleNewThread,
-      }),
-    );
-
-    expect(didStart).toBe(false);
-    expect(handleNewThread).not.toHaveBeenCalled();
   });
 });

@@ -103,7 +103,7 @@ instance:
 ## Model defaults
 
 MyBot remembers your provider, model, and model options for new threads. A
-project's configured model takes precedence; resetting that project setting
+bot's configured model takes precedence; resetting that bot setting
 returns to the remembered selection.
 
 Leaving reasoning level or service tier unset uses the provider's own configuration.
@@ -143,7 +143,7 @@ into a normal draft.
 ## Edit an earlier prompt
 
 On web and desktop, choose **Edit from here** beneath a sent message to rewind
-the conversation to before that message. Files in the project folder are not
+the conversation to before that message. Files in the bot's folder are not
 restored; they stay as the agent left them. The selected prompt and its attachments return to the composer for editing and
 resending. Any unsent draft stays above the restored prompt.
 

@@ -156,7 +156,7 @@ const PanelRunContext = memo(function PanelRunContext({
         </Tooltip>
       </span>
       <ComposerContextLabel displayMode="panel">
-        {autoEnvironmentLabel ?? activeEnvironment?.label ?? "Project folder"}
+        {autoEnvironmentLabel ?? activeEnvironment?.label ?? "Bot folder"}
       </ComposerContextLabel>
     </>
   );

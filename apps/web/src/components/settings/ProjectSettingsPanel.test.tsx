@@ -90,10 +90,6 @@ vi.mock("~/state/server", () => ({
     removeKeybinding: "removeKeybinding",
   },
 }));
-// The bot section reads a bot's memory file; these projects are not bots.
-vi.mock("~/components/files/projectFilesQueryState", () => ({
-  useProjectFileQuery: () => ({ data: null, readError: null, refresh: () => {} }),
-}));
 vi.mock("~/state/use-atom-command", () => ({
   useAtomCommand: (
     command: "update" | "delete" | "updateSettings" | "upsertKeybinding" | "removeKeybinding",
@@ -104,13 +100,6 @@ vi.mock("~/hooks/useSettings", () => ({
   useUpdateClientSettings: () => state.updateClientSettings,
   usePrimarySettings: () => DEFAULT_SERVER_SETTINGS,
   useEnvironmentSettings: () => DEFAULT_SERVER_SETTINGS,
-}));
-vi.mock("~/hooks/useT3ProjectFileScripts", () => ({
-  useT3ProjectFileState: () => ({
-    status: "valid",
-    file: null,
-    scripts: [{ name: "Imported", command: "vp test" }],
-  }),
 }));
 vi.mock("~/hooks/useCopyToClipboard", () => ({
   useCopyToClipboard: () => ({ copyToClipboard: state.copy }),
@@ -190,7 +179,7 @@ vi.mock("./settingsLayout", () => ({
   }) => <button {...props} aria-label={`Reset ${label} to default`} />,
 }));
 vi.mock("./ProjectDefaultsSettings", () => ({ ProjectDefaultsSettings: () => null }));
-vi.mock("./ProjectActionsSettings", () => ({ ProjectActionsSettings: () => null }));
+vi.mock("./BotProfileSettings", () => ({ BotProfileSettings: () => null }));
 vi.mock("../ProjectFavicon", () => ({ ProjectFavicon: () => null }));
 vi.mock("../chat/ProviderModelPicker", () => ({ ProviderModelPicker: "model-picker" }));
 vi.mock("../chat/TraitsPicker", () => ({ TraitsPicker: "traits-picker" }));
@@ -199,10 +188,6 @@ vi.mock("./ProjectFaviconPickerDialog", () => ({
   ProjectFaviconPickerDialog: "favicon-picker",
 }));
 vi.mock("./ProjectIconPickerDialog", () => ({ ProjectIconPickerDialog: "icon-picker" }));
-vi.mock("../projectScriptEditor", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../projectScriptEditor")>()),
-  ProjectScriptEditorDialog: "script-editor",
-}));
 
 import { buildSidebarProjectSnapshots } from "../../sidebarProjectGrouping";
 import { ProjectFaviconPickerDialog } from "./ProjectFaviconPickerDialog";
@@ -255,6 +240,7 @@ beforeEach(() => {
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
     scripts: [],
+    bot: { role: "Helper", instructions: "" },
   }));
   state.providers = Atom.make<ReadonlyArray<ServerProvider>>([
     {
@@ -323,11 +309,11 @@ async function grant(id: EnvironmentId, result: SessionResult) {
   await act(() => state.registry!.set(state.sessions.get(id)!, result));
 }
 
-describe("project settings permissions", () => {
-  it("blocks shared field updates and removal without project access", async () => {
+describe("bot settings permissions", () => {
+  it("blocks shared field updates and deletion without project access", async () => {
     await grant(remoteId, AsyncResult.success(session([AuthSettingsWriteScope])));
     const root = await mountPanel();
-    const name = root.findByProps({ "aria-label": "Project name" });
+    const name = root.findByProps({ "aria-label": "Bot name" });
 
     await act(async () => {
       name.props.onChange();
@@ -338,13 +324,13 @@ describe("project settings permissions", () => {
     expect(state.update).not.toHaveBeenCalled();
     expect(state.projects.every((project) => project.title === "Shared repo")).toBe(true);
     expect(name.props.disabled).toBe(true);
-    expect(button("Remove project").props.disabled).toBe(true);
+    expect(button("Delete bot").props.disabled).toBe(true);
   });
 
-  it("updates the project with project access but without settings access", async () => {
+  it("updates the bot with project access but without settings access", async () => {
     const root = await mountPanel();
     await act(async () => {
-      const name = root.findByProps({ "aria-label": "Project name" });
+      const name = root.findByProps({ "aria-label": "Bot name" });
       name.props.onChange();
       name.props.onBlur({ currentTarget: { value: "Renamed" } });
     });
@@ -352,9 +338,9 @@ describe("project settings permissions", () => {
     expect(state.projects.map((project) => project.title)).toEqual(["Renamed"]);
   });
 
-  it("removes the project and its drafts after confirmation", async () => {
+  it("deletes the bot and its drafts after confirmation", async () => {
     await mountPanel();
-    await act(async () => button("Remove project").props.onClick());
+    await act(async () => button("Delete bot").props.onClick());
     expect(state.confirm).toHaveBeenCalledOnce();
     expect(state.delete).toHaveBeenCalledExactlyOnceWith({
       environmentId: remoteId,
@@ -368,7 +354,7 @@ describe("project settings permissions", () => {
     const confirmed = deferred<boolean>();
     state.confirm.mockReturnValueOnce(confirmed.promise);
     await mountPanel();
-    await act(async () => button("Remove project").props.onClick());
+    await act(async () => button("Delete bot").props.onClick());
     expect(state.confirm).toHaveBeenCalledOnce();
     await grant(remoteId, AsyncResult.success(session([])));
     await act(async () => {
@@ -382,7 +368,7 @@ describe("project settings permissions", () => {
 
   it("reacts to a revoked and restored grant and guards a stale handler", async () => {
     const root = await mountPanel();
-    const name = () => root.findByProps({ "aria-label": "Project name" });
+    const name = () => root.findByProps({ "aria-label": "Bot name" });
     const staleSave = name().props.onBlur;
     await act(async () => {
       state.registry!.set(state.sessions.get(remoteId)!, AsyncResult.success(session([])));
@@ -412,7 +398,7 @@ describe("project settings permissions", () => {
   ] as const)("uses the current grant while the session is %s", async (_state, result, allowed) => {
     await grant(remoteId, result());
     const root = await mountPanel();
-    const name = root.findByProps({ "aria-label": "Project name" });
+    const name = root.findByProps({ "aria-label": "Bot name" });
     expect(name.props.disabled).toBe(!allowed);
     await act(async () => {
       name.props.onChange();

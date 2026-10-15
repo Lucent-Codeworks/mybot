@@ -2,7 +2,10 @@
 
 A bot is a teammate with a job. It has a name, a model, and standing
 instructions that it follows in every conversation, so you can hand it the
-same kind of work again and again without repeating yourself.
+same kind of work again and again without repeating yourself. Every
+conversation in MyBot is with a bot. Projects from earlier versions that are
+not bots are removed when MyBot starts, along with their conversations; their
+folders and files stay on disk.
 
 ## Create a bot
 
@@ -141,10 +144,10 @@ in MyBot.
 
 ## Change or remove a bot
 
-Hover a bot and choose the gear icon, or open its project settings. You can
-change its name, icon, job, and instructions there, and its model under **New
-threads**. Instruction changes apply from the next message, including in
-conversations that are already open.
+Hover a bot and choose the gear icon, or choose **Bot settings** from a
+conversation's menu. You can change its name, icon, job, and instructions
+there, and its model under **New threads**. Instruction changes apply from the
+next message, including in conversations that are already open.
 
-**Make a plain project** removes the job and instructions but keeps the
-conversations. Any project can become a bot with **Make a bot**.
+**Delete bot** deletes the bot and its conversations. The files in its folder
+stay on disk.

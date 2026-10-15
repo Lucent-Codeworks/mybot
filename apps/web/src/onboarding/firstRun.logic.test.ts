@@ -5,6 +5,7 @@ import {
   isFreshFirstRunWorkspace,
   resolveFirstRunDecision,
   resolveHostedFirstRunDecision,
+  selectFirstRunBotWorkspace,
   transitionFirstRunGateState,
 } from "./firstRun.logic";
 
@@ -522,5 +523,24 @@ describe("isFreshFirstRunWorkspace", () => {
         threads: [{ ...bootstrapThread, runtime: { status: "ready" } }],
       }),
     ).toBe(false);
+  });
+});
+
+describe("selectFirstRunBotWorkspace", () => {
+  it("keeps only bots and the threads that belong to them", () => {
+    const bot = { id: "bot", environmentId: "env", bot: {} };
+    const plain = { id: "plain", environmentId: "env", bot: null };
+    const otherEnvironmentBot = { id: "bot", environmentId: "remote", bot: {} };
+    const botThread = { id: "t1", projectId: "bot", environmentId: "env" };
+    const plainThread = { id: "t2", projectId: "plain", environmentId: "env" };
+    const strayThread = { id: "t3", projectId: "bot", environmentId: "elsewhere" };
+
+    const result = selectFirstRunBotWorkspace(
+      [bot, plain, otherEnvironmentBot],
+      [botThread, plainThread, strayThread],
+    );
+
+    expect(result.bots).toEqual([bot, otherEnvironmentBot]);
+    expect(result.threads).toEqual([botThread]);
   });
 });

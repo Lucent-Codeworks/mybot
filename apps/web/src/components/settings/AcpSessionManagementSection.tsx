@@ -309,7 +309,7 @@ export function AcpSessionManagementSection(props: {
         description="Resume agent-owned conversations as MyBot threads."
         status={
           canList && props.projects.length === 0
-            ? "Add a project before importing sessions."
+            ? "Create a bot before importing sessions."
             : undefined
         }
         control={
@@ -339,7 +339,7 @@ export function AcpSessionManagementSection(props: {
                     setProviderDrafts({});
                   }}
                 >
-                  <SelectTrigger aria-label="Project for ACP sessions" className="w-40" size="sm">
+                  <SelectTrigger aria-label="Bot for ACP sessions" className="w-40" size="sm">
                     <SelectValue>
                       {props.projects.find((project) => project.id === projectId)?.title}
                     </SelectValue>
@@ -470,7 +470,7 @@ export function AcpSessionManagementSection(props: {
                 setProviderDrafts({});
               }}
             >
-              <SelectTrigger aria-label="Project for ACP providers" className="min-w-48" size="xs">
+              <SelectTrigger aria-label="Bot for ACP providers" className="min-w-48" size="xs">
                 <SelectValue>
                   {props.projects.find((project) => project.id === projectId)?.title}
                 </SelectValue>

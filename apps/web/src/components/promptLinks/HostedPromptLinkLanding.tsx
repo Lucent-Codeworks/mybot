@@ -45,10 +45,7 @@ function summarize(
     ok: true,
     value: {
       prompt: link.value.prompt,
-      details: [
-        "No project",
-        ...(provider ? [`Model ${model ? `${provider} ${model}` : provider}`] : []),
-      ],
+      details: provider ? [`Model ${model ? `${provider} ${model}` : provider}`] : [],
     },
   };
 }

@@ -14,7 +14,7 @@ over from V1. You may need to sign in again to websites opened inside the app. O
 the V2 desktop app copies stashed prompts, unsent drafts, layout, and theme from V1. Anything you
 change in V2 afterwards stays in V2.
 
-The migrated thread keeps its title, project, provider and model selection, permission and
+The migrated thread keeps its title, bot, provider and model selection, permission and
 interaction modes, archive state, settlement state, and snooze and pin state. MyBot also brings over user and assistant messages, their timestamps, and
 supported attachments. Large histories may appear in stages while the server imports transcripts.
 

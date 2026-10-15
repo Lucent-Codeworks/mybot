@@ -2,7 +2,7 @@ import { RefreshIcon } from "~/components/ui/refresh-icon";
 import { useAtomValue } from "@effect/atom-react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { Atom } from "effect/reactivity";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   ensureClientSettingsHydrated,
@@ -15,6 +15,7 @@ import {
   isFirstRunWorkspaceProvenanceAuthoritative,
   isFreshFirstRunWorkspace,
   resolveFirstRunDecision,
+  selectFirstRunBotWorkspace,
   resolveHostedFirstRunDecision,
   transitionFirstRunGateState,
   type FirstRunGateState,
@@ -88,7 +89,11 @@ export function FirstRunGate({
   const bootstrapped = useAllEnvironmentShellsBootstrapped();
   const { environments, isReady: environmentCatalogReady } = useEnvironments();
   const projects = useProjects();
-  const threads = useThreadShells();
+  const allThreads = useThreadShells();
+  const { bots, threads } = useMemo(
+    () => selectFirstRunBotWorkspace(projects, allThreads),
+    [allThreads, projects],
+  );
   const serverConfig = useAtomValue(primaryServerConfigAtom);
   const serverWelcome = useAtomValue(primaryServerWelcomeAtom);
   const primaryShellLive = useAtomValue(primaryShellLiveAtom);
@@ -104,14 +109,11 @@ export function FirstRunGate({
   }));
   const { decision, stalled } = gateState;
   const settingsReadFailed = hydrationStatus === "failed" || hydrationStatus === "retrying";
-  // A workspace still counts as fresh when its only content is the server's
-  // own cwd auto-bootstrap: web mode creates a project + thread from cwd at
-  // startup (`autoBootstrapProjectFromCwd` defaults on there), so "no
-  // projects at all" would mean `npx t3` users never see the wizard. Any
-  // other project, more than one thread, or state in a non-primary
-  // environment is real user state — the aggregate hooks span every
-  // environment, and a saved remote's project must never read as "the
-  // bootstrap project" just because its root string matches the primary cwd.
+  // Freshness is judged on bots only (see selectFirstRunBotWorkspace): a
+  // workspace with no bot still needs setup. The cwd-bootstrap provenance
+  // check below only matters if a server ever bootstraps a bot from its cwd;
+  // a saved remote's bot must never read as "the bootstrap project" just
+  // because its root string matches the primary cwd.
   const serverCwd = serverConfig?.cwd ?? null;
   const primaryEnvironmentId = serverConfig?.environment.environmentId ?? null;
   const workspaceFresh = isFreshFirstRunWorkspace({
@@ -121,7 +123,7 @@ export function FirstRunGate({
     bootstrapThreadId: serverWelcome?.bootstrapThreadId,
     bootstrapProjectCreated: serverWelcome?.bootstrapProjectCreated,
     bootstrapThreadCreated: serverWelcome?.bootstrapThreadCreated,
-    projects,
+    projects: bots,
     threads,
   });
 
@@ -147,7 +149,7 @@ export function FirstRunGate({
         catalogReady: environmentCatalogReady,
         serverConfigAvailable: serverConfig !== null,
         workspaceFresh,
-        projectCount: projects.length,
+        projectCount: bots.length,
         threadCount: threads.length,
       });
 

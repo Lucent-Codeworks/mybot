@@ -5,10 +5,10 @@ import { useSettingsScope } from "./SettingsScopeContext";
 import { SettingsScopeNotice } from "./SettingsScopeNotice";
 import { SettingsPageContainer } from "./settingsLayout";
 
-/** Project identity and checkout management for the selected project. */
+/** Identity, profile and removal for the selected bot. */
 export function ProjectsSettings() {
   const { search: value, scope } = useSettingsScope();
-  // The panel explains a missing project or checkout itself.
+  // The panel explains a missing bot or checkout itself.
   const projectScope =
     scope.kind === "project" ||
     scope.kind === "checkout" ||
@@ -28,7 +28,7 @@ export function ProjectsSettings() {
         </SettingsPageContainer>
       ) : (
         <SettingsScopeNotice target="project">
-          Choose a project to manage its name, icon, checkouts and actions.
+          Choose a bot to manage its name, icon, instructions and memory.
         </SettingsScopeNotice>
       )}
     </div>

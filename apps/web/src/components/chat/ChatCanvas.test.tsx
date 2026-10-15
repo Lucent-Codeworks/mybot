@@ -78,7 +78,7 @@ afterEach(async () => {
 async function renderFind(open: boolean, previewX = 1548) {
   await act(() =>
     root.render(
-      <ChatCanvas composerOverlayElement={null} detailsCardTopInset={open ? 48 : 0}>
+      <ChatCanvas composerOverlayElement={null} findBarOpen={open}>
         {open ? <div data-thread-find-bar /> : null}
         <Preview x={previewX} />
       </ChatCanvas>,
@@ -94,11 +94,9 @@ it.each([16, 24])(
     expect(canvas?.layout.frame?.y).toBe(12);
 
     await renderFind(true);
-    expect(canvas?.detailsCardTopInset).toBe(3 * size);
     expect(canvas?.layout.frame?.y).toBe(3 * size + 12);
 
     await renderFind(false);
-    expect(canvas?.detailsCardTopInset).toBe(0);
     expect(canvas?.layout.frame?.y).toBe(12);
 
     await renderFind(true);
@@ -114,6 +112,5 @@ it("remeasures the open bar when its font size changes without resizing the canv
   await act(() => {
     for (const callback of resize.callbacks) callback();
   });
-  expect(canvas?.detailsCardTopInset).toBe(72);
   expect(canvas?.layout.frame?.y).toBe(84);
 });

@@ -3,8 +3,6 @@ import { EnvironmentId, ProjectId, ProviderInstanceId, ThreadId } from "@t3tools
 import type { Project, Thread } from "../types";
 import { makeThreadFixture } from "../test-fixtures";
 import {
-  buildBrowseGroups,
-  buildCommandPaletteProjectMetadata,
   buildCommandPaletteRows,
   buildProjectActionItems,
   buildThreadActionItems,
@@ -16,124 +14,6 @@ import {
   type CommandPaletteGroup,
 } from "./CommandPalette.logic";
 
-describe("buildCommandPaletteProjectMetadata", () => {
-  const localEnvironmentId = EnvironmentId.make("environment-local");
-  const remoteEnvironmentId = EnvironmentId.make("environment-build-box");
-  const locations = new Map([
-    [localEnvironmentId, { kind: "local" as const, label: "Local", machine: "laptop" as const }],
-    [
-      remoteEnvironmentId,
-      { kind: "remote" as const, label: "Build box", machine: "server" as const },
-    ],
-  ]);
-
-  it("makes every member environment and path searchable", () => {
-    const metadata = buildCommandPaletteProjectMetadata({
-      projects: [
-        {
-          environmentId: localEnvironmentId,
-          title: "MyBot",
-          workspaceRoot: "/Users/theo/Projects/t3code",
-        },
-        {
-          environmentId: remoteEnvironmentId,
-          title: "t3code",
-          workspaceRoot: "/srv/t3code",
-        },
-      ],
-      locationByEnvironmentId: locations,
-    });
-
-    expect(metadata.searchTerms).toEqual([
-      "MyBot",
-      "/Users/theo/Projects/t3code",
-      "Local",
-      "t3code",
-      "/srv/t3code",
-      "Build box",
-    ]);
-    expect(metadata.environmentLabels).toEqual(["Local", "Build box"]);
-
-    const [filteredGroup] = filterCommandPaletteGroups({
-      activeGroups: [],
-      query: "build box",
-      isInSubmenu: false,
-      projectSearchItems: [
-        {
-          kind: "action",
-          value: "project:t3code",
-          title: "MyBot",
-          searchTerms: metadata.searchTerms,
-          icon: null,
-          run: async () => undefined,
-        },
-      ],
-      threadSearchItems: [],
-    });
-    expect(filteredGroup?.items).toHaveLength(1);
-  });
-
-  it("deduplicates grouped projects by environment", () => {
-    const metadata = buildCommandPaletteProjectMetadata({
-      projects: [
-        {
-          environmentId: remoteEnvironmentId,
-          title: "MyBot",
-          workspaceRoot: "/srv/t3code",
-        },
-        {
-          environmentId: remoteEnvironmentId,
-          title: "MyBot copy",
-          workspaceRoot: "/srv/t3code-feature",
-        },
-      ],
-      locationByEnvironmentId: locations,
-    });
-
-    expect(metadata.environmentLabels).toEqual(["Build box"]);
-  });
-
-  it("deduplicates distinct environments with the same label", () => {
-    const secondRemoteEnvironmentId = EnvironmentId.make("environment-build-box-2");
-    const metadata = buildCommandPaletteProjectMetadata({
-      projects: [
-        {
-          environmentId: remoteEnvironmentId,
-          title: "MyBot",
-          workspaceRoot: "/srv/t3code",
-        },
-        {
-          environmentId: secondRemoteEnvironmentId,
-          title: "MyBot mirror",
-          workspaceRoot: "/srv/mirror/t3code",
-        },
-      ],
-      locationByEnvironmentId: new Map([
-        [remoteEnvironmentId, { label: "Build box" }],
-        [secondRemoteEnvironmentId, { label: "Build box" }],
-      ]),
-    });
-
-    expect(metadata.environmentLabels).toEqual(["Build box"]);
-  });
-
-  it("uses a human-readable fallback when presentation data is unavailable", () => {
-    const metadata = buildCommandPaletteProjectMetadata({
-      projects: [
-        {
-          environmentId: remoteEnvironmentId,
-          title: "MyBot",
-          workspaceRoot: "/srv/t3code",
-        },
-      ],
-      locationByEnvironmentId: new Map(),
-    });
-
-    expect(metadata.searchTerms).toContain("Remote");
-    expect(metadata.environmentLabels).toEqual(["Remote"]);
-  });
-});
-
 describe("reduceCommandPaletteUiState", () => {
   const closedState = { open: false, mode: "command", openIntent: null } as const;
 
@@ -144,15 +24,11 @@ describe("reduceCommandPaletteUiState", () => {
     });
     expect(filesOpen).toEqual({ open: true, mode: "files", openIntent: null });
 
-    const contentOpen = reduceCommandPaletteUiState(filesOpen, {
-      _tag: "ToggleMode",
-      mode: "content",
+    expect(reduceCommandPaletteUiState(filesOpen, { _tag: "ToggleMode", mode: "files" })).toEqual({
+      open: false,
+      mode: "files",
+      openIntent: null,
     });
-    expect(contentOpen).toEqual({ open: true, mode: "content", openIntent: null });
-
-    expect(
-      reduceCommandPaletteUiState(contentOpen, { _tag: "ToggleMode", mode: "content" }),
-    ).toEqual({ open: false, mode: "content", openIntent: null });
   });
 
   it("switches between open modes without closing", () => {
@@ -191,15 +67,10 @@ describe("reduceCommandPaletteUiState", () => {
       _tag: "ToggleMode",
       mode: "files",
     });
-    expect(reduceCommandPaletteUiState(filesOpen, { _tag: "OpenAddProject" })).toEqual({
+    expect(reduceCommandPaletteUiState(filesOpen, { _tag: "OpenChangeTheme" })).toEqual({
       open: true,
       mode: "command",
-      openIntent: { kind: "add-project" },
-    });
-    expect(reduceCommandPaletteUiState(filesOpen, { _tag: "OpenNewThreadIn" })).toEqual({
-      open: true,
-      mode: "command",
-      openIntent: { kind: "new-thread-in" },
+      openIntent: { kind: "change-theme" },
     });
   });
 
@@ -304,9 +175,7 @@ describe("buildProjectActionItems", () => {
     });
 
     expect(item?.title).toBe("t3dotgg/fleet");
-    expect(item?.searchTerms).toEqual(
-      expect.arrayContaining(["t3dotgg/fleet", "fleet", "/Users/theo/Code/p/fleet"]),
-    );
+    expect(item?.searchTerms).toEqual(expect.arrayContaining(["t3dotgg/fleet", "fleet"]));
     expect(iconTitles).toEqual(["fleet"]);
   });
 });
@@ -373,7 +242,7 @@ describe("buildThreadActionItems", () => {
       activeGroups: [],
       query: "project",
       isInSubmenu: false,
-      projectSearchItems: [],
+      botSearchItems: [],
       threadSearchItems: threadItems,
     });
 
@@ -422,7 +291,7 @@ describe("buildThreadActionItems", () => {
       activeGroups: [],
       query: "convex",
       isInSubmenu: false,
-      projectSearchItems: [],
+      botSearchItems: [],
       threadSearchItems: items,
     });
 
@@ -454,7 +323,7 @@ describe("buildThreadActionItems", () => {
       activeGroups: [group],
       query: "project",
       isInSubmenu: false,
-      projectSearchItems: [],
+      botSearchItems: [],
       threadSearchItems: [],
     });
 
@@ -486,7 +355,7 @@ describe("buildThreadActionItems", () => {
       activeGroups: [],
       query: "pairing remote",
       isInSubmenu: false,
-      projectSearchItems: [],
+      botSearchItems: [],
       settingsSearchItems,
       threadSearchItems: [],
     });
@@ -504,7 +373,7 @@ describe("buildThreadActionItems", () => {
       activeGroups: [],
       query: "thè\u{1ab0}mes",
       isInSubmenu: false,
-      projectSearchItems: [],
+      botSearchItems: [],
       settingsSearchItems: [
         {
           kind: "action",
@@ -533,7 +402,7 @@ describe("buildThreadActionItems", () => {
         activeGroups: [],
         query: "INPUT",
         isInSubmenu: false,
-        projectSearchItems: [],
+        botSearchItems: [],
         threadSearchItems: [],
         settingsSearchItems: [
           {
@@ -600,7 +469,7 @@ describe("buildThreadActionItems", () => {
       activeGroups: [],
       query: "  THREAD-ALPHA-1234  ",
       isInSubmenu: false,
-      projectSearchItems: [],
+      botSearchItems: [],
       settingsSearchItems: [],
       threadSearchItems: items,
     });
@@ -650,44 +519,6 @@ describe("buildThreadActionItems", () => {
   });
 });
 
-describe("buildBrowseGroups", () => {
-  it("waits for asynchronous browse navigation actions", async () => {
-    let finishNavigation: (() => void) | undefined;
-    const browseTo = vi.fn(
-      () =>
-        new Promise<void>((resolve) => {
-          finishNavigation = resolve;
-        }),
-    );
-    const groups = buildBrowseGroups({
-      browseEntries: [{ name: "Downloads", fullPath: "/Users/test/Downloads" }],
-      browseQuery: "~/",
-      canBrowseUp: false,
-      upIcon: null,
-      directoryIcon: null,
-      browseUp: vi.fn(),
-      browseTo,
-    });
-    const item = groups[0]?.items[0];
-    if (!item || item.kind !== "action") {
-      throw new Error("Expected a browse action");
-    }
-
-    let actionSettled = false;
-    const action = item.run().then(() => {
-      actionSettled = true;
-    });
-    await Promise.resolve();
-
-    expect(browseTo).toHaveBeenCalledWith("Downloads");
-    expect(actionSettled).toBe(false);
-
-    finishNavigation?.();
-    await action;
-    expect(actionSettled).toBe(true);
-  });
-});
-
 describe("filterCommandPaletteGroups", () => {
   it("sorts secondary settings results after other matches", () => {
     const item = (value: string, title: string, secondary?: boolean) =>
@@ -704,7 +535,7 @@ describe("filterCommandPaletteGroups", () => {
       activeGroups: [],
       query: "model",
       isInSubmenu: false,
-      projectSearchItems: [],
+      botSearchItems: [],
       settingsSearchItems: [
         item("setting:keybinding-modelPicker.toggle", "Model Picker: Toggle", true),
         item("setting:default-model", "Default model"),

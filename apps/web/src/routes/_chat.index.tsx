@@ -2,22 +2,18 @@ import { RefreshIcon } from "~/components/ui/refresh-icon";
 import { scopeProjectRef } from "@t3tools/client-runtime/environment";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { LinkIcon, PlusIcon } from "lucide-react";
-import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import { isLocalEnvironmentDisabled } from "../localEnvironment";
 import { isElectron } from "../env";
-import { NoProjectsHero } from "../components/NoProjectsHero";
-import { sortScopedProjectsForSidebar } from "../components/Sidebar.logic";
+import { NoBotsHero } from "../components/NoBotsHero";
 import { Button } from "../components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "../components/ui/empty";
 import { SidebarInset } from "../components/ui/sidebar";
 import { WorkspacePageHeader } from "../components/WorkspacePageHeader";
+import { useBotsByRecentUse } from "../hooks/useBotChat";
 import { useNewThreadHandler } from "../hooks/useHandleNewThread";
-import {
-  useAllEnvironmentShellsBootstrapped,
-  useProjects,
-  useThreadShells,
-} from "../state/entities";
+import { useAllEnvironmentShellsBootstrapped } from "../state/entities";
 import { useEnvironments } from "../state/environments";
 import { APP_DISPLAY_NAME } from "~/branding";
 import { hasCloudPublicConfig } from "~/cloud/publicConfig";
@@ -35,13 +31,12 @@ function ChatIndexRouteView() {
 }
 
 /**
- * Landing on the index route drops straight into a draft thread for the most
- * recently active project, so the first screen is a prompt instead of a dead
- * end. Falls back to an add-project hero when no project exists yet.
+ * Landing on the index route drops straight into a draft chat with the most
+ * recently used bot, so the first screen is a prompt instead of a dead end.
+ * Falls back to a new-bot hero when no bot exists yet.
  */
 function IndexDraftLanding() {
-  const projects = useProjects();
-  const threads = useThreadShells();
+  const bots = useBotsByRecentUse();
   const bootstrapped = useAllEnvironmentShellsBootstrapped();
   const handleNewThread = useNewThreadHandler();
   const router = useRouter();
@@ -51,32 +46,26 @@ function IndexDraftLanding() {
   const startingRef = useRef(false);
   const [startState, setStartState] = useState({ failed: false, retryRequest: 0 });
 
-  const mostRecentProject = useMemo(
-    () =>
-      bootstrapped
-        ? (sortScopedProjectsForSidebar(projects, threads, "updated_at")[0] ?? null)
-        : null,
-    [bootstrapped, projects, threads],
-  );
+  const mostRecentBot = bootstrapped ? (bots[0] ?? null) : null;
 
   useEffect(() => {
     // Starting a draft after the user has left would replace the page they picked.
-    if (mostRecentProject === null || startingRef.current || !isStillOnIndex()) {
+    if (mostRecentBot === null || startingRef.current || !isStillOnIndex()) {
       return;
     }
     startingRef.current = true;
-    void handleNewThread(scopeProjectRef(mostRecentProject.environmentId, mostRecentProject.id), {
+    void handleNewThread(scopeProjectRef(mostRecentBot.environmentId, mostRecentBot.id), {
       replace: true,
     }).catch(() => {
       startingRef.current = false;
       setStartState((state) => ({ ...state, failed: true }));
     });
-  }, [handleNewThread, mostRecentProject, startState.retryRequest]);
+  }, [handleNewThread, mostRecentBot, startState.retryRequest]);
 
   if (!bootstrapped) {
     return null;
   }
-  if (mostRecentProject !== null) {
+  if (mostRecentBot !== null) {
     return startState.failed ? (
       <DraftStartError
         onRetry={() => {
@@ -90,7 +79,7 @@ function IndexDraftLanding() {
   }
   // First-run routing to the welcome wizard happens in FirstRunGate at the
   // root, before this route ever renders.
-  return <NoProjectsHero />;
+  return <NoBotsHero />;
 }
 
 function DraftStartError({ onRetry }: { readonly onRetry: () => void }) {
@@ -99,9 +88,9 @@ function DraftStartError({ onRetry }: { readonly onRetry: () => void }) {
       {isElectron ? <WorkspacePageHeader electron /> : null}
       <Empty className="flex-1">
         <EmptyHeader className="max-w-md">
-          <EmptyTitle>Couldn’t start a new thread</EmptyTitle>
+          <EmptyTitle>Couldn’t start a new chat</EmptyTitle>
           <EmptyDescription>
-            The project is still available. Try opening the draft again.
+            The bot is still available. Try opening the chat again.
           </EmptyDescription>
           <div className="mt-5 flex justify-center">
             <Button size="sm" onClick={onRetry}>

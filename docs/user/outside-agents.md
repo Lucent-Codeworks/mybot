@@ -1,7 +1,7 @@
 # Outside agents
 
 Agents that MyBot did not start can work with an environment through its MCP
-server. They can read projects and threads, start and message threads, and
+server. They can read bots and threads, start and message threads, and
 check which providers and models are available. This covers Claude Code or
 Codex in your own terminal, ChatGPT, and bots that support MCP. Each agent signs
 in once, and you choose what it may do.
@@ -43,10 +43,10 @@ without a code.
 
 Then choose what the agent may do:
 
-- **Read only** is the default. The agent can read projects and threads and see
+- **Read only** is the default. The agent can read bots and threads and see
   the available providers and models. It cannot change anything.
 - **Supervised** through **Full access** also let it start, message and stop
-  threads in every project. A thread it starts or steers cannot run with more
+  threads with every bot. A thread it starts or steers cannot run with more
   permissions than the mode you chose.
 
 ## Claude Code

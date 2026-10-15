@@ -123,8 +123,8 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
       title="Model"
       description={
         isProjectScope
-          ? "Model for new threads in this project."
-          : "Default model for new threads. Projects can override it."
+          ? "Model for new threads with this bot."
+          : "Default model for new threads. Bots can override it."
       }
       status={
         unavailable || mixedModel || modelSource === "project"
@@ -202,8 +202,8 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             {...searchableSetting("default-permissions")}
             description={
               isProjectScope
-                ? "Permissions for new threads in this project."
-                : "Default permissions for new threads. Projects can override them."
+                ? "Permissions for new threads with this bot."
+                : "Default permissions for new threads. Bots can override them."
             }
             resetAction={
               settings.defaultRuntimeMode !== DEFAULT_SERVER_SETTINGS.defaultRuntimeMode ? (
@@ -267,8 +267,8 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             title="Agent browser access"
             description={
               isProjectScope
-                ? "Allow agents in this project to use the shared browser. Applies when the agent session next starts."
-                : "Allow agents to use the shared browser. Projects can override it."
+                ? "Allow this bot to use the shared browser. Applies when the agent session next starts."
+                : "Allow agents to use the shared browser. Bots can override it."
             }
             resetAction={
               settings.enableAgentBrowserAccess !==

@@ -3,6 +3,7 @@ import { ProjectId } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 
 import {
+  ProjectBotRequiredError,
   ProjectConflictError,
   ProjectNotEmptyError,
   ProjectNotFoundError,
@@ -14,6 +15,7 @@ import { failProjectMutation } from "./http.ts";
 const projectId = ProjectId.make("project:http-mutation");
 
 it.effect.each([
+  new ProjectBotRequiredError({ projectId }),
   new ProjectNotFoundError({ projectId }),
   new ProjectNotEmptyError({ projectId }),
   new ProjectConflictError({

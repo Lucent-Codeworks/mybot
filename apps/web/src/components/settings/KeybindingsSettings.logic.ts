@@ -350,10 +350,20 @@ export function buildWhenVariableOptions(): ReadonlyArray<WhenVariableOption> {
   });
 }
 
+// Commands MyBot no longer handles. The contract keeps them so saved
+// keybinding files still decode, but they are not offered for new bindings.
+const RETIRED_KEYBINDING_COMMANDS = new Set<KeybindingCommand>([
+  "threadPanel.toggle",
+  "projectSearch.toggle",
+  "chat.newWithoutProject",
+]);
+
 export function buildKeybindingCommandOptions(
   keybindings: ResolvedKeybindingsConfig,
 ): ReadonlyArray<KeybindingCommandOption> {
-  const commands = new Set<KeybindingCommand>(STATIC_KEYBINDING_COMMANDS);
+  const commands = new Set<KeybindingCommand>(
+    STATIC_KEYBINDING_COMMANDS.filter((command) => !RETIRED_KEYBINDING_COMMANDS.has(command)),
+  );
   for (const binding of keybindings) {
     commands.add(binding.command);
   }

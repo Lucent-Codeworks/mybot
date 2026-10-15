@@ -43,8 +43,6 @@ const state = vi.hoisted(() => ({
   close: vi.fn<(request: Request<TerminalCloseInput>) => Promise<CommandResult>>(),
   refresh: vi.fn(),
   pair: vi.fn(),
-  createProject: vi.fn(),
-  importThreads: vi.fn(),
   complete: vi.fn<() => Promise<void>>(),
   done: vi.fn(),
 }));
@@ -75,18 +73,9 @@ vi.mock("../../state/terminal", () => ({
   terminalEnvironment: { open: "open", write: "write", close: "close" },
 }));
 vi.mock("../../state/use-atom-command", () => ({
-  useAtomCommand: (
-    command: "open" | "write" | "close" | "refresh" | "pair" | "createProject" | "importThreads",
-  ) => state[command],
+  useAtomCommand: (command: "open" | "write" | "close" | "refresh" | "pair") => state[command],
 }));
 vi.mock("../../connection/onboarding", () => ({ connectPairing: "pair" }));
-vi.mock("../../state/agentSessions", () => ({
-  agentSessionImport: "importThreads",
-  agentSessionScan: vi.fn(),
-}));
-vi.mock("../../state/projects", () => ({ projectEnvironment: { create: "createProject" } }));
-vi.mock("../../state/entities", () => ({ readProjects: () => [], useProjects: () => [] }));
-vi.mock("../../onboarding/useProjectScans", () => ({ useProjectScans: () => [] }));
 vi.mock("../ui/dialog", () => ({
   Dialog: "div",
   DialogPopup: "div",
@@ -312,10 +301,9 @@ describe("welcome agent terminal setup", () => {
     expect(state.open).not.toHaveBeenCalled();
     expect(state.write).not.toHaveBeenCalled();
     expect(state.close).not.toHaveBeenCalled();
-    await click("Continue");
-    await click("Do not import projects");
+    await click("Finish setup");
     expect(state.complete).toHaveBeenCalledOnce();
-    expect(state.done).toHaveBeenCalledExactlyOnceWith(undefined);
+    expect(state.done).toHaveBeenCalledExactlyOnceWith();
   });
 
   it("rejects a retained install action after revocation and allows a terminal-only regrant", async () => {
@@ -430,8 +418,8 @@ describe("welcome agent terminal setup", () => {
     await click("Close");
     expect(hasViewport()).toBe(false);
     expect(state.close).not.toHaveBeenCalled();
-    await click("Continue");
-    expect(text(renderer!.root)).toContain("Import your projects");
+    await click("Finish setup");
+    expect(state.complete).toHaveBeenCalledOnce();
   });
 
   it("settles accepted pretyping locally after revocation without closing the PTY", async () => {

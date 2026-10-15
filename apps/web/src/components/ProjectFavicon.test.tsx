@@ -66,7 +66,7 @@ vi.mock("../state/assets", () => ({
   },
 }));
 
-import { ProjectFavicon, type ProjectFaviconProject } from "./ProjectFavicon";
+import { LucideProjectIcon, ProjectFavicon, type ProjectFaviconProject } from "./ProjectFavicon";
 
 function makeProject(
   overrides: Partial<ProjectFaviconProject> &
@@ -154,16 +154,11 @@ describe("ProjectFavicon", () => {
         faviconPath: "brand/icon.svg",
         projectIcon: { kind: "lucide", name: "alarm-clock", color: "violet" },
       }),
-    }) as ReactElement<{
-      readonly children: ReactElement<{
-        readonly children: ReactElement<{ readonly name: string; readonly className: string }>;
-      }>;
-      readonly className: string;
-    }>;
+    }) as ReactElement<{ readonly name: string; readonly color: string }>;
 
-    expect(element.props.children.props.children.props.name).toBe("alarm-clock");
-    expect(element.props.className).toContain("text-violet-600");
-    expect(element.props.children.props.children.props.className).toContain("text-violet-600");
+    expect(element.type).toBe(LucideProjectIcon);
+    expect(element.props.name).toBe("alarm-clock");
+    expect(element.props.color).toBe("violet");
   });
 
   it("renders a saved emoji ahead of an uploaded favicon", () => {

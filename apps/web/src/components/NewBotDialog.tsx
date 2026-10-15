@@ -6,7 +6,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { create } from "zustand";
 
 import { useEnvironmentSettings } from "../hooks/useSettings";
-import { useNewProject } from "../hooks/useNewProject";
+import { useNewBot } from "../hooks/useNewBot";
 import { getCustomModelOptionsByInstance } from "../modelSelection";
 import {
   applyProviderInstanceSettings,
@@ -54,7 +54,7 @@ export function NewBotDialogHost() {
 
 function NewBotDialog({ environmentId }: { environmentId: EnvironmentId }) {
   const id = useId();
-  const createBot = useNewProject();
+  const createBot = useNewBot();
   const settings = useEnvironmentSettings(environmentId);
   const providers =
     useAtomValue(serverEnvironment.providersValueAtom(environmentId)) ?? EMPTY_SERVER_PROVIDERS;

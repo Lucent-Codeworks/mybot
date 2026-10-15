@@ -100,93 +100,7 @@ it.effect("attributes a launched thread's first message to the calling thread", 
   }),
 );
 
-it.effect("launches a scratch thread into the Scratch project", () =>
-  Effect.gen(function* () {
-    const sourceThreadId = ThreadId.make("source-thread");
-    const scratchProjectId = ProjectId.make("project:scratch");
-    const providerInstanceId = ProviderInstanceId.make("codex");
-    const modelSelection = { instanceId: providerInstanceId, model: "gpt-5" };
-    const caller = {
-      id: sourceThreadId,
-      projectId: ProjectId.make("project:caller"),
-      providerInstanceId,
-      modelSelection,
-      runtimeMode: "full-access",
-      interactionMode: "default",
-      activeRunId: "active-run",
-      archivedAt: null,
-      deletedAt: null,
-    } as OrchestrationV2ThreadShell;
-    const launched: Array<ThreadLaunch.ThreadLaunchInput> = [];
-    const layerDependencies = Layer.mergeAll(
-      ServerSettings.layerTest(),
-      NodeCrypto.layer,
-      Layer.succeed(McpInvocationContext.McpInvocationContext, {
-        environmentId: EnvironmentId.make("environment"),
-        requestNamespace: "session",
-        thread: {
-          threadId: sourceThreadId,
-          providerSessionId: "session",
-          providerInstanceId,
-        },
-        client: undefined,
-        issuedAt: 0,
-        capabilities: new Set(["orchestration" as const]),
-      }),
-      Layer.mock(ThreadManagement.ThreadManagementService)({
-        getThreadShell: () => Effect.succeed(caller),
-      }),
-      Layer.mock(ThreadLaunch.ThreadLaunchService)({
-        launch: (input) => {
-          launched.push(input);
-          return Effect.succeed({
-            threadId: input.threadId,
-            projection: {
-              thread: { id: input.threadId, projectId: input.projectId, modelSelection },
-              runs: [],
-            },
-            resumed: false,
-          } as unknown as ThreadLaunch.ThreadLaunchResult);
-        },
-      }),
-      Layer.mock(Project.ProjectService)({}),
-      Layer.mock(ManagedProjectFolders.ManagedProjectFolders)({
-        scratchRoot: "/scratch",
-        namedProjectsRoot: "/projects",
-        ensureScratchProject: Effect.succeed({ projectId: scratchProjectId }),
-      }),
-      NodeServices.layer,
-      ServerConfig.layerTest(process.cwd(), { prefix: "t3-scratch-launch-" }).pipe(
-        Layer.provide(NodeServices.layer),
-      ),
-    );
-    const toolkit = yield* ProjectToolkit.pipe(
-      Effect.provide(
-        McpToolAccess.HandlersLayer.layer(ProjectHandlers.layer).pipe(
-          Layer.provide(layerDependencies),
-        ),
-      ),
-    );
-    const handle = (params: Parameters<typeof toolkit.handle<"t3_thread_launch">>[1]) =>
-      toolkit
-        .handle("t3_thread_launch", params)
-        .pipe(Stream.unwrap, Stream.runCollect, Effect.provide(layerDependencies));
-
-    const result = yield* handle({ title: "Notes", scratch: true, message: "Draft a list" });
-    expect(result.at(-1)?.result).toMatchObject({ projectId: scratchProjectId });
-    expect(launched.map((input) => input.projectId)).toEqual([scratchProjectId]);
-
-    const rejected = yield* handle({
-      title: "Notes",
-      scratch: true,
-      projectId: caller.projectId,
-    });
-    expect(rejected.at(-1)?.result).toMatchObject({ code: "invalid_request" });
-    expect(launched).toHaveLength(1);
-  }),
-);
-
-it.effect("starts a project from just a title when workspaceRoot is omitted", () =>
+it.effect("starts a bot from just a title when workspaceRoot is omitted", () =>
   Effect.gen(function* () {
     const sourceThreadId = ThreadId.make("source-thread");
     const createdProjectId = ProjectId.make("project:named");
@@ -274,8 +188,9 @@ it.effect("starts a project from just a title when workspaceRoot is omitted", ()
       toolkit
         .handle("t3_project_create", params)
         .pipe(Stream.unwrap, Stream.runCollect, Effect.provide(layerDependencies));
+    const blankBot = { role: "", instructions: "" };
 
-    const result = yield* handle({ title: "Pinball Stats" });
+    const result = yield* handle({ title: "Pinball Stats", bot: blankBot });
     expect(result.at(-1)?.result).toMatchObject({
       id: createdProjectId,
       workspaceRoot: "/projects/pinball-stats",
@@ -283,12 +198,12 @@ it.effect("starts a project from just a title when workspaceRoot is omitted", ()
     expect(named).toEqual(["Pinball Stats"]);
 
     // A path still registers that folder, and never makes a named project.
-    yield* handle({ title: "Existing", workspaceRoot: "/work/existing" });
+    yield* handle({ title: "Existing", workspaceRoot: "/work/existing", bot: blankBot });
     expect(registered).toEqual(["/work/existing"]);
 
     // Fields this mode cannot apply are rejected, not dropped.
     for (const extra of [{ scripts: [] }, { createWorkspaceRootIfMissing: true }]) {
-      const rejected = yield* handle({ title: "Configured", ...extra });
+      const rejected = yield* handle({ title: "Configured", bot: blankBot, ...extra });
       expect(rejected.at(-1)?.result).toMatchObject({ code: "invalid_request" });
     }
     expect(named).toEqual(["Pinball Stats"]);
@@ -298,6 +213,78 @@ it.effect("starts a project from just a title when workspaceRoot is omitted", ()
     const defaultModelSelection = { instanceId: providerInstanceId, model: "gpt-5" };
     yield* handle({ title: "Scout", bot, defaultModelSelection });
     expect(namedInputs.at(-1)).toEqual({ name: "Scout", bot, defaultModelSelection });
+  }),
+);
+
+it.effect("refuses to create a project without a bot or to remove a bot", () =>
+  Effect.gen(function* () {
+    const providerInstanceId = ProviderInstanceId.make("codex");
+    const caller = {
+      id: ThreadId.make("source-thread"),
+      projectId: ProjectId.make("project:caller"),
+      providerInstanceId,
+      modelSelection: { instanceId: providerInstanceId, model: "gpt-5" },
+      runtimeMode: "full-access",
+      interactionMode: "default",
+      activeRunId: "active-run",
+      archivedAt: null,
+      deletedAt: null,
+    } as OrchestrationV2ThreadShell;
+    // Any call through to the services would die on these empty mocks.
+    const layerDependencies = Layer.mergeAll(
+      ServerSettings.layerTest(),
+      NodeCrypto.layer,
+      Layer.succeed(McpInvocationContext.McpInvocationContext, {
+        environmentId: EnvironmentId.make("environment"),
+        requestNamespace: "session",
+        thread: {
+          threadId: caller.id,
+          providerSessionId: "session",
+          providerInstanceId,
+        },
+        client: undefined,
+        issuedAt: 0,
+        capabilities: new Set(["orchestration" as const]),
+      }),
+      Layer.mock(ThreadManagement.ThreadManagementService)({
+        getThreadShell: () => Effect.succeed(caller),
+      }),
+      Layer.mock(ThreadLaunch.ThreadLaunchService)({}),
+      Layer.mock(Project.ProjectService)({}),
+      Layer.mock(ManagedProjectFolders.ManagedProjectFolders)({
+        scratchRoot: "/scratch",
+        namedProjectsRoot: "/projects",
+      }),
+      NodeServices.layer,
+      ServerConfig.layerTest(process.cwd(), { prefix: "t3-plain-project-" }).pipe(
+        Layer.provide(NodeServices.layer),
+      ),
+    );
+    const toolkit = yield* ProjectToolkit.pipe(
+      Effect.provide(
+        McpToolAccess.HandlersLayer.layer(ProjectHandlers.layer).pipe(
+          Layer.provide(layerDependencies),
+        ),
+      ),
+    );
+    const refusal = {
+      code: "invalid_request",
+      message: "MyBot only has bots: give the project a bot profile.",
+    };
+    for (const params of [
+      { title: "Plain" },
+      { title: "Plain", bot: null },
+      { title: "Plain", workspaceRoot: "/work/plain" },
+    ]) {
+      const result = yield* toolkit
+        .handle("t3_project_create", params)
+        .pipe(Stream.unwrap, Stream.runCollect, Effect.provide(layerDependencies));
+      expect(result.at(-1)?.result).toMatchObject(refusal);
+    }
+    const unbot = yield* toolkit
+      .handle("t3_project_update", { projectId: caller.projectId, bot: null })
+      .pipe(Stream.unwrap, Stream.runCollect, Effect.provide(layerDependencies));
+    expect(unbot.at(-1)?.result).toMatchObject(refusal);
   }),
 );
 

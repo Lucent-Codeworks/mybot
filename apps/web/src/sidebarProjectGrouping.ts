@@ -1,6 +1,5 @@
 import type { EnvironmentId, ScopedProjectRef } from "@t3tools/contracts";
-import { buildProjectGroups, derivePhysicalProjectKey } from "./logicalProject";
-import { resolveScratchProjectScopeKey } from "@t3tools/client-runtime/state/project-grouping";
+import { buildProjectGroups } from "./logicalProject";
 import type { Project } from "./types";
 
 export type EnvironmentPresence = "local-only" | "remote-only" | "mixed";
@@ -46,42 +45,15 @@ export interface SidebarProjectPickerEntry {
   isPreferred: boolean;
 }
 
-/** A merged filter still opens settings for the chosen physical project. */
-export function getSidebarProjectSettingsKey(
-  group: SidebarProjectSnapshot,
-  projects: ReadonlyArray<Project>,
-  projectRef?: ScopedProjectRef,
-): string {
-  if (!group.isScratch) return group.projectKey;
-  const project =
-    group.memberProjects.find(
-      (member) =>
-        member.environmentId === projectRef?.environmentId && member.id === projectRef.projectId,
-    ) ??
-    group.memberProjects.find((member) => member.environmentId === projectRef?.environmentId) ??
-    group;
-  return (
-    buildPhysicalToLogicalProjectKeyMap({ projects, primaryEnvironmentId: null }).get(
-      derivePhysicalProjectKey(project),
-    ) ?? group.projectKey
-  );
-}
-
-/** Retains a saved physical scratch scope when its environment config coalesces the group. */
+/** Keeps a saved scope until every environment has loaded, then drops it if it is gone. */
 export function resolveSidebarProjectScopeKey(input: {
   readonly groups: ReadonlyArray<SidebarProjectSnapshot>;
   readonly key: string | null;
   readonly canClearMissingScope?: boolean;
 }): string | null {
   if (input.key === null) return null;
-  const group =
-    input.groups.find((candidate) => candidate.projectKey === input.key) ??
-    input.groups.find(
-      (candidate) =>
-        candidate.isScratch &&
-        resolveScratchProjectScopeKey(input.key, candidate.memberProjects) === candidate.projectKey,
-    );
-  return group?.projectKey ?? (input.canClearMissingScope ? null : input.key);
+  if (input.groups.some((candidate) => candidate.projectKey === input.key)) return input.key;
+  return input.canClearMissingScope ? null : input.key;
 }
 
 export function buildPhysicalToLogicalProjectKeyMap(input: {
@@ -103,7 +75,6 @@ export function buildPhysicalToLogicalProjectKeyMap(input: {
 
 export function buildSidebarProjectSnapshots(input: {
   projects: ReadonlyArray<Project>;
-  groupScratchProjects?: boolean;
   primaryEnvironmentId: EnvironmentId | null;
   resolveEnvironmentLabel: (environmentId: EnvironmentId) => string | null;
   // Returns true when an env id maps to a desktop-local saved-env
@@ -115,7 +86,6 @@ export function buildSidebarProjectSnapshots(input: {
 }): SidebarProjectSnapshot[] {
   return buildProjectGroups({
     projects: input.projects,
-    groupScratchProjects: input.groupScratchProjects ?? false,
     preferredEnvironmentId: input.primaryEnvironmentId,
   }).map((group): SidebarProjectSnapshot => {
     const members = group.members.map(

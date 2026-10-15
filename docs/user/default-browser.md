@@ -2,8 +2,8 @@
 
 On macOS, the desktop app can be your default web browser. Links you open from other apps then
 open in MyBot. When the thread on screen shows its browser panel, the link opens there as a new
-tab. Otherwise it starts a new thread without a project, with the browser panel maximized on the
-page, so you can ask an agent about it right away.
+tab. Otherwise it starts a new chat with the bot you used most recently, with the browser panel
+maximized on the page, so you can ask it about the page right away.
 
 Choose **MyBot** under **System Settings → Desktop & Dock → Default web browser**. To go back,
 choose another browser there.

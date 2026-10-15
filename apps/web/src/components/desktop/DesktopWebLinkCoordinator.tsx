@@ -9,7 +9,7 @@ import { openFileInPreview, openUrlInPreview } from "../../browser/openFileInPre
 import { isPreviewAvailableFor } from "../../browser/previewRuntime";
 import { useComposerDraftStore } from "../../composerDraftStore";
 import { useNewThreadHandler } from "../../hooks/useHandleNewThread";
-import { useScratchProject } from "../../hooks/useScratchProject";
+import { useBotsByRecentUse } from "../../hooks/useBotChat";
 import { selectActiveRightPanelSurface, useRightPanelStore } from "../../rightPanelStore";
 import { resolveThreadRouteTarget } from "../../threadRoutes";
 import { assetEnvironment } from "../../state/assets";
@@ -49,13 +49,13 @@ function threadShowingBrowser(
  * Opens each link the OS hands MyBot. Prompt and thread links, by `t3code://`
  * or as hosted-app pages, open in the app. Other web links and HTML files arrive
  * because MyBot is the default browser (macOS): with a browser panel on screen
- * the page opens as a new tab there; otherwise it starts a thread without a
- * project, its browser panel maximized.
+ * the page opens as a new tab there; otherwise it starts a chat with the most
+ * recently used bot on this machine, its browser panel maximized.
  */
 export function DesktopWebLinkCoordinator() {
   const router = useRouter();
   const primaryEnvironment = usePrimaryEnvironment();
-  const { scratchEnvironmentId, openScratchProject } = useScratchProject();
+  const bots = useBotsByRecentUse();
   const openThread = useNewThreadHandler();
   const openPreview = useAtomCommand(previewEnvironment.open, { reportFailure: false });
   const createAssetUrl = useAtomQueryRunner(assetEnvironment.createUrl, {
@@ -77,20 +77,19 @@ export function DesktopWebLinkCoordinator() {
 
   // The OS hands each link over once, so a thread that could not start says so.
   const startThread = async (url: string): Promise<ScopedThreadRef | null> => {
-    const environmentId = scratchEnvironmentId(primaryEnvironment?.environmentId ?? null);
-    if (environmentId === null) {
-      reportFailure(url);
+    const bot = bots.find(
+      (candidate) => candidate.environmentId === primaryEnvironment?.environmentId,
+    );
+    if (bot === undefined) {
+      reportFailure(url, "Create a bot first, then open the link again.");
       return null;
     }
-    // Reports its own failure.
-    const project = await openScratchProject(environmentId, "Could not open the link");
-    if (!project) return null;
-    const opened = await openThread(scopeProjectRef(project.environmentId, project.id));
+    const opened = await openThread(scopeProjectRef(bot.environmentId, bot.id));
     if (!opened) {
       reportFailure(url);
       return null;
     }
-    const threadRef = scopeThreadRef(project.environmentId, opened.threadId);
+    const threadRef = scopeThreadRef(bot.environmentId, opened.threadId);
     useRightPanelStore.getState().requestMaximize(threadRef);
     return threadRef;
   };

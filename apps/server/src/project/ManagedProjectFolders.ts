@@ -2,9 +2,12 @@
  * ManagedProjectFolders - the project folders MyBot makes for the user under
  * its data dir, rather than ones the user picks:
  *
- * - `<baseDir>/scratch`: the Scratch project ("No project");
- * - `<baseDir>/projects/<slug>`: projects started from just a name, each with a
- *   README and an icon.
+ * - `<baseDir>/projects/<slug>`: bots started from just a name, each with a
+ *   README, a memory file, and an icon.
+ *
+ * `<baseDir>/scratch` once held the plain "No project" project. MyBot only has
+ * bots now, so nothing creates it; PlainProjectCleanup removes the old record
+ * and leaves the folder.
  *
  * @module ManagedProjectFolders
  */
@@ -27,32 +30,6 @@ import { findBotTemplate } from "@t3tools/shared/botTemplates";
 import * as ServerConfig from "../config.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import * as ProjectService from "./ProjectService.ts";
-
-export class ScratchFolderError extends Schema.TaggedError<ScratchFolderError>()(
-  "ScratchFolderError",
-  {
-    folder: Schema.String,
-    cause: Schema.Defect(),
-  },
-) {
-  override get message(): string {
-    return "Failed to create the folder for threads without a project.";
-  }
-}
-
-export class ScratchProjectError extends Schema.TaggedError<ScratchProjectError>()(
-  "ScratchProjectError",
-  {
-    workspaceRoot: Schema.String,
-    cause: Schema.Defect(),
-  },
-) {
-  override get message(): string {
-    return "Failed to create the project for threads without a project.";
-  }
-}
-
-export type ScratchError = ScratchFolderError | ScratchProjectError;
 
 export class NamedProjectFolderError extends Schema.TaggedError<NamedProjectFolderError>()(
   "NamedProjectFolderError",
@@ -78,15 +55,16 @@ export class NamedProjectCreateError extends Schema.TaggedError<NamedProjectCrea
   }
 }
 
-export type NamedProjectError = NamedProjectFolderError | NamedProjectCreateError;
+export type NamedProjectError =
+  | NamedProjectFolderError
+  | NamedProjectCreateError
+  | ProjectService.ProjectBotRequiredError;
 
 export class ManagedProjectFolders extends Context.Service<
   ManagedProjectFolders,
   {
-    /** The Scratch folder. */
+    /** The old Scratch folder, still reported so clients can recognize its leftovers. */
     readonly scratchRoot: string;
-    /** Finds or creates the Scratch project and (re)creates its folder. */
-    readonly ensureScratchProject: Effect.Effect<{ readonly projectId: ProjectId }, ScratchError>;
     /** The folder that holds projects started from just a name. */
     readonly namedProjectsRoot: string;
     /**
@@ -94,7 +72,7 @@ export class ManagedProjectFolders extends Context.Service<
      * (adding `-2`, `-3`, ... when taken), writes a README and an icon, then
      * creates the project. The folder is removed when the create fails or is
      * cancelled before the project exists, never once another project owns it.
-     * With `bot`, the project is a bot. `defaultModelSelection` becomes the
+     * `bot` is required: every project is a bot. `defaultModelSelection` becomes the
      * project's model override, the model its new threads start with.
      */
     readonly createNamedProject: (input: ProjectCreateNewInput) => Effect.Effect<
@@ -210,53 +188,6 @@ const make = Effect.gen(function* () {
 
   const scratchRoot = path.resolve(config.baseDir, "scratch");
 
-  const makeScratchFolder = (folder: string) =>
-    fileSystem
-      .makeDirectory(folder, { recursive: true })
-      .pipe(Effect.mapError((cause) => new ScratchFolderError({ folder, cause })));
-
-  const ensureScratchProject: ManagedProjectFolders["Service"]["ensureScratchProject"] = Effect.gen(
-    function* () {
-      const workspaceRoot = scratchRoot;
-      // Re-made on every call, so a deleted Scratch folder still runs threads.
-      yield* makeScratchFolder(workspaceRoot);
-      const id = yield* crypto.randomUUIDv4.pipe(
-        Effect.mapError((cause) => new ScratchProjectError({ workspaceRoot, cause })),
-      );
-      const bootstrapped = yield* projects
-        .bootstrap({
-          commandId: CommandId.make(`scratch-project:${id}`),
-          projectId: ProjectId.make(id),
-          title: "No project",
-          workspaceRoot,
-        })
-        .pipe(
-          // bootstrap looks the root up before taking the workspace lock, so a
-          // racing create loses with a conflict that names the winner.
-          Effect.catchTags({
-            ProjectConflictError: (conflict) =>
-              Effect.succeed({
-                project: { id: conflict.conflictingProjectId },
-                created: false,
-              }),
-          }),
-          Effect.mapError((cause) => new ScratchProjectError({ workspaceRoot, cause })),
-        );
-      if (bootstrapped.created) {
-        // A dashed chat bubble in neutral gray marks Scratch. Set once at
-        // create, so a user's own icon choice is never overwritten.
-        yield* projects
-          .update({
-            commandId: CommandId.make(`scratch-project-icon:${id}`),
-            projectId: bootstrapped.project.id,
-            projectIcon: { kind: "lucide", name: "message-square-dashed", color: "gray" },
-          })
-          .pipe(Effect.mapError((cause) => new ScratchProjectError({ workspaceRoot, cause })));
-      }
-      return { projectId: bootstrapped.project.id };
-    },
-  );
-
   // Projects started from just a name live beside Scratch, away from folders
   // the user organizes by hand.
   const namedProjectsRoot = path.resolve(config.baseDir, "projects");
@@ -296,12 +227,10 @@ const make = Effect.gen(function* () {
   const scaffoldFolder = Effect.fn("ManagedProjectFolders.scaffoldFolder")(function* (
     cwd: string,
     name: string,
-    isBot: boolean,
   ) {
     yield* fileSystem.writeFileString(path.join(cwd, "README.md"), namedProjectReadme(name));
     // The bot keeps this file itself; starting it here lets the user see it from day one.
-    if (isBot)
-      yield* fileSystem.writeFileString(path.join(cwd, BOT_MEMORY_FILE_NAME), "# Memory\n");
+    yield* fileSystem.writeFileString(path.join(cwd, BOT_MEMORY_FILE_NAME), "# Memory\n");
     yield* fileSystem.makeDirectory(path.join(cwd, "assets"));
     yield* fileSystem.writeFileString(
       path.join(cwd, "assets", "icon.svg"),
@@ -312,12 +241,15 @@ const make = Effect.gen(function* () {
   const createNamedProject: ManagedProjectFolders["Service"]["createNamedProject"] = Effect.fn(
     "ManagedProjectFolders.createNamedProject",
   )(function* (input) {
+    // Checked before the folder is claimed, so a refused create leaves nothing on disk.
+    const bot = input.bot;
+    if (bot === undefined) return yield* new ProjectService.ProjectBotRequiredError({});
     const workspaceRoot = yield* claimNamedFolder(input.name);
     const removeFolder = fileSystem.remove(workspaceRoot, { recursive: true }).pipe(Effect.ignore);
     // Until the create is dispatched nothing else can use the folder, so any
     // exit but success removes it, an interrupt included.
     const [, id] = yield* Effect.all([
-      scaffoldFolder(workspaceRoot, input.name, input.bot !== undefined).pipe(
+      scaffoldFolder(workspaceRoot, input.name).pipe(
         Effect.mapError((cause) => new NamedProjectFolderError({ folder: workspaceRoot, cause })),
       ),
       crypto.randomUUIDv4.pipe(
@@ -330,7 +262,7 @@ const make = Effect.gen(function* () {
         projectId: ProjectId.make(id),
         title: input.name,
         workspaceRoot,
-        ...(input.bot === undefined ? {} : { bot: input.bot }),
+        bot,
       })
       .pipe(
         // A rejected create leaves the folder unused, so remove it. An
@@ -390,7 +322,6 @@ const make = Effect.gen(function* () {
 
   return ManagedProjectFolders.of({
     scratchRoot,
-    ensureScratchProject,
     namedProjectsRoot,
     createNamedProject,
   });

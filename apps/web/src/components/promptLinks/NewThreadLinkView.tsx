@@ -9,11 +9,11 @@ import { type ReactNode, useEffect, useEffectEvent, useRef, useState } from "rea
 import { useComposerDraftStore } from "~/composerDraftStore";
 import { isElectron } from "~/env";
 import { useNewThreadHandler } from "~/hooks/useHandleNewThread";
-import { useScratchProject } from "~/hooks/useScratchProject";
-import { useThreadShells } from "~/state/entities";
-import { useEnvironments, usePrimaryEnvironmentId } from "~/state/environments";
+import { useBotsByRecentUse } from "~/hooks/useBotChat";
+import { useEnvironments } from "~/state/environments";
 import { allReachableShellsLiveAtom } from "~/state/shell";
 
+import { requestNewBot } from "../NewBotDialog";
 import { Button } from "../ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "../ui/empty";
 import { SidebarInset } from "../ui/sidebar";
@@ -23,6 +23,7 @@ import { placeLinkedPrompt } from "./linkedPrompt";
 type LinkState =
   | { readonly status: "opening" }
   | { readonly status: "opened" }
+  | { readonly status: "no-bot" }
   | { readonly status: "failed"; readonly message: string };
 
 // A link opens once per history entry. Going back to it lands here again, and opening a
@@ -30,39 +31,28 @@ type LinkState =
 const openedLinkKeys = new Set<string>();
 
 /**
- * The `/new` route: turns a prompt link into a "No project" draft holding its prompt, on the
- * machine the user worked on last. The user still reads the prompt and presses Send.
+ * The `/new` route: turns a prompt link into a draft with the most recently used bot, holding
+ * its prompt. The user still reads the prompt and presses Send.
  */
 export function NewThreadLinkView({ link }: { readonly link: NewThreadLink }) {
   const locationKey = useLocation({ select: (location) => location.state.__TSR_key ?? "" });
-  // The link needs every reachable machine's threads to find the one worked on last.
+  // The link needs every reachable machine's threads to find the bot used last.
   const ready = useAtomValue(allReachableShellsLiveAtom);
-  const threads = useThreadShells();
+  const bots = useBotsByRecentUse();
   const { environments } = useEnvironments();
-  const primaryEnvironmentId = usePrimaryEnvironmentId();
   const handleNewThread = useNewThreadHandler();
-  const { scratchEnvironmentId, openScratchProject } = useScratchProject();
   const [state, setState] = useState<LinkState>(() =>
     openedLinkKeys.has(locationKey) ? { status: "opened" } : { status: "opening" },
   );
   const startedRef = useRef(false);
 
-  /** The machine the user worked on last, scratch threads included. */
-  const lastActiveEnvironmentId = () => {
-    let latest: (typeof threads)[number] | undefined;
-    for (const thread of threads) {
-      if (latest === undefined || thread.updatedAt > latest.updatedAt) latest = thread;
-    }
-    return latest?.environmentId ?? primaryEnvironmentId;
-  };
-
-  /** Opens a draft in the project with the link's prompt and, when it is available, model. */
+  /** Opens a draft with the bot holding the link's prompt and, when it is available, model. */
   const openDraft = async (project: EnvironmentProject) => {
     const opened = await handleNewThread(scopeProjectRef(project.environmentId, project.id), {
       replace: true,
     }).catch(() => null);
     if (opened === null) {
-      setState({ status: "failed", message: "MyBot could not open a new thread." });
+      setState({ status: "failed", message: "MyBot could not open a new chat." });
       return;
     }
     setState({ status: "opened" });
@@ -92,29 +82,21 @@ export function NewThreadLinkView({ link }: { readonly link: NewThreadLink }) {
     placeLinkedPrompt(opened.draftId, link.prompt, notes);
   };
 
-  /** "No project" on the machine the user last worked on. */
-  const openWithoutProject = async () => {
+  const openWithLastBot = async () => {
     setState({ status: "opening" });
-    // The machine the user last worked on, or the only one that offers it.
-    const environmentId =
-      scratchEnvironmentId(lastActiveEnvironmentId()) ?? scratchEnvironmentId(null);
-    // Reports its own failure.
-    const project = environmentId === null ? null : await openScratchProject(environmentId);
-    if (project === null) {
-      setState({
-        status: "failed",
-        message: "None of your machines can start a thread without a project right now.",
-      });
+    const bot = bots[0];
+    if (bot === undefined) {
+      setState({ status: "no-bot" });
       return;
     }
-    await openDraft(project);
+    await openDraft(bot);
   };
 
   const start = useEffectEvent(() => {
     if (startedRef.current) return;
     startedRef.current = true;
     openedLinkKeys.add(locationKey);
-    void openWithoutProject();
+    void openWithLastBot();
   });
 
   // Runs once per link, when the shells are in. Later shell updates must not open it again.
@@ -138,6 +120,17 @@ export function NewThreadLinkView({ link }: { readonly link: NewThreadLink }) {
             }}
           >
             Open it again
+          </Button>
+        </LinkPage>
+      );
+    case "no-bot":
+      return (
+        <LinkPage
+          title="Create a bot to open this link"
+          description="Links open as a new chat with a bot. Create one, then open the link again."
+        >
+          <Button size="sm" onClick={requestNewBot}>
+            New bot
           </Button>
         </LinkPage>
       );
