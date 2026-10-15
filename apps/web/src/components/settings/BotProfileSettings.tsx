@@ -17,6 +17,7 @@ import { toastManager } from "../ui/toast";
 
 import { projectEnvironment } from "~/state/projects";
 import { useAtomCommand } from "~/state/use-atom-command";
+import { BotMembersPicker } from "../BotMembersPicker";
 import { useProjectFileQuery } from "../files/projectFilesQueryState";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -61,7 +62,23 @@ export function BotProfileSettings(props: {
     );
   }
   return (
-    <SettingsSection title="Bot">
+    <SettingsSection title={bot.members === undefined ? "Bot" : "Group chat"}>
+      {bot.members === undefined ? null : (
+        <SettingsRow
+          title="Bots"
+          description="The bots in this group chat. Changes apply from the next message."
+        >
+          <div className="pb-3">
+            <BotMembersPicker
+              environmentId={props.environmentId}
+              groupId={props.projectId}
+              value={bot.members}
+              disabled={disabled}
+              onChange={(members) => onChange({ ...bot, members })}
+            />
+          </div>
+        </SettingsRow>
+      )}
       <SettingsRow
         title="Job"
         description="What this bot is for, in a few words."

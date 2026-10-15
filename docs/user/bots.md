@@ -7,8 +7,11 @@ same kind of work again and again without repeating yourself.
 ## Create a bot
 
 Choose **New bot** under **Bots** in the sidebar, or run **New bot** from the
-command palette. Give it a name, a job (for example "Daily tech scout"), its
-instructions, and the model it should use. Any provider you have set up works.
+command palette. Pick a ready-made bot from the marketplace, such as a morning
+briefing, a research analyst, an inbox assistant, or an expense tracker, or
+start from scratch. A ready-made bot comes with its job, instructions, icon,
+and starter skills; you can change any of them before or after creating it.
+Then choose the model it should use. Any provider you have set up works.
 
 MyBot creates a folder for the bot in its data directory and opens a new
 conversation with it.
@@ -45,6 +48,14 @@ with that bot, using its instructions, memory, and model, and the first bot
 reports back with the result. You can also ask for it directly, for example
 "ask Inbox to sort today's mail".
 
+## Group chats
+
+A group chat lets you talk to several bots in one conversation. Choose **New
+bot**, then **Group chat**, and pick its bots. Each message goes to the bots you
+name, or to the ones whose job fits, and every answer appears under the bot's
+name. Each bot keeps its own conversation for the group, so it remembers what
+was said. Change the group's bots in its settings.
+
 ## Sign a bot into websites
 
 Bots browse in a shared browser that keeps its logins, so a site you sign into
@@ -55,6 +66,17 @@ leaves the page open and tells you what to do. Open its browser tab, choose
 **Take control**, finish the step, choose **Release control**, and reply to the
 bot. Never send passwords or codes in a chat; a bot that needs an API key asks
 for it with a private form.
+
+## Connect apps
+
+Connect your apps so bots can use them directly instead of clicking through
+websites. An app connects through its MCP server: open **Settings →
+Integrations → Connected apps**, choose **Add app**, and give it a web address
+(with an access token if the app needs one) or a local command to run. MyBot
+checks the connection before saving it, and tokens stay on your computer.
+
+Every bot can use every connected app. Bots still show you a draft and wait for
+your go-ahead before an app sends, posts, buys, or deletes anything.
 
 ## Memory
 

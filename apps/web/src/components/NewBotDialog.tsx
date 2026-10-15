@@ -1,5 +1,6 @@
 import { useAtomValue } from "@effect/atom-react";
-import type { EnvironmentId, ModelSelection } from "@t3tools/contracts";
+import type { EnvironmentId, ModelSelection, ProjectId } from "@t3tools/contracts";
+import type { BotTemplate } from "@t3tools/shared/botTemplates";
 import { createModelSelection } from "@t3tools/shared/model";
 import { useEffect, useId, useMemo, useState } from "react";
 import { create } from "zustand";
@@ -30,6 +31,8 @@ import {
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
+import { BotMarketplace } from "./BotMarketplace";
+import { BotMembersPicker } from "./BotMembersPicker";
 
 const useRequest = create<{ open: boolean }>(() => ({ open: false }));
 
@@ -60,6 +63,28 @@ function NewBotDialog({ environmentId }: { environmentId: EnvironmentId }) {
   const [instructions, setInstructions] = useState("");
   const [chosenModel, setChosenModel] = useState<ModelSelection | null>(null);
   const [saving, setSaving] = useState(false);
+  // The dialog opens on the marketplace; a template or a blank bot leads to the form.
+  const [step, setStep] = useState<"pick" | "form">("pick");
+  const [template, setTemplate] = useState<BotTemplate | null>(null);
+  // A group chat is a bot that hosts the conversation with its member bots.
+  const [members, setMembers] = useState<ReadonlyArray<ProjectId> | null>(null);
+  const isGroup = members !== null;
+  const chooseGroup = () => {
+    setTemplate(null);
+    setMembers([]);
+    setName("");
+    setRole("Group chat");
+    setInstructions("");
+    setStep("form");
+  };
+  const choose = (next: BotTemplate | null) => {
+    setTemplate(next);
+    setMembers(null);
+    setName(next?.name ?? "");
+    setRole(next?.role ?? "");
+    setInstructions(next?.instructions ?? "");
+    setStep("form");
+  };
 
   const instanceEntries = useMemo(
     () =>
@@ -82,12 +107,53 @@ function NewBotDialog({ environmentId }: { environmentId: EnvironmentId }) {
     const created = await createBot({
       environmentId,
       name: trimmedName,
-      bot: { role: role.trim(), instructions: instructions.trim() },
+      bot: {
+        role: role.trim(),
+        instructions: instructions.trim(),
+        ...(members === null ? {} : { members }),
+      },
       defaultModelSelection: model,
+      ...(template === null
+        ? {}
+        : {
+            templateId: template.id,
+            projectIcon: { kind: "lucide" as const, ...template.icon },
+          }),
+      ...(isGroup
+        ? { projectIcon: { kind: "lucide" as const, name: "users", color: "sky" as const } }
+        : {}),
     });
     setSaving(false);
     if (created) close();
   };
+
+  if (step === "pick") {
+    return (
+      <Dialog
+        open
+        onOpenChange={(open) => {
+          if (!open) close();
+        }}
+      >
+        <DialogPopup className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>New bot</DialogTitle>
+            <DialogDescription>
+              Start from a ready-made bot, or describe your own. You can change everything later.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogPanel>
+            <BotMarketplace onChoose={choose} onGroup={chooseGroup} />
+          </DialogPanel>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={close}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogPopup>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog
@@ -105,9 +171,15 @@ function NewBotDialog({ environmentId }: { environmentId: EnvironmentId }) {
           }}
         >
           <DialogHeader>
-            <DialogTitle>New bot</DialogTitle>
+            <DialogTitle>
+              {isGroup ? "New group chat" : template ? `Add ${template.name}` : "New bot"}
+            </DialogTitle>
             <DialogDescription>
-              A bot is a teammate with a job. It keeps its instructions in every conversation.
+              {isGroup
+                ? "Talk to several bots in one conversation. The group's model passes your messages to the right bots and shows each answer under its name."
+                : template
+                  ? `${template.summary} Its starter skills are added to your skills folder.`
+                  : "A bot is a teammate with a job. It keeps its instructions in every conversation."}
             </DialogDescription>
           </DialogHeader>
           <DialogPanel>
@@ -119,12 +191,24 @@ function NewBotDialog({ environmentId }: { environmentId: EnvironmentId }) {
                   autoFocus
                   required
                   maxLength={200}
-                  placeholder="Scout"
+                  placeholder={isGroup ? "Team" : "Scout"}
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                 />
               </div>
-              <div className="flex flex-col gap-1.5">
+              {isGroup ? (
+                <div className="flex flex-col gap-1.5">
+                  <Label>Bots</Label>
+                  <BotMembersPicker
+                    environmentId={environmentId}
+                    groupId={null}
+                    value={members}
+                    disabled={saving}
+                    onChange={setMembers}
+                  />
+                </div>
+              ) : null}
+              <div className={isGroup ? "hidden" : "flex flex-col gap-1.5"}>
                 <Label htmlFor={`${id}-role`}>Job</Label>
                 <Input
                   id={`${id}-role`}
@@ -140,7 +224,11 @@ function NewBotDialog({ environmentId }: { environmentId: EnvironmentId }) {
                   id={`${id}-instructions`}
                   rows={6}
                   maxLength={20_000}
-                  placeholder="Each weekday, check my bookmarks and summarize anything worth prototyping. Ask before posting or sending anything."
+                  placeholder={
+                    isGroup
+                      ? "Optional house rules, such as: keep answers short, and let Analyst go first."
+                      : "Each weekday, check my bookmarks and summarize anything worth prototyping. Ask before posting or sending anything."
+                  }
                   value={instructions}
                   onChange={(event) => setInstructions(event.target.value)}
                 />
@@ -173,11 +261,14 @@ function NewBotDialog({ environmentId }: { environmentId: EnvironmentId }) {
             </div>
           </DialogPanel>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={close}>
-              Cancel
+            <Button type="button" variant="outline" onClick={() => setStep("pick")}>
+              Back
             </Button>
-            <Button type="submit" disabled={!name.trim() || !model || saving}>
-              Create bot
+            <Button
+              type="submit"
+              disabled={!name.trim() || !model || saving || (isGroup && members.length === 0)}
+            >
+              {isGroup ? "Create group" : "Create bot"}
             </Button>
           </DialogFooter>
         </form>

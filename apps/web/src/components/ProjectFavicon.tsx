@@ -1,4 +1,5 @@
 import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
+import type { ProjectIconColor } from "@t3tools/contracts";
 import {
   getProjectFaviconResourceKey,
   isProjectFaviconFallbackUrl,
@@ -30,6 +31,33 @@ export type ProjectFaviconProject = Pick<
   EnvironmentProject,
   "environmentId" | "workspaceRoot" | "title" | "faviconPath" | "projectIcon"
 >;
+/** A project's chosen Lucide icon in its color, also used before a project exists. */
+export function LucideProjectIcon(input: {
+  name: string;
+  color: ProjectIconColor;
+  className?: string | undefined;
+}) {
+  const colorClassName = projectIconColorClassName(input.color);
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "inline-flex size-3.5 shrink-0 items-center justify-center",
+        colorClassName,
+        input.className,
+      )}
+    >
+      <Suspense fallback={<DynamicProjectIconFallback />}>
+        <DynamicIcon
+          name={input.name as IconName}
+          className={cn("size-full", colorClassName)}
+          fallback={DynamicProjectIconFallback}
+        />
+      </Suspense>
+    </span>
+  );
+}
+
 export function ProjectFavicon(input: {
   project: ProjectFaviconProject;
   className?: string | undefined;
@@ -62,22 +90,12 @@ export function ProjectFavicon(input: {
     );
   }
   if (project.projectIcon?.kind === "lucide") {
-    const colorClassName = projectIconColorClassName(project.projectIcon.color);
-    const iconClassName = cn(
-      "inline-flex size-3.5 shrink-0 items-center justify-center",
-      colorClassName,
-      input.className,
-    );
     return (
-      <span aria-hidden="true" className={iconClassName}>
-        <Suspense fallback={<DynamicProjectIconFallback />}>
-          <DynamicIcon
-            name={project.projectIcon.name as IconName}
-            className={cn("size-full", colorClassName)}
-            fallback={DynamicProjectIconFallback}
-          />
-        </Suspense>
-      </span>
+      <LucideProjectIcon
+        name={project.projectIcon.name}
+        color={project.projectIcon.color}
+        className={input.className}
+      />
     );
   }
   const FallbackIcon = input.fallbackIcon ?? FolderCodeIcon;

@@ -51,6 +51,7 @@ import * as TurnItemPositionStore from "./TurnItemPositionStore.ts";
 import * as ScheduledTaskService from "../scheduledTasks/ScheduledTaskService.ts";
 import * as SecretRequests from "../secrets/SecretRequests.ts";
 import * as TelegramChannel from "../channels/TelegramChannel.ts";
+import * as AppConnections from "../apps/AppConnections.ts";
 import * as AutoReviewService from "./AutoReviewService.ts";
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 
@@ -376,6 +377,7 @@ export const layerProduction = Layer.mergeAll(
   layerThreadLifecycleProvided,
   layerScheduledTaskProvided,
   layerTelegramChannelProvided,
+  AppConnections.layer,
   layerAutoReviewProvided,
   layerSecretRequestsProvided,
   UsageLimitRecoveryWorker.layer.pipe(

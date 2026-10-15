@@ -205,6 +205,49 @@ it.effect("starts a bot with its profile and chosen model", () =>
   ),
 );
 
+it.effect("starts a marketplace bot with its icon and starter skills, keeping the user's own", () =>
+  withScratch(({ baseDir }) =>
+    Effect.gen(function* () {
+      const folders = yield* ManagedProjectFolders.ManagedProjectFolders;
+      const projects = yield* ProjectService.ProjectService;
+      const fileSystem = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const skills = path.join(baseDir, "skills");
+      // The user already has their own take on one of the template's skills.
+      yield* fileSystem.makeDirectory(path.join(skills, "log-expense"), { recursive: true });
+      yield* fileSystem.writeFileString(path.join(skills, "log-expense", "SKILL.md"), "mine");
+
+      const created = yield* folders.createNamedProject({
+        name: "Expenses",
+        bot: { role: "Expense tracker", instructions: "Keep expenses.csv." },
+        projectIcon: { kind: "lucide", name: "receipt", color: "emerald" },
+        templateId: "expense-tracker",
+      });
+
+      const project = Option.getOrThrow(yield* projects.getById(created.projectId));
+      assert.deepStrictEqual(project.projectIcon, {
+        kind: "lucide",
+        name: "receipt",
+        color: "emerald",
+      });
+      assert.equal(
+        yield* fileSystem.readFileString(path.join(skills, "log-expense", "SKILL.md")),
+        "mine",
+      );
+
+      yield* folders.createNamedProject({
+        name: "Briefing",
+        bot: { role: "Morning briefing", instructions: "" },
+        templateId: "daily-briefing",
+      });
+      assert.include(
+        yield* fileSystem.readFileString(path.join(skills, "morning-briefing", "SKILL.md")),
+        "name: morning-briefing",
+      );
+    }),
+  ),
+);
+
 it.effect("gives concurrent named projects with the same name distinct folders", () =>
   withScratch(() =>
     Effect.gen(function* () {

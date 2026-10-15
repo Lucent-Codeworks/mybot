@@ -166,6 +166,8 @@ export const BotProfile = Schema.Struct({
   instructions: Schema.String.check(Schema.isMaxLength(20_000)),
   /** A reviewer model approves the bot's clearly safe actions and leaves the rest for the user. */
   autoReview: Schema.optional(Schema.Boolean),
+  /** Makes the bot a group chat that hosts the conversation with these bots. */
+  members: Schema.optional(Schema.Array(ProjectId).check(Schema.isMaxLength(12))),
 });
 export type BotProfile = typeof BotProfile.Type;
 
@@ -534,6 +536,9 @@ export const ProjectCreateNewInput = Schema.Struct({
   /** Set to create a bot instead of a plain project. */
   bot: Schema.optional(BotProfile),
   defaultModelSelection: Schema.optional(ModelSelection),
+  projectIcon: Schema.optional(ProjectIconOverride),
+  /** A marketplace template whose starter skills are installed with the bot. */
+  templateId: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(64))),
 });
 export type ProjectCreateNewInput = typeof ProjectCreateNewInput.Type;
 

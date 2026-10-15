@@ -13,6 +13,8 @@ export interface BotInstructions {
     readonly role: string;
     readonly projectId: string;
   }>;
+  /** Set for a group chat: the bots (projectIds) this bot hosts the conversation with. */
+  readonly members?: ReadonlyArray<string> | undefined;
 }
 
 /** The file in a bot's folder that holds what it remembers across conversations. */
@@ -37,15 +39,31 @@ export function buildBotInstructions(bot: BotInstructions): string {
     "Websites you sign into in the shared browser stay signed in for every bot. When a site needs the user, such as a login, a two-factor code, a CAPTCHA, or a payment, leave the page open in your browser tab, say exactly what they need to do there (take control of the tab, finish the step, release control, then reply), and end your turn; continue when they reply. Never ask for passwords or one-time codes in chat. For an API key or token, use the request_secret tool.",
   );
   lines.push(
+    "The user may have connected apps, such as their mail, calendar, or CRM. When a task involves one of their accounts, call app_tools_list to see the connected apps and their tools, and use app_tool_call when one fits; it is faster and more reliable than the website.",
+  );
+  lines.push(
     "When the user wants something done regularly or whenever something happens, set it up as a routine with the schedule_task tool if you have it, and tell the user the schedule you set.",
   );
-  if (bot.teammates && bot.teammates.length > 0) {
+  const memberIds = new Set(bot.members ?? []);
+  const members = (bot.teammates ?? []).filter((teammate) => memberIds.has(teammate.projectId));
+  const roster = (teammates: NonNullable<BotInstructions["teammates"]>) =>
+    teammates.map(
+      (teammate) =>
+        `- ${toSingleLine(teammate.name)}${teammate.role ? ` (${toSingleLine(teammate.role)})` : ""}: projectId ${teammate.projectId}`,
+    );
+  if (bot.members !== undefined) {
+    lines.push(
+      "This is a group chat between the user and these bots, and you host it:",
+      ...(members.length > 0
+        ? roster(members)
+        : ["- (no bots yet: ask the user to add some in this group's settings)"]),
+      "For each user message, choose who answers: the bots the user names, otherwise the ones whose job fits, or every bot when the user addresses the group. Send each chosen bot the message with the context it needs from this chat. The first time you message a bot here, call t3_thread_launch with its projectId and keep the threadId it returns; after that, use t3_thread_send to that threadId so the bot remembers the chat. Message the chosen bots in parallel, then use t3_thread_wait and t3_thread_read to collect their replies, and pass one bot's reply to another when it asks for their input.",
+      "Reply with each bot's answer under its name, in its own words: **Name:** answer. Do not answer for a bot. Add a short line of your own only to connect or summarize answers. When a bot needs the user, such as a question or an approval, relay it with the bot's name.",
+    );
+  } else if (bot.teammates && bot.teammates.length > 0) {
     lines.push(
       "The user's other bots, which you can hand work to when it fits their job better than yours:",
-      ...bot.teammates.map(
-        (teammate) =>
-          `- ${toSingleLine(teammate.name)}${teammate.role ? ` (${toSingleLine(teammate.role)})` : ""}: projectId ${teammate.projectId}`,
-      ),
+      ...roster(bot.teammates),
       "To hand off, call t3_thread_launch with that projectId and the full task in message; it runs as that bot, with its own instructions, memory, and model. Follow it with t3_thread_wait and t3_thread_read, then report back. Tell the user when you hand work off.",
     );
   }

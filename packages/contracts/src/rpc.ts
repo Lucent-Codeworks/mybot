@@ -264,6 +264,12 @@ import {
   ScheduledTaskMutationResult,
 } from "./scheduledTask.ts";
 import {
+  AppConnectionAddInput,
+  AppConnectionError,
+  AppConnectionList,
+  AppConnectionRemoveInput,
+} from "./appConnections.ts";
+import {
   BotTelegramConnectInput,
   BotTelegramDisconnectInput,
   BotTelegramError,
@@ -394,6 +400,11 @@ export const WS_METHODS = {
   serverGetBackgroundPolicy: "server.getBackgroundPolicy",
   serverGetUsageSummary: "server.getUsageSummary",
   serverRefreshUsageRates: "server.refreshUsageRates",
+
+  // App connections
+  appConnectionsList: "appConnections.list",
+  appConnectionsAdd: "appConnections.add",
+  appConnectionsRemove: "appConnections.remove",
 
   // Bot channels
   botsTelegramStatus: "bots.telegram.status",
@@ -1241,6 +1252,24 @@ const WsScheduledTasksListRpc = Rpc.make(WS_METHODS.scheduledTasksList, {
   error: Schema.Union([ScheduledTaskError, EnvironmentAuthorizationError]),
 });
 
+const WsAppConnectionsListRpc = Rpc.make(WS_METHODS.appConnectionsList, {
+  payload: Schema.Struct({}),
+  success: AppConnectionList,
+  error: Schema.Union([AppConnectionError, EnvironmentAuthorizationError]),
+});
+
+const WsAppConnectionsAddRpc = Rpc.make(WS_METHODS.appConnectionsAdd, {
+  payload: AppConnectionAddInput,
+  success: AppConnectionList,
+  error: Schema.Union([AppConnectionError, EnvironmentAuthorizationError]),
+});
+
+const WsAppConnectionsRemoveRpc = Rpc.make(WS_METHODS.appConnectionsRemove, {
+  payload: AppConnectionRemoveInput,
+  success: AppConnectionList,
+  error: Schema.Union([AppConnectionError, EnvironmentAuthorizationError]),
+});
+
 const WsBotsTelegramStatusRpc = Rpc.make(WS_METHODS.botsTelegramStatus, {
   payload: BotTelegramStatusInput,
   success: BotTelegramStatus,
@@ -1404,6 +1433,9 @@ export const WsRpcGroup = RpcGroup.make(
   WsServerGetUsageSummaryRpc,
   WsServerRefreshUsageRatesRpc,
   WsServerSignalProcessRpc,
+  WsAppConnectionsListRpc,
+  WsAppConnectionsAddRpc,
+  WsAppConnectionsRemoveRpc,
   WsBotsTelegramStatusRpc,
   WsBotsTelegramConnectRpc,
   WsBotsTelegramDisconnectRpc,

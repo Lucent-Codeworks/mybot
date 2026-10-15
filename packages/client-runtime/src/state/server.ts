@@ -1090,6 +1090,10 @@ export function createServerEnvironmentAtoms<R, E>(
       label: "environment-data:server:bot-telegram:status",
       tag: WS_METHODS.botsTelegramStatus,
     }),
+    appConnections: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:server:app-connections",
+      tag: WS_METHODS.appConnectionsList,
+    }),
     scheduledTaskWebhookDeliveries: createEnvironmentRpcQueryAtomFamily(runtime, {
       label: "environment-data:server:scheduled-task:webhook-deliveries",
       tag: WS_METHODS.scheduledTasksListWebhookDeliveries,
@@ -1313,6 +1317,18 @@ export function createServerEnvironmentAtoms<R, E>(
     disconnectBotTelegram: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:server:bot-telegram:disconnect",
       tag: WS_METHODS.botsTelegramDisconnect,
+      scheduler: configScheduler,
+      concurrency: configConcurrency,
+    }),
+    addAppConnection: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:app-connections:add",
+      tag: WS_METHODS.appConnectionsAdd,
+      scheduler: configScheduler,
+      concurrency: configConcurrency,
+    }),
+    removeAppConnection: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:app-connections:remove",
+      tag: WS_METHODS.appConnectionsRemove,
       scheduler: configScheduler,
       concurrency: configConcurrency,
     }),

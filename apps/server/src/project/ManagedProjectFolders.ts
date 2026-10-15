@@ -22,6 +22,7 @@ import * as PlatformError from "effect/PlatformError";
 import * as Schema from "effect/Schema";
 
 import { BOT_MEMORY_FILE_NAME } from "@t3tools/provider-core/server/runtimeInstructions";
+import { findBotTemplate } from "@t3tools/shared/botTemplates";
 
 import * as ServerConfig from "../config.ts";
 import * as ServerSettings from "../serverSettings.ts";
@@ -347,6 +348,34 @@ const make = Effect.gen(function* () {
         ),
         Effect.mapError((cause) => new NamedProjectCreateError({ workspaceRoot, cause })),
       );
+    if (input.projectIcon !== undefined) {
+      yield* projects
+        .update({
+          commandId: CommandId.make(`named-project:${id}:icon`),
+          projectId: project.id,
+          projectIcon: input.projectIcon,
+        })
+        .pipe(Effect.mapError((cause) => new NamedProjectCreateError({ workspaceRoot, cause })));
+    }
+    // A template's starter skills join the shared library; one the user
+    // already has (or edited) is never overwritten. A failed write only
+    // costs the skill, not the bot.
+    const template = input.templateId === undefined ? undefined : findBotTemplate(input.templateId);
+    for (const skill of template?.skills ?? []) {
+      const skillFile = path.join(config.skillsDir, skill.name, "SKILL.md");
+      yield* fileSystem.exists(skillFile).pipe(
+        Effect.flatMap((exists) =>
+          exists
+            ? Effect.void
+            : fileSystem
+                .makeDirectory(path.dirname(skillFile), { recursive: true })
+                .pipe(Effect.andThen(fileSystem.writeFileString(skillFile, skill.content))),
+        ),
+        Effect.catch((cause) =>
+          Effect.logWarning("Could not install a template skill.", { skill: skill.name, cause }),
+        ),
+      );
+    }
     if (input.defaultModelSelection !== undefined) {
       yield* serverSettings
         .updateSettings({

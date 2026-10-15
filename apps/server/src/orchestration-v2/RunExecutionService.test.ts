@@ -791,98 +791,113 @@ const scout = {
   bot: { role: "Daily tech scout", instructions: "Summarize my bookmarks." },
 } as OrchestrationProjectShell;
 
-it.effect("gives turns in a bot's thread the bot's profile and its teammates", () =>
-  Effect.gen(function* () {
-    const runExecution = yield* RunExecutionService.RunExecutionServiceV2;
-    const started = yield* Deferred.make<ProviderAdapter.ProviderAdapterV2TurnInput>();
-    const threadId = ThreadId.make("thread:run-execution-bot");
-    const providerInstanceId = ProviderInstanceId.make("codex");
-    const attemptId = RunAttemptId.make("attempt:run-execution-bot");
-    const session = {
-      events: Stream.never,
-      startTurn: (input: ProviderAdapter.ProviderAdapterV2TurnInput) =>
-        Deferred.succeed(started, input),
-    } as unknown as ProviderAdapter.ProviderAdapterV2SessionRuntime;
+it.effect(
+  "gives turns in a bot's thread the bot's profile and its teammates, not group chats",
+  () =>
+    Effect.gen(function* () {
+      const runExecution = yield* RunExecutionService.RunExecutionServiceV2;
+      const started = yield* Deferred.make<ProviderAdapter.ProviderAdapterV2TurnInput>();
+      const threadId = ThreadId.make("thread:run-execution-bot");
+      const providerInstanceId = ProviderInstanceId.make("codex");
+      const attemptId = RunAttemptId.make("attempt:run-execution-bot");
+      const session = {
+        events: Stream.never,
+        startTurn: (input: ProviderAdapter.ProviderAdapterV2TurnInput) =>
+          Deferred.succeed(started, input),
+      } as unknown as ProviderAdapter.ProviderAdapterV2SessionRuntime;
 
-    yield* runExecution.startRootRun({
-      commandId: CommandId.make("command:run-execution-bot"),
-      appThread: {
-        id: threadId,
-        projectId: ProjectId.make("project:bot"),
-      } as OrchestrationV2AppThread,
-      providerSessionId: ProviderSessionId.make("session:run-execution-bot"),
-      session,
-      run: {
-        id: RunId.make("run:run-execution-bot"),
-        threadId,
-        ordinal: 1,
-        providerInstanceId,
-      } as OrchestrationV2Run,
-      rootNode: {
-        id: NodeId.make("node:run-execution-bot"),
-      } as OrchestrationV2ExecutionNode,
-      checkpointScope: {
-        id: CheckpointScopeId.make("checkpoint-scope:run-execution-bot"),
-      } as OrchestrationV2CheckpointScope,
-      providerThread: {
-        id: ProviderThreadId.make("provider-thread:run-execution-bot"),
-        driver,
-      } as OrchestrationV2ProviderThread,
-      attempt: { id: attemptId, providerTurnId: null } as OrchestrationV2RunAttempt,
-      attemptId,
-      providerTurnOrdinal: 1,
-      message: {
-        messageId: MessageId.make("message:run-execution-bot"),
-        text: "What is on my list?",
-        attachments: [],
-        createdBy: "user",
-        creationSource: "web",
-      },
-      modelSelection: { instanceId: providerInstanceId, model: "gpt-5.4" },
-      runtimePolicy: { runtimeMode: "full-access", interactionMode: "default", cwd: process.cwd() },
-    });
+      yield* runExecution.startRootRun({
+        commandId: CommandId.make("command:run-execution-bot"),
+        appThread: {
+          id: threadId,
+          projectId: ProjectId.make("project:bot"),
+        } as OrchestrationV2AppThread,
+        providerSessionId: ProviderSessionId.make("session:run-execution-bot"),
+        session,
+        run: {
+          id: RunId.make("run:run-execution-bot"),
+          threadId,
+          ordinal: 1,
+          providerInstanceId,
+        } as OrchestrationV2Run,
+        rootNode: {
+          id: NodeId.make("node:run-execution-bot"),
+        } as OrchestrationV2ExecutionNode,
+        checkpointScope: {
+          id: CheckpointScopeId.make("checkpoint-scope:run-execution-bot"),
+        } as OrchestrationV2CheckpointScope,
+        providerThread: {
+          id: ProviderThreadId.make("provider-thread:run-execution-bot"),
+          driver,
+        } as OrchestrationV2ProviderThread,
+        attempt: { id: attemptId, providerTurnId: null } as OrchestrationV2RunAttempt,
+        attemptId,
+        providerTurnOrdinal: 1,
+        message: {
+          messageId: MessageId.make("message:run-execution-bot"),
+          text: "What is on my list?",
+          attachments: [],
+          createdBy: "user",
+          creationSource: "web",
+        },
+        modelSelection: { instanceId: providerInstanceId, model: "gpt-5.4" },
+        runtimePolicy: {
+          runtimeMode: "full-access",
+          interactionMode: "default",
+          cwd: process.cwd(),
+        },
+      });
 
-    const input = yield* Deferred.await(started);
-    assert.deepEqual(input.bot, {
-      name: "Scout",
-      role: "Daily tech scout",
-      instructions: "Summarize my bookmarks.",
-      folder: "/bots/scout",
-      skillsFolder: "/mybot/skills",
-      teammates: [{ name: "Inbox", role: "Inbox triage", projectId: "project:inbox" }],
-    });
-  }).pipe(
-    Effect.provide(
-      RunExecutionService.layer.pipe(
-        Layer.provide(
-          Layer.mergeAll(
-            McpAppModelContext.layerEmpty,
-            layerConfig,
-            Layer.mock(ProjectStore.ProjectStoreV2)({
-              getShell: () => Effect.succeed(Option.some(scout)),
-              listShells: () =>
-                Effect.succeed([
-                  scout,
-                  { id: ProjectId.make("project:plain"), title: "Plain", bot: null },
-                  {
-                    id: ProjectId.make("project:inbox"),
-                    title: "Inbox",
-                    bot: { role: "Inbox triage", instructions: "" },
-                  },
-                ] as ReadonlyArray<OrchestrationProjectShell>),
-            }),
-            Layer.mock(CheckpointService.CheckpointServiceV2)({}),
-            Layer.mock(EventSink.EventSinkV2)({}),
-            IdAllocator.layer,
-            Layer.mock(ProviderEventIngestor.ProviderEventIngestorV2)({
-              ingestNormalized: () => Effect.succeed([]),
-            }),
-            ServerSettings.layerTest(),
+      const input = yield* Deferred.await(started);
+      assert.deepEqual(input.bot, {
+        name: "Scout",
+        role: "Daily tech scout",
+        instructions: "Summarize my bookmarks.",
+        folder: "/bots/scout",
+        skillsFolder: "/mybot/skills",
+        teammates: [{ name: "Inbox", role: "Inbox triage", projectId: "project:inbox" }],
+      });
+    }).pipe(
+      Effect.provide(
+        RunExecutionService.layer.pipe(
+          Layer.provide(
+            Layer.mergeAll(
+              McpAppModelContext.layerEmpty,
+              layerConfig,
+              Layer.mock(ProjectStore.ProjectStoreV2)({
+                getShell: () => Effect.succeed(Option.some(scout)),
+                listShells: () =>
+                  Effect.succeed([
+                    scout,
+                    { id: ProjectId.make("project:plain"), title: "Plain", bot: null },
+                    {
+                      id: ProjectId.make("project:inbox"),
+                      title: "Inbox",
+                      bot: { role: "Inbox triage", instructions: "" },
+                    },
+                    {
+                      id: ProjectId.make("project:team"),
+                      title: "Team",
+                      bot: {
+                        role: "Group chat",
+                        instructions: "",
+                        members: [ProjectId.make("project:inbox")],
+                      },
+                    },
+                  ] as ReadonlyArray<OrchestrationProjectShell>),
+              }),
+              Layer.mock(CheckpointService.CheckpointServiceV2)({}),
+              Layer.mock(EventSink.EventSinkV2)({}),
+              IdAllocator.layer,
+              Layer.mock(ProviderEventIngestor.ProviderEventIngestorV2)({
+                ingestNormalized: () => Effect.succeed([]),
+              }),
+              ServerSettings.layerTest(),
+            ),
           ),
         ),
       ),
     ),
-  ),
 );
 
 it.effect("fails the run when its ownership check cannot be read before calling the provider", () =>

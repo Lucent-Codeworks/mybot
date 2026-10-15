@@ -3,7 +3,12 @@ import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
 } from "@t3tools/client-runtime/state/runtime";
-import type { BotProfile, EnvironmentId, ModelSelection } from "@t3tools/contracts";
+import type {
+  BotProfile,
+  EnvironmentId,
+  ModelSelection,
+  ProjectIconOverride,
+} from "@t3tools/contracts";
 import { useCallback } from "react";
 
 import { stackedThreadToast, toastManager } from "~/components/ui/toast";
@@ -36,6 +41,8 @@ export function useNewProject() {
       readonly name: string;
       readonly bot?: BotProfile;
       readonly defaultModelSelection?: ModelSelection;
+      readonly projectIcon?: ProjectIconOverride;
+      readonly templateId?: string;
     }): Promise<boolean> => {
       const kind = input.bot === undefined ? "project" : "bot";
       const result = await createNew({
@@ -46,6 +53,8 @@ export function useNewProject() {
           ...(input.defaultModelSelection === undefined
             ? {}
             : { defaultModelSelection: input.defaultModelSelection }),
+          ...(input.projectIcon === undefined ? {} : { projectIcon: input.projectIcon }),
+          ...(input.templateId === undefined ? {} : { templateId: input.templateId }),
         },
       });
       if (result._tag === "Failure") {

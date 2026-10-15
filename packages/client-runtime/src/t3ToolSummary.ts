@@ -371,6 +371,14 @@ export function summarizeT3ToolCalls(
     case "capabilities":
       label = phrase("Checked", "check", `orchestration capabilities ${times}`);
       break;
+    case "app-list":
+      label = phrase("Checked", "check", `connected apps ${times}`);
+      break;
+    case "app-call": {
+      const apps = new Set(selected.map((call) => id(call.input?.app) ?? "app")).size;
+      label = phrase("Used", "use", quantity(apps, "connected app"));
+      break;
+    }
   }
   return { label, failedCount };
 }
