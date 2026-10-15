@@ -2,26 +2,100 @@ import { AppConnectionAddInput } from "@t3tools/contracts";
 import * as Schema from "effect/Schema";
 import { describe, expect, it } from "vite-plus/test";
 
-import { APP_CATALOG, buildAppConnectionInput, findAppPreset } from "./appCatalog.ts";
+import {
+  APP_CATALOG,
+  APP_CATEGORIES,
+  type AppPreset,
+  type AppPresetField,
+  appPresetFieldDefault,
+  buildAppConnectionInput,
+  findAppPreset,
+} from "./appCatalog.ts";
 
-const isAddInput = Schema.is(AppConnectionAddInput);
+const decodeAddInput = Schema.decodeUnknownSync(AppConnectionAddInput);
 
-const sampleValue = (key: string) =>
-  key === "url" ? "https://app.example.com/mcp" : `sample-${key}`;
+const sampleValue = (field: AppPresetField) =>
+  field.kind === "toggle"
+    ? "true"
+    : field.kind === "select"
+      ? field.default
+      : (field.default ??
+        (field.key === "url" ? "https://app.example.com" : `sample-${field.key}`));
+
+const sampleValues = (preset: AppPreset) =>
+  Object.fromEntries(preset.fields.map((field) => [field.key, sampleValue(field)]));
+
+/** Every string the built transport carries, to find which fields it used. */
+const transportStrings = (preset: AppPreset, values: Record<string, string>) => {
+  const transport = preset.transport(values);
+  return transport.type === "http"
+    ? [transport.url, transport.bearerToken ?? ""]
+    : [transport.command, ...transport.args, ...Object.values(transport.env ?? {})];
+};
+
+const RUNTIME_OF_COMMAND = { npx: "node", uvx: "uv", docker: "docker" } as const;
 
 describe("the app catalog", () => {
-  it("builds a valid add input from every preset", () => {
+  it("has unique ids and known categories", () => {
     const ids = APP_CATALOG.map((preset) => preset.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const preset of APP_CATALOG) {
-      const values = Object.fromEntries(
-        preset.fields.map((field) => [field.key, field.default ?? sampleValue(field.key)]),
-      );
+      expect(APP_CATEGORIES, preset.id).toContain(preset.category);
+    }
+  });
+
+  // One test over the whole catalog; a failure names the preset.
+  it("builds a valid add input from every preset, using every field", () => {
+    for (const preset of APP_CATALOG) {
+      const values = sampleValues(preset);
       const built = buildAppConnectionInput(preset, values);
       expect("input" in built, preset.id).toBe(true);
       if (!("input" in built)) continue;
-      expect(isAddInput(built.input), preset.id).toBe(true);
+      expect(() => decodeAddInput(built.input), preset.id).not.toThrow();
+      if (preset.via) continue;
       expect(built.input).toMatchObject({ name: preset.name, presetId: preset.id });
+
+      // Each text field's sample value reaches the transport, so no field key is misspelled.
+      const strings = transportStrings(preset, values).join("\n");
+      for (const field of preset.fields) {
+        if (field.kind === "toggle" || field.kind === "select") continue;
+        expect(strings, `${preset.id}.${field.key}`).toContain(values[field.key]);
+      }
+    }
+  });
+
+  it("starts selects on a valid option and declares how local apps run", () => {
+    for (const preset of APP_CATALOG) {
+      for (const field of preset.fields) {
+        if (field.kind !== "select") continue;
+        expect(
+          field.options.map((option) => option.value),
+          `${preset.id}.${field.key}`,
+        ).toContain(appPresetFieldDefault(field));
+      }
+      const transport = preset.transport(sampleValues(preset));
+      expect(transport.type === "stdio", preset.id).toBe(preset.connection === "local");
+      if (transport.type === "stdio") {
+        expect(preset.requires, preset.id).toBe(
+          RUNTIME_OF_COMMAND[transport.command as keyof typeof RUNTIME_OF_COMMAND],
+        );
+      }
+    }
+  });
+
+  it("connects cards that go through Composio to the Composio server", () => {
+    const composio = findAppPreset("composio")!;
+    const viaCards = APP_CATALOG.filter((preset) => preset.via === "composio");
+    expect(viaCards.map((preset) => preset.id)).toEqual(
+      expect.arrayContaining(["gmail", "google-calendar", "google-drive"]),
+    );
+    for (const card of viaCards) {
+      const built = buildAppConnectionInput(card, {});
+      expect("input" in built && built.input, card.id).toEqual({
+        name: "Composio",
+        presetId: "composio",
+        transport: composio.transport({}),
+      });
     }
   });
 
@@ -64,6 +138,38 @@ describe("the app catalog", () => {
     });
     expect("input" in token && token.input.transport).toMatchObject({
       bearerToken: "t",
+      auth: "token",
+    });
+  });
+
+  it("maps selects and toggles onto the command", () => {
+    const outlook = findAppPreset("outlook")!;
+    const personal = buildAppConnectionInput(outlook, { account: "personal", readOnly: "" });
+    expect("input" in personal && personal.input.transport).toEqual({
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "@softeria/ms-365-mcp-server"],
+      env: { MS365_MCP_TENANT_ID: "consumers" },
+    });
+    const work = buildAppConnectionInput(outlook, { account: "work", readOnly: "true" });
+    expect("input" in work && work.input.transport).toEqual({
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "@softeria/ms-365-mcp-server", "--org-mode", "--read-only"],
+    });
+
+    const firecrawl = findAppPreset("firecrawl")!;
+    const signIn = buildAppConnectionInput(firecrawl, {});
+    expect("input" in signIn && signIn.input.transport).toEqual({
+      type: "http",
+      url: "https://mcp.firecrawl.dev/v2/mcp-oauth",
+      auth: "oauth",
+    });
+    const key = buildAppConnectionInput(firecrawl, { apiKey: "fc-1" });
+    expect("input" in key && key.input.transport).toEqual({
+      type: "http",
+      url: "https://mcp.firecrawl.dev/v2/mcp",
+      bearerToken: "fc-1",
       auth: "token",
     });
   });

@@ -84,24 +84,37 @@ for it with a private form.
 
 Connect your apps so bots can use them directly instead of clicking through
 websites. Choose **Apps** in the sidebar (or **Settings → Apps**) and choose **Add
-app**. Pick an app from the list, such as Dialpad, Telnyx, Twilio, n8n, or
-Activepieces, or choose **Custom** to connect any app that offers an MCP server
-by its web address or a local command. MyBot checks the connection before
-saving it, and keys and tokens stay on your computer.
+app**. Search the catalog or browse by category, pick an app, and fill in what it
+asks for. If an app isn't listed, choose **Custom** to connect any app that
+offers an MCP server by its web address or a local command. MyBot checks the
+connection before saving it, and keys and tokens stay on your computer.
 
-Some apps sign in through your browser. MyBot opens the app's sign-in page;
-approve access there, then come back to MyBot. When a sign-in expires and
-cannot be renewed, the app shows **Sign in** in Connected apps and bots tell
-you it needs signing in again. Dialpad sessions last 24 hours.
+Each app shows how it connects:
 
-A few apps have requirements of their own:
+- **Sign in** apps open their sign-in page in your browser. Approve access
+  there, then come back to MyBot. When a sign-in expires and cannot be renewed,
+  the app shows **Sign in** in Connected apps and bots tell you it needs signing
+  in again.
+- **API key** apps ask for a key or token you create in the app's settings. The
+  setup guide link in each app's form shows where.
+- **Runs on this computer** apps start a small helper program on the computer
+  running MyBot. They need Node.js, [uv](https://docs.astral.sh/uv/), or Docker
+  installed, as the app's form says. Apps marked **macOS** only work there.
+- **No sign-in** apps work right away.
 
-- **Dialpad** connects only for accounts in Dialpad's MCP early access program.
-  Accounts outside the US may need a regional address from api@dialpad.com.
-- **Twilio** runs Twilio's MCP server on this computer with `npx`, so Node.js
-  must be installed. Choose which Twilio APIs to load under **Services**.
-- **n8n** needs instance-level MCP turned on in n8n. Paste an access token, or
-  leave it empty to sign in through the browser.
+Apps marked **Community** use a helper made by the community rather than the
+app's maker. Some apps list a requirement before you connect, such as a paid
+plan or an admin who must turn on access.
+
+Gmail, Google Calendar, Drive, Docs, and Sheets connect through Composio: sign in
+to Composio once, and it asks you to approve each Google app (or any of its
+other apps) the first time a bot uses it. If you'd rather not use Composio,
+**Google Workspace (advanced)** connects with your own Google Cloud OAuth client.
+
+**Outlook & Microsoft 365** runs on this computer. After connecting it, ask a
+bot to sign in to Microsoft; it shows a code to enter at
+microsoft.com/devicelogin. Choose **Work or school** to also reach Teams and
+SharePoint.
 
 Every bot can use every connected app. Bots still show you a draft and wait for
 your go-ahead before an app sends, posts, buys, or deletes anything.
