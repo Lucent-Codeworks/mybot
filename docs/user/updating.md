@@ -1,5 +1,10 @@
 # Updating MyBot
 
+When a desktop update is available, click the update button at the bottom of
+the sidebar, or **Download** under **Settings → General → About**, to read what the
+update changes. Nothing downloads until you choose **Update now**. Choose
+**Later** to keep working on your current version.
+
 The app you use and the server running your agents can be on different machines.
 When a server is behind your web or desktop app, an update notice appears in the
 conversation and **Settings → Connections**. Update the machine named in that

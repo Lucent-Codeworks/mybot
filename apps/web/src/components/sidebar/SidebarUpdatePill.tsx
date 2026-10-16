@@ -21,6 +21,7 @@ import {
   shouldToastDesktopUpdateActionResult,
 } from "../desktopUpdate.logic";
 import { showDesktopUpdateDownloadedToast } from "../desktopUpdate.toast";
+import { DesktopUpdateReviewDialog } from "../DesktopUpdateReviewDialog";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Popover, PopoverCreateHandle, PopoverPopup, PopoverTrigger } from "../ui/popover";
 import { SidebarMenuItem } from "../ui/sidebar";
@@ -200,6 +201,7 @@ function SidebarUpdateControl() {
   const [isActionPending, setIsActionPending] = useState(false);
   const [isUpdatingEverything, setIsUpdatingEverything] = useState(false);
   const [isConfirmingEverything, setIsConfirmingEverything] = useState(false);
+  const [isReviewingUpdate, setIsReviewingUpdate] = useState(false);
   const [checkAnimationKey, setCheckAnimationKey] = useState(0);
   const [isCheckAnimationLatched, setIsCheckAnimationLatched] = useState(false);
   const [releaseNotesPopoverHandle] = useState(() => PopoverCreateHandle());
@@ -282,14 +284,13 @@ function SidebarUpdateControl() {
     }
 
     if (!bridge || !state) return;
-    setIsActionPending(true);
 
     if (action === "download") {
-      void downloadLocalUpdate(bridge, { notifyDownloaded: true }).finally(() =>
-        setIsActionPending(false),
-      );
+      setIsReviewingUpdate(true);
       return;
     }
+
+    setIsActionPending(true);
 
     if (action === "install") {
       let confirmed = false;
@@ -344,6 +345,16 @@ function SidebarUpdateControl() {
       })
       .finally(() => setIsActionPending(false));
   }, [action, isInteractionDisabled, prefersReducedMotion, runsEverything, state]);
+
+  const confirmReviewedUpdate = useCallback(() => {
+    const bridge = window.desktopBridge;
+    setIsReviewingUpdate(false);
+    if (!bridge) return;
+    setIsActionPending(true);
+    void downloadLocalUpdate(bridge, { notifyDownloaded: true }).finally(() =>
+      setIsActionPending(false),
+    );
+  }, []);
 
   const runEverything = useCallback(async () => {
     const bridge = window.desktopBridge;
@@ -500,6 +511,12 @@ function SidebarUpdateControl() {
           </PopoverPopup>
         ) : null}
       </Popover>
+      <DesktopUpdateReviewDialog
+        open={isReviewingUpdate}
+        onOpenChange={setIsReviewingUpdate}
+        state={state}
+        onConfirm={confirmReviewedUpdate}
+      />
       <UpdateEverythingDialog
         open={isConfirmingEverything}
         onOpenChange={setIsConfirmingEverything}

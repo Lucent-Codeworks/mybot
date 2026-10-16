@@ -59,6 +59,7 @@ import {
   isDesktopUpdateButtonDisabled,
   resolveDesktopUpdateButtonAction,
 } from "../../components/desktopUpdate.logic";
+import { DesktopUpdateReviewDialog } from "../DesktopUpdateReviewDialog";
 import { ProviderModelPicker } from "../chat/ProviderModelPicker";
 import { TraitsPicker } from "../chat/TraitsPicker";
 import {
@@ -261,6 +262,7 @@ function AboutVersionSection() {
   const updateState = useDesktopUpdateState();
   const [isChangingUpdateChannel, setIsChangingUpdateChannel] = useState(false);
   const [isUpdateActionPending, setIsUpdateActionPending] = useState(false);
+  const [isReviewingUpdate, setIsReviewingUpdate] = useState(false);
 
   const hasDesktopBridge = typeof window !== "undefined" && Boolean(window.desktopBridge);
   const selectedUpdateChannel = updateState?.channel ?? "latest";
@@ -303,15 +305,7 @@ function AboutVersionSection() {
     const action = updateState ? resolveDesktopUpdateButtonAction(updateState) : "none";
 
     if (action === "download") {
-      void bridge.downloadUpdate().catch((error: unknown) => {
-        toastManager.add(
-          stackedThreadToast({
-            type: "error",
-            title: "Could not download update",
-            description: error instanceof Error ? error.message : "Download failed.",
-          }),
-        );
-      });
+      setIsReviewingUpdate(true);
       return;
     }
 
@@ -381,6 +375,19 @@ function AboutVersionSection() {
       });
   }, [isUpdateActionPending, updateState]);
 
+  const confirmReviewedUpdate = useCallback(() => {
+    setIsReviewingUpdate(false);
+    void window.desktopBridge?.downloadUpdate().catch((error: unknown) => {
+      toastManager.add(
+        stackedThreadToast({
+          type: "error",
+          title: "Could not download update",
+          description: error instanceof Error ? error.message : "Download failed.",
+        }),
+      );
+    });
+  }, []);
+
   const action = updateState ? resolveDesktopUpdateButtonAction(updateState) : "none";
   const buttonTooltip = updateState ? getDesktopUpdateButtonTooltip(updateState) : null;
   const buttonDisabled =
@@ -424,6 +431,12 @@ function AboutVersionSection() {
             {buttonTooltip ? <TooltipPopup>{buttonTooltip}</TooltipPopup> : null}
           </Tooltip>
         }
+      />
+      <DesktopUpdateReviewDialog
+        open={isReviewingUpdate}
+        onOpenChange={setIsReviewingUpdate}
+        state={updateState}
+        onConfirm={confirmReviewedUpdate}
       />
       {hasDesktopBridge ? (
         <SettingsRow
