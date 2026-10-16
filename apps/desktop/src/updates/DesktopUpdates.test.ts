@@ -156,6 +156,7 @@ describe("DesktopUpdates", () => {
       Effect.gen(function* () {
         const updates = yield* DesktopUpdates.DesktopUpdates;
         yield* updates.configure;
+        assert.equal(harness.fullChangelog(), true);
 
         yield* updates.setChannel("nightly");
         assert.equal(harness.fullChangelog(), true);

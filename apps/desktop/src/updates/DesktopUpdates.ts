@@ -453,12 +453,13 @@ export const make = Effect.gen(function* () {
     yield* electronUpdater.setChannel(channel);
     yield* electronUpdater.setAllowPrerelease(allowsPrerelease);
     yield* electronUpdater.setAllowDowngrade(allowsPrerelease);
-    yield* electronUpdater.setFullChangelog(allowsPrerelease);
+    // Notes for every release since the running one, so the update review
+    // shows everything a skipped version carried, on either channel.
+    yield* electronUpdater.setFullChangelog(true);
     yield* logUpdaterInfo("using update channel", {
       channel,
       allowPrerelease: allowsPrerelease,
       allowDowngrade: allowsPrerelease,
-      fullChangelog: allowsPrerelease,
     });
   });
 
