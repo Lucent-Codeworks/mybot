@@ -80,6 +80,14 @@ it relays each message to member bots with `bot_message` and quotes their replie
 ordinary bots in their own threads; group chats are left out of other bots' rosters and cannot
 receive `bot_message`.
 
+## Guides
+
+`skill_import_guide` ([`GuideImport`](../../apps/server/src/bots/GuideImport.ts)) reads a guide PDF
+on the server and saves its screenshots as PNGs in the skill's `guide/` folder, because not every
+provider can read a PDF or the images in it. It runs as the server, outside the provider's sandbox,
+so it only opens files under the attachments directory or the calling bot's folder. pdf.js loads on
+first use to keep it off server startup.
+
 ## Telegram
 
 `apps/server/src/channels/TelegramChannel.ts` long-polls the Bot API from the host, so it needs no
