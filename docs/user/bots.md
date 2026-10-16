@@ -141,6 +141,11 @@ Only what you do while in control is recorded. Passwords and one-time codes are
 recorded as steps you do yourself, without their values. Afterwards the bot
 writes a skill it can repeat, with the details you entered turned into inputs.
 
+You can also hand a bot a step-by-step guide you already have, such as a PDF
+exported from Scribe. Attach it and ask, for example, "learn this as a skill".
+The bot reads each step, keeps the guide's screenshots with the skill, and
+follows them the next time.
+
 ## Skills
 
 Ask a bot to save something it just did as a skill, and it writes the steps to

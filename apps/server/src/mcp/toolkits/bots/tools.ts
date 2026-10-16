@@ -3,6 +3,7 @@ import * as Schema from "effect/Schema";
 import { Tool, Toolkit } from "effect/ai";
 
 import * as BotMessaging from "../../../bots/BotMessaging.ts";
+import * as GuideImport from "../../../bots/GuideImport.ts";
 import * as ThreadManagementService from "../../../orchestration-v2/ThreadManagementService.ts";
 import * as McpInvocationContext from "../../McpInvocationContext.ts";
 
@@ -46,4 +47,41 @@ const BotMessageTool = Tool.make("bot_message", {
   .annotate(Tool.Idempotent, false)
   .annotate(Tool.OpenWorld, true);
 
-export const BotsToolkit = Toolkit.make(BotMessageTool);
+const SkillImportGuideTool = Tool.make("skill_import_guide", {
+  description:
+    "Read a step-by-step guide PDF the user gave you, such as one exported from Scribe, to save it as a skill. Returns each page's text and saves the guide's screenshots as PNG files in the skill's folder, under guide/. Look at the screenshots for where each step happens, then write SKILL.md in that folder. The PDF must be a file the user attached or one in your own folder. Only works from a bot's conversation.",
+  parameters: Schema.Struct({
+    path: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(4_096)).annotate({
+      description: "The absolute path of the PDF.",
+    }),
+    skill: Schema.String.check(Schema.isPattern(GuideImport.SKILL_NAME_PATTERN)).annotate({
+      description:
+        "The skill's folder name: lowercase letters, digits, and dashes, such as file-expense. Screenshots saved there before by this tool are replaced.",
+    }),
+  }),
+  success: Schema.Struct({
+    skillFolder: Schema.String,
+    pages: Schema.Array(
+      Schema.Struct({
+        page: Schema.Number,
+        text: Schema.String,
+        images: Schema.Array(Schema.String),
+      }),
+    ),
+    truncated: Schema.Boolean,
+  }),
+  failure: OrchestratorMcpFailure,
+  failureMode: "return",
+  dependencies: [
+    McpInvocationContext.McpInvocationContext,
+    ThreadManagementService.ThreadManagementService,
+    GuideImport.GuideImport,
+  ],
+})
+  .annotate(Tool.Title, "Import a guide")
+  .annotate(Tool.Readonly, false)
+  .annotate(Tool.Destructive, false)
+  .annotate(Tool.Idempotent, true)
+  .annotate(Tool.OpenWorld, false);
+
+export const BotsToolkit = Toolkit.make(BotMessageTool, SkillImportGuideTool);

@@ -56,7 +56,8 @@ export type T3McpToolSummaryAction =
   | "html-render"
   | "app-list"
   | "app-call"
-  | "bot-message";
+  | "bot-message"
+  | "guide-import";
 
 export interface T3McpToolDefinition {
   readonly displayName: string;
@@ -298,6 +299,7 @@ const T3_MCP_TOOLS: Readonly<Record<string, T3McpToolDefinition>> = {
   app_tools_list: tool(["List", "Listing", "Listed", "connected app tools"], "app-list"),
   app_tool_call: tool(["Use", "Using", "Used", "a connected app"], "app-call"),
   bot_message: tool(["Message", "Messaging", "Messaged", "a bot"], "bot-message"),
+  skill_import_guide: tool(["Import", "Importing", "Imported", "a guide"], "guide-import"),
 };
 
 /**

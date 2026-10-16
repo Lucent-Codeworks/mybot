@@ -386,6 +386,9 @@ export function summarizeT3ToolCalls(
       label = phrase("Messaged", "message", quantity(bots, "bot"));
       break;
     }
+    case "guide-import":
+      label = phrase("Imported", "import", quantity(selected.length, "guide"));
+      break;
   }
   return { label, failedCount };
 }
