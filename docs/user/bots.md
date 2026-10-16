@@ -99,8 +99,9 @@ Each app shows how it connects:
 - **API key** apps ask for a key or token you create in the app's settings. The
   setup guide link in each app's form shows where.
 - **Runs on this computer** apps start a small helper program on the computer
-  running MyBot. They need Node.js, [uv](https://docs.astral.sh/uv/), or Docker
-  installed, as the app's form says. Apps marked **macOS** only work there.
+  running MyBot. MyBot downloads what they run on the first time you connect
+  one, so the first connect can take a minute; only apps whose form says so need
+  Docker installed. Apps marked **macOS** only work there.
 - **No sign-in** apps work right away.
 
 Apps marked **Community** use a helper made by the community rather than the

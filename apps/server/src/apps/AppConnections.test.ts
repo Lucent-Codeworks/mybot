@@ -12,10 +12,12 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import { FetchHttpClient } from "effect/http";
 
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 import * as ServerConfig from "../config.ts";
 import * as AppConnections from "./AppConnections.ts";
+import * as LocalRuntimes from "./LocalRuntimes.ts";
 
 const require = NodeModule.createRequire(import.meta.url);
 const sdk = (path: string) => JSON.stringify(require.resolve(`@modelcontextprotocol/sdk/${path}`));
@@ -88,8 +90,10 @@ const startHttpEchoApp = Effect.acquireRelease(
 );
 
 const layerTest = AppConnections.layer.pipe(
+  Layer.provideMerge(LocalRuntimes.layer),
   Layer.provideMerge(ServerSecretStore.layer),
   Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "t3-app-connections-" })),
+  Layer.provideMerge(FetchHttpClient.layer),
   Layer.provideMerge(NodeServices.layer),
 );
 

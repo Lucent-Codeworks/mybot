@@ -19,6 +19,7 @@ import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
 
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
+import * as LocalRuntimes from "./LocalRuntimes.ts";
 import {
   connectMcp,
   McpAuthorizationError,
@@ -70,7 +71,10 @@ const TokensJson = Schema.fromJsonString(Schema.Record(Schema.String, StoredToke
 const ClientsJson = Schema.fromJsonString(Schema.Record(Schema.String, OAuthClient));
 
 const CONNECT_TIMEOUT_MS = 20_000;
-/** A local app's first start downloads its package (npx, uvx, docker), which can take minutes. */
+/**
+ * A local app's first start downloads its package (npx, uvx, docker), which can take minutes.
+ * Setting up MyBot's own Node.js or uv before that has its own bound in LocalRuntimes.
+ */
 const LOCAL_CONNECT_TIMEOUT_MS = 3 * 60_000;
 const CALL_TIMEOUT_MS = 5 * 60_000;
 const SIGN_IN_TTL_MS = 10 * 60_000;
@@ -259,6 +263,7 @@ const closeClient = (connected: Connected) =>
 const make = Effect.gen(function* () {
   const secrets = yield* ServerSecretStore.ServerSecretStore;
   const platform = yield* HostProcess.Platform;
+  const runtimes = yield* LocalRuntimes.LocalRuntimes;
   const services = yield* Effect.context<never>();
   const runPromise = Effect.runPromiseWith(services);
   const writeLock = yield* Semaphore.make(1);
@@ -399,11 +404,24 @@ const make = Effect.gen(function* () {
     });
 
   const connectTo = (connection: StoredConnection) =>
-    connect(
-      connection,
-      platform,
-      usesSignIn(connection) ? accessTokensFor(connection.id) : undefined,
-    );
+    Effect.gen(function* () {
+      // npx and uvx resolve to MyBot's own runtimes at start time; the stored command stays.
+      const transport =
+        connection.transport.type === "stdio"
+          ? yield* runtimes
+              .prepare(connection.transport)
+              .pipe(
+                Effect.mapError(
+                  (error) => new AppConnectionError({ message: error.messageFor(connection.name) }),
+                ),
+              )
+          : connection.transport;
+      return yield* connect(
+        { ...connection, transport },
+        platform,
+        usesSignIn(connection) ? accessTokensFor(connection.id) : undefined,
+      );
+    });
 
   const connected = (connection: StoredConnection) =>
     Effect.gen(function* () {
