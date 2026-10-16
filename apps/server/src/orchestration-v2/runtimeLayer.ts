@@ -52,6 +52,7 @@ import * as ScheduledTaskService from "../scheduledTasks/ScheduledTaskService.ts
 import * as SecretRequests from "../secrets/SecretRequests.ts";
 import * as TelegramChannel from "../channels/TelegramChannel.ts";
 import * as AppConnections from "../apps/AppConnections.ts";
+import * as LocalRuntimes from "../apps/LocalRuntimes.ts";
 import * as BotMessaging from "../bots/BotMessaging.ts";
 import * as AutoReviewService from "./AutoReviewService.ts";
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
@@ -383,7 +384,7 @@ export const layerProduction = Layer.mergeAll(
   layerThreadLifecycleProvided,
   layerScheduledTaskProvided,
   layerTelegramChannelProvided,
-  AppConnections.layer,
+  AppConnections.layer.pipe(Layer.provide(LocalRuntimes.layer)),
   layerBotMessagingProvided,
   layerAutoReviewProvided,
   layerSecretRequestsProvided,

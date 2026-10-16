@@ -69,7 +69,7 @@ export interface AppPreset {
   /** Something the user should know before connecting, such as an access requirement. */
   readonly note?: string;
   readonly connection: AppConnectionKind;
-  /** What a local app needs installed on this computer. */
+  /** What a local app runs on. MyBot sets up Node.js and uv itself; Docker must be installed. */
   readonly requires?: "node" | "uv" | "docker";
   /** Only works on these operating systems. */
   readonly platforms?: ReadonlyArray<"darwin">;

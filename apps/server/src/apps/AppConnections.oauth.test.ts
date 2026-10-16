@@ -10,10 +10,12 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprot
 import * as Clock from "effect/Clock";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import { FetchHttpClient } from "effect/http";
 
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 import * as ServerConfig from "../config.ts";
 import * as AppConnections from "./AppConnections.ts";
+import * as LocalRuntimes from "./LocalRuntimes.ts";
 
 const REDIRECT_BASE = "http://127.0.0.1:3773";
 const CALLBACK = `${REDIRECT_BASE}/oauth/apps/callback`;
@@ -198,8 +200,10 @@ const later =
     );
 
 const layerTest = AppConnections.layer.pipe(
+  Layer.provideMerge(LocalRuntimes.layer),
   Layer.provideMerge(ServerSecretStore.layer),
   Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "t3-app-oauth-" })),
+  Layer.provideMerge(FetchHttpClient.layer),
   Layer.provideMerge(NodeServices.layer),
 );
 

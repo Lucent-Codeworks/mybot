@@ -118,8 +118,12 @@ const CONNECTION_LABEL = {
 export const connectionLabel = (preset: AppPreset): string =>
   preset.via ? VIA_LABEL[preset.via] : CONNECTION_LABEL[preset.connection];
 
-const RUNTIME_NAME = { node: "Node.js", uv: "uv", docker: "Docker" } as const;
+const REQUIREMENT_LABEL = {
+  node: "MyBot sets up Node.js the first time you connect (about 50 MB)",
+  uv: "MyBot sets up uv and Python the first time you connect (about 50 MB)",
+  docker: "Needs Docker on this computer",
+} as const;
 
-/** What a local app needs installed, or null. */
+/** What a local app runs on and whether the user installs it, or null. */
 export const requirementLabel = (preset: AppPreset): string | null =>
-  preset.requires ? `Needs ${RUNTIME_NAME[preset.requires]} on this computer` : null;
+  preset.requires ? REQUIREMENT_LABEL[preset.requires] : null;

@@ -67,6 +67,14 @@ because its query carries the code. A refused refresh drops the tokens and marks
 needs-sign-in rather than removing it. `packages/shared/src/appCatalog.ts` is the data-only list of
 presets the Add app dialog offers.
 
+Local apps saved as `npx` or `uvx` never run the machine's own Node.js or uv.
+[`LocalRuntimes.ts`](../../apps/server/src/apps/LocalRuntimes.ts) rewrites them at start time to a
+pinned Node.js and uv it downloads, checks against SHA-256s in the code, and unpacks into
+`<baseDir>/runtimes` (npm, uv, and uv's own Python cache there too). Most users have neither
+installed, an old system Node breaks current packages, and on Windows `npx` is a `.cmd` shim that
+cannot be spawned without a shell. Saved connections keep the plain command, so a new pin applies
+to them on the next start. Docker apps still use the machine's Docker.
+
 A group chat is a bot whose profile has `members`. Its block replaces the roster with a host role:
 it relays each message to member bots with `bot_message` and quotes their replies. Members stay
 ordinary bots in their own threads; group chats are left out of other bots' rosters and cannot
