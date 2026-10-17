@@ -233,6 +233,8 @@ const CORE_APPS: ReadonlyArray<AppPreset> = [
           MCP_EMAIL_SERVER_SMTP_HOST: "smtpHost",
           MCP_EMAIL_SERVER_SMTP_PORT: "smtpPort",
         }),
+        // The server refuses to send anywhere until recipients are allowed.
+        MCP_EMAIL_SERVER_ALLOWED_RECIPIENTS: "*",
         ...mailTls("IMAP", values.imapPort, "993"),
         ...mailTls("SMTP", values.smtpPort, "465"),
       },
