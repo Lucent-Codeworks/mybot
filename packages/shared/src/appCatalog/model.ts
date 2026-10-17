@@ -9,6 +9,7 @@ import type { AppConnectionAddInput, ProjectIconColor } from "@t3tools/contracts
 interface AppPresetFieldBase {
   readonly key: string;
   readonly label: string;
+  /** Where to find the value, in the provider's own words and menus. */
   readonly help?: string;
 }
 
@@ -24,6 +25,12 @@ export type AppPresetField =
       readonly optional?: boolean;
       readonly placeholder?: string;
       readonly default?: string;
+      /**
+       * The provider's page where the user creates or copies this value. Every
+       * credential needs one unless the value comes from the user's own system,
+       * such as a database URL.
+       */
+      readonly getAt?: string;
     })
   | (AppPresetFieldBase & {
       readonly kind: "select";
@@ -68,6 +75,8 @@ export interface AppPreset {
   readonly docsUrl: string;
   /** Something the user should know before connecting, such as an access requirement. */
   readonly note?: string;
+  /** How to set up the credentials when it takes more than copying a key, in order. */
+  readonly steps?: ReadonlyArray<string>;
   readonly connection: AppConnectionKind;
   /** What a local app runs on. MyBot sets up Node.js and uv itself; Docker must be installed. */
   readonly requires?: "node" | "uv" | "docker";
@@ -117,12 +126,13 @@ export const tokenOptional =
       ? { type: "http", url: tokenUrl, bearerToken: values[key], auth: "token" }
       : { type: "http", url, auth: otherwise };
 
-export const optionalKeyField = (help: string): AppPresetField => ({
+export const optionalKeyField = (help: string, getAt: string): AppPresetField => ({
   key: "apiKey",
   label: "API key",
   kind: "secret",
   optional: true,
   help,
+  getAt,
 });
 
 /** Env entries for the fields that have a value. */

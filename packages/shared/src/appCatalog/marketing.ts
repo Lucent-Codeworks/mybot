@@ -59,7 +59,8 @@ export const MARKETING_APPS: ReadonlyArray<AppPreset> = [
     fields: [
       {
         ...optionalKeyField(
-          "Leave empty to sign in with Brevo in your browser, or create an MCP token under Account → SMTP & API → API Keys.",
+          "Leave empty to sign in with Brevo. Or in Brevo, open Account → SMTP & API → API Keys → Generate a new API key, tick the MCP option, then copy it.",
+          "https://app.brevo.com/settings/keys/api",
         ),
         label: "MCP token",
       },
@@ -130,12 +131,18 @@ export const MARKETING_APPS: ReadonlyArray<AppPreset> = [
     official: false,
     keywords: ["blog", "newsletter", "publishing", "members"],
     fields: [
-      { key: "url", label: "Site URL", placeholder: "https://yourblog.com" },
+      {
+        key: "url",
+        label: "Site URL",
+        placeholder: "https://yourblog.com",
+        help: "Your Ghost site address, like https://yourblog.com. It also appears as API URL on your custom integration page.",
+      },
       {
         key: "apiKey",
         label: "Admin API key",
         kind: "secret",
-        help: "In Ghost Admin, go to Settings → Integrations and add a custom integration.",
+        help: "In Ghost Admin, go to Settings → Integrations → Add custom integration, name it, and copy the Admin API key.",
+        getAt: "https://ghost.org/integrations/custom-integrations/",
       },
     ],
     transport: (values) => ({
@@ -190,7 +197,8 @@ export const MARKETING_APPS: ReadonlyArray<AppPreset> = [
         key: "apiKey",
         label: "API key",
         kind: "secret",
-        help: "Create one in Mailgun under Settings → API Security.",
+        help: "In Mailgun, open Settings → API Security → Add new key, then copy it. Use an account API key, not a domain sending key.",
+        getAt: "https://app.mailgun.com/settings/api_security",
       },
       {
         key: "region",
@@ -201,6 +209,7 @@ export const MARKETING_APPS: ReadonlyArray<AppPreset> = [
           { value: "us", label: "US" },
           { value: "eu", label: "EU" },
         ],
+        help: "Choose EU if your Mailgun account is hosted in the EU, for example if you log in at app.eu.mailgun.com. Otherwise choose US.",
       },
     ],
     transport: (values) => ({
@@ -226,15 +235,24 @@ export const MARKETING_APPS: ReadonlyArray<AppPreset> = [
         key: "apiKey",
         label: "Server API token",
         kind: "secret",
-        help: "In Postmark, open your server and go to API Tokens.",
+        help: "In Postmark, open Servers → pick your server → API Tokens, then copy the Server API token.",
+        getAt:
+          "https://postmarkapp.com/support/article/1008-what-are-the-account-and-server-api-tokens",
       },
       {
         key: "sender",
         label: "Default sender",
         placeholder: "you@example.com",
-        help: "Must be a verified sender in Postmark.",
+        help: "An email address like you@yourdomain.com. It must be a confirmed Sender Signature or on a verified domain under Sender Signatures in Postmark.",
+        getAt: "https://account.postmarkapp.com/signature_domains",
       },
-      { key: "stream", label: "Message stream", default: "outbound" },
+      {
+        key: "stream",
+        label: "Message stream",
+        default: "outbound",
+        help: 'Usually "outbound", the default transactional stream. To check, open your server in Postmark and look at the stream ID under Message Streams.',
+        getAt: "https://postmarkapp.com/message-streams",
+      },
     ],
     transport: (values) => ({
       type: "stdio",
@@ -481,7 +499,9 @@ export const MARKETING_APPS: ReadonlyArray<AppPreset> = [
         key: "apiKey",
         label: "API token",
         kind: "secret",
-        help: "In your Clarity project, go to Settings → Data Export → Generate new API token.",
+        help: "In Clarity, open your project → Settings → Data Export → Generate new API token, give it a name, then copy it. You need to be a project admin.",
+        getAt:
+          "https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-data-export-api",
       },
     ],
     transport: (values) => ({
@@ -635,7 +655,8 @@ export const MARKETING_APPS: ReadonlyArray<AppPreset> = [
         key: "apiKey",
         label: "API key",
         kind: "secret",
-        help: "Create one in ElevenLabs under Developers → API Keys.",
+        help: "In ElevenLabs, open Developers → API Keys → Create API key, leave access unrestricted (or allow speech, voices and audio tools), then copy it.",
+        getAt: "https://elevenlabs.io/app/developers/api-keys",
       },
     ],
     transport: (values) => ({
