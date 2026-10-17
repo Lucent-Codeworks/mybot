@@ -121,7 +121,7 @@ export class ThreadLaunchService extends Context.Service<
       | ThreadManagement.ThreadManagementProviderInstanceDisabledError
     >;
   }
->()("t3/orchestration-v2/ThreadLaunchService") {}
+>()("mybot/orchestration-v2/ThreadLaunchService") {}
 
 const isThreadLaunchError = Schema.is(ThreadLaunchError);
 

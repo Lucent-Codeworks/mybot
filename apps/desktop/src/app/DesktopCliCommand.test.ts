@@ -85,7 +85,7 @@ const fakePowerShell = (initial: string) => {
   return { registry, spawner };
 };
 
-// The machine's own PATH may already hold a t3; each test sets the PATH it means.
+// The machine's own PATH may already hold a mybot; each test sets the PATH it means.
 const machinePath = process.env.PATH;
 beforeEach(() => {
   process.env.PATH = "";
@@ -101,40 +101,40 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       const path = yield* Path.Path;
       const home = yield* fs.makeTempDirectoryScoped();
       const command = yield* commandIn({ home });
-      const link = path.join(home, ".local", "bin", "t3");
+      const link = path.join(home, ".local", "bin", "mybot");
 
       expect(yield* command.state).toEqual({ supported: true, installedPath: null, onPath: false });
       // Install writes the launcher itself, even when no local backend ever did.
       const installed = yield* command.install;
       expect(installed.installedPath).toBe(link);
-      expect(yield* fs.readLink(link)).toBe(path.join(home, ".t3", "bin", "t3"));
+      expect(yield* fs.readLink(link)).toBe(path.join(home, ".t3", "bin", "mybot"));
       expect((yield* command.install).installedPath).toBe(link);
 
       expect((yield* command.uninstall).installedPath).toBeNull();
       expect(yield* fs.exists(link)).toBe(false);
       // The launcher itself stays for setup commands.
-      expect(yield* fs.exists(path.join(home, ".t3", "bin", "t3"))).toBe(true);
+      expect(yield* fs.exists(path.join(home, ".t3", "bin", "mybot"))).toBe(true);
     }).pipe(Effect.scoped),
   );
 
-  it.effect("never replaces or removes a t3 it did not create", () =>
+  it.effect("never replaces or removes a mybot it did not create", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const home = yield* fs.makeTempDirectoryScoped();
       const command = yield* commandIn({ home });
-      const theirs = path.join(home, ".local", "bin", "t3");
+      const theirs = path.join(home, ".local", "bin", "mybot");
       yield* fs.makeDirectory(path.dirname(theirs), { recursive: true });
-      yield* fs.writeFileString(theirs, "npm's t3\n");
+      yield* fs.writeFileString(theirs, "npm's mybot\n");
       // Even a broken link in the next folder is someone else's.
       yield* fs.makeDirectory(path.join(home, "bin"), { recursive: true });
-      yield* fs.symlink(path.join(home, "gone"), path.join(home, "bin", "t3"));
+      yield* fs.symlink(path.join(home, "gone"), path.join(home, "bin", "mybot"));
 
       const error = yield* Effect.flip(command.install);
-      expect(error.message).toContain("Another t3 command is already installed");
+      expect(error.message).toContain("Another mybot command is already installed");
       yield* command.uninstall;
-      expect(yield* fs.readFileString(theirs)).toBe("npm's t3\n");
-      expect(yield* fs.readLink(path.join(home, "bin", "t3"))).toBe(path.join(home, "gone"));
+      expect(yield* fs.readFileString(theirs)).toBe("npm's mybot\n");
+      expect(yield* fs.readLink(path.join(home, "bin", "mybot"))).toBe(path.join(home, "gone"));
     }).pipe(Effect.scoped),
   );
 
@@ -150,14 +150,14 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       expect((yield* after.state).installedPath).toBe(link);
       // Installing again points the link at this home's launcher.
       expect((yield* after.install).installedPath).toBe(link);
-      expect(yield* fs.readLink(link!)).toBe(path.join(home, "new-t3", "bin", "t3"));
+      expect(yield* fs.readLink(link!)).toBe(path.join(home, "new-t3", "bin", "mybot"));
       yield* after.uninstall;
-      expect(yield* fs.exists(path.join(home, ".local", "bin", "t3"))).toBe(false);
-      expect(yield* fs.exists(path.join(home, "bin", "t3"))).toBe(false);
+      expect(yield* fs.exists(path.join(home, ".local", "bin", "mybot"))).toBe(false);
+      expect(yield* fs.exists(path.join(home, "bin", "mybot"))).toBe(false);
     }).pipe(Effect.scoped),
   );
 
-  it.effect("does not read a large binary another t3 links to", () =>
+  it.effect("does not read a large binary another mybot links to", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
@@ -166,39 +166,135 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       const binary = path.join(home, "native-t3");
       yield* fs.writeFileString(binary, `${"\0".repeat(64 * 1024)}${DesktopCliShim.MARKER}`);
       yield* fs.makeDirectory(path.join(home, ".local", "bin"), { recursive: true });
-      yield* fs.symlink(binary, path.join(home, ".local", "bin", "t3"));
+      yield* fs.symlink(binary, path.join(home, ".local", "bin", "mybot"));
       const command = yield* commandIn({ home });
       expect((yield* command.state).installedPath).toBeNull();
       yield* command.uninstall;
-      expect(yield* fs.readLink(path.join(home, ".local", "bin", "t3"))).toBe(binary);
+      expect(yield* fs.readLink(path.join(home, ".local", "bin", "mybot"))).toBe(binary);
     }).pipe(Effect.scoped),
   );
 
-  it.effect("refuses to install behind another t3 that runs first", () =>
+  it.effect("refuses to install behind another mybot that runs first", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const home = yield* fs.makeTempDirectoryScoped();
       const shadow = path.join(home, "shadow");
       yield* fs.makeDirectory(shadow);
-      yield* fs.writeFileString(path.join(shadow, "t3"), "#!/bin/sh\n", { mode: 0o755 });
+      yield* fs.writeFileString(path.join(shadow, "mybot"), "#!/bin/sh\n", { mode: 0o755 });
       process.env.PATH = [shadow, path.join(home, ".local", "bin")].join(":");
 
       const command = yield* commandIn({ home });
-      const theirs = path.join(shadow, "t3");
+      const theirs = path.join(shadow, "mybot");
       expect((yield* command.state).shadowedBy).toBe(theirs);
       // A link behind it would never run, so nothing is created.
       const error = yield* Effect.flip(command.install);
       expect(error.message).toContain(theirs);
-      expect(yield* fs.exists(path.join(home, ".local", "bin", "t3"))).toBe(false);
+      expect(yield* fs.exists(path.join(home, ".local", "bin", "mybot"))).toBe(false);
 
       yield* fs.remove(theirs);
       const installed = yield* command.install;
       expect(installed).toMatchObject({
         onPath: true,
-        installedPath: path.join(home, ".local", "bin", "t3"),
+        installedPath: path.join(home, ".local", "bin", "mybot"),
       });
       expect(installed.shadowedBy).toBeUndefined();
+    }).pipe(Effect.scoped),
+  );
+
+  it.effect("replaces its own installed t3 command with mybot on start", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const home = yield* fs.makeTempDirectoryScoped();
+      const oldLauncher = path.join(home, ".t3", "bin", "t3");
+      const oldLink = path.join(home, ".local", "bin", "t3");
+      yield* fs.makeDirectory(path.dirname(oldLauncher), { recursive: true });
+      yield* fs.writeFileString(oldLauncher, `#!/bin/sh\n# ${DesktopCliShim.LEGACY_MARKER}\n`);
+      yield* fs.makeDirectory(path.dirname(oldLink), { recursive: true });
+      yield* fs.symlink(oldLauncher, oldLink);
+
+      const command = yield* commandIn({ home });
+
+      expect(yield* fs.exists(oldLink)).toBe(false);
+      expect(yield* fs.exists(oldLauncher)).toBe(false);
+      const link = path.join(home, ".local", "bin", "mybot");
+      expect((yield* command.state).installedPath).toBe(link);
+      expect(yield* fs.readLink(link)).toBe(path.join(home, ".t3", "bin", "mybot"));
+    }).pipe(Effect.scoped),
+  );
+
+  it.effect("leaves a t3 it cannot prove it wrote, such as T3 Code's", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const home = yield* fs.makeTempDirectoryScoped();
+      // T3 Code shares the T3 home and writes its own `t3` launcher there.
+      const t3CodeLauncher = path.join(home, ".t3", "bin", "t3");
+      const t3CodeContent =
+        "#!/bin/sh\n# Written by T3 Code: runs the desktop app's bundled t3 CLI.\n";
+      yield* fs.makeDirectory(path.dirname(t3CodeLauncher), { recursive: true });
+      yield* fs.writeFileString(t3CodeLauncher, t3CodeContent);
+      const t3CodeLink = path.join(home, ".local", "bin", "t3");
+      yield* fs.makeDirectory(path.dirname(t3CodeLink), { recursive: true });
+      yield* fs.symlink(t3CodeLauncher, t3CodeLink);
+      const npmT3 = path.join(home, "bin", "t3");
+      yield* fs.makeDirectory(path.dirname(npmT3), { recursive: true });
+      yield* fs.writeFileString(npmT3, "npm's t3\n");
+
+      const command = yield* commandIn({ home });
+      yield* command.uninstall;
+
+      expect(yield* fs.readFileString(t3CodeLauncher)).toBe(t3CodeContent);
+      expect(yield* fs.readLink(t3CodeLink)).toBe(t3CodeLauncher);
+      expect(yield* fs.readFileString(npmT3)).toBe("npm's t3\n");
+      // Nothing of ours was installed, so nothing replaces it.
+      expect((yield* command.state).installedPath).toBeNull();
+    }).pipe(Effect.scoped),
+  );
+
+  it.effect("Remove also takes out a leftover t3 link of its own", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const home = yield* fs.makeTempDirectoryScoped();
+      const command = yield* commandIn({ home });
+      // Left by a previous T3 home after this run's startup cleanup.
+      const oldLauncher = path.join(home, "old-t3", "bin", "t3");
+      yield* fs.makeDirectory(path.dirname(oldLauncher), { recursive: true });
+      yield* fs.writeFileString(oldLauncher, `#!/bin/sh\n# ${DesktopCliShim.LEGACY_MARKER}\n`);
+      const oldLink = path.join(home, "bin", "t3");
+      yield* fs.makeDirectory(path.dirname(oldLink), { recursive: true });
+      yield* fs.symlink(oldLauncher, oldLink);
+
+      yield* command.uninstall;
+      expect(yield* fs.exists(oldLink)).toBe(false);
+    }).pipe(Effect.scoped),
+  );
+
+  it.effect("replaces its own Windows t3.cmd with mybot.cmd on start", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const home = yield* fs.makeTempDirectoryScoped();
+      const bin = path.join(home, ".t3", "bin");
+      yield* fs.makeDirectory(bin, { recursive: true });
+      yield* fs.writeFileString(
+        path.join(bin, "t3.cmd"),
+        `@echo off\r\nrem ${DesktopCliShim.LEGACY_MARKER}\r\n`,
+      );
+      // Install had added the launcher folder to PATH, which is all that stays installed.
+      yield* fs.makeDirectory(path.join(home, ".t3", "userdata"), { recursive: true });
+      yield* fs.writeFileString(path.join(home, ".t3", "userdata", "cli-command-path-entry"), bin);
+      const { registry, spawner } = fakePowerShell(bin);
+
+      yield* commandIn({ home, platform: "win32" }, spawner);
+
+      expect(yield* fs.exists(path.join(bin, "t3.cmd"))).toBe(false);
+      expect(yield* fs.readFileString(path.join(bin, "mybot.cmd"))).toContain(
+        DesktopCliShim.MARKER,
+      );
+      expect(registry).toMatchObject({ path: bin, writes: 0 });
     }).pipe(Effect.scoped),
   );
 
@@ -218,7 +314,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       registry.failReads = false;
       const launcherDir = DesktopCliShim.launcherPath(
         environmentFor(yield* Path.Path, { home, baseDir: `${home}/.t3`, platform: "win32" }),
-      ).replace(/[\\/]t3\.cmd$/, "");
+      ).replace(/[\\/]mybot\.cmd$/, "");
       yield* command.install;
       expect(registry.path).toBe(`${userPath};${launcherDir}`);
       yield* command.uninstall;

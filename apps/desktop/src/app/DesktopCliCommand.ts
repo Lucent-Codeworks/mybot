@@ -1,4 +1,5 @@
 import type { DesktopCliCommandState } from "@t3tools/contracts";
+import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -11,13 +12,21 @@ import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 
 import * as DesktopCliShim from "./DesktopCliShim.ts";
 import * as DesktopEnvironment from "./DesktopEnvironment.ts";
+import { makeComponentLogger } from "./DesktopObservability.ts";
 
-// Settings → Install `t3` command, like VS Code's "Install 'code' command".
+const { logInfo, logWarning } = makeComponentLogger("desktop-cli-command");
+
+// Settings → Install `mybot` command, like VS Code's "Install 'code' command".
 // The app's launcher (see DesktopCliShim) lives in the T3 home and is off PATH
 // by default. Installing links it into a folder on the user's PATH, or on
 // Windows adds the launcher's folder to the user's PATH. Removing undoes only
 // what installing did: a link that points at one of the app's launchers, or a
 // PATH entry the app recorded adding.
+//
+// The command used to be `t3`. On start the app removes its own `t3` launcher
+// and links (proved by DesktopCliShim.LEGACY_MARKER, never by name or path,
+// since T3 Code writes a `t3` into the same T3 home) and installs `mybot` in
+// their place when the old command was installed.
 
 export class DesktopCliCommandError extends Schema.TaggedError<DesktopCliCommandError>()(
   "DesktopCliCommandError",
@@ -80,7 +89,9 @@ export const make = Effect.gen(function* () {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
   const path = environment.path;
   const windows = environment.platform === "win32";
+  const command = DesktopCliShim.COMMAND;
   const launcher = DesktopCliShim.launcherPath(environment);
+  const legacyLauncher = DesktopCliShim.legacyLauncherPath(environment);
   const binDirectory = path.dirname(launcher);
   /** Records that Install added `binDirectory` to the Windows PATH, so Remove takes out only that. */
   const ownedPathMarker = path.join(environment.stateDir, "cli-command-path-entry");
@@ -93,20 +104,24 @@ export const make = Effect.gen(function* () {
       Effect.orElseSucceed(() => false),
     );
 
+  /** A launcher file the app wrote, by its marker. Launchers are a few KB; never read a large binary. */
+  const carriesMarker = (file: string, marker: string) =>
+    Effect.gen(function* () {
+      const info = yield* fs.stat(file);
+      if (info.type !== "File" || Number(info.size) > 16_384) return false;
+      return (yield* fs.readFileString(file)).includes(marker);
+    }).pipe(Effect.orElseSucceed(() => false));
+
   /**
    * A link to one of the app's launchers, by the marker the launcher carries.
    * This also finds links made under a previous T3 home, so Remove can clean
    * them up and Install does not add a second.
    */
-  const isOurLink = (link: string) =>
-    Effect.gen(function* () {
-      yield* fs.readLink(link);
-      // The launcher is a few KB; never read a large binary another `t3` links to.
-      const info = yield* fs.stat(link);
-      if (info.type !== "File" || Number(info.size) > 16_384) return false;
-      const content = yield* fs.readFileString(link);
-      return content.includes(DesktopCliShim.MARKER);
-    }).pipe(Effect.orElseSucceed(() => false));
+  const isOurLink = (link: string, marker = DesktopCliShim.MARKER) =>
+    fs.readLink(link).pipe(
+      Effect.flatMap(() => carriesMarker(link, marker)),
+      Effect.orElseSucceed(() => false),
+    );
 
   const powershell = (env: Record<string, string>) =>
     Effect.scoped(
@@ -137,16 +152,16 @@ export const make = Effect.gen(function* () {
       Effect.mapError(() => fail("Could not update your PATH.")),
     );
 
-  /** The `t3` a new shell runs, by PATH order, or none. */
+  /** The `mybot` a new shell runs, by PATH order, or none. */
   const firstOnPath = Effect.gen(function* () {
     for (const directory of pathEntries(process.env.PATH, ":")) {
-      const candidate = path.join(directory, "t3");
+      const candidate = path.join(directory, command);
       if (yield* exists(candidate)) return Option.some(candidate);
     }
     return Option.none<string>();
   });
 
-  /** The `t3` a new shell runs when it is not this app's, on Unix. */
+  /** The `mybot` a new shell runs when it is not this app's, on Unix. */
   const foreignFirstOnPath = Effect.gen(function* () {
     if (windows) return Option.none<string>();
     const first = yield* firstOnPath;
@@ -164,7 +179,7 @@ export const make = Effect.gen(function* () {
         : Option.none<string>();
     }
     for (const directory of unixCandidates(environment.homeDirectory, environment.platform)) {
-      const link = path.join(directory, "t3");
+      const link = path.join(directory, command);
       if (yield* isOurLink(link)) return Option.some(link);
     }
     return Option.none<string>();
@@ -181,7 +196,7 @@ export const make = Effect.gen(function* () {
       return { supported: true, installedPath: null, onPath: false, ...shadow };
     }
     // On Windows only terminals opened after the change see it. On Unix the
-    // first `t3` on PATH must be ours; a `t3` earlier on PATH would shadow it.
+    // first `mybot` on PATH must be ours; a `mybot` earlier on PATH would shadow it.
     const first = yield* firstOnPath;
     const onPath = windows || (Option.isSome(first) && (yield* isOurLink(first.value)));
     return { supported: true, installedPath: installed.value, onPath, ...shadow };
@@ -193,14 +208,14 @@ export const make = Effect.gen(function* () {
     Effect.provideService(FileSystem.FileSystem, fs),
     Effect.flatMap(
       Option.match({
-        onNone: () => Effect.fail(fail(`Could not set up the t3 launcher at ${launcher}.`)),
+        onNone: () => Effect.fail(fail(`Could not set up the mybot launcher at ${launcher}.`)),
         onSome: () => Effect.void,
       }),
     ),
   );
 
   const install: DesktopCliCommand["Service"]["install"] = Effect.gen(function* () {
-    if (!environment.isPackaged) return yield* fail("The t3 command needs an installed app.");
+    if (!environment.isPackaged) return yield* fail("The mybot command needs an installed app.");
     yield* ensureLauncher;
     if (windows) {
       const entries = pathEntries(yield* readUserPath, ";");
@@ -208,7 +223,7 @@ export const make = Effect.gen(function* () {
         yield* writeUserPath([...entries, binDirectory].join(";"));
         yield* fs
           .writeFileString(ownedPathMarker, `${binDirectory}\n`)
-          .pipe(Effect.mapError(() => fail("Added t3 to your PATH but could not record it.")));
+          .pipe(Effect.mapError(() => fail("Added mybot to your PATH but could not record it.")));
       }
       return yield* state;
     }
@@ -221,11 +236,11 @@ export const make = Effect.gen(function* () {
         .remove(existing.value)
         .pipe(Effect.mapError(() => fail(`Could not replace ${existing.value}.`)));
     }
-    // A link behind another `t3` never runs, so installing one would only hide the problem.
+    // A link behind another `mybot` never runs, so installing one would only hide the problem.
     const shadowedBy = yield* foreignFirstOnPath;
     if (Option.isSome(shadowedBy)) {
       return yield* fail(
-        `Another t3 at ${shadowedBy.value} runs first in a new terminal. Remove it, or run the launcher directly at ${launcher}.`,
+        `Another mybot at ${shadowedBy.value} runs first in a new terminal. Remove it, or run the launcher directly at ${launcher}.`,
       );
     }
     const onPath = pathEntries(process.env.PATH, ":");
@@ -235,7 +250,7 @@ export const make = Effect.gen(function* () {
       ...candidates.filter((candidate) => onPath.includes(candidate)),
       ...candidates.filter((candidate) => !onPath.includes(candidate)),
     ]) {
-      const link = path.join(directory, "t3");
+      const link = path.join(directory, command);
       const created = (yield* exists(directory))
         ? yield* writableDirectory(directory)
         : yield* fs.makeDirectory(directory, { recursive: true }).pipe(
@@ -251,7 +266,7 @@ export const make = Effect.gen(function* () {
       if (linked) return yield* state;
     }
     return yield* fail(
-      `Another t3 command is already installed, or no folder on your PATH is writable. Run the launcher directly at ${launcher}.`,
+      `Another mybot command is already installed, or no folder on your PATH is writable. Run the launcher directly at ${launcher}.`,
     );
   }).pipe(Effect.withSpan("desktop.cliCommand.install"));
 
@@ -266,13 +281,54 @@ export const make = Effect.gen(function* () {
       return yield* state;
     }
     for (const directory of unixCandidates(environment.homeDirectory, environment.platform)) {
-      const link = path.join(directory, "t3");
-      if (yield* isOurLink(link)) {
-        yield* fs.remove(link).pipe(Effect.mapError(() => fail(`Could not remove ${link}.`)));
+      // A leftover `t3` link of ours goes too.
+      for (const [name, marker] of [
+        [command, DesktopCliShim.MARKER],
+        [DesktopCliShim.LEGACY_COMMAND, DesktopCliShim.LEGACY_MARKER],
+      ] as const) {
+        const link = path.join(directory, name);
+        if (yield* isOurLink(link, marker)) {
+          yield* fs.remove(link).pipe(Effect.mapError(() => fail(`Could not remove ${link}.`)));
+        }
       }
     }
     return yield* state;
   }).pipe(Effect.withSpan("desktop.cliCommand.uninstall"));
+
+  /**
+   * Replaces the app's own `t3` command with `mybot`: removes our `t3` links
+   * and launcher, then installs `mybot` if `t3` was installed. On Windows the
+   * PATH entry is the launcher folder, which now holds `mybot.cmd`.
+   */
+  const migrateLegacyCommand = Effect.gen(function* () {
+    if (!environment.isPackaged) return;
+    let wasInstalled = false;
+    if (!windows) {
+      // Links first: they are proved ours by reading through to the old launcher.
+      for (const directory of unixCandidates(environment.homeDirectory, environment.platform)) {
+        const link = path.join(directory, DesktopCliShim.LEGACY_COMMAND);
+        if (!(yield* isOurLink(link, DesktopCliShim.LEGACY_MARKER))) continue;
+        yield* fs.remove(link);
+        yield* logInfo("removed the old t3 command link", { link });
+        wasInstalled = true;
+      }
+    }
+    if (yield* carriesMarker(legacyLauncher, DesktopCliShim.LEGACY_MARKER)) {
+      yield* fs.remove(legacyLauncher);
+      yield* logInfo("removed the old t3 launcher", { launcher: legacyLauncher });
+      if (windows) wasInstalled = yield* exists(ownedPathMarker);
+    }
+    if (wasInstalled) {
+      if (windows) yield* ensureLauncher;
+      else if (Option.isNone(yield* installedAt)) yield* install;
+    }
+  }).pipe(
+    Effect.catchCause((cause) =>
+      logWarning("could not replace the old t3 command", { cause: Cause.pretty(cause) }),
+    ),
+    Effect.withSpan("desktop.cliCommand.migrateLegacy"),
+  );
+  yield* migrateLegacyCommand;
 
   return DesktopCliCommand.of({ state, install, uninstall });
 });

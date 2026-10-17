@@ -52,7 +52,7 @@ export function useUpdateEverything(localUpdateVersion: string | null) {
   const machines = useAtomValue(machinesAtom);
   const behindServers = collectServerUpdateTargets(machines, targetVersion);
   // A desktop-managed server installs from its own app's update feed, so only
-  // servers that download t3 from npm wait for npm to publish the version.
+  // servers that download mybot from npm wait for npm to publish the version.
   const needsNpm = behindServers.some((server) => server.selfUpdate !== "desktop-managed");
   const published = useNpmReleasePublished(needsNpm ? targetVersion : null);
   const servers = published

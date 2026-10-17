@@ -83,7 +83,7 @@ export class ManagedProjectFolders extends Context.Service<
       NamedProjectError
     >;
   }
->()("t3/project/ManagedProjectFolders") {}
+>()("mybot/project/ManagedProjectFolders") {}
 
 // Tailwind 600 shades: dark enough for white initials on every hue.
 const ICON_BACKGROUNDS = [

@@ -46,7 +46,7 @@ export class ProjectEnrichmentService extends Context.Service<
     /** Invalidate workspace-derived metadata. */
     readonly invalidate: (workspaceRoots: Iterable<string>) => Effect.Effect<void>;
   }
->()("t3/project/ProjectEnrichmentService") {}
+>()("mybot/project/ProjectEnrichmentService") {}
 
 function availableValue<A, E>(cached: Option.Option<Exit.Exit<A, E>>): A | null {
   return Option.match(cached, {

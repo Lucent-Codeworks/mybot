@@ -1523,6 +1523,54 @@ it.live("a lesson records only what the user does while they control the tab", (
   ).pipe(Effect.provide(layer)),
 );
 
+it.live("a tab the user opens mid-lesson is shown to them and joins the lesson", () =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      const { browser, broker, tabId } = yield* ready;
+      yield* broker.invoke({
+        scope,
+        tabId,
+        operation: "teachStart",
+        input: { goal: "pay a bill" },
+      });
+      const report = clipboardBinding!;
+      const viewer = yield* browser.attachViewer(viewerInput(tabId, true));
+      yield* viewer.input({ type: "takeControl" });
+      const popup = makeContext();
+      contexts[0]!.page.emit("popup", popup.page);
+      let shown = yield* Queue.take(viewer.output);
+      while (shown._tag !== "popup") shown = yield* Queue.take(viewer.output);
+      const manager = yield* Manager.PreviewManager;
+      const sessions = (yield* manager.list({ threadId: scope.thread.threadId })).sessions;
+      const popupTabId = shown.tabId;
+      expect(sessions.find((session) => session.tabId === popupTabId)?.reveal).not.toBe(false);
+      // The person lands in control of the new tab, as in a browser.
+      const popupViewer = yield* browser.attachViewer(viewerInput(popupTabId, true));
+      let control = yield* Queue.take(popupViewer.output);
+      while (control._tag !== "control") control = yield* Queue.take(popupViewer.output);
+      expect(control).toMatchObject({ controller: "you" });
+      report({ page: popup.page }, { kind: "click", target: 'button "Pay"' });
+      const lesson = yield* broker.invoke<PreviewAutomationTeachResult>({
+        scope,
+        tabId,
+        operation: "teachStop",
+        input: {},
+      });
+      expect(lesson.steps).toEqual(["Opened a new tab", 'Clicked button "Pay"']);
+      // Ending the lesson ends it in every tab it spans.
+      const again = yield* broker
+        .invoke<PreviewAutomationTeachResult>({
+          scope,
+          tabId: popupTabId,
+          operation: "teachStop",
+          input: {},
+        })
+        .pipe(Effect.flip);
+      expect(again).toMatchObject({ reason: expect.stringContaining("No lesson is running") });
+    }),
+  ).pipe(Effect.provide(layer)),
+);
+
 it.live(
   "a bot's tab runs headless in its profile even while a desktop window could render it",
   () =>

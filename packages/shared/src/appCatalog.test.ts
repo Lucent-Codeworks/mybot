@@ -224,6 +224,25 @@ describe("the app catalog", () => {
     });
   });
 
+  it("lets email send to anyone and read and save attachments", () => {
+    const email = findAppPreset("email")!;
+    const result = buildAppConnectionInput(email, {
+      address: "me@example.com",
+      password: "p",
+      imapHost: "imap.example.com",
+      imapPort: "993",
+      smtpHost: "smtp.example.com",
+      smtpPort: "465",
+    });
+    expect("input" in result && result.input.transport).toMatchObject({
+      env: {
+        MCP_EMAIL_SERVER_ALLOWED_RECIPIENTS: "*",
+        MCP_EMAIL_SERVER_ENABLE_ATTACHMENT_CONTENT: "true",
+        MCP_EMAIL_SERVER_ENABLE_ATTACHMENT_DOWNLOAD: "true",
+      },
+    });
+  });
+
   it("connects Paddle sandbox keys to the sandbox server", () => {
     const paddle = findAppPreset("paddle")!;
     const sandbox = buildAppConnectionInput(paddle, { apiKey: "pdl_sdbx_apikey_1" });

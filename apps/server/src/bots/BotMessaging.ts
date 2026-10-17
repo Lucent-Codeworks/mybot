@@ -85,7 +85,7 @@ export class BotMessaging extends Context.Service<
   {
     readonly send: (input: BotMessageInput) => Effect.Effect<BotMessageResult, BotMessagingError>;
   }
->()("t3/bots/BotMessaging") {}
+>()("mybot/bots/BotMessaging") {}
 
 interface WaitEdge {
   readonly id: number;

@@ -97,7 +97,7 @@ const readField = (stdout: string, field: string) => {
   return line.slice(field.length + 1).trim();
 };
 
-// Stands in for the release's self-contained `t3` executable: the install
+// Stands in for the release's self-contained `mybot` executable: the install
 // script only asks it for `--version`.
 const SERVER_ENTRY_SOURCE = '#!/bin/sh\necho "t3code wsl runtime test server 0.0.0"\n';
 
@@ -199,8 +199,8 @@ describe("WSL runtime cache", () => {
     expect(script).not.toContain('rm -rf "$runtime_lock"');
     expect(script).toContain('mv -T "$runtime_root" "$runtime_stale"');
     expect(script).toContain('mktemp -d "$runtime_parent/.1.2.3-x64.tmp.XXXXXX"');
-    // The release archive wraps everything in one `t3-<version>-linux-x64/`
-    // directory; stripping it puts the executable at `$runtime_root/t3`.
+    // The release archive wraps everything in one `mybot-<version>-linux-x64/`
+    // directory; stripping it puts the executable at `$runtime_root/mybot`.
     expect(script).toContain(
       "tar -xzf '/mnt/c/Program Files/MyBot/wsl-runtime.tar.gz' -C \"$runtime_tmp\" --strip-components=1",
     );
@@ -284,7 +284,7 @@ describe("WSL runtime cache", () => {
     // The same proof the SSH runner and CLI installers use: executable, and
     // `--version` exits 0. That is what decides arch and loadability, so no
     // separate native probe is needed.
-    expect(script).toContain('  [ -x "$1/t3" ] && "$1/t3" --version >/dev/null 2>&1');
+    expect(script).toContain('  [ -x "$1/mybot" ] && "$1/mybot" --version >/dev/null 2>&1');
 
     // Readiness gates the short-circuit, so a cache whose executable broke
     // reinstalls from the archive instead of being reused forever.
@@ -296,7 +296,7 @@ describe("WSL runtime cache", () => {
     expect(readinessDefined).toBeLessThan(readyShortCircuit);
   });
 
-  // A swapped or half-written `t3` can still exist and even still answer
+  // A swapped or half-written `mybot` can still exist and even still answer
   // `--version`, and launch then runs something this install never verified.
   // The digest the install records is what turns that into a miss.
   it("re-hashes the executable against the digest the install recorded", () => {
@@ -306,7 +306,7 @@ describe("WSL runtime cache", () => {
       "b".repeat(64),
     );
 
-    expect(script).toContain(`  sha256sum "$1/t3" 2>/dev/null | cut -d ' ' -f 1`);
+    expect(script).toContain(`  sha256sum "$1/mybot" 2>/dev/null | cut -d ' ' -f 1`);
     expect(script).toContain(
       '    [ "$recorded_entry_digest" = "$(runtime_server_entry_digest "$runtime_root")" ]',
     );
@@ -370,7 +370,7 @@ describe("WSL runtime cache", () => {
   it("never deletes a runtime another backend is running from", () => {
     const script = buildWslRuntimePruneScript("1.2.3/x64");
 
-    // The running backend's argv holds `<runtime>/t3`, so
+    // The running backend's argv holds `<runtime>/mybot`, so
     // the process itself is the lease and exiting releases it. Nothing has to be
     // registered up front, which is what makes this cover backends already
     // running from an older version that knows nothing about pruning.
@@ -431,12 +431,12 @@ describe.skipIf(posixShellRunner === null)("WSL runtime install script (executed
         "work=$(mktemp -d)",
         // Mirrors the release archive: one top-level versioned directory that
         // holds the executable and its native addons.
-        'stage="$work/stage/t3-0.0.0-linux-x64"',
+        'stage="$work/stage/mybot-0.0.0-linux-x64"',
         'mkdir -p "$stage/node_modules/node-pty/build/Release" "$work/home"',
-        `printf '%s' ${sh(SERVER_ENTRY_SOURCE)} > "$stage/t3"`,
-        'chmod +x "$stage/t3"',
+        `printf '%s' ${sh(SERVER_ENTRY_SOURCE)} > "$stage/mybot"`,
+        'chmod +x "$stage/mybot"',
         `printf '%s' 'pty-native-payload' > "$stage/node_modules/node-pty/build/Release/pty.node"`,
-        `tar -czf "$work/wsl-runtime.tar.gz" -C "$work/stage" t3-0.0.0-linux-x64`,
+        `tar -czf "$work/wsl-runtime.tar.gz" -C "$work/stage" mybot-0.0.0-linux-x64`,
         `printf 'work:%s\\n' "$work"`,
         `printf 'archiveSha:%s\\n' "$(sha256sum "$work/wsl-runtime.tar.gz" | cut -d ' ' -f 1)"`,
       ].join("\n"),
@@ -463,7 +463,7 @@ describe.skipIf(posixShellRunner === null)("WSL runtime install script (executed
       runtimeId,
       runtimeParent: `${work}/home/.t3/wsl-runtime`,
       runtimeRoot: `${work}/home/.t3/wsl-runtime/${runtimeId}`,
-      serverEntry: `${work}/home/.t3/wsl-runtime/${runtimeId}/t3`,
+      serverEntry: `${work}/home/.t3/wsl-runtime/${runtimeId}/mybot`,
       installScript,
       install: (archive?: string, sha?: string) => runShell(installScript(archive, sha)),
     };
@@ -555,6 +555,21 @@ describe.skipIf(posixShellRunner === null)("WSL runtime install script (executed
     const fixture = createFixture();
     expect(fixture.install().status).toBe(0);
     expect(runShell(`set -eu\n: > ${sh(fixture.serverEntry)}`).status).toBe(0);
+
+    const repaired = fixture.install();
+
+    expect(repaired.status, repaired.stderr).toBe(0);
+    expect(parseWslRuntimeRoot(repaired.stdout)).toBe(fixture.runtimeRoot);
+    const restored = runShell(`set -eu\ncat ${sh(fixture.serverEntry)}`);
+    expect(restored.stdout).toBe(SERVER_ENTRY_SOURCE);
+  });
+
+  it("reinstalls a cache from before the command was renamed to mybot", () => {
+    const fixture = createFixture();
+    expect(fixture.install().status).toBe(0);
+    // An older runtime: same ready marker, but its executable is `t3`.
+    const rename = `set -eu\nmv ${sh(fixture.serverEntry)} ${sh(`${fixture.runtimeRoot}/t3`)}`;
+    expect(runShell(rename).status).toBe(0);
 
     const repaired = fixture.install();
 
@@ -734,7 +749,7 @@ describe.skipIf(posixShellRunner === null)("WSL runtime install script (executed
         `runtime_root=${sh(fixture.runtimeRoot)}`,
         `runtime_parent=${sh(fixture.runtimeParent)}`,
         'rm "$runtime_root/.t3code-wsl-runtime-ready"',
-        holdRuntimeBusy('"$runtime_root/t3"'),
+        holdRuntimeBusy('"$runtime_root/mybot"'),
         fixture.installScript(),
         'stale=$(find "$runtime_parent" -maxdepth 1 -type d -name ".sha256-*.stale.*" -print -quit)',
         'test -n "$stale"',
@@ -768,7 +783,7 @@ describe.skipIf(posixShellRunner === null)("WSL runtime install script (executed
         'touch -d "4 minutes ago" "$runtime_parent/sha256-active"',
         'touch -d "3 minutes ago" "$runtime_parent/sha256-old"',
         'touch -d "2 minutes ago" "$runtime_parent/sha256-locked"',
-        holdRuntimeBusy('"$runtime_parent/sha256-active/t3"'),
+        holdRuntimeBusy('"$runtime_parent/sha256-active/mybot"'),
         holdInstallLock('"$runtime_parent/.sha256-locked.install.lock"'),
         `HOME="$home"`,
         "export HOME",

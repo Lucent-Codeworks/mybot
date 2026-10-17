@@ -1245,7 +1245,7 @@ export interface DesktopBridge {
     install: () => Promise<DesktopCliCommandState>;
     uninstall: () => Promise<DesktopCliCommandState>;
   };
-  /** Present when the desktop shell accepts `t3 app` activation requests. */
+  /** Present when the desktop shell accepts `mybot app` activation requests. */
   /**
    * Web links the OS opens with MyBot as the default browser (macOS). The
    * renderer reports when it listens; links queue in the main process until then.

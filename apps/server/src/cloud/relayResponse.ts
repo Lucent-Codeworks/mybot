@@ -42,7 +42,7 @@ function recoveryHint(error: RelayProtectedError): string {
     case "RelayEnvironmentLinkLimitExceededError":
       return "Unlink an unused environment in MyBot Connect, then restart MyBot on this machine.";
     case "RelayAuthInvalidError":
-      return "Run `t3 connect login` to check this machine's authorization. If the stored credential was revoked, sign out with `t3 connect logout`, then run `t3 connect` again. Restart MyBot after signing in.";
+      return "Run `mybot connect login` to check this machine's authorization. If the stored credential was revoked, sign out with `mybot connect logout`, then run `mybot connect` again. Restart MyBot after signing in.";
     case "RelayEnvironmentLinkProofExpiredError":
     case "RelayEnvironmentLinkProofInvalidError":
       return "Check this machine's date and time, update MyBot, then restart it.";
