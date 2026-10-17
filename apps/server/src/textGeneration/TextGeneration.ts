@@ -19,7 +19,7 @@ export type {
  * provider instance named by the request's model selection.
  */
 export class TextGeneration extends Context.Service<TextGeneration, ProviderTextGeneration>()(
-  "t3/textGeneration/TextGeneration",
+  "mybot/textGeneration/TextGeneration",
 ) {}
 
 /** @public Service construction is part of the canonical Effect module API. */

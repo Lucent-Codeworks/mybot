@@ -97,7 +97,7 @@ export function useServerUpdate() {
         description:
           selfUpdate === "desktop-managed"
             ? `Desktop app relaunched on ${result.value.targetVersion}.`
-            : `Reconnected on t3@${result.value.targetVersion}.`,
+            : `Reconnected on mybot@${result.value.targetVersion}.`,
       });
     } catch (error) {
       toastManager.add({
@@ -242,8 +242,8 @@ export function ServerUpdateAction({
           installation?.kind === "npm-global" ? "Update command copied" : "Relaunch command copied",
         description:
           installation?.kind === "npm-global"
-            ? `Run \`${command}\` on ${serverLabel}, then restart t3 with your usual options.`
-            : `Stop t3 on ${serverLabel}, then relaunch with \`${command}\` using the same subcommand and options. This does not update an installed t3 command.`,
+            ? `Run \`${command}\` on ${serverLabel}, then restart mybot with your usual options.`
+            : `Stop mybot on ${serverLabel}, then relaunch with \`${command}\` using the same subcommand and options. This does not update an installed mybot command.`,
       });
     },
     onError: (error) => {
@@ -376,7 +376,7 @@ export function OutdatedServerUpdateAction({
       toastManager.add({
         type: "success",
         title: `${serverLabel} updated`,
-        description: `Reconnected on t3@${result.value.targetVersion}.`,
+        description: `Reconnected on mybot@${result.value.targetVersion}.`,
       });
     } catch (error) {
       toastManager.add({

@@ -248,7 +248,7 @@ export class LocalRuntimes extends Context.Service<
       transport: StdioTransport,
     ) => Effect.Effect<StdioTransport, LocalRuntimeSetupError>;
   }
->()("t3/apps/LocalRuntimes") {}
+>()("mybot/apps/LocalRuntimes") {}
 
 export interface LocalRuntimesOptions {
   readonly runtimesDir: string;

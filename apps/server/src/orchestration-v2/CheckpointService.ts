@@ -97,7 +97,7 @@ export interface CheckpointServiceV2Shape {
 export class CheckpointServiceV2 extends Context.Service<
   CheckpointServiceV2,
   CheckpointServiceV2Shape
->()("t3/orchestration-v2/CheckpointService/CheckpointServiceV2") {}
+>()("mybot/orchestration-v2/CheckpointService/CheckpointServiceV2") {}
 
 /**
  * Checkpoints mark conversation positions only; nothing is snapshotted on disk.

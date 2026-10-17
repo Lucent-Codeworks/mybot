@@ -6,15 +6,25 @@ import * as Option from "effect/Option";
 import * as DesktopEnvironment from "./DesktopEnvironment.ts";
 import { makeComponentLogger } from "./DesktopObservability.ts";
 
-// A desktop install puts no `t3` on PATH, so commands the server asks a person
-// to run (`sudo t3 browser setup`) had nothing to call. The app keeps a small
+// A desktop install puts no `mybot` on PATH, so commands the server asks a person
+// to run (`sudo mybot browser setup`) had nothing to call. The app keeps a small
 // launcher for its bundled CLI in the T3 home, which is never on PATH and so
-// never shadows another `t3`, and the server names it by absolute path in those
+// never shadows another `mybot`, and the server names it by absolute path in those
 // commands through T3CODE_CLI_PATH. An AppImage mounts somewhere new each run,
 // so its launcher mounts the AppImage itself instead of pointing into it.
 const { logInfo, logWarning } = makeComponentLogger("desktop-cli-shim");
 
-export const MARKER = "Written by MyBot: runs the desktop app's bundled t3 CLI.";
+/** The command the launcher provides. */
+export const COMMAND = "mybot";
+export const MARKER = "Written by MyBot: runs the desktop app's bundled mybot CLI.";
+
+/**
+ * The launcher this app wrote while its command was still `t3`. Only this exact
+ * marker proves a `t3` is ours: T3 Code shares the T3 home and writes its own
+ * `t3` launcher there under a different marker.
+ */
+export const LEGACY_COMMAND = "t3";
+export const LEGACY_MARKER = "Written by MyBot: runs the desktop app's bundled t3 CLI.";
 
 /** Server entry inside the app, relative to its server root (an asar archive when packaged). */
 const SERVER_ENTRY = "apps/server/dist/bin.mjs";
@@ -125,13 +135,23 @@ export const renderCliShim = (input: {
   ].join("\n");
 };
 
-/** Where the packaged app keeps its launcher: `<T3 home>/bin/t3`, `t3.cmd` on Windows. */
-export const launcherPath = (environment: DesktopEnvironment.DesktopEnvironment["Service"]) =>
+const launcherFor = (
+  environment: DesktopEnvironment.DesktopEnvironment["Service"],
+  command: string,
+) =>
   environment.path.join(
     environment.baseDir,
     "bin",
-    environment.platform === "win32" ? "t3.cmd" : "t3",
+    environment.platform === "win32" ? `${command}.cmd` : command,
   );
+
+/** Where the packaged app keeps its launcher: `<T3 home>/bin/mybot`, `mybot.cmd` on Windows. */
+export const launcherPath = (environment: DesktopEnvironment.DesktopEnvironment["Service"]) =>
+  launcherFor(environment, COMMAND);
+
+/** Where the app kept its launcher while the command was `t3`. */
+export const legacyLauncherPath = (environment: DesktopEnvironment.DesktopEnvironment["Service"]) =>
+  launcherFor(environment, LEGACY_COMMAND);
 
 /**
  * Writes the packaged app's launcher to `<T3 home>/bin` and returns its path
@@ -162,23 +182,23 @@ export const install = Effect.gen(function* () {
   return yield* Effect.gen(function* () {
     const existing = yield* fs.readFileString(shimPath).pipe(Effect.option);
     if (Option.isSome(existing) && !existing.value.includes(MARKER)) {
-      // Someone else's file; leave it, and let commands fall back to plain `t3`.
-      yield* logWarning("leaving a t3 launcher the app did not write", { shimPath });
+      // Someone else's file; leave it, and let commands fall back to plain `mybot`.
+      yield* logWarning("leaving a mybot launcher the app did not write", { shimPath });
       return Option.none<string>();
     }
     if (Option.getOrUndefined(existing) !== content) {
       yield* fs.makeDirectory(path.dirname(shimPath), { recursive: true });
-      // Written beside the launcher and renamed over it, so a running `t3` never reads half a file.
+      // Written beside the launcher and renamed over it, so a running `mybot` never reads half a file.
       const staging = `${shimPath}.${process.pid}.tmp`;
       yield* fs.writeFileString(staging, content, { mode: 0o755 });
       yield* fs.rename(staging, shimPath);
-      yield* logInfo("installed t3 launcher", { shimPath });
+      yield* logInfo("installed mybot launcher", { shimPath });
     }
     return Option.some(shimPath);
   }).pipe(
-    // Best-effort: nothing here may block the backend's start; commands then fall back to plain `t3`.
+    // Best-effort: nothing here may block the backend's start; commands then fall back to plain `mybot`.
     Effect.catchCause((cause) =>
-      logWarning("could not install t3 launcher", { shimPath, cause: Cause.pretty(cause) }).pipe(
+      logWarning("could not install mybot launcher", { shimPath, cause: Cause.pretty(cause) }).pipe(
         Effect.as(Option.none<string>()),
       ),
     ),

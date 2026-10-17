@@ -260,7 +260,7 @@ export class ServerBrowser extends Context.Service<
      */
     readonly reportProfiles: (input: PreviewReportProfilesInput) => Effect.Effect<void>;
   }
->()("t3/preview/ServerBrowser") {}
+>()("mybot/preview/ServerBrowser") {}
 
 interface ViewerState {
   readonly id: string;

@@ -64,7 +64,7 @@ export class GuideImport extends Context.Service<
       readonly skill: string;
     }) => Effect.Effect<GuideImportResult, GuideImportError>;
   }
->()("t3/bots/GuideImport") {}
+>()("mybot/bots/GuideImport") {}
 
 /** Encodes raw 8-bit gray, RGB, or RGBA pixels as a PNG. */
 export function encodePng(image: {

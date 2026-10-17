@@ -139,7 +139,7 @@ export class AppConnections extends Context.Service<
       args: Record<string, unknown>,
     ) => Effect.Effect<AppToolResult, AppConnectionError>;
   }
->()("t3/apps/AppConnections") {}
+>()("mybot/apps/AppConnections") {}
 
 /** The app refused MyBot until the user signs in (again). */
 class AppNeedsSignIn extends Schema.TaggedError<AppNeedsSignIn>()("AppNeedsSignIn", {

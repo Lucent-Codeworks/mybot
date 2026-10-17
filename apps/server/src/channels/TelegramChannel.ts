@@ -120,7 +120,7 @@ export class TelegramChannel extends Context.Service<
       projectId: ProjectId,
     ) => Effect.Effect<BotTelegramStatus, BotTelegramError>;
   }
->()("t3/channels/TelegramChannel") {}
+>()("mybot/channels/TelegramChannel") {}
 
 const make = Effect.gen(function* () {
   const http = yield* HttpClient.HttpClient;

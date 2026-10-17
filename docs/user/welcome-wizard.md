@@ -13,9 +13,9 @@ browser.
 You can add more computers before continuing:
 
 - **Add a computer** connects directly to a server on your network or tailnet.
-  Start the server with `t3 serve`, then run `t3 pair --tailscale` and paste
-  the pairing link. You can also run `t3 serve --host <address>` and use
-  `t3 pair` when the server is already reachable on your network.
+  Start the server with `mybot serve`, then run `mybot pair --tailscale` and paste
+  the pairing link. You can also run `mybot serve --host <address>` and use
+  `mybot pair` when the server is already reachable on your network.
 
 Saved computers and computers discovered through T3 Connect are selected by
 default. Uncheck any you do not want to set up; this does not disconnect them.

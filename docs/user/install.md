@@ -26,11 +26,11 @@ Closing the window on Windows or Linux keeps MyBot running in the system tray,
 so bots and their routines keep working. Choose **Quit MyBot** from the tray
 icon to stop it.
 
-### The `t3` command
+### The `mybot` command
 
-The desktop app includes the `t3` command-line tool. To run it from any
+The desktop app includes the `mybot` command-line tool. To run it from any
 terminal, open **Settings → General → About** and choose **Install** next to
-**t3 command**. On macOS and Linux it adds a `t3` link to a folder on your
+**mybot command**. On macOS and Linux it adds a `mybot` link to a folder on your
 `PATH`; on Windows it adds the app's command folder to your `PATH`. Open a new
 terminal afterwards. **Remove** takes it off again.
 
