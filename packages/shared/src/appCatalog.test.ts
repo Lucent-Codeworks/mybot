@@ -241,4 +241,23 @@ describe("the app catalog", () => {
     const signIn = buildAppConnectionInput(paddle, {});
     expect("input" in signIn && signIn.input.transport).toMatchObject({ auth: "oauth" });
   });
+
+  it("connects Instacart development keys to Instacart's test server", () => {
+    const instacart = findAppPreset("instacart")!;
+    const development = buildAppConnectionInput(instacart, {
+      apiKey: "k",
+      environment: "development",
+    });
+    expect("input" in development && development.input.transport).toMatchObject({
+      url: "https://mcp.dev.instacart.tools/mcp",
+      bearerToken: "k",
+    });
+    const production = buildAppConnectionInput(instacart, {
+      apiKey: "k",
+      environment: "production",
+    });
+    expect("input" in production && production.input.transport).toMatchObject({
+      url: "https://mcp.instacart.com/mcp",
+    });
+  });
 });
