@@ -223,4 +223,22 @@ describe("the app catalog", () => {
       },
     });
   });
+
+  it("connects Paddle sandbox keys to the sandbox server", () => {
+    const paddle = findAppPreset("paddle")!;
+    const sandbox = buildAppConnectionInput(paddle, { apiKey: "pdl_sdbx_apikey_1" });
+    expect("input" in sandbox && sandbox.input.transport).toEqual({
+      type: "http",
+      url: "https://sandbox-mcp.paddle.com/mcp",
+      bearerToken: "pdl_sdbx_apikey_1",
+      auth: "token",
+    });
+    const live = buildAppConnectionInput(paddle, { apiKey: "pdl_live_apikey_1" });
+    expect("input" in live && live.input.transport).toMatchObject({
+      url: "https://mcp.paddle.com/mcp",
+      auth: "token",
+    });
+    const signIn = buildAppConnectionInput(paddle, {});
+    expect("input" in signIn && signIn.input.transport).toMatchObject({ auth: "oauth" });
+  });
 });
