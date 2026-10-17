@@ -151,7 +151,7 @@ export type ThemeDefinition = Readonly<{
  * Search uses amber across built-ins to separate matches from accent-tinted
  * inline code. The current match uses a stronger gold with dark text.
  */
-export const T3_CODE_LIGHT_THEME_COLORS: ThemeColors = {
+export const MYBOT_LIGHT_THEME_COLORS: ThemeColors = {
   searchMatchBackground: "#ffde8b",
   searchMatchForeground: "#21180a",
   searchMatchActiveBackground: "#eea52b",
@@ -215,7 +215,7 @@ export const T3_CODE_LIGHT_THEME_COLORS: ThemeColors = {
   terminalScrollbarHover: "#bdbdbd",
 };
 
-export const T3_CODE_DARK_THEME_COLORS: ThemeColors = {
+export const MYBOT_DARK_THEME_COLORS: ThemeColors = {
   searchMatchBackground: "#8c6c1f",
   searchMatchForeground: "#f5f5f5",
   searchMatchActiveBackground: "#eea52b",

@@ -67,7 +67,7 @@ export class DesktopSshEnvironment extends Context.Service<
 >()("@mybot/desktop/ssh/DesktopSshEnvironment") {}
 
 export interface DesktopSshEnvironmentLayerOptions {
-  readonly resolveCliRunner?: Effect.Effect<SshTunnel.RemoteT3RunnerOptions>;
+  readonly resolveCliRunner?: Effect.Effect<SshTunnel.RemoteMyBotRunnerOptions>;
 }
 
 function discoverDesktopSshHostsEffect(input?: { readonly homeDir?: string }) {

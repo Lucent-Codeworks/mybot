@@ -1,11 +1,11 @@
-export type T3McpToolLogo = "t3-code";
+export type MyBotMcpToolLogo = "t3-code";
 
-export interface T3McpToolPresentation {
+export interface MyBotMcpToolPresentation {
   readonly displayName: string;
-  readonly logo: T3McpToolLogo;
+  readonly logo: MyBotMcpToolLogo;
 }
 
-export type T3McpToolSummaryAction =
+export type MyBotMcpToolSummaryAction =
   | "capabilities"
   | "delegate"
   | "task-status"
@@ -59,26 +59,26 @@ export type T3McpToolSummaryAction =
   | "bot-message"
   | "guide-import";
 
-export interface T3McpToolDefinition {
+export interface MyBotMcpToolDefinition {
   readonly displayName: string;
   readonly labels: readonly [action: string, running: string, completed: string, detail: string];
   readonly icon: "t3-code" | "browser" | "device";
-  readonly summaryAction: T3McpToolSummaryAction;
+  readonly summaryAction: MyBotMcpToolSummaryAction;
 }
 
 function tool(
-  labels: T3McpToolDefinition["labels"],
-  summaryAction: T3McpToolSummaryAction,
-  icon: T3McpToolDefinition["icon"] = "t3-code",
+  labels: MyBotMcpToolDefinition["labels"],
+  summaryAction: MyBotMcpToolSummaryAction,
+  icon: MyBotMcpToolDefinition["icon"] = "t3-code",
   displayName = `${labels[0]} ${labels[3]}`,
-): T3McpToolDefinition {
+): MyBotMcpToolDefinition {
   return { displayName, labels, icon, summaryAction };
 }
 
 const T3_MCP_SERVER_ALIASES = new Set(["t3-code", "t3_code", "t3code"]);
 
 // Cards, activity rows, summaries, and provider identity recovery share this inventory.
-const T3_MCP_TOOLS: Readonly<Record<string, T3McpToolDefinition>> = {
+const MYBOT_MCP_TOOLS: Readonly<Record<string, MyBotMcpToolDefinition>> = {
   orchestrator_capabilities: tool(
     ["Get", "Getting", "Got", "orchestration capabilities"],
     "capabilities",
@@ -306,7 +306,7 @@ const T3_MCP_TOOLS: Readonly<Record<string, T3McpToolDefinition>> = {
  * The MyBot orchestration tool inventory, used to gate loose name matching on
  * both the server (ACP MCP identity recovery) and the client (logo branding).
  */
-export const T3_MCP_TOOL_NAMES: ReadonlySet<string> = new Set(Object.keys(T3_MCP_TOOLS));
+export const MYBOT_MCP_TOOL_NAMES: ReadonlySet<string> = new Set(Object.keys(MYBOT_MCP_TOOLS));
 
 function normalizeT3McpToolLabel(value: string): string {
   return value.replace(/\s+(?:complete|completed)\s*$/i, "").trim();
@@ -319,7 +319,7 @@ function normalizeT3McpToolLabel(value: string): string {
  * agents. The prefix match is deliberately loose because the display-name
  * inventory is the real gate; unknown tools stay on the generic renderer.
  */
-function resolveT3McpToolName(value: string): string | null {
+function resolveMyBotMcpToolName(value: string): string | null {
   const label = normalizeT3McpToolLabel(value);
   const mcpMatch = /^mcp__(?<server>.+?)__(?<tool>.+)$/i.exec(label);
   if (mcpMatch?.groups) {
@@ -340,40 +340,40 @@ function resolveT3McpToolName(value: string): string | null {
 
   const prefixed = /^(?:mcp[-_]{1,2})?t3[-_ ]?code(?:__|[-_.:/ ])(?<tool>.+)$/i.exec(label);
   const candidate = prefixed?.groups?.tool ?? label;
-  if (Object.hasOwn(T3_MCP_TOOLS, candidate)) return candidate;
+  if (Object.hasOwn(MYBOT_MCP_TOOLS, candidate)) return candidate;
   // OpenCode 2 registers one server per thread, `t3-code-<thread>`, and joins
   // it to the tool with `_`. Thread ids can hold `_` too, so take the longest
   // known tool name that ends the label.
   if (!/^t3-code-/i.test(label)) return null;
   let longest: string | null = null;
-  for (const tool of Object.keys(T3_MCP_TOOLS)) {
+  for (const tool of Object.keys(MYBOT_MCP_TOOLS)) {
     if (label.endsWith(`_${tool}`) && tool.length > (longest?.length ?? 0)) longest = tool;
   }
   return longest;
 }
 
 /** The bare MyBot tool name (`html_render`) for any provider's spelling of it. */
-export function resolveT3McpToolId(toolName: string | null | undefined): string | null {
-  const name = toolName == null ? null : resolveT3McpToolName(toolName);
-  return name !== null && Object.hasOwn(T3_MCP_TOOLS, name) ? name : null;
+export function resolveMyBotMcpToolId(toolName: string | null | undefined): string | null {
+  const name = toolName == null ? null : resolveMyBotMcpToolName(toolName);
+  return name !== null && Object.hasOwn(MYBOT_MCP_TOOLS, name) ? name : null;
 }
 
-export function resolveT3McpToolDefinition(
+export function resolveMyBotMcpToolDefinition(
   toolName: string | null | undefined,
-): T3McpToolDefinition | null {
-  const name = toolName == null ? null : resolveT3McpToolName(toolName);
-  return name !== null && Object.hasOwn(T3_MCP_TOOLS, name) ? T3_MCP_TOOLS[name]! : null;
+): MyBotMcpToolDefinition | null {
+  const name = toolName == null ? null : resolveMyBotMcpToolName(toolName);
+  return name !== null && Object.hasOwn(MYBOT_MCP_TOOLS, name) ? MYBOT_MCP_TOOLS[name]! : null;
 }
 
-export function resolveT3McpToolPresentation(
+export function resolveMyBotMcpToolPresentation(
   toolName: string | null | undefined,
-): T3McpToolPresentation | null {
-  const definition = resolveT3McpToolDefinition(toolName);
+): MyBotMcpToolPresentation | null {
+  const definition = resolveMyBotMcpToolDefinition(toolName);
   return definition === null ? null : { displayName: definition.displayName, logo: "t3-code" };
 }
 
-export function resolveT3McpToolSummaryAction(
+export function resolveMyBotMcpToolSummaryAction(
   toolName: string | null | undefined,
-): T3McpToolSummaryAction | null {
-  return resolveT3McpToolDefinition(toolName)?.summaryAction ?? null;
+): MyBotMcpToolSummaryAction | null {
+  return resolveMyBotMcpToolDefinition(toolName)?.summaryAction ?? null;
 }

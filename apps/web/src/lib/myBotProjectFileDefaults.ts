@@ -1,5 +1,9 @@
-import { T3_PROJECT_FILE_NAME, type EnvironmentId, type T3ProjectFile } from "@mybot/contracts";
-import { parseT3ProjectFile } from "@mybot/shared/t3ProjectFile";
+import {
+  MYBOT_PROJECT_FILE_NAME,
+  type EnvironmentId,
+  type MyBotProjectFile,
+} from "@mybot/contracts";
+import { parseMyBotProjectFile } from "@mybot/shared/myBotProjectFile";
 import { executeAtomQuery } from "@mybot/client-runtime/state/runtime";
 
 import {
@@ -21,18 +25,18 @@ import { appAtomRegistry } from "~/rpc/atomRegistry";
 export async function readMyBotProjectFile(
   environmentId: EnvironmentId,
   workspaceRoot: string,
-): Promise<T3ProjectFile | null> {
+): Promise<MyBotProjectFile | null> {
   const result = await executeAtomQuery(
     appAtomRegistry,
-    getProjectFileQueryAtom(environmentId, workspaceRoot, T3_PROJECT_FILE_NAME),
+    getProjectFileQueryAtom(environmentId, workspaceRoot, MYBOT_PROJECT_FILE_NAME),
     { reportDefect: false, reportFailure: false },
   );
   const data = resolveProjectFileQueryData(
     environmentId,
     workspaceRoot,
-    T3_PROJECT_FILE_NAME,
+    MYBOT_PROJECT_FILE_NAME,
     result._tag === "Success" ? result.value : null,
   );
   if (data === null || data.truncated) return null;
-  return parseT3ProjectFile(data.contents);
+  return parseMyBotProjectFile(data.contents);
 }

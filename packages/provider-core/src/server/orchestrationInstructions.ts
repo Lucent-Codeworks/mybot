@@ -1,6 +1,6 @@
 import type { ProviderInteractionMode } from "@mybot/contracts";
 
-export const T3_CODE_ORCHESTRATION_INSTRUCTIONS = `
+export const MYBOT_ORCHESTRATION_INSTRUCTIONS = `
 
 ## MyBot orchestration
 
@@ -79,7 +79,7 @@ export function myBotAcpPromptWithInstructions(input: {
       ? T3_CODE_ACP_PLAN_MODE_INSTRUCTIONS
       : T3_CODE_ACP_DEFAULT_MODE_INSTRUCTIONS,
     ...(input.state.hasMyBotMcp
-      ? [T3_CODE_BROWSER_TOOL_INSTRUCTIONS.trim(), T3_CODE_ORCHESTRATION_INSTRUCTIONS.trim()]
+      ? [T3_CODE_BROWSER_TOOL_INSTRUCTIONS.trim(), MYBOT_ORCHESTRATION_INSTRUCTIONS.trim()]
       : []),
   ];
   return `<t3_code_instructions>\n${instructions.join("\n\n")}\n</t3_code_instructions>\n\n<user_request>\n${input.prompt}\n</user_request>`;
@@ -91,7 +91,7 @@ export function myBotAcpPromptWithInstructions(input: {
  * mistaken for text authored by the user.
  */
 function prependMyBotOrchestrationInstructions(prompt: string): string {
-  return `<t3_code_orchestration_instructions>${T3_CODE_ORCHESTRATION_INSTRUCTIONS.trim()}</t3_code_orchestration_instructions>\n\n<user_request>\n${prompt}\n</user_request>`;
+  return `<t3_code_orchestration_instructions>${MYBOT_ORCHESTRATION_INSTRUCTIONS.trim()}</t3_code_orchestration_instructions>\n\n<user_request>\n${prompt}\n</user_request>`;
 }
 
 export function myBotOrchestrationPromptForFirstRun(input: {
@@ -105,5 +105,5 @@ export function myBotOrchestrationPromptForFirstRun(input: {
 }
 
 export function myBotOrchestrationSystemPrompt(hasMyBotMcp: boolean): string | undefined {
-  return hasMyBotMcp ? T3_CODE_ORCHESTRATION_INSTRUCTIONS : undefined;
+  return hasMyBotMcp ? MYBOT_ORCHESTRATION_INSTRUCTIONS : undefined;
 }

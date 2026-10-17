@@ -1,4 +1,4 @@
-import type { T3McpToolSummaryAction } from "@mybot/shared/t3McpToolPresentation";
+import type { MyBotMcpToolSummaryAction } from "@mybot/shared/myBotMcpToolPresentation";
 
 export interface MyBotToolSummaryCall {
   readonly input: unknown;
@@ -82,7 +82,7 @@ function quantity(count: number, noun: string, plural = `${noun}s`): string {
 
 /** Counts successful effects separately from failed or unfinished tool calls. */
 export function summarizeMyBotToolCalls(
-  action: T3McpToolSummaryAction,
+  action: MyBotMcpToolSummaryAction,
   calls: ReadonlyArray<MyBotToolSummaryCall>,
 ): { label: string; failedCount: number } {
   const results = calls.map((call) => {

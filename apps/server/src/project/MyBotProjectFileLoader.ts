@@ -16,10 +16,10 @@ import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 
-import { T3_PROJECT_FILE_NAME, type T3ProjectFile } from "@mybot/contracts";
-import { T3ProjectFileFromJson } from "@mybot/shared/t3ProjectFile";
+import { MYBOT_PROJECT_FILE_NAME, type MyBotProjectFile } from "@mybot/contracts";
+import { MyBotProjectFileFromJson } from "@mybot/shared/myBotProjectFile";
 
-const decodeT3ProjectFileJson = Schema.decodeEffect(T3ProjectFileFromJson);
+const decodeT3ProjectFileJson = Schema.decodeEffect(MyBotProjectFileFromJson);
 
 export class MyBotProjectFileLoadError extends Schema.TaggedError<MyBotProjectFileLoadError>()(
   "MyBotProjectFileLoadError",
@@ -31,7 +31,7 @@ export class MyBotProjectFileLoadError extends Schema.TaggedError<MyBotProjectFi
   },
 ) {
   override get message(): string {
-    return `Failed to ${this.operation} ${T3_PROJECT_FILE_NAME} at ${this.filePath}.`;
+    return `Failed to ${this.operation} ${MYBOT_PROJECT_FILE_NAME} at ${this.filePath}.`;
   }
 }
 
@@ -45,7 +45,7 @@ export class MyBotProjectFileLoader extends Context.Service<
      * Never fails: missing, unreadable, or invalid files resolve to
      * `Option.none` (invalid files are logged as warnings).
      */
-    readonly load: (workspaceRoot: string) => Effect.Effect<Option.Option<T3ProjectFile>>;
+    readonly load: (workspaceRoot: string) => Effect.Effect<Option.Option<MyBotProjectFile>>;
   }
 >()("mybot/project/MyBotProjectFileLoader") {}
 
@@ -66,7 +66,7 @@ export const make = Effect.gen(function* () {
 
   const load: MyBotProjectFileLoader["Service"]["load"] = Effect.fn("MyBotProjectFileLoader.load")(
     function* (workspaceRoot) {
-      const filePath = path.join(workspaceRoot, T3_PROJECT_FILE_NAME);
+      const filePath = path.join(workspaceRoot, MYBOT_PROJECT_FILE_NAME);
       const raw = yield* fileSystem.readFileString(filePath).pipe(
         Effect.asSome,
         Effect.catchTags({
@@ -84,7 +84,7 @@ export const make = Effect.gen(function* () {
         }),
       );
       if (Option.isNone(raw)) {
-        return Option.none<T3ProjectFile>();
+        return Option.none<MyBotProjectFile>();
       }
       return yield* decodeT3ProjectFileJson(raw.value).pipe(
         Effect.asSome,
@@ -97,7 +97,7 @@ export const make = Effect.gen(function* () {
                 filePath,
                 cause: error,
               }),
-            ).pipe(Effect.as(Option.none<T3ProjectFile>())),
+            ).pipe(Effect.as(Option.none<MyBotProjectFile>())),
         }),
       );
     },

@@ -131,7 +131,7 @@ import {
 } from "../../provider/claudeUsageLimits.ts";
 import type { ManagedServerProvider } from "@mybot/provider-core/server/snapshot";
 import { mergeProviderInstanceEnvironment } from "@mybot/provider-core/server/instanceEnvironment";
-import { T3_CODE_ORCHESTRATION_INSTRUCTIONS } from "@mybot/provider-core/server/orchestrationInstructions";
+import { MYBOT_ORCHESTRATION_INSTRUCTIONS } from "@mybot/provider-core/server/orchestrationInstructions";
 import {
   buildBotInstructions,
   buildRuntimeInstructions,
@@ -1058,7 +1058,7 @@ export function makeClaudeQueryOptions(input: {
       preset: "claude_code" as const,
       append:
         buildRuntimeInstructions({ harness: "Claude Code", bot: input.bot }) +
-        (input.mcpServers === undefined ? "" : T3_CODE_ORCHESTRATION_INSTRUCTIONS),
+        (input.mcpServers === undefined ? "" : MYBOT_ORCHESTRATION_INSTRUCTIONS),
     },
     ...(Object.keys(extraArgs).length === 0 ? {} : { extraArgs }),
   };

@@ -2,16 +2,16 @@ import * as Schema from "effect/Schema";
 import { describe, expect, it } from "vite-plus/test";
 
 import {
-  buildT3ProjectFileJsonSchema,
-  parseT3ProjectFile,
-  T3ProjectFileFromJson,
-} from "./t3ProjectFile.ts";
+  buildMyBotProjectFileJsonSchema,
+  parseMyBotProjectFile,
+  MyBotProjectFileFromJson,
+} from "./myBotProjectFile.ts";
 
-const decodeJson = Schema.decodeUnknownSync(T3ProjectFileFromJson);
+const decodeJson = Schema.decodeUnknownSync(MyBotProjectFileFromJson);
 
-describe("buildT3ProjectFileJsonSchema", () => {
+describe("buildMyBotProjectFileJsonSchema", () => {
   it("emits a draft 2020-12 schema with the published $id", () => {
-    const schema = buildT3ProjectFileJsonSchema();
+    const schema = buildMyBotProjectFileJsonSchema();
 
     expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
     expect(schema.$id).toBe("https://t3.codes/schema/t3.json");
@@ -20,7 +20,7 @@ describe("buildT3ProjectFileJsonSchema", () => {
   });
 
   it("documents every supported field", () => {
-    const schema = buildT3ProjectFileJsonSchema() as {
+    const schema = buildMyBotProjectFileJsonSchema() as {
       properties: Record<
         string,
         {
@@ -47,12 +47,12 @@ describe("buildT3ProjectFileJsonSchema", () => {
   });
 
   it("stays JSON-serializable", () => {
-    const schema = buildT3ProjectFileJsonSchema();
+    const schema = buildMyBotProjectFileJsonSchema();
     expect(JSON.parse(JSON.stringify(schema))).toEqual(schema);
   });
 });
 
-describe("T3ProjectFileFromJson", () => {
+describe("MyBotProjectFileFromJson", () => {
   it("decodes lenient JSONC with comments and trailing commas", () => {
     const decoded = decodeJson(`{
       // team scripts
@@ -71,15 +71,15 @@ describe("T3ProjectFileFromJson", () => {
   });
 });
 
-describe("parseT3ProjectFile", () => {
+describe("parseMyBotProjectFile", () => {
   it("returns the decoded file for valid contents", () => {
-    expect(parseT3ProjectFile('{ "iconPath": "assets/logo.svg" }')).toEqual({
+    expect(parseMyBotProjectFile('{ "iconPath": "assets/logo.svg" }')).toEqual({
       iconPath: "assets/logo.svg",
     });
   });
 
   it("returns null for malformed or invalid contents", () => {
-    expect(parseT3ProjectFile("{ not json")).toBeNull();
-    expect(parseT3ProjectFile('{ "scripts": [{ "name": "Dev" }] }')).toBeNull();
+    expect(parseMyBotProjectFile("{ not json")).toBeNull();
+    expect(parseMyBotProjectFile('{ "scripts": [{ "name": "Dev" }] }')).toBeNull();
   });
 });

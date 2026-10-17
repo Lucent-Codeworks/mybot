@@ -9,10 +9,10 @@ import {
   type ThreadId,
 } from "@mybot/contracts";
 import {
-  resolveT3McpToolDefinition,
-  type T3McpToolDefinition,
-  type T3McpToolSummaryAction,
-} from "@mybot/shared/t3McpToolPresentation";
+  resolveMyBotMcpToolDefinition,
+  type MyBotMcpToolDefinition,
+  type MyBotMcpToolSummaryAction,
+} from "@mybot/shared/myBotMcpToolPresentation";
 import { classifyMarkdownImageSource } from "@mybot/client-runtime/markdown-images";
 import { resolveMediaSource } from "@mybot/client-runtime/media-source";
 import { isWorkspaceImagePreviewPath } from "@mybot/shared/filePreview";
@@ -118,7 +118,7 @@ function workEntryToolName(
     return `${data.server}.${data.tool}`;
   }
   if (typeof data?.toolName === "string") return data.toolName;
-  return resolveT3McpToolDefinition(entry.toolTitle) ? entry.toolTitle : entry.label;
+  return resolveMyBotMcpToolDefinition(entry.toolTitle) ? entry.toolTitle : entry.label;
 }
 
 function workEntryToolOutput(
@@ -132,7 +132,7 @@ function workEntryToolOutput(
 }
 
 function resolveMyBotMcpToolPresentation(
-  definition: T3McpToolDefinition | null,
+  definition: MyBotMcpToolDefinition | null,
   status: string | undefined,
 ) {
   if (!definition) return null;
@@ -173,7 +173,7 @@ export function resolveWorkEntryToolPresentation(
   >,
   fallbackStatus?: "inProgress" | "completed",
 ) {
-  const definition = resolveT3McpToolDefinition(workEntryToolName(entry));
+  const definition = resolveMyBotMcpToolDefinition(workEntryToolName(entry));
   const status = entry.toolLifecycleStatus ?? fallbackStatus;
   return resolveMyBotMcpToolPresentation(
     definition,
@@ -342,7 +342,7 @@ function workEntryIndicatesToolFailureFromOutput(
   }
   if (!workLogEntryIsToolLike(entry)) return false;
   if (
-    resolveT3McpToolDefinition(workEntryToolName(entry)) &&
+    resolveMyBotMcpToolDefinition(workEntryToolName(entry)) &&
     myBotToolResultIndicatesFailure(workEntryToolOutput(entry))
   ) {
     return true;
@@ -556,7 +556,7 @@ function myBotToolSummaryCall(entry: WorkLogPresentationEntry): MyBotToolSummary
   };
 }
 
-function summaryActionPriority(action: ToolGroupAction | T3McpToolSummaryAction): number {
+function summaryActionPriority(action: ToolGroupAction | MyBotMcpToolSummaryAction): number {
   switch (action) {
     case "command":
     case "edit":
@@ -613,16 +613,17 @@ export function summarizeToolGroup(entries: ReadonlyArray<WorkLogPresentationEnt
   }
   entries = toolEntries;
   const groups = new Map<
-    ToolGroupAction | T3McpToolSummaryAction,
+    ToolGroupAction | MyBotMcpToolSummaryAction,
     {
       action: ToolGroupAction;
-      myBotAction: T3McpToolSummaryAction | null;
+      myBotAction: MyBotMcpToolSummaryAction | null;
       entries: WorkLogPresentationEntry[];
     }
   >();
   const sources = new Map<string, ToolActivitySource>();
   for (const entry of entries) {
-    const myBotAction = resolveT3McpToolDefinition(workEntryToolName(entry))?.summaryAction ?? null;
+    const myBotAction =
+      resolveMyBotMcpToolDefinition(workEntryToolName(entry))?.summaryAction ?? null;
     if (entry.toolSource && myBotAction === null) {
       sources.set(entry.toolSource.key, entry.toolSource);
       continue;
@@ -669,7 +670,7 @@ export function summarizeToolGroup(entries: ReadonlyArray<WorkLogPresentationEnt
   const sourcedCount = entries.filter(
     (entry) =>
       entry.toolSource !== undefined &&
-      resolveT3McpToolDefinition(workEntryToolName(entry)) === null,
+      resolveMyBotMcpToolDefinition(workEntryToolName(entry)) === null,
   ).length;
   const remainingCount =
     entries.length - sourcedCount - selected.reduce((count, group) => count + group.count, 0);

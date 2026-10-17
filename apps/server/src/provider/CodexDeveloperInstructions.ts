@@ -4,7 +4,7 @@ import { buildRuntimeInstructions } from "@mybot/provider-core/server/runtimeIns
 
 import {
   T3_CODE_BROWSER_TOOL_INSTRUCTIONS,
-  T3_CODE_ORCHESTRATION_INSTRUCTIONS,
+  MYBOT_ORCHESTRATION_INSTRUCTIONS,
 } from "@mybot/provider-core/server/orchestrationInstructions";
 
 const T3_CODE_DEVICE_TOOL_INSTRUCTIONS = `## MyBot devices
@@ -215,7 +215,7 @@ export function buildCodexAdditionalContext(
   const tools = toolInstructions(toolsAvailable);
   // Separate keys keep each value under Codex's per-entry token cap.
   return {
-    t3_code_orchestration: { kind: "application", value: T3_CODE_ORCHESTRATION_INSTRUCTIONS },
+    t3_code_orchestration: { kind: "application", value: MYBOT_ORCHESTRATION_INSTRUCTIONS },
     t3_code_runtime: {
       kind: "application",
       value: buildRuntimeInstructions({ harness: "Codex", ...runtime }),

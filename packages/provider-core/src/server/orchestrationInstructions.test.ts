@@ -1,7 +1,7 @@
 import { assert, describe, it } from "@effect/vitest";
 
 import {
-  T3_CODE_ORCHESTRATION_INSTRUCTIONS,
+  MYBOT_ORCHESTRATION_INSTRUCTIONS,
   myBotAcpPromptWithInstructions,
   myBotOrchestrationPromptForFirstRun,
   myBotOrchestrationSystemPrompt,
@@ -9,21 +9,21 @@ import {
 
 describe("MyBot orchestration provider instructions", () => {
   it("distinguishes delegated subagents from ordinary top-level threads", () => {
-    assert.include(T3_CODE_ORCHESTRATION_INSTRUCTIONS, "Use `delegate_task`");
-    assert.include(T3_CODE_ORCHESTRATION_INSTRUCTIONS, "ordinary top-level MyBot conversations");
-    assert.include(T3_CODE_ORCHESTRATION_INSTRUCTIONS, "Never use them merely");
-    assert.include(T3_CODE_ORCHESTRATION_INSTRUCTIONS, "cross-provider");
-    assert.include(T3_CODE_ORCHESTRATION_INSTRUCTIONS, "call `delegate_task` again");
+    assert.include(MYBOT_ORCHESTRATION_INSTRUCTIONS, "Use `delegate_task`");
+    assert.include(MYBOT_ORCHESTRATION_INSTRUCTIONS, "ordinary top-level MyBot conversations");
+    assert.include(MYBOT_ORCHESTRATION_INSTRUCTIONS, "Never use them merely");
+    assert.include(MYBOT_ORCHESTRATION_INSTRUCTIONS, "cross-provider");
+    assert.include(MYBOT_ORCHESTRATION_INSTRUCTIONS, "call `delegate_task` again");
     assert.include(
-      T3_CODE_ORCHESTRATION_INSTRUCTIONS,
+      MYBOT_ORCHESTRATION_INSTRUCTIONS,
       "Do not use `t3_thread_send` on `childThreadId`",
     );
   });
 
   it("documents structured schedules instead of JSON strings", () => {
-    assert.include(T3_CODE_ORCHESTRATION_INSTRUCTIONS, "structured object, never as JSON text");
-    assert.include(T3_CODE_ORCHESTRATION_INSTRUCTIONS, '"everyMs":3600000');
-    assert.include(T3_CODE_ORCHESTRATION_INSTRUCTIONS, "bindToCurrentThread=false");
+    assert.include(MYBOT_ORCHESTRATION_INSTRUCTIONS, "structured object, never as JSON text");
+    assert.include(MYBOT_ORCHESTRATION_INSTRUCTIONS, '"everyMs":3600000');
+    assert.include(MYBOT_ORCHESTRATION_INSTRUCTIONS, "bindToCurrentThread=false");
   });
 
   it("injects prompt fallback only for an MCP-enabled first run", () => {
@@ -48,7 +48,7 @@ describe("MyBot orchestration provider instructions", () => {
 
   it("only exposes the system prompt when the MyBot MCP server is attached", () => {
     assert.equal(myBotOrchestrationSystemPrompt(false), undefined);
-    assert.equal(myBotOrchestrationSystemPrompt(true), T3_CODE_ORCHESTRATION_INSTRUCTIONS);
+    assert.equal(myBotOrchestrationSystemPrompt(true), MYBOT_ORCHESTRATION_INSTRUCTIONS);
   });
 
   it("gives ACP sessions provider-neutral mode, browser, and orchestration guidance", () => {

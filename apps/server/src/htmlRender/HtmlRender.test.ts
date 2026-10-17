@@ -8,7 +8,7 @@ import {
   HTML_RENDER_MEASURE_WIDTHS,
   htmlRenderTheme,
 } from "@mybot/shared/htmlRender";
-import { T3_CODE_DARK_THEME_COLORS } from "@mybot/shared/themePalettes";
+import { MYBOT_DARK_THEME_COLORS } from "@mybot/shared/themePalettes";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Base64 from "effect/encoding/Base64";
@@ -277,7 +277,7 @@ describe("HtmlRender", () => {
               { level: "info", text: HTML_RENDER_MEASURE_FONTS.sans },
               {
                 level: "warning",
-                text: htmlRenderTheme(T3_CODE_DARK_THEME_COLORS, "dark").variables["--background"],
+                text: htmlRenderTheme(MYBOT_DARK_THEME_COLORS, "dark").variables["--background"],
               },
               { level: "error", text: "boom" },
               {

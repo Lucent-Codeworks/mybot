@@ -31,11 +31,11 @@ import {
   type WorkLogToolLifecycleStatus,
 } from "@mybot/client-runtime/work-log/presentation";
 import {
-  resolveT3McpToolDefinition,
-  resolveT3McpToolPresentation,
-  type T3McpToolLogo,
-  type T3McpToolPresentation,
-} from "@mybot/shared/t3McpToolPresentation";
+  resolveMyBotMcpToolDefinition,
+  resolveMyBotMcpToolPresentation,
+  type MyBotMcpToolLogo,
+  type MyBotMcpToolPresentation,
+} from "@mybot/shared/myBotMcpToolPresentation";
 import type {
   ChatAttachment,
   MessageId,
@@ -111,7 +111,7 @@ export interface ThreadFeedActivity {
     | "warning"
     | "wrench"
     | "zap";
-  readonly logo: T3McpToolLogo | null;
+  readonly logo: MyBotMcpToolLogo | null;
   readonly toolLike: boolean;
   readonly prominent: boolean;
   readonly status: "success" | "failure" | "neutral" | null;
@@ -585,16 +585,18 @@ function itemIcon(item: OrchestrationV2TurnItem): ThreadFeedActivity["icon"] {
   }
 }
 
-function itemToolPresentation(item: OrchestrationV2TurnItem): T3McpToolPresentation | null {
+function itemToolPresentation(item: OrchestrationV2TurnItem): MyBotMcpToolPresentation | null {
   if (item.type !== "dynamic_tool") {
     return null;
   }
-  return resolveT3McpToolPresentation(item.toolName) ?? resolveT3McpToolPresentation(item.title);
+  return (
+    resolveMyBotMcpToolPresentation(item.toolName) ?? resolveMyBotMcpToolPresentation(item.title)
+  );
 }
 
 function itemSummary(
   item: OrchestrationV2TurnItem,
-  toolPresentation: T3McpToolPresentation | null = null,
+  toolPresentation: MyBotMcpToolPresentation | null = null,
 ): string {
   if (item.type === "notification") return item.summary;
   if (item.type === "system_notice") return item.message;
@@ -929,7 +931,7 @@ function groupAdjacentActivities(entries: ReadonlyArray<RawThreadFeedEntry>): Th
         item.type === "dynamic_tool" &&
         item.runId !== null &&
         (item.status === "running" || item.status === "completed") &&
-        resolveT3McpToolDefinition(item.toolName)?.summaryAction === "delegate" &&
+        resolveMyBotMcpToolDefinition(item.toolName)?.summaryAction === "delegate" &&
         !workEntryDisplayIndicatesToolFailure(entry.activity.workEntry)
       ) {
         const output = compactDynamicToolOutput(item.output);

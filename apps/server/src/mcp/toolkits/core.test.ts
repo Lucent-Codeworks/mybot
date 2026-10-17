@@ -67,10 +67,10 @@ const declaredFailure = (result: McpSchema.CallToolResult) => {
 import { HtmlToolkit } from "./html/tools.ts";
 import { BotsToolkit } from "./bots/tools.ts";
 import {
-  resolveT3McpToolDefinition,
-  resolveT3McpToolPresentation,
-  resolveT3McpToolSummaryAction,
-} from "@mybot/shared/t3McpToolPresentation";
+  resolveMyBotMcpToolDefinition,
+  resolveMyBotMcpToolPresentation,
+  resolveMyBotMcpToolSummaryAction,
+} from "@mybot/shared/myBotMcpToolPresentation";
 import { htmlRenderFromToolItem } from "@mybot/shared/toolOutput";
 
 const decodeMcpAttachmentInput = Schema.decodeUnknownEffect(McpAttachmentInput);
@@ -104,15 +104,15 @@ it("publishes unique tool names with reference-free object-root inputs", () => {
       // The published tool catalog must also work with providers without $ref support.
       expect(JSON.stringify(schema), tool.name).not.toContain('"$ref"');
       // Every published tool must have labels for its lifecycle, branding, and a summary.
-      const definition = resolveT3McpToolDefinition(tool.name);
+      const definition = resolveMyBotMcpToolDefinition(tool.name);
       expect(definition, tool.name).not.toBeNull();
       expect(
         definition?.labels.every((label) => label.trim().length > 0),
         tool.name,
       ).toBe(true);
       for (const name of [tool.name, `mcp__t3-code__${tool.name}`, `T3-code.${tool.name}`]) {
-        expect(resolveT3McpToolPresentation(name)?.logo, name).toBe("t3-code");
-        expect(resolveT3McpToolSummaryAction(name), name).not.toBeNull();
+        expect(resolveMyBotMcpToolPresentation(name)?.logo, name).toBe("t3-code");
+        expect(resolveMyBotMcpToolSummaryAction(name), name).not.toBeNull();
       }
     }
   }

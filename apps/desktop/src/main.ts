@@ -19,7 +19,7 @@ import * as Electron from "electron";
 
 import * as NetService from "@mybot/shared/Net";
 import * as HostProcess from "@mybot/shared/HostProcess";
-import type { RemoteT3RunnerOptions } from "@mybot/ssh/tunnel";
+import type { RemoteMyBotRunnerOptions } from "@mybot/ssh/tunnel";
 import serverPackageJson from "../../server/package.json" with { type: "json" };
 
 import * as DesktopIpc from "./ipc/DesktopIpc.ts";
@@ -108,7 +108,7 @@ const layerDesktopEnvironment = Layer.unwrap(
 // a source checkout instead so the two sides can be iterated together.
 const resolveDesktopSshCliRunner = (
   environment: DesktopEnvironment.DesktopEnvironment["Service"],
-): RemoteT3RunnerOptions => {
+): RemoteMyBotRunnerOptions => {
   const devRemoteEntryPath = Option.getOrUndefined(environment.devRemoteMyBotServerEntryPath);
   if (environment.isDevelopment && devRemoteEntryPath !== undefined) {
     return {

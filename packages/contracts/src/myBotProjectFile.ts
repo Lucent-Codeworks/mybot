@@ -4,9 +4,9 @@ import * as SchemaTransformation from "effect/SchemaTransformation";
 import { ProjectScriptIcon } from "./project.ts";
 
 /** File name of the checked-in MyBot project file, resolved at the workspace root. */
-export const T3_PROJECT_FILE_NAME = "t3.json";
+export const MYBOT_PROJECT_FILE_NAME = "t3.json";
 
-/** Public URL of the published JSON Schema for {@link T3ProjectFile}. */
+/** Public URL of the published JSON Schema for {@link MyBotProjectFile}. */
 export const T3_PROJECT_FILE_SCHEMA_URL = "https://t3.codes/schema/t3.json";
 
 const T3_PROJECT_FILE_PATH_MAX_LENGTH = 512;
@@ -23,7 +23,7 @@ const trimmedNonEmpty = (annotations: { readonly description: string }, maxLengt
   return encoded.pipe(Schema.decodeTo(encoded, SchemaTransformation.trim()));
 };
 
-export const T3ProjectFileScript = Schema.Struct({
+export const MyBotProjectFileScript = Schema.Struct({
   name: trimmedNonEmpty({
     description: "Display name for the script, shown in the MyBot scripts menu.",
   }),
@@ -50,9 +50,9 @@ export const T3ProjectFileScript = Schema.Struct({
 }).annotate({
   description: "A project script that team members can import into MyBot.",
 });
-export type T3ProjectFileScript = typeof T3ProjectFileScript.Type;
+export type MyBotProjectFileScript = typeof MyBotProjectFileScript.Type;
 
-export const T3ProjectFile = Schema.Struct({
+export const MyBotProjectFile = Schema.Struct({
   $schema: Schema.optionalKey(
     Schema.String.annotate({
       description: `URL of the JSON Schema for this file, typically "${T3_PROJECT_FILE_SCHEMA_URL}".`,
@@ -68,7 +68,7 @@ export const T3ProjectFile = Schema.Struct({
     ),
   ),
   scripts: Schema.optionalKey(
-    Schema.Array(T3ProjectFileScript)
+    Schema.Array(MyBotProjectFileScript)
       .annotate({
         description: "Project scripts shared with everyone who opens this repository in MyBot.",
       })
@@ -78,4 +78,4 @@ export const T3ProjectFile = Schema.Struct({
   title: "MyBot project file",
   description: "Checked-in project configuration for MyBot (t3.json at the repository root).",
 });
-export type T3ProjectFile = typeof T3ProjectFile.Type;
+export type MyBotProjectFile = typeof MyBotProjectFile.Type;
