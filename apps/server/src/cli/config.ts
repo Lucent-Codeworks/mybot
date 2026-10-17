@@ -23,6 +23,7 @@ import * as CliError from "effect/cli/CliError";
 
 import { readBootstrapEnvelope } from "../bootstrap.ts";
 import * as ServerConfig from "../config.ts";
+import { importLegacyT3Home } from "../legacyHomeImport.ts";
 import { expandHomePath, resolveBaseDir } from "../os-jank.ts";
 import { isProcessAlive, readPersistedServerRuntimeState } from "../serverRuntimeState.ts";
 
@@ -325,6 +326,13 @@ export const resolveServerConfig = (
     const cwd = path.resolve(yield* expandHomePath(rawCwd.trim()));
     const derivedPaths = yield* ServerConfig.deriveServerPaths(baseDir, devUrl, {
       baseDirIsExplicit: Option.isSome(explicitBaseDir),
+    });
+    // Must run before anything creates the state directory. A desktop bootstrap
+    // that carries t3Home is the desktop app's local backend; WSL omits it.
+    yield* importLegacyT3Home({
+      baseDir,
+      stateDir: derivedPaths.stateDir,
+      launchedByLocalDesktop: bootstrap?.t3Home !== undefined,
     });
     // An interactive CLI must not start over a discovered server. Lifetime locking
     // and supervisor handoff are separate; this preflight cannot arbitrate two starts.

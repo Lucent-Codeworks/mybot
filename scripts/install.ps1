@@ -7,7 +7,7 @@
 #   MYBOT_CHANNEL           release train to follow: stable, nightly, or preview
 #                            (default: stable; preview is a maintainers' test train)
 #   MYBOT_VERSION           exact version to install (overrides MYBOT_CHANNEL)
-#   MYBOT_HOME              MyBot home directory (default: ~\.t3)
+#   MYBOT_HOME              MyBot home directory (default: ~\.mybot)
 #   MYBOT_INSTALL_BIN_DIR   where mybot.exe is linked (default: ~\.local\bin)
 #   MYBOT_RELEASE_BASE_URL  mirror for releases/download (default: GitHub)
 #
@@ -18,7 +18,7 @@ $ErrorActionPreference = "Stop"
 
 $repo = "Lucent-Codeworks/mybot"
 $baseUrl = if ($env:MYBOT_RELEASE_BASE_URL) { $env:MYBOT_RELEASE_BASE_URL.TrimEnd("/") } else { "https://github.com/$repo/releases/download" }
-$t3Home = if ($env:MYBOT_HOME) { $env:MYBOT_HOME } else { Join-Path $HOME ".t3" }
+$t3Home = if ($env:MYBOT_HOME) { $env:MYBOT_HOME } else { Join-Path $HOME ".mybot" }
 $binDir = if ($env:MYBOT_INSTALL_BIN_DIR) { $env:MYBOT_INSTALL_BIN_DIR } else { Join-Path $HOME ".local\bin" }
 
 function Fail([string] $message) {

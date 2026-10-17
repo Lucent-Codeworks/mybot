@@ -40,6 +40,7 @@ export default defineConfig({
     environment: "node",
     exclude: [
       "**/.repos/**",
+      "**/.mybot/**",
       "**/.t3/**",
       "**/node_modules/**",
       "**/dist/**",

@@ -107,7 +107,10 @@ describe("ssh tunnel scripts", () => {
       script,
       "MYBOT_RELEASE_BASE_URL='https://github.com/Lucent-Codeworks/mybot/releases/download'",
     );
-    assert.include(script, 'MYBOT_RUNTIME_DIR="$HOME/.t3/runtime/versions/$MYBOT_ARCHIVE_VERSION"');
+    assert.include(
+      script,
+      'MYBOT_RUNTIME_DIR="$HOME/.mybot/runtime/versions/$MYBOT_ARCHIVE_VERSION"',
+    );
     assert.include(
       script,
       'MYBOT_ARCHIVE="mybot-$MYBOT_ARCHIVE_VERSION-$MYBOT_PLATFORM-$MYBOT_ARCH.tar.gz"',
@@ -122,7 +125,7 @@ describe("ssh tunnel scripts", () => {
     // the completion marker after acquiring it.
     assert.include(
       script,
-      'MYBOT_LOCK="$HOME/.t3/runtime/versions/.$MYBOT_ARCHIVE_VERSION.install.lock"',
+      'MYBOT_LOCK="$HOME/.mybot/runtime/versions/.$MYBOT_ARCHIVE_VERSION.install.lock"',
     );
     // mkdir is the exclusive create; the pid follows atomically. A dead owner
     // is reclaimed at once, a never-published owner after a short grace.
@@ -783,7 +786,7 @@ describe("archive runner script", () => {
           assert.equal(result.exitCode, 0, result.stderr);
           assert.include(result.stdout, `mybot v${archiveVersion}`);
         }
-        const versionsDir = `${home}/.t3/runtime/versions`;
+        const versionsDir = `${home}/.mybot/runtime/versions`;
         assert.deepEqual(yield* fs.readDirectory(versionsDir), [archiveVersion]);
         assert.equal(
           (yield* fs.readFileString(`${versionsDir}/${archiveVersion}/.install-complete`)).trim(),

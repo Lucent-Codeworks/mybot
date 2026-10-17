@@ -37,7 +37,7 @@ installing one.
 
 `mybot uninstall` removes the background service, the `mybot` launcher, and the
 downloaded versions after showing you the list and asking once. Your bots,
-threads, and settings under `~/.t3/userdata` are kept. Pass `--yes` from a
+threads, and settings under `~/.mybot/userdata` are kept. Pass `--yes` from a
 script.
 
 ## Platform support
@@ -84,14 +84,20 @@ that session open.
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `linger-unavailable`                    | Run `loginctl show-user "$(id -un)" --property=Linger` and check that systemd-logind is available.                             |
 | `user-manager-unavailable`              | Run `systemctl --user status` in a login session for the service user; check your distribution's systemd user-session support. |
-| `service-disabled` or `service-stopped` | Read the log and `systemctl --user status t3code.service`, then use the repair command printed by MyBot.                       |
+| `service-disabled` or `service-stopped` | Read the log and `systemctl --user status mybot.service`, then use the repair command printed by MyBot.                        |
 | `restart-pending`                       | A newer version is installed but the service still runs the previous one. Run `mybot service restart`.                         |
 
 On macOS, check **System Settings → General → Login Items** if the service no
 longer starts at login. If agent work cannot access Desktop, Documents, or
 Downloads, it may need Full Disk Access for the `mybot` executable listed in
 `ProgramArguments` in
-`~/Library/LaunchAgents/com.t3tools.t3code.service.plist`.
+`~/Library/LaunchAgents/com.lucentcodeworks.mybot.service.plist`.
+
+Earlier MyBot versions installed the service as `t3code.service` (Linux) or
+`com.t3tools.t3code.service` (macOS), the names T3 Code uses. `mybot service
+status` reports such a service as needing an update; `mybot service install` or
+`mybot update` restarts it under the new name, and `mybot uninstall` removes it.
+A T3 Code service under those names is left alone.
 
 For failures after signing in to MyBot Connect, see
 [connection troubleshooting](./remote-access.md#mybot-connect-troubleshooting).

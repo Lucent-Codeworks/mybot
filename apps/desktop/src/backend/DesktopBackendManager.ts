@@ -91,7 +91,7 @@ export interface DesktopBackendStartConfig extends BackendProcessContext {
   readonly env: Record<string, string | undefined>;
   // When true the spawner merges the desktop process.env on top of `env`;
   // when false `env` is passed verbatim. WSL mode opts out so a leaking
-  // MYBOT_HOME can't pin the WSL backend to /mnt/c/...\.t3.
+  // MYBOT_HOME can't pin the WSL backend to /mnt/c/...\.mybot.
   readonly extendEnv: boolean;
   readonly bootstrap: DesktopBackendBootstrapValue;
   readonly bootstrapDelivery: DesktopBackendBootstrapDelivery;

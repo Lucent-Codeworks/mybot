@@ -8,7 +8,7 @@
 #   MYBOT_CHANNEL           release train to follow: stable, nightly, or preview
 #                            (default: stable; preview is a maintainers' test train)
 #   MYBOT_VERSION           exact version to install (overrides MYBOT_CHANNEL)
-#   MYBOT_HOME              MyBot home directory (default: ~/.t3)
+#   MYBOT_HOME              MyBot home directory (default: ~/.mybot)
 #   MYBOT_INSTALL_BIN_DIR   where the `mybot` symlink goes (default: ~/.local/bin)
 #   MYBOT_RELEASE_BASE_URL  mirror for releases/download (default: GitHub)
 #
@@ -19,7 +19,7 @@ set -eu
 
 repo="Lucent-Codeworks/mybot"
 base_url="${MYBOT_RELEASE_BASE_URL:-https://github.com/${repo}/releases/download}"
-t3_home="${MYBOT_HOME:-$HOME/.t3}"
+t3_home="${MYBOT_HOME:-$HOME/.mybot}"
 bin_dir="${MYBOT_INSTALL_BIN_DIR:-$HOME/.local/bin}"
 
 fail() {

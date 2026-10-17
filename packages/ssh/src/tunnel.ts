@@ -444,16 +444,16 @@ fi
 # Self-contained release archive: no Node, npm, or compiler on the remote.
 # Unpacked into the pinned-runtime layout so \`mybot service install\` reuses it.
 MYBOT_RELEASE_BASE_URL=@@MYBOT_RELEASE_BASE_URL@@
-MYBOT_RUNTIME_DIR="$HOME/.t3/runtime/versions/$MYBOT_ARCHIVE_VERSION"
+MYBOT_RUNTIME_DIR="$HOME/.mybot/runtime/versions/$MYBOT_ARCHIVE_VERSION"
 t3_runtime_ready() {
   [ -x "$MYBOT_RUNTIME_DIR/mybot" ] && [ "$(cat "$MYBOT_RUNTIME_DIR/.install-complete" 2>/dev/null)" = "$MYBOT_ARCHIVE_VERSION" ]
 }
 if ! t3_runtime_ready; then
-  mkdir -p "$HOME/.t3/runtime/versions"
+  mkdir -p "$HOME/.mybot/runtime/versions"
   # Concurrent launches (two clients, a retry racing a slow first run) must
   # not both install: mkdir is the atomic lock and the ready check repeats
   # under it.
-  MYBOT_LOCK="$HOME/.t3/runtime/versions/.$MYBOT_ARCHIVE_VERSION.install.lock"
+  MYBOT_LOCK="$HOME/.mybot/runtime/versions/.$MYBOT_ARCHIVE_VERSION.install.lock"
   # mkdir is the only portable atomic exclusive create (mv would silently
   # nest a candidate inside an existing lock). The owner publishes its pid
   # right after, so a lock with a live owner is never reclaimed however
@@ -500,7 +500,7 @@ if ! t3_runtime_ready; then
     *) printf 'Remote host %s has no mybot release archive.\\n' "$(uname -m)" >&2; exit 1 ;;
   esac
   MYBOT_ARCHIVE="mybot-$MYBOT_ARCHIVE_VERSION-$MYBOT_PLATFORM-$MYBOT_ARCH.tar.gz"
-  MYBOT_STAGING="$(mktemp -d "$HOME/.t3/runtime/versions/.staging-XXXXXX")"
+  MYBOT_STAGING="$(mktemp -d "$HOME/.mybot/runtime/versions/.staging-XXXXXX")"
   trap 'rm -rf "$MYBOT_STAGING" "$MYBOT_LOCK"' EXIT
   t3_fetch() {
     if command -v curl >/dev/null 2>&1; then curl -fsSL --connect-timeout 30 --max-time "$3" "$1" -o "$2"
@@ -540,8 +540,8 @@ exec "$MYBOT_RUNTIME_DIR/mybot" "$@"
 const REMOTE_LAUNCH_SCRIPT = `set -eu
 @@MYBOT_NODE_ENV_SCRIPT@@
 STATE_KEY="$1"
-STATE_DIR="$HOME/.t3/ssh-launch/$STATE_KEY"
-DEFAULT_SERVER_HOME="$HOME/.t3"
+STATE_DIR="$HOME/.mybot/ssh-launch/$STATE_KEY"
+DEFAULT_SERVER_HOME="$HOME/.mybot"
 DEFAULT_RUNTIME_FILE="$DEFAULT_SERVER_HOME/userdata/server-runtime.json"
 PORT_FILE="$STATE_DIR/port"
 PID_FILE="$STATE_DIR/pid"
@@ -719,8 +719,8 @@ printf '{"remotePort":%s,"serverKind":"%s"}\\n' "$REMOTE_PORT" "\${REMOTE_MANAGE
 `;
 
 const REMOTE_PAIRING_SCRIPT = `set -eu
-STATE_DIR="$HOME/.t3/ssh-launch/@@MYBOT_STATE_KEY@@"
-DEFAULT_SERVER_HOME="$HOME/.t3"
+STATE_DIR="$HOME/.mybot/ssh-launch/@@MYBOT_STATE_KEY@@"
+DEFAULT_SERVER_HOME="$HOME/.mybot"
 RUNNER_FILE="$STATE_DIR/run-t3.sh"
 mkdir -p "$STATE_DIR"
 cat >"$RUNNER_FILE" <<'SH'
@@ -732,7 +732,7 @@ PAIRING_BASE_DIR="$DEFAULT_SERVER_HOME"
 `;
 
 const REMOTE_STOP_SCRIPT = `set -eu
-STATE_DIR="$HOME/.t3/ssh-launch/@@MYBOT_STATE_KEY@@"
+STATE_DIR="$HOME/.mybot/ssh-launch/@@MYBOT_STATE_KEY@@"
 PID_FILE="$STATE_DIR/pid"
 PORT_FILE="$STATE_DIR/port"
 MANAGED_FILE="$STATE_DIR/managed"
@@ -755,7 +755,7 @@ printf '{"stopped":true}\\n'
 `;
 
 const REMOTE_LOG_TAIL_SCRIPT = `set -eu
-STATE_DIR="$HOME/.t3/ssh-launch/@@MYBOT_STATE_KEY@@"
+STATE_DIR="$HOME/.mybot/ssh-launch/@@MYBOT_STATE_KEY@@"
 LOG_FILE="$STATE_DIR/server.log"
 if [ -f "$LOG_FILE" ]; then
   tail -n 80 "$LOG_FILE" 2>/dev/null || true
