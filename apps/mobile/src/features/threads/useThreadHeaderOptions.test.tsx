@@ -51,7 +51,7 @@ vi.mock("../settings/appearance/AppearancePreferencesProvider", () => ({
 
 import { ThreadHeader } from "./ThreadHeader";
 
-const projectScripts: ReadonlyArray<import("@t3tools/contracts").ProjectScript> = [];
+const projectScripts: ReadonlyArray<import("@mybot/contracts").ProjectScript> = [];
 
 // Mirrors the route screen: every render passes fresh control callbacks.
 function Header(props: { readonly title?: string; readonly scripts?: typeof projectScripts }) {

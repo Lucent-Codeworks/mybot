@@ -1,6 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import { SettingsRow } from "./components/SettingsRow";
-import { AuthSettingsWriteScope } from "@t3tools/contracts";
+import { AuthSettingsWriteScope } from "@mybot/contracts";
 import { readEnvironmentScope, useEnvironmentsWithScope } from "../../state/session";
 import { ScreenScrollView as ScrollView } from "../../components/ScreenScrollView";
 import { AppText as Text } from "../../components/AppText";
@@ -10,7 +10,7 @@ import {
   type ServerSettingsPatch,
   PROJECT_SCOPED_SERVER_SETTING_KEYS,
   type ProjectScopedServerSettingKey,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import { useRef, useState } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

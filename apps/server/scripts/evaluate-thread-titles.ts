@@ -7,7 +7,7 @@
 import * as NodeUtil from "node:util";
 import * as NodeCrypto from "node:crypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { CodexSettings, ProviderInstanceId } from "@t3tools/contracts";
+import { CodexSettings, ProviderInstanceId } from "@mybot/contracts";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Duration from "effect/Duration";
@@ -19,7 +19,7 @@ import { threadTitleEvaluationCases } from "./threadTitleEvaluationCases.ts";
 import {
   formatThreadTitleContext,
   type ThreadTitleMessage,
-} from "@t3tools/provider-core/server/threadTitleContext";
+} from "@mybot/provider-core/server/threadTitleContext";
 import * as ServerConfig from "../src/config.ts";
 
 const { values } = NodeUtil.parseArgs({

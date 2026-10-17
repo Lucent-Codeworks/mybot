@@ -6,7 +6,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useEffect, useMemo, useState } from "react";
 import { Platform, useWindowDimensions } from "react-native";
 
-import { resolveScratchProjectScopeKey } from "@t3tools/client-runtime/state/project-grouping";
+import { resolveScratchProjectScopeKey } from "@mybot/client-runtime/state/project-grouping";
 
 import { NativeHeaderToolbar, NativeStackScreenOptions } from "../../native/StackHeader";
 import { useProjects } from "../../state/entities";

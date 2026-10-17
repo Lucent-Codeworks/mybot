@@ -1,4 +1,4 @@
-import type { ProjectIconColor } from "@t3tools/contracts";
+import type { ProjectIconColor } from "@mybot/contracts";
 
 /** Marketplace sections, in the order the category list shows them. */
 export const BOT_TEMPLATE_CATEGORIES = [

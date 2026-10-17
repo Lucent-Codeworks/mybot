@@ -1,10 +1,10 @@
 import { useAtomValue } from "@effect/atom-react";
-import { clampFileAttachmentUploadBytes } from "@t3tools/client-runtime/state/attachments";
+import { clampFileAttachmentUploadBytes } from "@mybot/client-runtime/state/attachments";
 import {
   nextPastedTextFileName,
   pastedTextDisposition,
   replaceTextSelection,
-} from "@t3tools/client-runtime/text-paste";
+} from "@mybot/client-runtime/text-paste";
 import { NativeHeaderToolbar, NativeStackScreenOptions } from "../../native/StackHeader";
 import {
   CommonActions,
@@ -30,8 +30,8 @@ import {
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   PROVIDER_SEND_TURN_MAX_INPUT_CHARS,
   resolveEnvironmentMachineKind,
-} from "@t3tools/contracts";
-import { deriveThreadTitleSeed } from "@t3tools/client-runtime/operations";
+} from "@mybot/contracts";
+import { deriveThreadTitleSeed } from "@mybot/client-runtime/operations";
 
 import {
   ComposerEditor,
@@ -63,7 +63,7 @@ import { FilePreviewModal, type FilePreviewSource } from "../../components/FileP
 import { VideoPreviewModal, type VideoPreviewSource } from "../../components/VideoPreviewModal";
 import { ProviderIcon } from "../../components/ProviderIcon";
 import { AppText as Text } from "../../components/AppText";
-import { hasProviderUsageLimits, isUsageLimitsCommand } from "@t3tools/shared/usageLimits";
+import { hasProviderUsageLimits, isUsageLimitsCommand } from "@mybot/shared/usageLimits";
 import { COMPOSER_LAYOUT_TRANSITION, ComposerSurface } from "./ThreadComposer";
 import { ComposerCommandPopover } from "./ComposerCommandPopover";
 import { useComposerCommandMenu } from "./use-composer-command-menu";

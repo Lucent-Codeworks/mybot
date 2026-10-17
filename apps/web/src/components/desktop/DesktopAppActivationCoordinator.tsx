@@ -1,4 +1,4 @@
-import type { DesktopAppActivationRequest } from "@t3tools/contracts";
+import type { DesktopAppActivationRequest } from "@mybot/contracts";
 import { useEffect, useEffectEvent, useRef } from "react";
 
 import { handleDesktopAppActivationRequest } from "../../desktopAppActivation";

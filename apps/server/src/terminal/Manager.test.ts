@@ -11,8 +11,8 @@ import {
   ProviderInstanceId,
   ServerSettingsError,
   TerminalProviderInstanceNotFoundError,
-} from "@t3tools/contracts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+} from "@mybot/contracts";
+import * as HostProcess from "@mybot/shared/HostProcess";
 import * as Data from "effect/Data";
 import * as Clock from "effect/Clock";
 import * as Deferred from "effect/Deferred";
@@ -42,7 +42,7 @@ import * as SqlitePersistence from "../persistence/Sqlite.ts";
 import * as ProcessRunner from "../processRunner.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import * as TerminalManager from "./Manager.ts";
-import * as PtyAdapter from "@t3tools/shared/PtyAdapter";
+import * as PtyAdapter from "@mybot/shared/PtyAdapter";
 
 const encodeUnknownJson = Schema.encodeUnknownSync(Schema.fromJsonString(Schema.Unknown));
 

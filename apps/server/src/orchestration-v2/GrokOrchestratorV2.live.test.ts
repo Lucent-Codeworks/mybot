@@ -10,7 +10,7 @@ import {
   ProviderDriverKind,
   ProviderInstanceId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Console from "effect/Console";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -27,11 +27,11 @@ import * as CodexInstallation from "../provider/CodexInstallation.ts";
 import * as ServerEnvironment from "../environment/ServerEnvironment.ts";
 import * as ModelManifest from "../provider/ModelManifest.ts";
 import * as ProviderInstanceRegistryHydration from "../provider/ProviderInstanceRegistryHydration.ts";
-import * as ProviderLatestVersions from "@t3tools/provider-core/server/ProviderLatestVersions";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
-import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
-import * as OpenCodeRuntime from "@t3tools/provider-opencode/server/OpenCodeRuntime";
-import * as OpenCodeServerLedger from "@t3tools/provider-opencode/server/OpenCodeServerLedger";
+import * as ProviderLatestVersions from "@mybot/provider-core/server/ProviderLatestVersions";
+import * as McpProviderSessions from "@mybot/provider-core/server/McpProviderSessions";
+import * as ProviderEventLoggers from "@mybot/provider-core/server/ProviderEventLoggers";
+import * as OpenCodeRuntime from "@mybot/provider-opencode/server/OpenCodeRuntime";
+import * as OpenCodeServerLedger from "@mybot/provider-opencode/server/OpenCodeServerLedger";
 import * as ServerSettings from "../serverSettings.ts";
 import * as Orchestrator from "./Orchestrator.ts";
 import * as RuntimeLayer from "./runtimeLayer.ts";

@@ -55,7 +55,7 @@ import {
   type ProviderInstanceId,
   type RunId,
   type RuntimeRequestId,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import type * as Cause from "effect/Cause";
 import * as DateTime from "effect/DateTime";
 import * as Deferred from "effect/Deferred";
@@ -71,33 +71,33 @@ import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
 import * as Stream from "effect/Stream";
 
-import * as ProviderHost from "@t3tools/provider-core/server/ProviderHost";
+import * as ProviderHost from "@mybot/provider-core/server/ProviderHost";
 import * as OpenCode2Client from "./OpenCode2Client.ts";
 import * as OpenCode2Server from "./OpenCode2Server.ts";
 import * as OpenCodeRuntime from "../OpenCodeRuntime.ts";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
-import { buildRuntimeInstructions } from "@t3tools/provider-core/server/runtimeInstructions";
-import { t3OrchestrationSystemPrompt } from "@t3tools/provider-core/server/orchestrationInstructions";
-import { SKILL_MENTION_PATTERN } from "@t3tools/shared/composerInlineTokens";
-import * as KeyedLock from "@t3tools/shared/KeyedLock";
-import { getModelSelectionStringOptionValue, modelSelectionsEqual } from "@t3tools/shared/model";
-import { causeErrorTag } from "@t3tools/shared/observability";
+import * as McpProviderSessions from "@mybot/provider-core/server/McpProviderSessions";
+import { buildRuntimeInstructions } from "@mybot/provider-core/server/runtimeInstructions";
+import { t3OrchestrationSystemPrompt } from "@mybot/provider-core/server/orchestrationInstructions";
+import { SKILL_MENTION_PATTERN } from "@mybot/shared/composerInlineTokens";
+import * as KeyedLock from "@mybot/shared/KeyedLock";
+import { getModelSelectionStringOptionValue, modelSelectionsEqual } from "@mybot/shared/model";
+import { causeErrorTag } from "@mybot/shared/observability";
 
-import { providerMessageTextWithAttachmentPaths } from "@t3tools/provider-core/server/attachmentPrompt";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
+import { providerMessageTextWithAttachmentPaths } from "@mybot/provider-core/server/attachmentPrompt";
+import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
 import {
   backgroundWorkNotification,
   type BackgroundWorkReport,
-} from "@t3tools/provider-core/server/notification";
-import * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
-import { makeProviderFailure } from "@t3tools/provider-core/server/failure";
+} from "@mybot/provider-core/server/notification";
+import * as ProviderContinuationRequests from "@mybot/provider-core/server/ProviderContinuationRequests";
+import { makeProviderFailure } from "@mybot/provider-core/server/failure";
 import {
   makeSubagentChildThread,
   makeSubagentConversationArtifacts,
   subagentThreadTitle,
-} from "@t3tools/provider-core/server/subagentProjection";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
-import { turnScopedSelectionTransition } from "@t3tools/provider-core/server/selectionTransition";
+} from "@mybot/provider-core/server/subagentProjection";
+import * as ProviderAdapter from "@mybot/provider-core/server/ProviderAdapter";
+import { turnScopedSelectionTransition } from "@mybot/provider-core/server/selectionTransition";
 import { OPENCODE_PROVIDER, openCodePermissionRequestKind } from "../adapter.ts";
 import { openCodeToolTurnItem } from "../toolItems.ts";
 

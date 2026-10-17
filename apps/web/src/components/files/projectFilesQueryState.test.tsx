@@ -5,7 +5,7 @@ import {
   type ProjectListEntriesResult,
   ProjectReadFileError,
   type ProjectReadFileResult,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";

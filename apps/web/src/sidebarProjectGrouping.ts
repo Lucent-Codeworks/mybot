@@ -1,4 +1,4 @@
-import type { EnvironmentId, ScopedProjectRef } from "@t3tools/contracts";
+import type { EnvironmentId, ScopedProjectRef } from "@mybot/contracts";
 import { buildProjectGroups } from "./logicalProject";
 import type { Project } from "./types";
 

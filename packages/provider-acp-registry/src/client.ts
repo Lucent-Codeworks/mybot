@@ -5,8 +5,8 @@
  *
  * @module provider-acp-registry/client
  */
-import { ProviderDriverKind } from "@t3tools/contracts";
-import { defineProviderClient } from "@t3tools/provider-core/client";
+import { ProviderDriverKind } from "@mybot/contracts";
+import { defineProviderClient } from "@mybot/provider-core/client";
 
 import { AcpRegistrySettings } from "./settings.ts";
 

@@ -14,19 +14,19 @@ import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 
-import { type ClaudeSettings } from "@t3tools/contracts";
-import { TextGenerationError } from "@t3tools/provider-core/server/textGeneration";
-import { resolveSpawnCommand } from "@t3tools/shared/shell";
+import { type ClaudeSettings } from "@mybot/contracts";
+import { TextGenerationError } from "@mybot/provider-core/server/textGeneration";
+import { resolveSpawnCommand } from "@mybot/shared/shell";
 
-import * as TextGenerationOperations from "@t3tools/provider-core/server/textGenerationOperations";
+import * as TextGenerationOperations from "@mybot/provider-core/server/textGenerationOperations";
 import {
   normalizeCliError,
   toJsonSchemaObject,
-} from "@t3tools/provider-core/server/textGenerationUtils";
+} from "@mybot/provider-core/server/textGenerationUtils";
 import {
   getModelSelectionStringOptionValue,
   getProviderOptionDescriptors,
-} from "@t3tools/shared/model";
+} from "@mybot/shared/model";
 import {
   BUNDLED_CLAUDE_MODEL_CATALOG,
   type ClaudeModelCatalog,

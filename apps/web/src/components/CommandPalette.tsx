@@ -1,10 +1,10 @@
 "use client";
 
-import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environment";
-import { threadSearchMatchKey } from "@t3tools/client-runtime/state/thread-search";
-import { resolveThreadReferenceCopyTarget } from "@t3tools/shared/threadReference";
-import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
-import type { ProjectId } from "@t3tools/contracts";
+import { scopeProjectRef, scopeThreadRef } from "@mybot/client-runtime/environment";
+import { threadSearchMatchKey } from "@mybot/client-runtime/state/thread-search";
+import { resolveThreadReferenceCopyTarget } from "@mybot/shared/threadReference";
+import { squashAtomCommandFailure } from "@mybot/client-runtime/state/runtime";
+import type { ProjectId } from "@mybot/contracts";
 import { useLocation, useNavigate, useParams } from "@tanstack/react-router";
 import {
   ArrowLeftIcon,
@@ -48,7 +48,7 @@ import { useClientSettings } from "../hooks/useSettings";
 import { useTheme } from "../hooks/useTheme";
 import { useCustomThemes } from "../hooks/useCustomThemes";
 import { useEnvironmentThemeDefinitions } from "../hooks/useEnvironmentTheme";
-import { BUILT_IN_THEMES } from "@t3tools/shared/themePalettes";
+import { BUILT_IN_THEMES } from "@mybot/shared/themePalettes";
 import { getThemeDefinition } from "../themePalette";
 import {
   STANDARD_THEME_CARDS,

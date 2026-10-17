@@ -1,13 +1,13 @@
 import { SourceFileSurface } from "../features/files/SourceFileSurface";
-import { filePreviewKind } from "@t3tools/shared/filePreview";
+import { filePreviewKind } from "@mybot/shared/filePreview";
 import type {
   ComposerContextRecord,
   ElementContextSource,
   EnvironmentId,
   ScopedThreadRef,
-} from "@t3tools/contracts";
-import { formatAttachmentSize } from "@t3tools/client-runtime/state/attachments";
-import { videoMimeType } from "@t3tools/shared/video";
+} from "@mybot/contracts";
+import { formatAttachmentSize } from "@mybot/client-runtime/state/attachments";
+import { videoMimeType } from "@mybot/shared/video";
 import { Platform, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { REVIEW_MONO_FONT_FAMILY } from "../features/review/reviewDiffRendering";

@@ -5,8 +5,8 @@ import type {
   OrchestrationV2Run,
   OrchestrationV2RunAttempt,
   OrchestrationV2TurnItem,
-} from "@t3tools/contracts";
-import { runRanAfter } from "@t3tools/shared/orchestrationV2ThreadError";
+} from "@mybot/contracts";
+import { runRanAfter } from "@mybot/shared/orchestrationV2ThreadError";
 
 type Work = OrchestrationV2RestartCancelledBackgroundWork;
 type Attempt = Pick<OrchestrationV2RunAttempt, "id" | "runId">;

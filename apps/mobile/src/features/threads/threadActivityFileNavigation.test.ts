@@ -1,4 +1,4 @@
-import { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import { EnvironmentId, ThreadId } from "@mybot/contracts";
 import { describe, expect, it } from "@effect/vitest";
 
 import { buildThreadActivityFileParams } from "./threadActivityFileNavigation";

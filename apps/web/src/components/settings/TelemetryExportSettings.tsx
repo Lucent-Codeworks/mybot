@@ -1,6 +1,6 @@
 import { useAtomValue } from "@effect/atom-react";
-import type { OtlpEndpointCheckResult, OtlpSignal } from "@t3tools/contracts";
-import { defaultSignalUrl } from "@t3tools/shared/otelEnvironment";
+import type { OtlpEndpointCheckResult, OtlpSignal } from "@mybot/contracts";
+import { defaultSignalUrl } from "@mybot/shared/otelEnvironment";
 import { useEffect, useEffectEvent, useState } from "react";
 
 import { serverEnvironment } from "../../state/server";

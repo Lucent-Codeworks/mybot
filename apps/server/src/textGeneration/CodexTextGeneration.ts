@@ -11,22 +11,22 @@ import {
   type CodexSettings,
   DEFAULT_TEXT_GENERATION_REASONING_EFFORT,
   type ServerProviderModel,
-} from "@t3tools/contracts";
-import { TextGenerationError } from "@t3tools/provider-core/server/textGeneration";
-import { resolveSpawnCommand } from "@t3tools/shared/shell";
+} from "@mybot/contracts";
+import { TextGenerationError } from "@mybot/provider-core/server/textGeneration";
+import { resolveSpawnCommand } from "@mybot/shared/shell";
 
 import { resolveAttachmentPath } from "../attachmentStore.ts";
 import * as ServerConfig from "../config.ts";
-import { expandHomePath } from "@t3tools/provider-core/server/pathExpansion";
+import { expandHomePath } from "@mybot/provider-core/server/pathExpansion";
 import { codexExecLaunchArgs, resolveCodexLaunchArgs } from "../provider/codexLaunchArgs.ts";
-import * as TextGenerationOperations from "@t3tools/provider-core/server/textGenerationOperations";
+import * as TextGenerationOperations from "@mybot/provider-core/server/textGenerationOperations";
 import {
   normalizeCliError,
   toJsonSchemaObject,
-} from "@t3tools/provider-core/server/textGenerationUtils";
-import { codexModelFamily, getModelSelectionStringOptionValue } from "@t3tools/shared/model";
+} from "@mybot/provider-core/server/textGenerationUtils";
+import { codexModelFamily, getModelSelectionStringOptionValue } from "@mybot/shared/model";
 import { getCodexServiceTierOptionValue } from "../codexModelOptions.ts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@mybot/shared/HostProcess";
 
 const CODEX_TIMEOUT_MS = 180_000;
 const CODEX_MCP_LIST_TIMEOUT_MS = 10_000;
@@ -64,7 +64,7 @@ export const makeCodexTextGeneration = Effect.fn("makeCodexTextGeneration")(func
   getModels: Effect.Effect<ReadonlyArray<ServerProviderModel>> = Effect.succeed([]),
   resolveRuntime?: Effect.Effect<
     import("../provider/CodexManagedRuntime.ts").CodexEffectiveRuntime,
-    import("@t3tools/contracts").ProviderSetupError,
+    import("@mybot/contracts").ProviderSetupError,
     Scope.Scope
   >,
 ) {

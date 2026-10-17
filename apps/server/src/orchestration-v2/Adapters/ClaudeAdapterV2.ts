@@ -3,7 +3,7 @@ import {
   dynamicToolTitle,
   formatReadToolLabel,
   formatSearchToolLabel,
-} from "@t3tools/shared/toolActivity";
+} from "@mybot/shared/toolActivity";
 import { field, text } from "../unknownField.ts";
 import { readWorkflowAgentAnswers } from "../workflowAgentAnswers.ts";
 import {
@@ -13,7 +13,7 @@ import {
   parseClaudeWorkflowRunHandles,
 } from "./claudeWorkflowProgress.ts";
 
-import { isWorkspaceImagePreviewPath } from "@t3tools/shared/filePreview";
+import { isWorkspaceImagePreviewPath } from "@mybot/shared/filePreview";
 import { normalizeClaudeTurnTokenUsage } from "../../provider/ClaudeTurnTokenUsage.ts";
 import {
   type CanUseTool,
@@ -39,14 +39,14 @@ import type {
   AskUserQuestionInput,
   WebSearchOutput,
 } from "@anthropic-ai/claude-agent-sdk/sdk-tools";
-import { parseCliArgs } from "@t3tools/shared/cliArgs";
-import { AgentScope } from "@t3tools/shared/AgentScope";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { applyClaudePromptEffortPrefix } from "@t3tools/shared/model";
+import { parseCliArgs } from "@mybot/shared/cliArgs";
+import { AgentScope } from "@mybot/shared/AgentScope";
+import * as HostProcess from "@mybot/shared/HostProcess";
+import { applyClaudePromptEffortPrefix } from "@mybot/shared/model";
 import {
   CLAUDE_RESUME_COMPACTION_NEVER_ANSWER,
   formatClaudeResumeCompactionQuestion,
-} from "@t3tools/shared/claudeCompaction";
+} from "@mybot/shared/claudeCompaction";
 import {
   type ChatAttachment,
   ClaudeSettings,
@@ -80,7 +80,7 @@ import {
   type ProviderThreadId,
   type RunId,
   type ThreadId,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
@@ -107,7 +107,7 @@ import { planClaudeSkillDispatch } from "../../provider/Drivers/ClaudeSkillDispa
 import { discoverClaudeSkills } from "../../provider/Drivers/ClaudeSkills.ts";
 import { compileClaudeModelSelection } from "../../claudeModelOptions.ts";
 import * as ServerConfig from "../../config.ts";
-import { expandHomePath } from "@t3tools/provider-core/server/pathExpansion";
+import { expandHomePath } from "@mybot/provider-core/server/pathExpansion";
 import {
   claudeSignedOutMessage,
   makeClaudeEnvironment,
@@ -124,47 +124,47 @@ import {
   boundProviderEventForLogging,
   shouldPersistProviderEvent,
 } from "../../provider/EventNdjsonLogger.ts";
-import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
+import * as ProviderEventLoggers from "@mybot/provider-core/server/ProviderEventLoggers";
 import {
   claudeRateLimitEventToUpdate,
   type ClaudeScopedLimitNames,
 } from "../../provider/claudeUsageLimits.ts";
-import type { ManagedServerProvider } from "@t3tools/provider-core/server/snapshot";
-import { mergeProviderInstanceEnvironment } from "@t3tools/provider-core/server/instanceEnvironment";
-import { T3_CODE_ORCHESTRATION_INSTRUCTIONS } from "@t3tools/provider-core/server/orchestrationInstructions";
+import type { ManagedServerProvider } from "@mybot/provider-core/server/snapshot";
+import { mergeProviderInstanceEnvironment } from "@mybot/provider-core/server/instanceEnvironment";
+import { T3_CODE_ORCHESTRATION_INSTRUCTIONS } from "@mybot/provider-core/server/orchestrationInstructions";
 import {
   buildBotInstructions,
   buildRuntimeInstructions,
-} from "@t3tools/provider-core/server/runtimeInstructions";
+} from "@mybot/provider-core/server/runtimeInstructions";
 import {
   mcpToolPresentation,
   normalizeMcpText,
-} from "@t3tools/provider-core/server/mcpToolPresentation";
-import * as McpProviderSession from "@t3tools/provider-core/server/mcpSession";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
+} from "@mybot/provider-core/server/mcpToolPresentation";
+import * as McpProviderSession from "@mybot/provider-core/server/mcpSession";
+import * as McpProviderSessions from "@mybot/provider-core/server/McpProviderSessions";
+import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
 import {
   makeProviderFailure,
   makeProviderRetryTurnItem,
-} from "@t3tools/provider-core/server/failure";
-import { turnScopedSelectionTransition } from "@t3tools/provider-core/server/selectionTransition";
-import { providerMessageTextWithAttachmentPaths } from "@t3tools/provider-core/server/attachmentPrompt";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+} from "@mybot/provider-core/server/failure";
+import { turnScopedSelectionTransition } from "@mybot/provider-core/server/selectionTransition";
+import { providerMessageTextWithAttachmentPaths } from "@mybot/provider-core/server/attachmentPrompt";
+import * as ProviderAdapter from "@mybot/provider-core/server/ProviderAdapter";
 import {
   ProviderAdapterDriverCreateError,
   type ProviderAdapterDriver,
   type ProviderAdapterDriverCreateInput,
-} from "@t3tools/provider-core/server/adapterDriver";
+} from "@mybot/provider-core/server/adapterDriver";
 import {
   type BackgroundWorkReport,
   backgroundWorkNotification,
-} from "@t3tools/provider-core/server/notification";
-import * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
+} from "@mybot/provider-core/server/notification";
+import * as ProviderContinuationRequests from "@mybot/provider-core/server/ProviderContinuationRequests";
 import {
   makeSubagentChildThread,
   makeSubagentConversationArtifacts,
   subagentThreadTitle,
-} from "@t3tools/provider-core/server/subagentProjection";
+} from "@mybot/provider-core/server/subagentProjection";
 
 export const CLAUDE_PROVIDER = ProviderDriverKind.make("claudeAgent");
 export const CLAUDE_AGENT_SDK_QUERY_PROTOCOL = "claude-agent-sdk.query" as const;

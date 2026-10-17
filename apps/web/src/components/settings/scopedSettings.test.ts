@@ -5,7 +5,7 @@ import {
   ProjectId,
   ProviderInstanceId,
   type ServerSettings,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import { describe, expect, it, vi } from "vite-plus/test";
 import * as Cause from "effect/Cause";
 

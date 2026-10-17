@@ -1,4 +1,4 @@
-import { OrchestrationDispatchCommandError } from "@t3tools/contracts";
+import { OrchestrationDispatchCommandError } from "@mybot/contracts";
 import * as Crypto from "effect/Crypto";
 
 import * as DateTime from "effect/DateTime";
@@ -91,7 +91,7 @@ import {
   type TerminalMetadataStreamEvent,
   WS_METHODS,
   WsRpcGroup,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import {
   HttpRouter,
   HttpServerRequest,
@@ -109,7 +109,7 @@ import * as McpAppRequests from "./mcpApps/McpAppRequests.ts";
 import * as ProviderSessionManager from "./orchestration-v2/ProviderSessionManager.ts";
 import * as ThreadLaunchService from "./orchestration-v2/ThreadLaunchService.ts";
 import * as ThreadMessageIntake from "./orchestration-v2/ThreadMessageIntake.ts";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
+import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
 import * as TelegramChannel from "./channels/TelegramChannel.ts";
 import * as AppConnections from "./apps/AppConnections.ts";
 import * as ScheduledTasks from "./scheduledTasks/ScheduledTaskService.ts";
@@ -149,10 +149,10 @@ import * as OrchestrationEventStore from "./persistence/OrchestrationEventStore.
 import { userFacingDispatchErrorMessage } from "./orchestration-v2/UserFacingErrors.ts";
 import * as ProviderRegistry from "./provider/ProviderRegistry.ts";
 import * as ProviderInstanceRegistry from "./provider/ProviderInstanceRegistry.ts";
-import * as AcpRegistrySupport from "@t3tools/provider-acp-registry/server/AcpRegistrySupport";
-import * as AcpRegistryRuntimeCoordinator from "@t3tools/provider-acp-registry/server/AcpRegistryRuntimeCoordinator";
+import * as AcpRegistrySupport from "@mybot/provider-acp-registry/server/AcpRegistrySupport";
+import * as AcpRegistryRuntimeCoordinator from "@mybot/provider-acp-registry/server/AcpRegistryRuntimeCoordinator";
 import * as ModelManifest from "./provider/ModelManifest.ts";
-import * as ProviderLatestVersions from "@t3tools/provider-core/server/ProviderLatestVersions";
+import * as ProviderLatestVersions from "@mybot/provider-core/server/ProviderLatestVersions";
 import * as ProviderMaintenanceRunner from "./provider/providerMaintenanceRunner.ts";
 import * as ProviderAuthService from "./provider/ProviderAuthService.ts";
 import { makeProviderInstallation } from "./provider/providerInstallation.ts";
@@ -206,11 +206,8 @@ import * as OtlpEndpointCheck from "./observability/OtlpEndpointCheck.ts";
 import * as PairingGrantStore from "./auth/PairingGrantStore.ts";
 import * as SessionStore from "./auth/SessionStore.ts";
 import { failEnvironmentAuthInvalid, failEnvironmentInternal } from "./auth/http.ts";
-import * as RelayClient from "@t3tools/shared/relayClient";
-import {
-  sameUsageLimitCommandCoverage,
-  withUsageLimitsCommands,
-} from "@t3tools/shared/usageLimits";
+import * as RelayClient from "@mybot/shared/relayClient";
+import { sameUsageLimitCommandCoverage, withUsageLimitsCommands } from "@mybot/shared/usageLimits";
 import * as AgentSessionScanner from "./project/AgentSessionScanner.ts";
 import * as AgentSessionImporter from "./project/AgentSessionImporter.ts";
 import * as UsageLimitSources from "./usage/UsageLimitSources.ts";

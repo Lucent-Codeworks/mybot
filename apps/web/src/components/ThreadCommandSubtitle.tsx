@@ -1,4 +1,4 @@
-import type { ProviderDriverKind } from "@t3tools/contracts";
+import type { ProviderDriverKind } from "@mybot/contracts";
 import { ProjectFavicon, type ProjectFaviconProject } from "./ProjectFavicon";
 import { ProviderInstanceIcon } from "./chat/ProviderInstanceIcon";
 import { cn } from "~/lib/utils";

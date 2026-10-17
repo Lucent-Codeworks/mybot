@@ -15,14 +15,14 @@ import {
   setRoutesInCatalog,
   replaceCatalogValue,
   Persistence,
-} from "@t3tools/client-runtime/platform";
-import { TokenStore } from "@t3tools/client-runtime/authorization";
+} from "@mybot/client-runtime/platform";
+import { TokenStore } from "@mybot/client-runtime/authorization";
 import {
   ConnectionTransientError,
   CredentialStore,
   ProfileStore,
-} from "@t3tools/client-runtime/connection";
-import { EnvironmentId, ServerConfig, ThreadId } from "@t3tools/contracts";
+} from "@mybot/client-runtime/connection";
+import { EnvironmentId, ServerConfig, ThreadId } from "@mybot/contracts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";

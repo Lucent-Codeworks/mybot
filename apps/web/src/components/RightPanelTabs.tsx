@@ -3,8 +3,8 @@ import type {
   EnvironmentId,
   PreviewSessionSnapshot,
   ResolvedKeybindingsConfig,
-} from "@t3tools/contracts";
-import { getTerminalLabel } from "@t3tools/shared/terminalLabels";
+} from "@mybot/contracts";
+import { getTerminalLabel } from "@mybot/shared/terminalLabels";
 import {
   closestCenter,
   DndContext,

@@ -1,4 +1,4 @@
-import type { EnvironmentId, ProjectId } from "@t3tools/contracts";
+import type { EnvironmentId, ProjectId } from "@mybot/contracts";
 import { useMemo } from "react";
 
 import { useProjects } from "../state/entities";

@@ -9,7 +9,7 @@
  *
  * @module PlainProjectCleanup
  */
-import { CommandId } from "@t3tools/contracts";
+import { CommandId } from "@mybot/contracts";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 

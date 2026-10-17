@@ -13,7 +13,7 @@ import {
   ProjectUpdatePayload,
   ProjectId,
   OrchestratorMcpFailure,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as FileSystem from "effect/FileSystem";
 import * as ServerConfig from "../../../config.ts";
 import * as ServerSettings from "../../../serverSettings.ts";

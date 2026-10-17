@@ -6,7 +6,7 @@ import {
   type ProjectSettingsOverrides,
   resolveProjectProviderInstanceEnabled,
   type ServerSettings,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import { fallbackTextGenerationModelSelection } from "./serverSettings.ts";
 
 /** Where a project-scoped value came from: a project override, or the environment value. */

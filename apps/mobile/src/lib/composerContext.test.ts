@@ -1,4 +1,4 @@
-import { upgradeLegacyContextMessage } from "@t3tools/shared/composerContextLegacy";
+import { upgradeLegacyContextMessage } from "@mybot/shared/composerContextLegacy";
 import { buildProjectThreadStartTurnInput } from "./projectThreadStartTurn";
 import {
   ProjectId,
@@ -6,14 +6,14 @@ import {
   ComposerContextId,
   type OrchestrationMessageContext,
   type ReviewCommentContextRecord,
-} from "@t3tools/contracts";
-import { collectComposerInlineTokens } from "@t3tools/shared/composerInlineTokens";
+} from "@mybot/contracts";
+import { collectComposerInlineTokens } from "@mybot/shared/composerInlineTokens";
 import {
   ATTACHMENT_ONLY_BOOTSTRAP_PROMPT,
   collectComposerContextReferences,
   formatComposerContextReference,
   projectComposerContextForProvider,
-} from "@t3tools/shared/composerContextReferences";
+} from "@mybot/shared/composerContextReferences";
 import { describe, expect, it } from "vite-plus/test";
 import {
   composerContextEditorTokens,

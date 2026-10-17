@@ -7,12 +7,12 @@
  * server is actually bound to are listed: a loopback-only server lists none,
  * because its loopback address means a different machine to every client.
  */
-import type { ServerDirectEndpoint } from "@t3tools/contracts";
+import type { ServerDirectEndpoint } from "@mybot/contracts";
 import {
   buildTailscaleHttpsBaseUrl,
   probeTailscaleHttpsEndpoint,
   readTailscaleStatus,
-} from "@t3tools/tailscale";
+} from "@mybot/tailscale";
 import * as Context from "effect/Context";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
@@ -23,7 +23,7 @@ import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 import * as NodeNet from "node:net";
 import * as NodeOS from "node:os";
 
-import { isPrivateNetworkHost, isTailnetHost } from "@t3tools/shared/hostClassification";
+import { isPrivateNetworkHost, isTailnetHost } from "@mybot/shared/hostClassification";
 
 import * as ServerConfig from "../config.ts";
 import { formatHostForUrl, isLoopbackHost, isWildcardHost } from "../startupAccess.ts";

@@ -1,4 +1,4 @@
-import type { OrchestrationV2HistoricalMessage } from "@t3tools/contracts";
+import type { OrchestrationV2HistoricalMessage } from "@mybot/contracts";
 import {
   ChatAttachment,
   CheckpointId,
@@ -32,7 +32,7 @@ import {
   RunAttemptId,
   RunId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Context from "effect/Context";
 import * as Schema from "effect/Schema";
 import type * as Effect from "effect/Effect";
@@ -671,4 +671,4 @@ export class ProviderAdapterV2 extends Context.Service<
       input: ProviderAdapterV2OpenSessionInput,
     ) => Effect.Effect<ProviderAdapterV2SessionRuntime, ProviderAdapterV2Error, Scope.Scope>;
   }
->()("@t3tools/provider-core/server/ProviderAdapter/ProviderAdapterV2") {}
+>()("@mybot/provider-core/server/ProviderAdapter/ProviderAdapterV2") {}

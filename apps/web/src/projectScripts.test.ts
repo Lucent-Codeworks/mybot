@@ -1,7 +1,7 @@
-import { MAX_SCRIPT_ID_LENGTH } from "@t3tools/contracts";
+import { MAX_SCRIPT_ID_LENGTH } from "@mybot/contracts";
 import { shortcutLabelForCommand } from "./keybindings";
 import { describe, expect, it } from "vite-plus/test";
-import { projectScriptRuntimeEnv } from "@t3tools/shared/projectScripts";
+import { projectScriptRuntimeEnv } from "@mybot/shared/projectScripts";
 
 import {
   buildProjectScript,

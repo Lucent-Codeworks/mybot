@@ -1,13 +1,13 @@
 import { StackActions, useNavigation } from "@react-navigation/native";
-import { availableScratchWorkspaceRoot } from "@t3tools/client-runtime/operations/projects";
-import { resolvePromptLinkModelSelection } from "@t3tools/client-runtime/prompt-links";
+import { availableScratchWorkspaceRoot } from "@mybot/client-runtime/operations/projects";
+import { resolvePromptLinkModelSelection } from "@mybot/client-runtime/prompt-links";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
-import type { EnvironmentId } from "@t3tools/contracts";
-import { parseNewThreadLink, type LinkedPrompt } from "@t3tools/shared/promptLinks";
+} from "@mybot/client-runtime/state/runtime";
+import type { EnvironmentProject } from "@mybot/client-runtime/state/shell";
+import type { EnvironmentId } from "@mybot/contracts";
+import { parseNewThreadLink, type LinkedPrompt } from "@mybot/shared/promptLinks";
 import { useEffect, useEffectEvent, useRef } from "react";
 import { Alert } from "react-native";
 

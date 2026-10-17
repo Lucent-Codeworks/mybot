@@ -1,5 +1,5 @@
 import { pruneLocalDeviceTools } from "./deviceToolMaintenance.ts";
-import { deviceToolInstallMessage } from "@t3tools/contracts";
+import { deviceToolInstallMessage } from "@mybot/contracts";
 /**
  * The device host that is this machine.
  *
@@ -17,15 +17,12 @@ import {
   type DevicePlatform,
   type DevicePlatformAvailability,
   LOCAL_DEVICE_HOST_ID,
-} from "@t3tools/contracts";
-import { waitForHttpReady } from "@t3tools/shared/httpReadiness";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import {
-  resolveNodeExecutable,
-  type NodeRuntimeUnavailableError,
-} from "@t3tools/shared/nodeRuntime";
-import * as NetService from "@t3tools/shared/Net";
-import { isCommandAvailable } from "@t3tools/shared/shell";
+} from "@mybot/contracts";
+import { waitForHttpReady } from "@mybot/shared/httpReadiness";
+import * as HostProcess from "@mybot/shared/HostProcess";
+import { resolveNodeExecutable, type NodeRuntimeUnavailableError } from "@mybot/shared/nodeRuntime";
+import * as NetService from "@mybot/shared/Net";
+import { isCommandAvailable } from "@mybot/shared/shell";
 import * as Clock from "effect/Clock";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
@@ -43,7 +40,7 @@ import { HttpClient } from "effect/http";
 import * as ChildProcess from "effect/process/ChildProcess";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 
-import { writeFileStringAtomically } from "@t3tools/shared/atomicWrite";
+import { writeFileStringAtomically } from "@mybot/shared/atomicWrite";
 import * as ServerConfig from "../config.ts";
 import * as ProcessRunner from "../processRunner.ts";
 import * as DeviceHost from "./DeviceHost.ts";

@@ -10,10 +10,10 @@
  *   node scripts/record-grok-acp-replay-fixture.ts --scenario simple
  */
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { type ProviderReplayEntry } from "@t3tools/contracts";
-import { GrokSettings } from "@t3tools/provider-grok/settings";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { resolveSelfInvocation } from "@t3tools/shared/nodeRuntime";
+import { type ProviderReplayEntry } from "@mybot/contracts";
+import { GrokSettings } from "@mybot/provider-grok/settings";
+import * as HostProcess from "@mybot/shared/HostProcess";
+import { resolveSelfInvocation } from "@mybot/shared/nodeRuntime";
 import * as Clock from "effect/Clock";
 import * as Console from "effect/Console";
 import * as Effect from "effect/Effect";
@@ -23,26 +23,26 @@ import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 import type * as EffectAcpProtocol from "effect-acp/protocol";
 
-import * as TestProviderHost from "@t3tools/provider-testing/TestProviderHost";
+import * as TestProviderHost from "@mybot/provider-testing/TestProviderHost";
 import {
   GROK_DEFAULT_INSTANCE_ID,
   GROK_PROVIDER,
   grokLaunchRuntimeMode,
   makeGrokAdapterV2,
-} from "@t3tools/provider-grok/testing";
-import { ACP_PROTOCOL } from "@t3tools/provider-acp/server/adapter";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
-import type * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
-import * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
+} from "@mybot/provider-grok/testing";
+import { ACP_PROTOCOL } from "@mybot/provider-acp/server/adapter";
+import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
+import type * as ProviderAdapter from "@mybot/provider-core/server/ProviderAdapter";
+import * as ProviderContinuationRequests from "@mybot/provider-core/server/ProviderContinuationRequests";
 import * as ProviderAdapterRegistry from "../src/orchestration-v2/ProviderAdapterRegistry.ts";
 import { provideDeterministicTestRuntime } from "../src/orchestration-v2/testkit/DeterministicRuntime.ts";
 import { ORCHESTRATOR_REPLAY_FIXTURES } from "../src/orchestration-v2/testkit/fixtures/index.ts";
 import { materializeFixtureInput } from "../src/orchestration-v2/testkit/fixtures/shared.ts";
 import { runOrchestratorV2Scenario } from "../src/orchestration-v2/testkit/OrchestratorScenario.ts";
 import * as ProviderReplayHarness from "../src/orchestration-v2/testkit/ProviderReplayHarness.ts";
-import { checkpointWorkspace } from "@t3tools/provider-testing/replayWorkspace";
-import { makeGrokAcpRuntime } from "@t3tools/provider-grok/testing";
-import { buildRuntimeInstructions } from "@t3tools/provider-core/server/runtimeInstructions";
+import { checkpointWorkspace } from "@mybot/provider-testing/replayWorkspace";
+import { makeGrokAcpRuntime } from "@mybot/provider-grok/testing";
+import { buildRuntimeInstructions } from "@mybot/provider-core/server/runtimeInstructions";
 
 const wallClock = Clock.Clock.defaultValue();
 const encodeJson = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));

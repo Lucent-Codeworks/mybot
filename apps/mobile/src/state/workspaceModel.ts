@@ -1,15 +1,15 @@
-import { type EnvironmentShellSummary } from "@t3tools/client-runtime/state/shell";
-import type { EnvironmentId, ServerConfig } from "@t3tools/contracts";
+import { type EnvironmentShellSummary } from "@mybot/client-runtime/state/shell";
+import type { EnvironmentId, ServerConfig } from "@mybot/contracts";
 
 import {
   type EnvironmentConnectionPhase,
   type NetworkStatus,
-} from "@t3tools/client-runtime/connection";
+} from "@mybot/client-runtime/connection";
 
-import type { EnvironmentConnectionSummary as WorkspaceEnvironment } from "@t3tools/client-runtime/state/presentation";
+import type { EnvironmentConnectionSummary as WorkspaceEnvironment } from "@mybot/client-runtime/state/presentation";
 
-export { projectEnvironmentConnectionSummary as projectWorkspaceEnvironment } from "@t3tools/client-runtime/state/presentation";
-export type { EnvironmentConnectionSummary as WorkspaceEnvironment } from "@t3tools/client-runtime/state/presentation";
+export { projectEnvironmentConnectionSummary as projectWorkspaceEnvironment } from "@mybot/client-runtime/state/presentation";
+export type { EnvironmentConnectionSummary as WorkspaceEnvironment } from "@mybot/client-runtime/state/presentation";
 
 export interface WorkspaceConnectionState {
   readonly isLoadingConnections: boolean;

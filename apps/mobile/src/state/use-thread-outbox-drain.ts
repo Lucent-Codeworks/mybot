@@ -3,9 +3,9 @@ import {
   threadRuntimeIsActive,
   type EnvironmentProject,
   type EnvironmentThreadShell,
-} from "@t3tools/client-runtime/state/shell";
-import type { AtomCommandResult } from "@t3tools/client-runtime/state/runtime";
-import { deriveThreadTitleSeed } from "@t3tools/client-runtime/operations";
+} from "@mybot/client-runtime/state/shell";
+import type { AtomCommandResult } from "@mybot/client-runtime/state/runtime";
+import { deriveThreadTitleSeed } from "@mybot/client-runtime/operations";
 import {
   AuthOrchestrationOperateScope,
   CommandId,
@@ -13,7 +13,7 @@ import {
   DEFAULT_RUNTIME_MODE,
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   type MessageId,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Cause from "effect/Cause";
 import { AsyncResult } from "effect/reactivity";
 import { useCallback, useEffect, useRef, useState } from "react";

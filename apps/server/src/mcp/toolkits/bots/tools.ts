@@ -1,4 +1,4 @@
-import { OrchestratorMcpFailure, ProjectId, ThreadId } from "@t3tools/contracts";
+import { OrchestratorMcpFailure, ProjectId, ThreadId } from "@mybot/contracts";
 import * as Schema from "effect/Schema";
 import { Tool, Toolkit } from "effect/ai";
 

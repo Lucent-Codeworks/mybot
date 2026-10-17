@@ -5,18 +5,18 @@ import type {
   ProviderInstanceId,
   ServerConfig,
   ServerProvider,
-} from "@t3tools/contracts";
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
+} from "@mybot/contracts";
+import { scopeThreadRef } from "@mybot/client-runtime/environment";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@mybot/client-runtime/state/runtime";
 import {
   AuthTerminalOperateScope,
   defaultInstanceIdForDriver,
   ProviderDriverKind,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Schema from "effect/Schema";
 import {
   ArrowRightIcon,

@@ -5,7 +5,7 @@ import * as Option from "effect/Option";
 import * as Ref from "effect/Ref";
 import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
-import { EnvironmentId, type ProviderInstanceId } from "@t3tools/contracts";
+import { EnvironmentId, type ProviderInstanceId } from "@mybot/contracts";
 import type { ComposerEnterBehavior } from "../lib/composerEnterBehavior";
 import type { FollowUpBehavior } from "../lib/followUpBehavior";
 import { isMicrophoneKind, type MicrophoneEntry } from "../lib/microphonePriority";
@@ -100,7 +100,7 @@ export class MobilePreferencesStore extends Context.Service<
       transform: (current: Preferences) => Partial<Preferences>,
     ) => Effect.Effect<Preferences, MobilePreferencesSaveError>;
   }
->()("@t3tools/mobile/persistence/MobilePreferencesStore") {}
+>()("@mybot/mobile/persistence/MobilePreferencesStore") {}
 
 function sanitizePreferences(parsed: Preferences): Preferences {
   const preferences: {

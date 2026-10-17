@@ -1,7 +1,7 @@
 import { ScreenScrollView as ScrollView } from "../../components/ScreenScrollView";
 import { AppText as Text, AppTextInput } from "../../components/AppText";
 import { ProjectFavicon } from "../../components/ProjectFavicon";
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
+import type { EnvironmentProject } from "@mybot/client-runtime/state/shell";
 import { useState } from "react";
 import { Platform, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

@@ -59,7 +59,7 @@ export class DesktopLifecycle extends Context.Service<
       Scope.Scope | DesktopLifecycleRegistrationServices
     >;
   }
->()("@t3tools/desktop/app/DesktopLifecycle") {}
+>()("@mybot/desktop/app/DesktopLifecycle") {}
 
 const { logInfo: logLifecycleInfo, logError: logLifecycleError } =
   makeComponentLogger("desktop-lifecycle");

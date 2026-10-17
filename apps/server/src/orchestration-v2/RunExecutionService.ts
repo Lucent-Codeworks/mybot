@@ -1,5 +1,5 @@
 import { makeAssistantStreamingFilter } from "./assistantStreaming.ts";
-import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
+import { resolveProjectSettings } from "@mybot/shared/projectSettings";
 import {
   isOrchestrationV2WorkActive,
   CommandId,
@@ -23,7 +23,7 @@ import {
   type RunAttemptId,
   type ThreadId,
   type TurnItemId,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Context from "effect/Context";
 import * as Cause from "effect/Cause";
 import * as DateTime from "effect/DateTime";
@@ -41,15 +41,15 @@ import * as McpAppModelContext from "../mcpApps/McpAppModelContext.ts";
 import * as ServerConfig from "../config.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import * as EventSink from "./EventSink.ts";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
+import * as ProviderAdapter from "@mybot/provider-core/server/ProviderAdapter";
 import * as ProviderEventIngestor from "./ProviderEventIngestor.ts";
 import * as ProjectStore from "./ProjectStore.ts";
 import type { ProjectionStoreV2Error } from "./ProjectionStore.ts";
 import {
   makeProviderFailure,
   makeProviderFailureTurnItem,
-} from "@t3tools/provider-core/server/failure";
+} from "@mybot/provider-core/server/failure";
 
 export interface ProviderEventRoutingState {
   readonly ownedThreadIds: ReadonlySet<ThreadId>;

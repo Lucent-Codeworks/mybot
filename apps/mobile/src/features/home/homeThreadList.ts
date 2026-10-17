@@ -1,13 +1,10 @@
-import { buildProjectGroups } from "@t3tools/client-runtime/state/project-grouping";
-import type {
-  EnvironmentProject,
-  EnvironmentThreadShell,
-} from "@t3tools/client-runtime/state/shell";
+import { buildProjectGroups } from "@mybot/client-runtime/state/project-grouping";
+import type { EnvironmentProject, EnvironmentThreadShell } from "@mybot/client-runtime/state/shell";
 import {
   getThreadSortTimestamp,
   toSortableTimestamp,
-} from "@t3tools/client-runtime/state/thread-sort";
-import type { EnvironmentId, ScopedProjectRef, SidebarProjectSortOrder } from "@t3tools/contracts";
+} from "@mybot/client-runtime/state/thread-sort";
+import type { EnvironmentId, ScopedProjectRef, SidebarProjectSortOrder } from "@mybot/contracts";
 import * as Arr from "effect/Array";
 import * as Order from "effect/Order";
 

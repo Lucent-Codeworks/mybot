@@ -1,5 +1,5 @@
-import type { ModelSelection, ServerProvider } from "@t3tools/contracts";
-import { buildNewThreadLink, PROMPT_LINK_MAX_PROMPT_LENGTH } from "@t3tools/shared/promptLinks";
+import type { ModelSelection, ServerProvider } from "@mybot/contracts";
+import { buildNewThreadLink, PROMPT_LINK_MAX_PROMPT_LENGTH } from "@mybot/shared/promptLinks";
 
 import { type ComposerThreadTarget, useComposerDraftStore } from "~/composerDraftStore";
 import { writeTextToClipboard } from "~/hooks/useCopyToClipboard";

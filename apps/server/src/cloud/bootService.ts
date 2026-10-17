@@ -1,4 +1,4 @@
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@mybot/shared/HostProcess";
 import * as Config from "effect/Config";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
@@ -11,7 +11,7 @@ import * as Path from "effect/Path";
 import { HttpClient } from "effect/http";
 import * as Schema from "effect/Schema";
 
-import { CLI_RELEASE_BASE_URL_ENV } from "@t3tools/shared/cliRelease";
+import { CLI_RELEASE_BASE_URL_ENV } from "@mybot/shared/cliRelease";
 
 import * as ProcessRunner from "../processRunner.ts";
 import {

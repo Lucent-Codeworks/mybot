@@ -1,4 +1,4 @@
-import { OrchestratorMcpFailure } from "@t3tools/contracts";
+import { OrchestratorMcpFailure } from "@mybot/contracts";
 import * as Effect from "effect/Effect";
 
 import * as BotMessaging from "../../../bots/BotMessaging.ts";

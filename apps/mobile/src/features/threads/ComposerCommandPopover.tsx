@@ -1,13 +1,13 @@
 import {
   resolveProviderSkillSourceKind,
   type ProviderSkillSourceKind,
-} from "@t3tools/client-runtime/providerSkills";
+} from "@mybot/client-runtime/providerSkills";
 import type {
   ScopedThreadRef,
   ServerProviderSkill,
   ServerProviderSlashCommand,
-} from "@t3tools/contracts";
-import type { ComposerTriggerKind } from "@t3tools/shared/composerTrigger";
+} from "@mybot/contracts";
+import type { ComposerTriggerKind } from "@mybot/shared/composerTrigger";
 import { memo } from "react";
 import { Pressable, ScrollView, StyleSheet, View, type ViewStyle } from "react-native";
 

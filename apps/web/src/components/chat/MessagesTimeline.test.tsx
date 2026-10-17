@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { ApprovalRequestId, EnvironmentId, MessageId, RunId, ThreadId } from "@t3tools/contracts";
+import { ApprovalRequestId, EnvironmentId, MessageId, RunId, ThreadId } from "@mybot/contracts";
 import {
   act,
   createRef,

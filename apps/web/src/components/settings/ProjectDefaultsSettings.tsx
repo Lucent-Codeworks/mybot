@@ -2,8 +2,8 @@ import {
   DEFAULT_SERVER_SETTINGS,
   type ModelSelection,
   type ProviderInstanceId,
-} from "@t3tools/contracts";
-import { createModelSelection } from "@t3tools/shared/model";
+} from "@mybot/contracts";
+import { createModelSelection } from "@mybot/shared/model";
 import { useNavigate } from "@tanstack/react-router";
 
 import { mergeEnvironmentSettings } from "../../hooks/useSettings";

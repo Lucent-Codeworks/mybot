@@ -1,4 +1,4 @@
-import type { DesktopUpdateState } from "@t3tools/contracts";
+import type { DesktopUpdateState } from "@mybot/contracts";
 
 import { getDesktopUpdateReleaseUrl } from "./desktopUpdate.logic";
 import { openDesktopUpdateReleaseNotes } from "./desktopUpdate.toast";

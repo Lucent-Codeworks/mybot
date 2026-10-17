@@ -10,22 +10,22 @@ import {
   getAddProjectInitialQuery,
   getNewProjectPathPreview,
   resolveAddProjectPath,
-} from "@t3tools/client-runtime/operations/projects";
+} from "@mybot/client-runtime/operations/projects";
 import {
   connectionStatusText,
   type EnvironmentConnectionPhase,
-} from "@t3tools/client-runtime/connection";
+} from "@mybot/client-runtime/connection";
 import {
   canPreloadBrowsePath,
   createBrowseNavigationCoordinator,
   filterFilesystemBrowseEntries,
   getFilesystemBrowsePath,
   resolveFilesystemReadAccess,
-} from "@t3tools/client-runtime/state/filesystem";
+} from "@mybot/client-runtime/state/filesystem";
 import {
   appendBrowsePathSegment,
   inferProjectTitleFromPath,
-} from "@t3tools/client-runtime/state/projects";
+} from "@mybot/client-runtime/state/projects";
 import {
   AuthOrchestrationOperateScope,
   AuthFilesystemReadScope,
@@ -34,7 +34,7 @@ import {
   type EnvironmentMachineKind,
   ProjectId,
   resolveEnvironmentMachineKind,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import { CommonActions, StackActions, useNavigation } from "@react-navigation/native";
 import { SymbolView } from "../../components/AppSymbol";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";

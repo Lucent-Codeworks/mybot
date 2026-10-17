@@ -14,4 +14,4 @@ export {
   normalizeProjectPathForComparison,
   normalizeProjectPathForDispatch,
   resolveProjectPathForDispatch,
-} from "@t3tools/client-runtime/state/projects";
+} from "@mybot/client-runtime/state/projects";

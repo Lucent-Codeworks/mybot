@@ -1,7 +1,7 @@
 import type {
   OrchestrationV2SearchThreadInput,
   OrchestrationV2SearchThreadResult,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import type {
   ProjectionRecordField,
   ProjectionRecordFilter,
@@ -33,7 +33,7 @@ import {
   type ScheduledTaskId,
   ThreadId,
   type TurnItemId,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
 import * as Duration from "effect/Duration";

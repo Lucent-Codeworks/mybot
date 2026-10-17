@@ -5,12 +5,12 @@ import type {
   ProjectId,
   RuntimeMode,
   ServerConfig as T3ServerConfig,
-} from "@t3tools/contracts";
-import { resolveProjectProviderInstanceEnabled } from "@t3tools/contracts";
+} from "@mybot/contracts";
+import { resolveProjectProviderInstanceEnabled } from "@mybot/contracts";
 import {
   buildExplicitProviderOptionSelectionsFromDescriptors,
   getProviderOptionDescriptors,
-} from "@t3tools/shared/model";
+} from "@mybot/shared/model";
 
 export type ModelOption = {
   readonly key: string;

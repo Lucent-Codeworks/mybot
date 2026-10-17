@@ -3,7 +3,7 @@ import {
   BOT_TEMPLATES,
   type BotTemplate,
   type BotTemplateCategory,
-} from "@t3tools/shared/botTemplates";
+} from "@mybot/shared/botTemplates";
 
 export type BotMarketplaceFilter = "all" | "popular" | BotTemplateCategory;
 

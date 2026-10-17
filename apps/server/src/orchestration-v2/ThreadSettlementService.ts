@@ -1,12 +1,12 @@
-import { backgroundWorkHoldsCompletion } from "@t3tools/shared/orchestrationV2PendingBackgroundWork";
-import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
+import { backgroundWorkHoldsCompletion } from "@mybot/shared/orchestrationV2PendingBackgroundWork";
+import { resolveProjectSettings } from "@mybot/shared/projectSettings";
 import {
   CommandId,
   type ThreadId,
   type OrchestrationV2DomainEvent,
   type OrchestrationV2ThreadShell,
-} from "@t3tools/contracts";
-import { makeDrainableWorker } from "@t3tools/shared/DrainableWorker";
+} from "@mybot/contracts";
+import { makeDrainableWorker } from "@mybot/shared/DrainableWorker";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
@@ -164,7 +164,7 @@ export class ThreadSettlementServiceV2 extends Context.Service<
   }
 >()("mybot/orchestration-v2/ThreadSettlementService/ThreadSettlementServiceV2") {}
 
-function autoSettlementConfigured(settings: import("@t3tools/contracts").ServerSettings): boolean {
+function autoSettlementConfigured(settings: import("@mybot/contracts").ServerSettings): boolean {
   if (settings.sidebarAutoSettleAfterDays !== null) return true;
   return Object.values(settings.projectSettingsOverrides).some(
     (entry) =>
@@ -175,7 +175,7 @@ function autoSettlementConfigured(settings: import("@t3tools/contracts").ServerS
 /** Identity of every settlement input, so unrelated settings edits do not trigger a sweep. */
 /** @internal Exported for tests. */
 export function autoSettlementSettingsKey(
-  settings: import("@t3tools/contracts").ServerSettings,
+  settings: import("@mybot/contracts").ServerSettings,
 ): string {
   return JSON.stringify([
     settings.sidebarAutoSettleAfterDays,

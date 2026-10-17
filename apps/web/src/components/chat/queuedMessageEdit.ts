@@ -1,4 +1,4 @@
-import type { ChatAttachment } from "@t3tools/contracts";
+import type { ChatAttachment } from "@mybot/contracts";
 import {
   composerDraftHasUserContent,
   useComposerDraftStore,

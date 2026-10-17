@@ -1,6 +1,6 @@
-import { serializeLegacyContextMessage } from "@t3tools/shared/composerContextLegacySend";
-import { filePreviewKind } from "@t3tools/shared/filePreview";
-import { videoMimeType } from "@t3tools/shared/video";
+import { serializeLegacyContextMessage } from "@mybot/shared/composerContextLegacySend";
+import { filePreviewKind } from "@mybot/shared/filePreview";
+import { videoMimeType } from "@mybot/shared/video";
 import {
   COMPOSER_CONTEXT_MAX_RECORDS,
   ComposerContextId,
@@ -8,7 +8,7 @@ import {
   OrchestrationMessageContext,
   type ScopedThreadRef,
   type ThreadContextRecord,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Schema from "effect/Schema";
 import {
   ATTACHMENT_ONLY_BOOTSTRAP_PROMPT,
@@ -17,11 +17,11 @@ import {
   isImageReferencesOnly,
   replaceComposerContextReferences,
   sanitizeComposerContextLabel,
-} from "@t3tools/shared/composerContextReferences";
+} from "@mybot/shared/composerContextReferences";
 import {
   collectComposerInlineTokens,
   type ComposerInlineToken,
-} from "@t3tools/shared/composerInlineTokens";
+} from "@mybot/shared/composerInlineTokens";
 
 const isMessageContext = Schema.is(OrchestrationMessageContext);
 const decodeMessageContext = Schema.decodeUnknownOption(OrchestrationMessageContext);

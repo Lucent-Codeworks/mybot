@@ -1,16 +1,16 @@
-import { isLiveSubagentTurnItem } from "@t3tools/client-runtime/state/subagentRuntime";
+import { isLiveSubagentTurnItem } from "@mybot/client-runtime/state/subagentRuntime";
 import * as DateTime from "effect/DateTime";
 import * as Equal from "effect/Equal";
 import {
   assistantCitationLabel,
   collectAssistantCitations,
-} from "@t3tools/shared/assistantCitations";
+} from "@mybot/shared/assistantCitations";
 import { shallow } from "zustand/vanilla/shallow";
-import { renderCodexDirectivesForCopy } from "@t3tools/shared/codexMarkdownDirectives";
+import { renderCodexDirectivesForCopy } from "@mybot/shared/codexMarkdownDirectives";
 import {
   commandDisplayText,
   commandProgramName,
-} from "@t3tools/client-runtime/work-log/command-label";
+} from "@mybot/client-runtime/work-log/command-label";
 import {
   liveActivityToolStatus,
   normalizeCompactToolLabel,
@@ -19,11 +19,11 @@ import {
   toolGroupAction,
   toolGroupSummaryKind,
   type ToolGroupSummaryKind,
-} from "@t3tools/client-runtime/work-log/presentation";
+} from "@mybot/client-runtime/work-log/presentation";
 export {
   normalizeCompactToolLabel,
   toolGroupAction,
-} from "@t3tools/client-runtime/work-log/presentation";
+} from "@mybot/client-runtime/work-log/presentation";
 import {
   deriveRevertTurnCountByUserMessageId,
   formatDuration,
@@ -50,24 +50,24 @@ import {
   RunId,
   type ThreadId,
   type TurnItemId,
-} from "@t3tools/contracts";
-import type { ThreadRunSummary } from "@t3tools/client-runtime/state/shell";
+} from "@mybot/contracts";
+import type { ThreadRunSummary } from "@mybot/client-runtime/state/shell";
 import {
   resolveT3McpToolDefinition,
   resolveT3McpToolPresentation,
   type T3McpToolPresentation,
-} from "@t3tools/shared/t3McpToolPresentation";
-import { compactDynamicToolOutput } from "@t3tools/shared/toolOutput";
-import { htmlRenderReferencesEqual, type HtmlRenderReference } from "@t3tools/shared/htmlRender";
-import { mcpAppReferencesEqual, type McpAppReference } from "@t3tools/shared/mcpApp";
-import { dynamicToolTitle } from "@t3tools/shared/toolActivity";
+} from "@mybot/shared/t3McpToolPresentation";
+import { compactDynamicToolOutput } from "@mybot/shared/toolOutput";
+import { htmlRenderReferencesEqual, type HtmlRenderReference } from "@mybot/shared/htmlRender";
+import { mcpAppReferencesEqual, type McpAppReference } from "@mybot/shared/mcpApp";
+import { dynamicToolTitle } from "@mybot/shared/toolActivity";
 import { formatWorkspaceRelativePath } from "../../filePathDisplay";
 import {
   collectToolFilePaths,
   formatReadToolLabel,
   formatSearchToolLabel,
-} from "@t3tools/shared/toolActivity";
-import { isWindowsAbsolutePath } from "@t3tools/shared/path";
+} from "@mybot/shared/toolActivity";
+import { isWindowsAbsolutePath } from "@mybot/shared/path";
 
 function timelineEntryRunId(entry: TimelineEntry): RunId | null {
   if (entry.kind === "message") {

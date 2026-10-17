@@ -1,4 +1,4 @@
-import { type EnvironmentId } from "@t3tools/contracts";
+import { type EnvironmentId } from "@mybot/contracts";
 import { ThreadHoverCard, ThreadHoverCardPopup } from "./ThreadHoverCard";
 import { CollapsibleSectionHeader } from "./ui/collapsible-section-header";
 import { ThreadTerminalStatusButton } from "./ThreadStatusIndicators";
@@ -14,7 +14,7 @@ import { requestNewBot } from "./NewBotDialog";
 import { resolveBotActivity } from "./sidebar/botActivity";
 import { botGroups, SidebarBots } from "./sidebar/SidebarBots";
 import { useAtomValue } from "@effect/atom-react";
-import { replaceComposerContextReferences } from "@t3tools/shared/composerContextReferences";
+import { replaceComposerContextReferences } from "@mybot/shared/composerContextReferences";
 import * as Schema from "effect/Schema";
 import {
   DndContext,
@@ -32,35 +32,35 @@ import {
   canSnooze,
   effectiveSnoozed,
   threadWokeAt,
-} from "@t3tools/client-runtime/state/thread-settled";
-import { createInboxReturnTracker } from "@t3tools/client-runtime/state/thread-inbox";
+} from "@mybot/client-runtime/state/thread-settled";
+import { createInboxReturnTracker } from "@mybot/client-runtime/state/thread-inbox";
 import {
   resolveSettledThreadTimestamp,
   sortSettledThreads,
-} from "@t3tools/client-runtime/state/thread-sort";
+} from "@mybot/client-runtime/state/thread-sort";
 import {
   threadSearchMatchKey,
   type EnvironmentThreadSearchMatch,
-} from "@t3tools/client-runtime/state/thread-search";
+} from "@mybot/client-runtime/state/thread-search";
 import {
   resolveThreadProviderStack,
   threadRuntimeCanArchive,
   type EnvironmentThreadShell,
-} from "@t3tools/client-runtime/state/models";
+} from "@mybot/client-runtime/state/models";
 import {
   parseScopedThreadKey,
   scopeProjectRef,
   scopeThreadRef,
   scopedThreadKey,
-} from "@t3tools/client-runtime/environment";
+} from "@mybot/client-runtime/environment";
 import {
   AuthOrchestrationOperateScope,
   type EnvironmentMachineKind,
   type ScopedThreadRef,
   type ThreadId,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 
-import type { TimestampFormat } from "@t3tools/contracts/settings";
+import type { TimestampFormat } from "@mybot/contracts/settings";
 import {
   AlarmClockIcon,
   AlarmClockOffIcon,
@@ -101,7 +101,7 @@ import {
   settlePromise,
   squashAtomCommandFailure,
   type AtomCommandResult,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@mybot/client-runtime/state/runtime";
 import { isElectron } from "../env";
 import {
   resolveShortcutCommand,
@@ -163,7 +163,7 @@ import {
 } from "../threadRoutes";
 import { formatRelativeTimeLabel, parseTimestampDate } from "../timestampFormat";
 import type { SidebarThreadSummary } from "../types";
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
+import type { EnvironmentProject } from "@mybot/client-runtime/state/shell";
 import { cn } from "~/lib/utils";
 import { EnvironmentMachineIcon } from "./EnvironmentMachineIcon";
 import {

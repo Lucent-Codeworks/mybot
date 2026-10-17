@@ -1,8 +1,5 @@
-import type {
-  EnvironmentProject,
-  EnvironmentThreadShell,
-} from "@t3tools/client-runtime/state/shell";
-import { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import type { EnvironmentProject, EnvironmentThreadShell } from "@mybot/client-runtime/state/shell";
+import { EnvironmentId, ThreadId } from "@mybot/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import { useFocusEffect } from "@react-navigation/native";
 import {

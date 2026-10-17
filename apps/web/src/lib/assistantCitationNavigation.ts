@@ -1,8 +1,8 @@
-import type { AssistantCitation } from "@t3tools/contracts";
+import type { AssistantCitation } from "@mybot/contracts";
 import {
   formatAssistantCitationHref,
   parseAssistantCitationHref,
-} from "@t3tools/shared/assistantCitations";
+} from "@mybot/shared/assistantCitations";
 import * as Base64Url from "effect/encoding/Base64Url";
 import * as Result from "effect/Result";
 

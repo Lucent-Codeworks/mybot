@@ -1,7 +1,7 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
+import * as McpProviderSessions from "@mybot/provider-core/server/McpProviderSessions";
 import { assert, it } from "@effect/vitest";
-import { ProjectId } from "@t3tools/contracts";
+import { ProjectId } from "@mybot/contracts";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
@@ -11,7 +11,7 @@ import * as Stream from "effect/Stream";
 import * as SqlClient from "effect/sql/SqlClient";
 
 import * as ServerConfig from "../config.ts";
-import * as NodeSqliteClient from "@t3tools/shared/nodeSqliteClient";
+import * as NodeSqliteClient from "@mybot/shared/nodeSqliteClient";
 
 import * as McpSessionRegistryTestkit from "../mcp/McpSessionRegistry.testkit.ts";
 import * as SqlitePersistence from "../persistence/Sqlite.ts";

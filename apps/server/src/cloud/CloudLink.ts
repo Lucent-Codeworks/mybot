@@ -11,7 +11,7 @@ import {
   type EnvironmentCloudLinkStateResult,
   type EnvironmentCloudPreferencesRequest,
   type EnvironmentCloudRelayConfigResult,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import {
   RelayCloudEnvironmentHealthProofPayload,
   type RelayCloudEnvironmentHealthRequest,
@@ -33,8 +33,8 @@ import {
   RelayManagedEndpointRecoveryResponse,
   type RelayManagedEndpointRuntimeConfig,
   RelayOkResponse,
-} from "@t3tools/contracts/relay";
-import { withRelayClientTracing } from "@t3tools/shared/relayTracing";
+} from "@mybot/contracts/relay";
+import { withRelayClientTracing } from "@mybot/shared/relayTracing";
 import {
   normalizeRelayIssuer,
   RELAY_HEALTH_REQUEST_TYP,
@@ -45,8 +45,8 @@ import {
   RELAY_MINT_RESPONSE_TYP,
   signRelayJwt,
   verifyRelayJwt,
-} from "@t3tools/shared/relayJwt";
-import { isSecureRelayUrl } from "@t3tools/shared/relayUrl";
+} from "@mybot/shared/relayJwt";
+import { isSecureRelayUrl } from "@mybot/shared/relayUrl";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
 import * as DateTime from "effect/DateTime";

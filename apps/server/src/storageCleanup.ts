@@ -2,8 +2,8 @@ import type {
   ServerSettingsError,
   StorageCleanupReport,
   StorageCleanupReportEntry,
-} from "@t3tools/contracts";
-import { makeDrainableWorker } from "@t3tools/shared/DrainableWorker";
+} from "@mybot/contracts";
+import { makeDrainableWorker } from "@mybot/shared/DrainableWorker";
 import * as Context from "effect/Context";
 import * as Deferred from "effect/Deferred";
 import * as Layer from "effect/Layer";

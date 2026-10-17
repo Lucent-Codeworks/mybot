@@ -1,14 +1,14 @@
-import { resolveFilesystemReadAccess } from "@t3tools/client-runtime/state/filesystem";
+import { resolveFilesystemReadAccess } from "@mybot/client-runtime/state/filesystem";
 import { environmentSession } from "./session";
 import { useEnvironmentPresentation } from "./presentation";
-import type { EnvironmentId, OrchestrationV2ProjectedTurnItem } from "@t3tools/contracts";
+import type { EnvironmentId, OrchestrationV2ProjectedTurnItem } from "@mybot/contracts";
 import {
   createThreadSearchResultsAtomFamily,
   makeThreadSearchKey,
   type EnvironmentThreadSearchMatch,
-} from "@t3tools/client-runtime/state/thread-search";
+} from "@mybot/client-runtime/state/thread-search";
 import { useAtomValue } from "@effect/atom-react";
-import { turnItemDetailRevision } from "@t3tools/client-runtime/work-log/item-detail";
+import { turnItemDetailRevision } from "@mybot/client-runtime/work-log/item-detail";
 import { Atom } from "effect/reactivity";
 import { useEffect, useMemo, useState } from "react";
 

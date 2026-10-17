@@ -3,11 +3,11 @@ import {
   MUSE_DEFAULT_MODEL,
   type ModelSelection,
   type ServerProviderModel,
-} from "@t3tools/contracts";
-import { TextGenerationError } from "@t3tools/provider-core/server/textGeneration";
+} from "@mybot/contracts";
+import { TextGenerationError } from "@mybot/provider-core/server/textGeneration";
 import type { MuseSettings } from "../settings.ts";
-import { getModelSelectionStringOptionValue } from "@t3tools/shared/model";
-import { extractJsonObject } from "@t3tools/shared/schemaJson";
+import { getModelSelectionStringOptionValue } from "@mybot/shared/model";
+import { extractJsonObject } from "@mybot/shared/schemaJson";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Option from "effect/Option";
@@ -15,15 +15,15 @@ import * as Schema from "effect/Schema";
 
 import { createMuseSdkHost, createMuseSdkHostEffect, type MuseSdkHost } from "./sdk.ts";
 import { museModelCapabilities, resolveMuseReasoningEffort } from "./modelCatalog.ts";
-import type { ProviderTextGeneration } from "@t3tools/provider-core/server/textGeneration";
+import type { ProviderTextGeneration } from "@mybot/provider-core/server/textGeneration";
 import {
   buildActionReviewPrompt,
   buildThreadTitlePrompt,
-} from "@t3tools/provider-core/server/textGenerationPrompts";
+} from "@mybot/provider-core/server/textGenerationPrompts";
 import {
   sanitizeThreadTitle,
   toJsonSchemaObject,
-} from "@t3tools/provider-core/server/textGenerationUtils";
+} from "@mybot/provider-core/server/textGenerationUtils";
 
 const SessionStarted = Schema.Struct({ session: Schema.Struct({ sessionId: Schema.String }) });
 const ItemNotification = Schema.Struct({

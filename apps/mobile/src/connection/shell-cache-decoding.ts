@@ -1,4 +1,4 @@
-import { StoredOrchestrationShellSnapshot } from "@t3tools/client-runtime/platform";
+import { StoredOrchestrationShellSnapshot } from "@mybot/client-runtime/platform";
 import * as Schema from "effect/Schema";
 
 export const decodeStoredShellSnapshot = Schema.decodeUnknownEffect(

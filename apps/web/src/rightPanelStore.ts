@@ -7,8 +7,8 @@
  * terminal surfaces point at terminal session ids, file surfaces point at
  * workspace paths, and the file explorer is a singleton surface.
  */
-import { parseScopedThreadKey, scopedThreadKey } from "@t3tools/client-runtime/environment";
-import type { ScopedThreadRef } from "@t3tools/contracts";
+import { parseScopedThreadKey, scopedThreadKey } from "@mybot/client-runtime/environment";
+import type { ScopedThreadRef } from "@mybot/contracts";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 

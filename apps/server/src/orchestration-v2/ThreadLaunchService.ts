@@ -14,7 +14,7 @@ import {
   type RuntimeMode,
   type ScheduledTaskId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -27,9 +27,9 @@ import * as Scope from "effect/Scope";
 
 import * as ProjectService from "../project/ProjectService.ts";
 import * as CommandReceiptStore from "./CommandReceiptStore.ts";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
+import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
 import type * as Orchestrator from "./Orchestrator.ts";
-import { makeProviderFailure } from "@t3tools/provider-core/server/failure";
+import { makeProviderFailure } from "@mybot/provider-core/server/failure";
 import * as ThreadManagement from "./ThreadManagementService.ts";
 
 export interface ThreadLaunchInitialMessage {
@@ -38,7 +38,7 @@ export interface ThreadLaunchInitialMessage {
   readonly senderThreadId?: ThreadId;
   readonly text: string;
   readonly attachments: ReadonlyArray<ChatAttachment>;
-  readonly context?: import("@t3tools/contracts").OrchestrationMessageContext | undefined;
+  readonly context?: import("@mybot/contracts").OrchestrationMessageContext | undefined;
 }
 
 /** Threads always run in their project's root folder. */

@@ -1,5 +1,5 @@
 {
-  "name": "@t3tools/shared",
+  "name": "@mybot/shared",
   "private": true,
   "type": "module",
   "exports": {
@@ -473,9 +473,9 @@
     "test": "vp test run --config ../../vite.config.ts --dir ."
   },
   "dependencies": {
+    "@mybot/contracts": "workspace:*",
     "@noble/curves": "catalog:",
     "@noble/hashes": "catalog:",
-    "@t3tools/contracts": "workspace:*",
     "effect": "catalog:",
     "jose": "catalog:",
     "mdast-util-directive": "catalog:",

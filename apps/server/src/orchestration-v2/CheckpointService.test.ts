@@ -7,13 +7,13 @@ import {
   RunId,
   ThreadId,
   type OrchestrationV2CheckpointScope,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
 import * as CheckpointService from "./CheckpointService.ts";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
+import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
 
 const layerTest = CheckpointService.layer.pipe(
   Layer.provide(IdAllocator.layer),

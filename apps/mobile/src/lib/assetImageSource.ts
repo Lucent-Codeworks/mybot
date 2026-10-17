@@ -1,4 +1,4 @@
-import type { AssetResource, EnvironmentId } from "@t3tools/contracts";
+import type { AssetResource, EnvironmentId } from "@mybot/contracts";
 import type { ImageSource } from "expo-image";
 
 /**

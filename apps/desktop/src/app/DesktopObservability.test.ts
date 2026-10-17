@@ -7,7 +7,7 @@ import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
 import * as HttpClient from "effect/http/HttpClient";
 import * as HttpClientResponse from "effect/http/HttpClientResponse";
-import * as OtelEnvironment from "@t3tools/shared/otelEnvironment";
+import * as OtelEnvironment from "@mybot/shared/otelEnvironment";
 
 import * as DesktopConfig from "./DesktopConfig.ts";
 import * as DesktopEnvironment from "./DesktopEnvironment.ts";

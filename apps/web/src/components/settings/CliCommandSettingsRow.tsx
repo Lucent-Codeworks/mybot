@@ -1,4 +1,4 @@
-import type { DesktopCliCommandState } from "@t3tools/contracts";
+import type { DesktopCliCommandState } from "@mybot/contracts";
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "../ui/button";

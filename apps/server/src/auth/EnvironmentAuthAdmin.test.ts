@@ -1,4 +1,4 @@
-import { AuthAdministrativeScopes } from "@t3tools/contracts";
+import { AuthAdministrativeScopes } from "@mybot/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";

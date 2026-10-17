@@ -1,5 +1,5 @@
 import { useAtomRefresh, useAtomValue } from "@effect/atom-react";
-import type { BotProfile, EnvironmentId, ProjectId } from "@t3tools/contracts";
+import type { BotProfile, EnvironmentId, ProjectId } from "@mybot/contracts";
 import * as Option from "effect/Option";
 import { AsyncResult } from "effect/reactivity";
 import { useNavigate } from "@tanstack/react-router";
@@ -10,7 +10,7 @@ import {
   type AtomCommandResult,
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@mybot/client-runtime/state/runtime";
 
 import { serverEnvironment } from "~/state/server";
 import { toastManager } from "../ui/toast";

@@ -1,11 +1,11 @@
-import type { AppConnectionAddInput, AppConnectionSummary } from "@t3tools/contracts";
+import type { AppConnectionAddInput, AppConnectionSummary } from "@mybot/contracts";
 import {
   type AppPreset,
   type AppPresetField,
   appPresetFieldDefault,
   appPresetTarget,
   buildAppConnectionInput,
-} from "@t3tools/shared/appCatalog";
+} from "@mybot/shared/appCatalog";
 import * as Base64 from "effect/encoding/Base64";
 import { ExternalLinkIcon, FileKeyIcon, InfoIcon, SearchIcon } from "lucide-react";
 import { useDeferredValue, useId, useMemo, useState } from "react";

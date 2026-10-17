@@ -2,11 +2,11 @@ import type {
   BrowserNavigationTarget,
   EnvironmentId,
   PreviewUrlResolution,
-} from "@t3tools/contracts";
-import { isLoopbackHost, normalizePreviewUrl } from "@t3tools/shared/preview";
-import { isLocalLoopbackHost, isPrivateNetworkHost } from "@t3tools/shared/hostClassification";
+} from "@mybot/contracts";
+import { isLoopbackHost, normalizePreviewUrl } from "@mybot/shared/preview";
+import { isLocalLoopbackHost, isPrivateNetworkHost } from "@mybot/shared/hostClassification";
 
-import type { ConnectionTarget } from "@t3tools/client-runtime/connection";
+import type { ConnectionTarget } from "@mybot/client-runtime/connection";
 
 import { isDesktopLocalConnectionTarget } from "~/connection/desktopLocal";
 import { isElectron } from "~/env";
@@ -17,7 +17,7 @@ export {
   isLocalLoopbackHost,
   isPrivateNetworkHost,
   isPublicFaviconHost,
-} from "@t3tools/shared/hostClassification";
+} from "@mybot/shared/hostClassification";
 
 const readEnvironmentUrl = (environmentId: EnvironmentId): URL => {
   const connection = readPreparedConnection(environmentId);

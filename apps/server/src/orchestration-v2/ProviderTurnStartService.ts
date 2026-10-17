@@ -1,5 +1,5 @@
-import { modelSelectionsEqual } from "@t3tools/shared/model";
-import { projectComposerContextForProvider } from "@t3tools/shared/composerContextReferences";
+import { modelSelectionsEqual } from "@mybot/shared/model";
+import { projectComposerContextForProvider } from "@mybot/shared/composerContextReferences";
 import {
   CommandId,
   latestProviderTurnForAttempt,
@@ -11,7 +11,7 @@ import {
   type OrchestrationV2TurnItem,
   RunId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
@@ -30,13 +30,13 @@ import {
   contextUsageForHandoff,
   historicalMessage,
   latestNativeContextUsage,
-} from "@t3tools/provider-core/server/handoffBudget";
+} from "@mybot/provider-core/server/handoffBudget";
 import { deliverContextHandoffs } from "./ContextHandoffDelivery.ts";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
+import * as ProviderAdapter from "@mybot/provider-core/server/ProviderAdapter";
+import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
 import * as ProjectionStore from "./ProjectionStore.ts";
 import * as ProviderSessionManager from "./ProviderSessionManager.ts";
-import { makeProviderFailure } from "@t3tools/provider-core/server/failure";
+import { makeProviderFailure } from "@mybot/provider-core/server/failure";
 import * as RunExecutionService from "./RunExecutionService.ts";
 import * as RuntimePolicy from "./RuntimePolicy.ts";
 import {

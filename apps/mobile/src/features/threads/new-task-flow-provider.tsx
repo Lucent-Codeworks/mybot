@@ -8,7 +8,7 @@ import type {
   ProviderOptionSelection,
   RuntimeMode,
   ServerProvider,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import {
   CommandId,
   DEFAULT_PROVIDER_INTERACTION_MODE,
@@ -16,8 +16,8 @@ import {
   DEFAULT_SERVER_SETTINGS,
   MessageId,
   ThreadId,
-} from "@t3tools/contracts";
-import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
+} from "@mybot/contracts";
+import { resolveProjectSettings } from "@mybot/shared/projectSettings";
 import * as Arr from "effect/Array";
 import { pipe } from "effect/Function";
 
@@ -83,13 +83,13 @@ import {
   useRemoteConnectionStatus,
   useSavedRemoteConnections,
 } from "../../state/use-remote-environment-registry";
-import { availableScratchWorkspaceRoot } from "@t3tools/client-runtime/operations/projects";
+import { availableScratchWorkspaceRoot } from "@mybot/client-runtime/operations/projects";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
-import { isScratchProject } from "@t3tools/client-runtime/state/projects";
-import { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
+} from "@mybot/client-runtime/state/runtime";
+import { isScratchProject } from "@mybot/client-runtime/state/projects";
+import { EnvironmentProject } from "@mybot/client-runtime/state/shell";
 import {
   buildHomeProjectScopes,
   sortHomeProjectScopes,

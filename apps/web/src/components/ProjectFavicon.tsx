@@ -1,9 +1,9 @@
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
-import type { ProjectIconColor } from "@t3tools/contracts";
+import type { EnvironmentProject } from "@mybot/client-runtime/state/shell";
+import type { ProjectIconColor } from "@mybot/contracts";
 import {
   getProjectFaviconResourceKey,
   isProjectFaviconFallbackUrl,
-} from "@t3tools/shared/projectFavicon";
+} from "@mybot/shared/projectFavicon";
 import { FolderCodeIcon } from "lucide-react";
 import type { IconName } from "lucide-react/dynamic";
 import type { ComponentType } from "react";

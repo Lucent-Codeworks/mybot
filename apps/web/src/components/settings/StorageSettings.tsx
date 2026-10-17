@@ -1,11 +1,11 @@
-import type { StorageCleanupReport, StorageCleanupSettings } from "@t3tools/contracts";
+import type { StorageCleanupReport, StorageCleanupSettings } from "@mybot/contracts";
 import { useMemo, useState } from "react";
 import { useAtomValue } from "@effect/atom-react";
 import { Atom } from "effect/reactivity";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@mybot/client-runtime/state/runtime";
 import { formatBytes } from "../../lib/formatBytes";
 import { serverEnvironment } from "../../state/server";
 import { useAtomCommand } from "../../state/use-atom-command";

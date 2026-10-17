@@ -1,6 +1,6 @@
-import { RELAY_TUNNEL_RELEASED_MESSAGE, type Discovery } from "@t3tools/client-runtime/relay";
-import type { AtomCommandResult } from "@t3tools/client-runtime/state/runtime";
-import { EnvironmentId, ORCHESTRATION_PROTOCOL_VERSION } from "@t3tools/contracts";
+import { RELAY_TUNNEL_RELEASED_MESSAGE, type Discovery } from "@mybot/client-runtime/relay";
+import type { AtomCommandResult } from "@mybot/client-runtime/state/runtime";
+import { EnvironmentId, ORCHESTRATION_PROTOCOL_VERSION } from "@mybot/contracts";
 import * as Option from "effect/Option";
 import { AsyncResult } from "effect/reactivity";
 import { act, useState, type ButtonHTMLAttributes, type ReactNode } from "react";

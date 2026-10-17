@@ -1,6 +1,6 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
-import { type OrchestrationProjectShell, ProjectId } from "@t3tools/contracts";
+import { type OrchestrationProjectShell, ProjectId } from "@mybot/contracts";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";

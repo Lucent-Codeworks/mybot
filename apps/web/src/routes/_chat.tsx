@@ -1,5 +1,5 @@
-import { scopeProjectRef } from "@t3tools/client-runtime/environment";
-import { AuthPreviewOperateScope } from "@t3tools/contracts";
+import { scopeProjectRef } from "@mybot/client-runtime/environment";
+import { AuthPreviewOperateScope } from "@mybot/contracts";
 import { Outlet, createFileRoute, redirect, useParams } from "@tanstack/react-router";
 import { useAtomValue } from "@effect/atom-react";
 import { useEffect } from "react";

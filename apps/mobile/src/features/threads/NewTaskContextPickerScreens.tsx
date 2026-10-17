@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { resolveEnvironmentMachineKind } from "@t3tools/contracts";
+import { resolveEnvironmentMachineKind } from "@mybot/contracts";
 import * as Haptics from "expo-haptics";
 import { useNavigation } from "@react-navigation/native";
 import { Platform, Pressable, ScrollView, View } from "react-native";

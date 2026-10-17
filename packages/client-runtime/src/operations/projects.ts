@@ -5,8 +5,8 @@ import type {
   ProjectMutation,
   ProjectId,
   ServerConfig,
-} from "@t3tools/contracts";
-import { newProjectFolderName } from "@t3tools/shared/path";
+} from "@mybot/contracts";
+import { newProjectFolderName } from "@mybot/shared/path";
 
 import {
   ensureBrowseDirectoryPath,

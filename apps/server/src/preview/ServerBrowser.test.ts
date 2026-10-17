@@ -10,7 +10,7 @@ import {
   type PreviewAutomationSnapshot,
   type PreviewAutomationStatus,
   type PreviewAutomationTeachResult,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Clock from "effect/Clock";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";

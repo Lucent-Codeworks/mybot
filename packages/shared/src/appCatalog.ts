@@ -1,4 +1,4 @@
-import type { AppConnectionAddInput } from "@t3tools/contracts";
+import type { AppConnectionAddInput } from "@mybot/contracts";
 
 import { PRODUCTIVITY_APPS } from "./appCatalog/productivity.ts";
 import { DEVELOPER_APPS } from "./appCatalog/developer.ts";

@@ -1,4 +1,4 @@
-import type { AppConnectionAddInput, ProjectIconColor } from "@t3tools/contracts";
+import type { AppConnectionAddInput, ProjectIconColor } from "@mybot/contracts";
 
 /**
  * The app catalog: ready-made connections for popular apps. Each preset lists

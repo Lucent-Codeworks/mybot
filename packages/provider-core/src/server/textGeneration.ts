@@ -1,4 +1,4 @@
-import type { ChatAttachment, ModelSelection } from "@t3tools/contracts";
+import type { ChatAttachment, ModelSelection } from "@mybot/contracts";
 import type * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 

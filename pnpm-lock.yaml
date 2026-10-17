@@ -157,7 +157,7 @@ patchedDependencies:
   '@react-native-menu/menu@2.0.0': a4866ecfcd44f318043de839d20110c17e14909004900f002ffe12050376f2ba
   '@react-navigation/native-stack@7.17.6': d2d52f3776e30765519748fd5e177592dc3b9cc778c52fb00e02674dfa9042c5
   alchemy@2.0.0-beta.80: bea1b6c0c0b23157fd5f439a1d7feff430f28ac1621ba135d8a13eeec60ccacd
-  dbus-next@0.10.2: cfff57561b0ee59b5addb3b2e6c6f20906e967507a530ab67e8db8108e520ba4
+  dbus-next@0.10.2: 6c46698fb221eede3bacf97d27033a43d63244cd589d5b822b6c5a4a17d60558
   effect@4.0.2: ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688
   expo-audio@58.0.4: c20cb927d6848c53e7bf6ec14fe12f19daae9210165d2dbaf4e0f97ce31e8742
   expo-blur@58.0.3: d0311b0c0b05bd94393bd9a84653cb42503d5f3c8a19eb2627c34ace08bedf18
@@ -212,27 +212,27 @@ importers:
       '@effect/platform-node':
         specifier: 4.0.2
         version: 4.0.2(bufferutil@4.1.0)(effect@4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688))(redis@6.2.1)(utf-8-validate@6.0.6)
+      '@mybot/client-runtime':
+        specifier: workspace:*
+        version: link:../../packages/client-runtime
+      '@mybot/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@mybot/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      '@mybot/ssh':
+        specifier: workspace:*
+        version: link:../../packages/ssh
+      '@mybot/tailscale':
+        specifier: workspace:*
+        version: link:../../packages/tailscale
       '@napi-rs/keyring':
         specifier: ^1.3.0
         version: 1.3.0
-      '@t3tools/client-runtime':
-        specifier: workspace:*
-        version: link:../../packages/client-runtime
-      '@t3tools/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
-      '@t3tools/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
-      '@t3tools/ssh':
-        specifier: workspace:*
-        version: link:../../packages/ssh
-      '@t3tools/tailscale':
-        specifier: workspace:*
-        version: link:../../packages/tailscale
       dbus-next:
         specifier: 0.10.2
-        version: 0.10.2(patch_hash=cfff57561b0ee59b5addb3b2e6c6f20906e967507a530ab67e8db8108e520ba4)
+        version: 0.10.2(patch_hash=6c46698fb221eede3bacf97d27033a43d63244cd589d5b822b6c5a4a17d60558)
       effect:
         specifier: 4.0.2
         version: 4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688)
@@ -285,7 +285,7 @@ importers:
 
   apps/marketing:
     dependencies:
-      '@t3tools/shared':
+      '@mybot/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       astro:
@@ -328,6 +328,45 @@ importers:
       '@material/material-color-utilities':
         specifier: 0.3.0
         version: 0.3.0
+      '@mybot/client-runtime':
+        specifier: workspace:*
+        version: link:../../packages/client-runtime
+      '@mybot/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@mybot/mobile-review-diff-native':
+        specifier: file:./modules/t3-review-diff
+        version: file:apps/mobile/modules/t3-review-diff
+      '@mybot/mobile-source-text':
+        specifier: file:./modules/t3-source-text
+        version: file:apps/mobile/modules/t3-source-text(react-native@0.88.0-rc.3(@babel/core@7.29.7)(@react-native/metro-config@0.88.0-rc.3(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6))(react@19.3.0)
+      '@mybot/mobile-terminal-native':
+        specifier: file:./modules/t3-terminal
+        version: file:apps/mobile/modules/t3-terminal
+      '@mybot/provider-acp-registry':
+        specifier: workspace:*
+        version: link:../../packages/provider-acp-registry
+      '@mybot/provider-core':
+        specifier: workspace:*
+        version: link:../../packages/provider-core
+      '@mybot/provider-cursor':
+        specifier: workspace:*
+        version: link:../../packages/provider-cursor
+      '@mybot/provider-grok':
+        specifier: workspace:*
+        version: link:../../packages/provider-grok
+      '@mybot/provider-muse':
+        specifier: workspace:*
+        version: link:../../packages/provider-muse
+      '@mybot/provider-opencode':
+        specifier: workspace:*
+        version: link:../../packages/provider-opencode
+      '@mybot/provider-pi':
+        specifier: workspace:*
+        version: link:../../packages/provider-pi
+      '@mybot/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@noble/curves':
         specifier: 'catalog:'
         version: 1.9.1
@@ -361,45 +400,6 @@ importers:
       '@shikijs/themes':
         specifier: 4.2.0
         version: 4.2.0
-      '@t3tools/client-runtime':
-        specifier: workspace:*
-        version: link:../../packages/client-runtime
-      '@t3tools/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
-      '@t3tools/mobile-review-diff-native':
-        specifier: file:./modules/t3-review-diff
-        version: file:apps/mobile/modules/t3-review-diff
-      '@t3tools/mobile-source-text':
-        specifier: file:./modules/t3-source-text
-        version: file:apps/mobile/modules/t3-source-text(react-native@0.88.0-rc.3(@babel/core@7.29.7)(@react-native/metro-config@0.88.0-rc.3(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6))(react@19.3.0)
-      '@t3tools/mobile-terminal-native':
-        specifier: file:./modules/t3-terminal
-        version: file:apps/mobile/modules/t3-terminal
-      '@t3tools/provider-acp-registry':
-        specifier: workspace:*
-        version: link:../../packages/provider-acp-registry
-      '@t3tools/provider-core':
-        specifier: workspace:*
-        version: link:../../packages/provider-core
-      '@t3tools/provider-cursor':
-        specifier: workspace:*
-        version: link:../../packages/provider-cursor
-      '@t3tools/provider-grok':
-        specifier: workspace:*
-        version: link:../../packages/provider-grok
-      '@t3tools/provider-muse':
-        specifier: workspace:*
-        version: link:../../packages/provider-muse
-      '@t3tools/provider-opencode':
-        specifier: workspace:*
-        version: link:../../packages/provider-opencode
-      '@t3tools/provider-pi':
-        specifier: workspace:*
-        version: link:../../packages/provider-pi
-      '@t3tools/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       '@tabler/icons-react-native':
         specifier: ^3.44.0
         version: 3.44.0(react-native-svg@15.15.5(react-native@0.88.0-rc.3(@babel/core@7.29.7)(@react-native/metro-config@0.88.0-rc.3(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6))(react@19.3.0))(react@19.3.0)
@@ -629,36 +629,36 @@ importers:
       '@muse-code/sdk':
         specifier: 1.4.6
         version: 1.4.6(@types/node@24.12.4)
+      '@mybot/provider-acp':
+        specifier: workspace:*
+        version: link:../../packages/provider-acp
+      '@mybot/provider-acp-registry':
+        specifier: workspace:*
+        version: link:../../packages/provider-acp-registry
+      '@mybot/provider-core':
+        specifier: workspace:*
+        version: link:../../packages/provider-core
+      '@mybot/provider-cursor':
+        specifier: workspace:*
+        version: link:../../packages/provider-cursor
+      '@mybot/provider-grok':
+        specifier: workspace:*
+        version: link:../../packages/provider-grok
+      '@mybot/provider-muse':
+        specifier: workspace:*
+        version: link:../../packages/provider-muse
+      '@mybot/provider-opencode':
+        specifier: workspace:*
+        version: link:../../packages/provider-opencode
+      '@mybot/provider-pi':
+        specifier: workspace:*
+        version: link:../../packages/provider-pi
       '@napi-rs/keyring':
         specifier: ^1.3.0
         version: 1.3.0
       '@opencode-ai/sdk':
         specifier: ^1.3.15
         version: 1.15.13
-      '@t3tools/provider-acp':
-        specifier: workspace:*
-        version: link:../../packages/provider-acp
-      '@t3tools/provider-acp-registry':
-        specifier: workspace:*
-        version: link:../../packages/provider-acp-registry
-      '@t3tools/provider-core':
-        specifier: workspace:*
-        version: link:../../packages/provider-core
-      '@t3tools/provider-cursor':
-        specifier: workspace:*
-        version: link:../../packages/provider-cursor
-      '@t3tools/provider-grok':
-        specifier: workspace:*
-        version: link:../../packages/provider-grok
-      '@t3tools/provider-muse':
-        specifier: workspace:*
-        version: link:../../packages/provider-muse
-      '@t3tools/provider-opencode':
-        specifier: workspace:*
-        version: link:../../packages/provider-opencode
-      '@t3tools/provider-pi':
-        specifier: workspace:*
-        version: link:../../packages/provider-pi
       effect:
         specifier: 4.0.2
         version: 4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688)
@@ -696,22 +696,22 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: 1.29.0
         version: 1.29.0(zod@4.6.5)
-      '@t3tools/contracts':
+      '@mybot/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@t3tools/provider-testing':
+      '@mybot/provider-testing':
         specifier: workspace:*
         version: link:../../packages/provider-testing
-      '@t3tools/shared':
+      '@mybot/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@t3tools/ssh':
+      '@mybot/ssh':
         specifier: workspace:*
         version: link:../../packages/ssh
-      '@t3tools/tailscale':
+      '@mybot/tailscale':
         specifier: workspace:*
         version: link:../../packages/tailscale
-      '@t3tools/web':
+      '@mybot/web':
         specifier: workspace:*
         version: link:../web
       '@types/node':
@@ -768,6 +768,36 @@ importers:
       '@legendapp/list':
         specifier: 'catalog:'
         version: 3.3.5(patch_hash=680cc6a5c5b4a4032e467e7b3fde22f89a84c0ee2e6eac6fda737d6277cc0806)(react-dom@19.2.6(react@19.2.6))(react-native@0.88.0-rc.3(@babel/core@7.29.7)(@react-native/metro-config@0.88.0-rc.3(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.2.6)(utf-8-validate@6.0.6))(react@19.2.6)
+      '@mybot/client-runtime':
+        specifier: workspace:*
+        version: link:../../packages/client-runtime
+      '@mybot/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@mybot/provider-acp-registry':
+        specifier: workspace:*
+        version: link:../../packages/provider-acp-registry
+      '@mybot/provider-core':
+        specifier: workspace:*
+        version: link:../../packages/provider-core
+      '@mybot/provider-cursor':
+        specifier: workspace:*
+        version: link:../../packages/provider-cursor
+      '@mybot/provider-grok':
+        specifier: workspace:*
+        version: link:../../packages/provider-grok
+      '@mybot/provider-muse':
+        specifier: workspace:*
+        version: link:../../packages/provider-muse
+      '@mybot/provider-opencode':
+        specifier: workspace:*
+        version: link:../../packages/provider-opencode
+      '@mybot/provider-pi':
+        specifier: workspace:*
+        version: link:../../packages/provider-pi
+      '@mybot/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@noble/hashes':
         specifier: 'catalog:'
         version: 1.8.0
@@ -777,36 +807,6 @@ importers:
       '@pierre/trees':
         specifier: 1.0.0-beta.6
         version: 1.0.0-beta.6(@pierre/theme@1.1.0)(@shikijs/themes@4.3.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(shiki@4.2.0)
-      '@t3tools/client-runtime':
-        specifier: workspace:*
-        version: link:../../packages/client-runtime
-      '@t3tools/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
-      '@t3tools/provider-acp-registry':
-        specifier: workspace:*
-        version: link:../../packages/provider-acp-registry
-      '@t3tools/provider-core':
-        specifier: workspace:*
-        version: link:../../packages/provider-core
-      '@t3tools/provider-cursor':
-        specifier: workspace:*
-        version: link:../../packages/provider-cursor
-      '@t3tools/provider-grok':
-        specifier: workspace:*
-        version: link:../../packages/provider-grok
-      '@t3tools/provider-muse':
-        specifier: workspace:*
-        version: link:../../packages/provider-muse
-      '@t3tools/provider-opencode':
-        specifier: workspace:*
-        version: link:../../packages/provider-opencode
-      '@t3tools/provider-pi':
-        specifier: workspace:*
-        version: link:../../packages/provider-pi
-      '@t3tools/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       '@tanstack/react-pacer':
         specifier: ^0.19.4
         version: 0.19.4(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -994,21 +994,21 @@ importers:
       '@effect/sql-sqlite-do':
         specifier: 'catalog:'
         version: 4.0.2(effect@4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688))
+      '@mybot/client-runtime':
+        specifier: workspace:*
+        version: link:../../packages/client-runtime
+      '@mybot/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@mybot/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@noble/curves':
         specifier: 'catalog:'
         version: 1.9.1
       '@noble/hashes':
         specifier: 'catalog:'
         version: 1.8.0
-      '@t3tools/client-runtime':
-        specifier: workspace:*
-        version: link:../../packages/client-runtime
-      '@t3tools/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
-      '@t3tools/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       alchemy:
         specifier: 2.0.0-beta.80
         version: 2.0.0-beta.80(patch_hash=bea1b6c0c0b23157fd5f439a1d7feff430f28ac1621ba135d8a13eeec60ccacd)(ba3b2ceb33761bc36b3beb11002eb316)
@@ -1065,15 +1065,15 @@ importers:
 
   packages/client-runtime:
     dependencies:
+      '@mybot/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@mybot/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@pierre/diffs':
         specifier: 'catalog:'
         version: 1.5.2(patch_hash=298e94372dbd51846a4e26ece2ecc3e22eb1f94b0450b1f1a9c6fec127809be7)(@shikijs/themes@4.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@t3tools/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@t3tools/shared':
-        specifier: workspace:*
-        version: link:../shared
       effect:
         specifier: 4.0.2
         version: 4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688)
@@ -1150,13 +1150,13 @@ importers:
 
   packages/provider-acp:
     dependencies:
-      '@t3tools/contracts':
+      '@mybot/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@t3tools/provider-core':
+      '@mybot/provider-core':
         specifier: workspace:*
         version: link:../provider-core
-      '@t3tools/shared':
+      '@mybot/shared':
         specifier: workspace:*
         version: link:../shared
       diff:
@@ -1184,21 +1184,21 @@ importers:
 
   packages/provider-acp-registry:
     dependencies:
+      '@mybot/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@mybot/provider-acp':
+        specifier: workspace:*
+        version: link:../provider-acp
+      '@mybot/provider-core':
+        specifier: workspace:*
+        version: link:../provider-core
+      '@mybot/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@noble/hashes':
         specifier: 'catalog:'
         version: 1.8.0
-      '@t3tools/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@t3tools/provider-acp':
-        specifier: workspace:*
-        version: link:../provider-acp
-      '@t3tools/provider-core':
-        specifier: workspace:*
-        version: link:../provider-core
-      '@t3tools/shared':
-        specifier: workspace:*
-        version: link:../shared
       effect:
         specifier: 4.0.2
         version: 4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688)
@@ -1209,7 +1209,7 @@ importers:
       '@effect/vitest':
         specifier: 4.0.2
         version: 4.0.2(patch_hash=595b7d26fb635caba9c3d39fcb189bb78a000192f8d3b60ead7174b310d1ade9)(@types/node@24.12.4)(@vitest/ui@5.0.1)(bufferutil@4.1.0)(effect@4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688))(esbuild@0.28.2)(jiti@2.7.0)(jsdom@30.1.0(@noble/hashes@1.8.0))(msw@2.12.11(@types/node@24.12.4)(typescript@7.0.2))(terser@5.48.0)(typescript@7.0.2)(unrun@0.2.39)(utf-8-validate@6.0.6)(yaml@2.9.0)
-      '@t3tools/provider-testing':
+      '@mybot/provider-testing':
         specifier: workspace:*
         version: link:../provider-testing
       '@types/node':
@@ -1224,10 +1224,10 @@ importers:
 
   packages/provider-core:
     dependencies:
-      '@t3tools/contracts':
+      '@mybot/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@t3tools/shared':
+      '@mybot/shared':
         specifier: workspace:*
         version: link:../shared
       effect:
@@ -1252,18 +1252,18 @@ importers:
       '@cursor/sdk':
         specifier: 1.0.35
         version: 1.0.35
+      '@mybot/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@mybot/provider-core':
+        specifier: workspace:*
+        version: link:../provider-core
+      '@mybot/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@napi-rs/keyring':
         specifier: ^1.3.0
         version: 1.3.0
-      '@t3tools/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@t3tools/provider-core':
-        specifier: workspace:*
-        version: link:../provider-core
-      '@t3tools/shared':
-        specifier: workspace:*
-        version: link:../shared
       effect:
         specifier: 4.0.2
         version: 4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688)
@@ -1277,7 +1277,7 @@ importers:
       '@effect/vitest':
         specifier: 4.0.2
         version: 4.0.2(patch_hash=595b7d26fb635caba9c3d39fcb189bb78a000192f8d3b60ead7174b310d1ade9)(@types/node@24.12.4)(@vitest/ui@5.0.1)(bufferutil@4.1.0)(effect@4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688))(esbuild@0.28.2)(jiti@2.7.0)(jsdom@30.1.0(@noble/hashes@1.8.0))(msw@2.12.11(@types/node@24.12.4)(typescript@7.0.2))(terser@5.48.0)(typescript@7.0.2)(unrun@0.2.39)(utf-8-validate@6.0.6)(yaml@2.9.0)
-      '@t3tools/provider-testing':
+      '@mybot/provider-testing':
         specifier: workspace:*
         version: link:../provider-testing
       '@types/node':
@@ -1289,16 +1289,16 @@ importers:
 
   packages/provider-grok:
     dependencies:
-      '@t3tools/contracts':
+      '@mybot/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@t3tools/provider-acp':
+      '@mybot/provider-acp':
         specifier: workspace:*
         version: link:../provider-acp
-      '@t3tools/provider-core':
+      '@mybot/provider-core':
         specifier: workspace:*
         version: link:../provider-core
-      '@t3tools/shared':
+      '@mybot/shared':
         specifier: workspace:*
         version: link:../shared
       effect:
@@ -1311,7 +1311,7 @@ importers:
       '@effect/vitest':
         specifier: 4.0.2
         version: 4.0.2(patch_hash=595b7d26fb635caba9c3d39fcb189bb78a000192f8d3b60ead7174b310d1ade9)(@types/node@24.12.4)(@vitest/ui@5.0.1)(bufferutil@4.1.0)(effect@4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688))(esbuild@0.28.2)(jiti@2.7.0)(jsdom@30.1.0(@noble/hashes@1.8.0))(msw@2.12.11(@types/node@24.12.4)(typescript@7.0.2))(terser@5.48.0)(typescript@7.0.2)(unrun@0.2.39)(utf-8-validate@6.0.6)(yaml@2.9.0)
-      '@t3tools/provider-testing':
+      '@mybot/provider-testing':
         specifier: workspace:*
         version: link:../provider-testing
       '@types/node':
@@ -1329,13 +1329,13 @@ importers:
       '@muse-code/sdk':
         specifier: 1.4.6
         version: 1.4.6(@types/node@24.12.4)
-      '@t3tools/contracts':
+      '@mybot/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@t3tools/provider-core':
+      '@mybot/provider-core':
         specifier: workspace:*
         version: link:../provider-core
-      '@t3tools/shared':
+      '@mybot/shared':
         specifier: workspace:*
         version: link:../shared
       effect:
@@ -1348,7 +1348,7 @@ importers:
       '@effect/vitest':
         specifier: 4.0.2
         version: 4.0.2(patch_hash=595b7d26fb635caba9c3d39fcb189bb78a000192f8d3b60ead7174b310d1ade9)(@types/node@24.12.4)(@vitest/ui@5.0.1)(bufferutil@4.1.0)(effect@4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688))(esbuild@0.28.2)(jiti@2.7.0)(jsdom@30.1.0(@noble/hashes@1.8.0))(msw@2.12.11(@types/node@24.12.4)(typescript@7.0.2))(terser@5.48.0)(typescript@7.0.2)(unrun@0.2.39)(utf-8-validate@6.0.6)(yaml@2.9.0)
-      '@t3tools/provider-testing':
+      '@mybot/provider-testing':
         specifier: workspace:*
         version: link:../provider-testing
       '@types/node':
@@ -1360,6 +1360,15 @@ importers:
 
   packages/provider-opencode:
     dependencies:
+      '@mybot/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@mybot/provider-core':
+        specifier: workspace:*
+        version: link:../provider-core
+      '@mybot/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@opencode-ai/sdk':
         specifier: ^1.3.15
         version: 1.15.13
@@ -1372,15 +1381,6 @@ importers:
       '@opencode/schema':
         specifier: 2.0.23
         version: 2.0.23(patch_hash=650f1b8602789407c010861284272dcb6bd6de01ec6a75bf3c0904a0e7596d59)
-      '@t3tools/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@t3tools/provider-core':
-        specifier: workspace:*
-        version: link:../provider-core
-      '@t3tools/shared':
-        specifier: workspace:*
-        version: link:../shared
       effect:
         specifier: 4.0.2
         version: 4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688)
@@ -1391,7 +1391,7 @@ importers:
       '@effect/vitest':
         specifier: 4.0.2
         version: 4.0.2(patch_hash=595b7d26fb635caba9c3d39fcb189bb78a000192f8d3b60ead7174b310d1ade9)(@types/node@24.12.4)(@vitest/ui@5.0.1)(bufferutil@4.1.0)(effect@4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688))(esbuild@0.28.2)(jiti@2.7.0)(jsdom@30.1.0(@noble/hashes@1.8.0))(msw@2.12.11(@types/node@24.12.4)(typescript@7.0.2))(terser@5.48.0)(typescript@7.0.2)(unrun@0.2.39)(utf-8-validate@6.0.6)(yaml@2.9.0)
-      '@t3tools/provider-testing':
+      '@mybot/provider-testing':
         specifier: workspace:*
         version: link:../provider-testing
       '@types/node':
@@ -1403,13 +1403,13 @@ importers:
 
   packages/provider-pi:
     dependencies:
-      '@t3tools/contracts':
+      '@mybot/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@t3tools/provider-core':
+      '@mybot/provider-core':
         specifier: workspace:*
         version: link:../provider-core
-      '@t3tools/shared':
+      '@mybot/shared':
         specifier: workspace:*
         version: link:../shared
       effect:
@@ -1422,7 +1422,7 @@ importers:
       '@effect/vitest':
         specifier: 4.0.2
         version: 4.0.2(patch_hash=595b7d26fb635caba9c3d39fcb189bb78a000192f8d3b60ead7174b310d1ade9)(@types/node@24.12.4)(@vitest/ui@5.0.1)(bufferutil@4.1.0)(effect@4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688))(esbuild@0.28.2)(jiti@2.7.0)(jsdom@30.1.0(@noble/hashes@1.8.0))(msw@2.12.11(@types/node@24.12.4)(typescript@7.0.2))(terser@5.48.0)(typescript@7.0.2)(unrun@0.2.39)(utf-8-validate@6.0.6)(yaml@2.9.0)
-      '@t3tools/provider-testing':
+      '@mybot/provider-testing':
         specifier: workspace:*
         version: link:../provider-testing
       '@types/node':
@@ -1437,13 +1437,13 @@ importers:
       '@effect/platform-node':
         specifier: 4.0.2
         version: 4.0.2(bufferutil@4.1.0)(effect@4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688))(redis@6.2.1)(utf-8-validate@6.0.6)
-      '@t3tools/contracts':
+      '@mybot/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@t3tools/provider-core':
+      '@mybot/provider-core':
         specifier: workspace:*
         version: link:../provider-core
-      '@t3tools/shared':
+      '@mybot/shared':
         specifier: workspace:*
         version: link:../shared
       effect:
@@ -1462,15 +1462,15 @@ importers:
 
   packages/shared:
     dependencies:
+      '@mybot/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@noble/curves':
         specifier: 'catalog:'
         version: 1.9.1
       '@noble/hashes':
         specifier: 'catalog:'
         version: 1.8.0
-      '@t3tools/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       effect:
         specifier: 4.0.2
         version: 4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688)
@@ -1529,10 +1529,10 @@ importers:
 
   packages/ssh:
     dependencies:
-      '@t3tools/contracts':
+      '@mybot/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@t3tools/shared':
+      '@mybot/shared':
         specifier: workspace:*
         version: link:../shared
       effect:
@@ -1554,7 +1554,7 @@ importers:
 
   packages/tailscale:
     dependencies:
-      '@t3tools/shared':
+      '@mybot/shared':
         specifier: workspace:*
         version: link:../shared
       effect:
@@ -1582,10 +1582,10 @@ importers:
       '@electron/osx-sign':
         specifier: 2.7.0
         version: 2.7.0
-      '@t3tools/shared':
+      '@mybot/shared':
         specifier: workspace:*
         version: link:../packages/shared
-      '@t3tools/tailscale':
+      '@mybot/tailscale':
         specifier: workspace:*
         version: link:../packages/tailscale
       effect:
@@ -3999,6 +3999,18 @@ packages:
       '@types/node':
         optional: true
 
+  '@mybot/mobile-review-diff-native@file:apps/mobile/modules/t3-review-diff':
+    resolution: {directory: apps/mobile/modules/t3-review-diff, type: directory}
+
+  '@mybot/mobile-source-text@file:apps/mobile/modules/t3-source-text':
+    resolution: {directory: apps/mobile/modules/t3-source-text, type: directory}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+
+  '@mybot/mobile-terminal-native@file:apps/mobile/modules/t3-terminal':
+    resolution: {directory: apps/mobile/modules/t3-terminal, type: directory}
+
   '@napi-rs/keyring-darwin-arm64@1.3.0':
     resolution: {integrity: sha512-pl76hJvdYUBn6I24bXiOBMA9nbDapo3I5B+f3OorjDU4dUMSypXeKbOVehJe8fhgTiH24flMyTS3aAIy43xegQ==}
     engines: {node: '>= 10'}
@@ -5546,18 +5558,6 @@ packages:
   '@szmarczak/http-timer@4.0.6':
     resolution: {integrity: sha512-4BAffykYOgO+5nzBWYwE3W90sBgLJoUPRWWcL8wlyiM8IB8ipJz3UMJ9KXQd1RKQXpKp8Tutn80HZtWsu2u76w==}
     engines: {node: '>=10'}
-
-  '@t3tools/mobile-review-diff-native@file:apps/mobile/modules/t3-review-diff':
-    resolution: {directory: apps/mobile/modules/t3-review-diff, type: directory}
-
-  '@t3tools/mobile-source-text@file:apps/mobile/modules/t3-source-text':
-    resolution: {directory: apps/mobile/modules/t3-source-text, type: directory}
-    peerDependencies:
-      react: '*'
-      react-native: '*'
-
-  '@t3tools/mobile-terminal-native@file:apps/mobile/modules/t3-terminal':
-    resolution: {directory: apps/mobile/modules/t3-terminal, type: directory}
 
   '@tabler/icons-react-native@3.44.0':
     resolution: {integrity: sha512-/Ppp68bpl9vQQsI/c+YiDC9dnLq4JUo0YI5qP72OQMC1WmCaRzdYn3CU79q01M2L3MfXO9a8WctWN8ay1Odkow==}
@@ -14908,6 +14908,15 @@ snapshots:
     optionalDependencies:
       '@types/node': 24.12.4
 
+  '@mybot/mobile-review-diff-native@file:apps/mobile/modules/t3-review-diff': {}
+
+  '@mybot/mobile-source-text@file:apps/mobile/modules/t3-source-text(react-native@0.88.0-rc.3(@babel/core@7.29.7)(@react-native/metro-config@0.88.0-rc.3(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6))(react@19.3.0)':
+    dependencies:
+      react: 19.3.0
+      react-native: 0.88.0-rc.3(@babel/core@7.29.7)(@react-native/metro-config@0.88.0-rc.3(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6)
+
+  '@mybot/mobile-terminal-native@file:apps/mobile/modules/t3-terminal': {}
+
   '@napi-rs/keyring-darwin-arm64@1.3.0':
     optional: true
 
@@ -16141,15 +16150,6 @@ snapshots:
   '@szmarczak/http-timer@4.0.6':
     dependencies:
       defer-to-connect: 2.0.1
-
-  '@t3tools/mobile-review-diff-native@file:apps/mobile/modules/t3-review-diff': {}
-
-  '@t3tools/mobile-source-text@file:apps/mobile/modules/t3-source-text(react-native@0.88.0-rc.3(@babel/core@7.29.7)(@react-native/metro-config@0.88.0-rc.3(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6))(react@19.3.0)':
-    dependencies:
-      react: 19.3.0
-      react-native: 0.88.0-rc.3(@babel/core@7.29.7)(@react-native/metro-config@0.88.0-rc.3(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6)
-
-  '@t3tools/mobile-terminal-native@file:apps/mobile/modules/t3-terminal': {}
 
   '@tabler/icons-react-native@3.44.0(react-native-svg@15.15.5(react-native@0.88.0-rc.3(@babel/core@7.29.7)(@react-native/metro-config@0.88.0-rc.3(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6))(react@19.3.0))(react@19.3.0)':
     dependencies:
@@ -18399,7 +18399,7 @@ snapshots:
 
   dayjs@1.11.23: {}
 
-  dbus-next@0.10.2(patch_hash=cfff57561b0ee59b5addb3b2e6c6f20906e967507a530ab67e8db8108e520ba4):
+  dbus-next@0.10.2(patch_hash=6c46698fb221eede3bacf97d27033a43d63244cd589d5b822b6c5a4a17d60558):
     dependencies:
       '@nornagon/put': 0.0.8
       event-stream: 3.3.4

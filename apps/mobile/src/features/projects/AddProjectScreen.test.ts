@@ -1,4 +1,4 @@
-import { AuthOrchestrationOperateScope } from "@t3tools/contracts";
+import { AuthOrchestrationOperateScope } from "@mybot/contracts";
 import * as Cause from "effect/Cause";
 import { AsyncResult } from "effect/reactivity";
 import { isValidElement, type ReactNode } from "react";

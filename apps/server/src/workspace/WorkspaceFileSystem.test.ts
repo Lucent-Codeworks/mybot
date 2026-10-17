@@ -12,8 +12,8 @@ import * as ServerConfig from "../config.ts";
 import * as WorkspaceEntries from "./WorkspaceEntries.ts";
 import * as WorkspaceFileSystem from "./WorkspaceFileSystem.ts";
 import * as WorkspacePaths from "./WorkspacePaths.ts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { symlinksSupported } from "@t3tools/shared/testing/symlinks";
+import * as HostProcess from "@mybot/shared/HostProcess";
+import { symlinksSupported } from "@mybot/shared/testing/symlinks";
 
 const layerProject = WorkspaceFileSystem.layer.pipe(
   Layer.provide(WorkspacePaths.layer),

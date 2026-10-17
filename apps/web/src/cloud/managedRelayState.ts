@@ -5,16 +5,13 @@ import {
   ManagedRelay,
   managedRelaySessionAtom,
   readManagedRelaySnapshotState,
-} from "@t3tools/client-runtime/relay";
+} from "@mybot/client-runtime/relay";
 import {
   createAtomCommandScheduler,
   createRuntimeCommand,
-} from "@t3tools/client-runtime/state/runtime";
-import type {
-  RelayClientDeviceRecord,
-  RelayClientEnvironmentRecord,
-} from "@t3tools/contracts/relay";
-import type { EnvironmentId } from "@t3tools/contracts";
+} from "@mybot/client-runtime/state/runtime";
+import type { RelayClientDeviceRecord, RelayClientEnvironmentRecord } from "@mybot/contracts/relay";
+import type { EnvironmentId } from "@mybot/contracts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";

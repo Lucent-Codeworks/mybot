@@ -16,7 +16,7 @@ import {
   type OrchestrationV2AppThread,
   type OrchestrationV2ProviderThread,
   type OrchestrationV2ProviderTurn,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Cause from "effect/Cause";
 import * as DateTime from "effect/DateTime";
 import * as Duration from "effect/Duration";
@@ -32,14 +32,14 @@ import * as TestClock from "effect/testing/TestClock";
 import * as ChildProcess from "effect/process/ChildProcess";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 
-import * as TestProviderHost from "@t3tools/provider-testing/TestProviderHost";
-import * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
-import { handoffBudget } from "@t3tools/provider-core/server/handoffBudget";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { toolOutputImages, compactDynamicToolOutput } from "@t3tools/shared/toolOutput";
+import * as TestProviderHost from "@mybot/provider-testing/TestProviderHost";
+import * as ProviderContinuationRequests from "@mybot/provider-core/server/ProviderContinuationRequests";
+import * as McpProviderSessions from "@mybot/provider-core/server/McpProviderSessions";
+import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
+import * as ProviderAdapter from "@mybot/provider-core/server/ProviderAdapter";
+import { handoffBudget } from "@mybot/provider-core/server/handoffBudget";
+import * as HostProcess from "@mybot/shared/HostProcess";
+import { toolOutputImages, compactDynamicToolOutput } from "@mybot/shared/toolOutput";
 import {
   makePiAdapterV2,
   PiAdapterV2Driver,

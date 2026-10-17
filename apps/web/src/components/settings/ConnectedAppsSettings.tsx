@@ -3,8 +3,8 @@ import {
   type AtomCommandResult,
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
-import type { AppConnectionAddInput, EnvironmentId } from "@t3tools/contracts";
+} from "@mybot/client-runtime/state/runtime";
+import type { AppConnectionAddInput, EnvironmentId } from "@mybot/contracts";
 import * as Option from "effect/Option";
 import { AsyncResult } from "effect/reactivity";
 import { PlusIcon } from "lucide-react";

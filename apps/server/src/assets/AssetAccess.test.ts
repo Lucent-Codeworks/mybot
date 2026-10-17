@@ -2,9 +2,9 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as NodeHttpPlatform from "@effect/platform-node/NodeHttpPlatform";
 import * as NodeFSP from "node:fs/promises";
-import { AssetPreviewTypeValidationError, ThreadId, TurnItemId } from "@t3tools/contracts";
-import { PROJECT_FAVICON_FALLBACK_MARKER } from "@t3tools/shared/projectFavicon";
-import { MCP_APP_MAX_HTML_BYTES } from "@t3tools/shared/mcpApp";
+import { AssetPreviewTypeValidationError, ThreadId, TurnItemId } from "@mybot/contracts";
+import { PROJECT_FAVICON_FALLBACK_MARKER } from "@mybot/shared/projectFavicon";
+import { MCP_APP_MAX_HTML_BYTES } from "@mybot/shared/mcpApp";
 import { describe, expect, it } from "@effect/vitest";
 import * as Crypto from "effect/Crypto";
 import * as DateTime from "effect/DateTime";
@@ -27,8 +27,8 @@ import { assetFileResponse } from "../http.ts";
 import { ASSET_ROUTE_PREFIX, issueAssetUrl, readMcpAppHtml, resolveAsset } from "./AssetAccess.ts";
 import * as NativeAppIconResolver from "./NativeAppIconResolver.ts";
 import { openMediaFile } from "./MediaFile.ts";
-import { symlinksSupported } from "@t3tools/shared/testing/symlinks";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import { symlinksSupported } from "@mybot/shared/testing/symlinks";
+import * as HostProcess from "@mybot/shared/HostProcess";
 
 vi.mock("node:fs/promises", async (importOriginal) => {
   const actual = await importOriginal<typeof NodeFSP>();

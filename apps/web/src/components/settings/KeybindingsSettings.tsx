@@ -29,12 +29,12 @@ import {
   type KeybindingWhenNode,
   type ServerRemoveKeybindingInput,
   type ServerUpsertKeybindingInput,
-} from "@t3tools/contracts";
-import { mergeWithDefaultKeybindings } from "@t3tools/shared/keybindings";
+} from "@mybot/contracts";
+import { mergeWithDefaultKeybindings } from "@mybot/shared/keybindings";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@mybot/client-runtime/state/runtime";
 
 import { isElectron } from "../../env";
 import { useOpenInPreferredEditor } from "../../editorPreferences";

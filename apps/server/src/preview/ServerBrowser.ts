@@ -44,10 +44,10 @@ import {
   ThreadId,
   SERVER_BROWSER_AUTOMATION_CLIENT_ID,
   type PreviewAppearancePreference,
-} from "@t3tools/contracts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { normalizePreviewUrl } from "@t3tools/shared/preview";
-import { resolvePreviewViewport } from "@t3tools/shared/previewViewport";
+} from "@mybot/contracts";
+import * as HostProcess from "@mybot/shared/HostProcess";
+import { normalizePreviewUrl } from "@mybot/shared/preview";
+import { resolvePreviewViewport } from "@mybot/shared/previewViewport";
 import * as NodeCrypto from "node:crypto";
 import * as NodeFSP from "node:fs/promises";
 import * as NodePath from "node:path";

@@ -1,4 +1,4 @@
-import type { DesktopCliCommandState } from "@t3tools/contracts";
+import type { DesktopCliCommandState } from "@mybot/contracts";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -80,7 +80,7 @@ export class DesktopCliCommand extends Context.Service<
     readonly install: Effect.Effect<DesktopCliCommandState, DesktopCliCommandError>;
     readonly uninstall: Effect.Effect<DesktopCliCommandState, DesktopCliCommandError>;
   }
->()("@t3tools/desktop/app/DesktopCliCommand") {}
+>()("@mybot/desktop/app/DesktopCliCommand") {}
 
 /** @public Service construction is part of the canonical Effect module API. */
 export const make = Effect.gen(function* () {

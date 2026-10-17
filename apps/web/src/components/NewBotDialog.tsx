@@ -1,7 +1,7 @@
 import { useAtomValue } from "@effect/atom-react";
-import type { EnvironmentId, ModelSelection, ProjectId } from "@t3tools/contracts";
-import type { BotTemplate } from "@t3tools/shared/botTemplates";
-import { createModelSelection } from "@t3tools/shared/model";
+import type { EnvironmentId, ModelSelection, ProjectId } from "@mybot/contracts";
+import type { BotTemplate } from "@mybot/shared/botTemplates";
+import { createModelSelection } from "@mybot/shared/model";
 import { useEffect, useId, useMemo, useState } from "react";
 import { create } from "zustand";
 

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { AuthEnvironmentMaintainScope } from "@t3tools/contracts";
+import { AuthEnvironmentMaintainScope } from "@mybot/contracts";
 
 import { usePrimaryCloudLinkState } from "~/cloud/primaryCloudLinkState";
 import { hasCloudPublicConfig } from "~/cloud/publicConfig";

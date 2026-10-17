@@ -6,14 +6,14 @@ import type {
   ProviderInstanceId,
   ServerSettings,
   UnifiedSettings,
-} from "@t3tools/contracts";
-import { DEFAULT_UNIFIED_SETTINGS } from "@t3tools/contracts/settings";
+} from "@mybot/contracts";
+import { DEFAULT_UNIFIED_SETTINGS } from "@mybot/contracts/settings";
 import {
   getBackgroundActivityBaseProfile,
   normalizeBackgroundActivitySettings,
   normalizeServerBackgroundActivitySettings,
   resolveServerBackgroundActivitySettings,
-} from "@t3tools/shared/backgroundActivitySettings";
+} from "@mybot/shared/backgroundActivitySettings";
 import * as Duration from "effect/Duration";
 import * as Equal from "effect/Equal";
 

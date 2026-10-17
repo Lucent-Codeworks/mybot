@@ -6,7 +6,7 @@ import {
   MARKETPLACE_FILTERS,
   marketplaceSections,
 } from "./appMarketplace.logic";
-import { findAppPreset } from "@t3tools/shared/appCatalog";
+import { findAppPreset } from "@mybot/shared/appCatalog";
 
 const ids = (query: string, filter: Parameters<typeof marketplaceSections>[1] = "all") =>
   marketplaceSections(query, filter).flatMap((section) => section.presets.map((p) => p.id));

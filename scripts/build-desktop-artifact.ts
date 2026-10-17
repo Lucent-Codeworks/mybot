@@ -15,10 +15,10 @@ import {
   type DirectoryRecord,
 } from "@electron/asar";
 
-import { fromYaml } from "@t3tools/shared/schemaYaml";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { clerkFrontendApiHostnameFromPublishableKey } from "@t3tools/shared/relayAuth";
-import { resolveSpawnCommand } from "@t3tools/shared/shell";
+import { fromYaml } from "@mybot/shared/schemaYaml";
+import * as HostProcess from "@mybot/shared/HostProcess";
+import { clerkFrontendApiHostnameFromPublishableKey } from "@mybot/shared/relayAuth";
+import { resolveSpawnCommand } from "@mybot/shared/shell";
 import rootPackageJson from "../package.json" with { type: "json" };
 import desktopPackageJson from "../apps/desktop/package.json" with { type: "json" };
 import gnomeCaptureBundle from "../apps/desktop/gnome-extension/bundle.json" with { type: "json" };
@@ -4020,7 +4020,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   const builderArgs = [
     "exec",
     "--filter",
-    "@t3tools/desktop",
+    "@mybot/desktop",
     "--",
     "electron-builder",
     "--projectDir",
@@ -4038,7 +4038,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       shell: builderCommand.shell,
     }),
     {
-      label: `vp exec --filter @t3tools/desktop -- electron-builder --projectDir ${stageAppDir} ${platformConfig.cliFlag} --${options.arch} --publish never`,
+      label: `vp exec --filter @mybot/desktop -- electron-builder --projectDir ${stageAppDir} ${platformConfig.cliFlag} --${options.arch} --publish never`,
       verbose: options.verbose,
     },
   );

@@ -2,8 +2,8 @@ import { writeTextToClipboard } from "../hooks/useCopyToClipboard";
 import { readLocalApi } from "../localApi";
 import { stackedThreadToast, toastManager } from "./ui/toast";
 import { ComposerContextLabel } from "./ComposerContextLabel";
-import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environment";
-import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import { scopeProjectRef, scopeThreadRef } from "@mybot/client-runtime/environment";
+import type { EnvironmentId, ThreadId } from "@mybot/contracts";
 import { FolderIcon, ScaleIcon } from "lucide-react";
 import {
   type MouseEvent as ReactMouseEvent,

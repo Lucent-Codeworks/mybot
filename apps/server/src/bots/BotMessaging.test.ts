@@ -9,7 +9,7 @@ import {
   RunId,
   RuntimeRequestId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as DateTime from "effect/DateTime";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";

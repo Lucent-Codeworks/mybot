@@ -9,9 +9,9 @@ import {
   type ProcessExit,
   type SpawnedMspConnection,
 } from "@muse-code/sdk";
-import type { RuntimeMode } from "@t3tools/contracts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { SpawnExecutableResolution } from "@t3tools/shared/shell";
+import type { RuntimeMode } from "@mybot/contracts";
+import * as HostProcess from "@mybot/shared/HostProcess";
+import { SpawnExecutableResolution } from "@mybot/shared/shell";
 import * as Effect from "effect/Effect";
 
 export interface MuseSdkHost {

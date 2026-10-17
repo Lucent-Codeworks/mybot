@@ -7,9 +7,9 @@ import {
   type AppConnectionSignIn,
   type AppConnectionSignInResult,
   type AppConnectionSummary,
-} from "@t3tools/contracts";
-import { findAppPreset } from "@t3tools/shared/appCatalog";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+} from "@mybot/contracts";
+import { findAppPreset } from "@mybot/shared/appCatalog";
+import * as HostProcess from "@mybot/shared/HostProcess";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";

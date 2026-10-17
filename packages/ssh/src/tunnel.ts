@@ -1,16 +1,13 @@
-import type {
-  DesktopSshEnvironmentBootstrap,
-  DesktopSshEnvironmentTarget,
-} from "@t3tools/contracts";
+import type { DesktopSshEnvironmentBootstrap, DesktopSshEnvironmentTarget } from "@mybot/contracts";
 import {
   describeReadinessCause,
   waitForHttpReady as waitForHttpReadyShared,
-} from "@t3tools/shared/httpReadiness";
-import { cliReleaseDownloadBaseUrl } from "@t3tools/shared/cliRelease";
-import * as KeyedLock from "@t3tools/shared/KeyedLock";
-import * as NetService from "@t3tools/shared/Net";
-import { extractJsonObject, fromLenientJson } from "@t3tools/shared/schemaJson";
-import { satisfiesSemverRange } from "@t3tools/shared/semver";
+} from "@mybot/shared/httpReadiness";
+import { cliReleaseDownloadBaseUrl } from "@mybot/shared/cliRelease";
+import * as KeyedLock from "@mybot/shared/KeyedLock";
+import * as NetService from "@mybot/shared/Net";
+import { extractJsonObject, fromLenientJson } from "@mybot/shared/schemaJson";
+import { satisfiesSemverRange } from "@mybot/shared/semver";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
 import * as Effect from "effect/Effect";
@@ -1768,7 +1765,7 @@ const makeSshEnvironmentManager = Effect.fn("ssh/tunnel.SshEnvironmentManager.ma
 export class SshEnvironmentManager extends Context.Service<
   SshEnvironmentManager,
   SshEnvironmentManagerShape
->()("@t3tools/ssh/tunnel/SshEnvironmentManager") {
+>()("@mybot/ssh/tunnel/SshEnvironmentManager") {
   static readonly layer = (options: SshEnvironmentManagerOptions = {}) =>
     Layer.effect(SshEnvironmentManager, makeSshEnvironmentManager(options));
 }

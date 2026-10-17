@@ -1,4 +1,4 @@
-import { type ProjectMutation } from "@t3tools/contracts";
+import { type ProjectMutation } from "@mybot/contracts";
 import * as Effect from "effect/Effect";
 
 import * as BuiltInMyBot from "../bots/BuiltInMyBot.ts";
