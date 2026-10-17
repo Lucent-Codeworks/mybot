@@ -191,7 +191,7 @@ const makeWindowsPayloadFixture = Effect.fn("test.makeWindowsPayloadFixture")(fu
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const tempDir = yield* fs.makeTempDirectoryScoped({
-    prefix: "t3-windows-payload-test-",
+    prefix: "mybot-windows-payload-test-",
   });
   const sourceDir = path.join(tempDir, "server-source");
   const serverEntryPath = path.join(sourceDir, "apps/server/dist/bin.mjs");
@@ -303,7 +303,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
           ConfigProvider.layer(
             ConfigProvider.fromEnv({
               env: {
-                T3CODE_DESKTOP_UPDATE_REPOSITORY: "pingdotgg/t3code",
+                T3CODE_DESKTOP_UPDATE_REPOSITORY: "Lucent-Codeworks/mybot",
               },
             }),
           ),
@@ -314,7 +314,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
           ConfigProvider.layer(
             ConfigProvider.fromEnv({
               env: {
-                GITHUB_REPOSITORY: "pingdotgg/t3code",
+                GITHUB_REPOSITORY: "Lucent-Codeworks/mybot",
               },
             }),
           ),
@@ -323,14 +323,14 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
 
       assert.deepStrictEqual(latestConfig, {
         provider: "github",
-        owner: "pingdotgg",
-        repo: "t3code",
+        owner: "Lucent-Codeworks",
+        repo: "mybot",
         releaseType: "release",
       });
       assert.deepStrictEqual(nightlyConfig, {
         provider: "github",
-        owner: "pingdotgg",
-        repo: "t3code",
+        owner: "Lucent-Codeworks",
+        repo: "mybot",
         releaseType: "prerelease",
         channel: "nightly",
       });
@@ -373,15 +373,15 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       assert.deepStrictEqual(release.publish, [
         {
           provider: "github",
-          owner: "pingdotgg",
-          repo: "t3code",
+          owner: "Lucent-Codeworks",
+          repo: "mybot",
           releaseType: "release",
         },
       ]);
     }).pipe(
       Effect.provide(
         ConfigProvider.layer(
-          ConfigProvider.fromEnv({ env: { GITHUB_REPOSITORY: "pingdotgg/t3code" } }),
+          ConfigProvider.fromEnv({ env: { GITHUB_REPOSITORY: "Lucent-Codeworks/mybot" } }),
         ),
       ),
     ),
@@ -849,7 +849,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-cursor-helpers-" });
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "mybot-cursor-helpers-" });
         const nodeModules = path.join(root, "node_modules");
         const destination = path.join(root, "resources/node_modules/@cursor");
         const cursorDirectory = symlinksSupported
@@ -919,7 +919,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const tempDir = yield* fs.makeTempDirectoryScoped({
-          prefix: "t3-windows-architecture-test-",
+          prefix: "mybot-windows-architecture-test-",
         });
         const sourceDir = path.join(tempDir, "server");
         const nativeFiles = [
@@ -1099,7 +1099,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const tempDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-windows-preflight-" });
+        const tempDir = yield* fs.makeTempDirectoryScoped({ prefix: "mybot-windows-preflight-" });
         const pythonPath = path.join(tempDir, "python.exe");
         yield* fs.writeFileString(pythonPath, "python");
         const spawner = Layer.succeed(
@@ -1141,7 +1141,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const tempDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-windows-preflight-" });
+        const tempDir = yield* fs.makeTempDirectoryScoped({ prefix: "mybot-windows-preflight-" });
         const pythonPath = path.join(tempDir, "python.exe");
         yield* fs.writeFileString(pythonPath, "python");
         const commands: string[] = [];
@@ -1183,7 +1183,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const tempDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-python2-preflight-" });
+        const tempDir = yield* fs.makeTempDirectoryScoped({ prefix: "mybot-python2-preflight-" });
         const pythonPath = path.join(tempDir, "python");
         yield* fs.writeFileString(pythonPath, "python2");
         const spawner = Layer.succeed(
@@ -1230,7 +1230,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const repoRoot = yield* fs.makeTempDirectoryScoped({ prefix: "t3-kde-stage-test-" });
+        const repoRoot = yield* fs.makeTempDirectoryScoped({ prefix: "mybot-kde-stage-test-" });
         const protocols = path.join(repoRoot, "native/hyprland-snap-shot/protocols");
         yield* fs.makeDirectory(protocols, { recursive: true });
         yield* fs.writeFileString(path.join(protocols, "capture.xml"), "BSD protocol notice");
@@ -1815,7 +1815,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       Effect.gen(function* () {
         const fixture = yield* makeWindowsPayloadFixture({
           copyUnpackedNatives: true,
-          serverEntrySource: 'import "t3code-deliberately-missing-package";\n',
+          serverEntrySource: 'import "mybot-deliberately-missing-package";\n',
         });
         const error = yield* validateWindowsPackagedPayload({
           stageDistDir: fixture.stageDistDir,
@@ -1825,7 +1825,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         }).pipe(Effect.flip);
 
         assert.instanceOf(error, BundleNotSelfContainedError);
-        assert.include(error.output, "t3code-deliberately-missing-package");
+        assert.include(error.output, "mybot-deliberately-missing-package");
       }),
     ).pipe(Effect.provideService(HostProcess.Platform, "linux")),
   );
@@ -1876,7 +1876,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const stageResourcesDir = yield* fs.makeTempDirectoryScoped({
-          prefix: "t3code-dmg-background-",
+          prefix: "mybot-dmg-background-",
         });
         const dmgDir = path.join(stageResourcesDir, "dmg");
         yield* fs.makeDirectory(dmgDir, { recursive: true });
@@ -1927,7 +1927,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const stageResourcesDir = yield* fs.makeTempDirectoryScoped({
-          prefix: "t3code-dmg-background-missing-",
+          prefix: "mybot-dmg-background-missing-",
         });
 
         const error = yield* stageDesktopDmgBackground(stageResourcesDir, "latest", false).pipe(
@@ -1944,7 +1944,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
   it("derives macOS passkey signing configuration from the Clerk publishable key", () => {
     const configuration = resolveMacPasskeySigningConfiguration({
       T3CODE_APPLE_TEAM_ID: "abc1234567",
-      T3CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
+      T3CODE_MACOS_PROVISIONING_PROFILE: "/tmp/mybot.provisionprofile",
       T3CODE_CLERK_PUBLISHABLE_KEY: `pk_test_${btoa("example.clerk.accounts.dev$")}`,
     });
 
@@ -1952,14 +1952,14 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       appId: "com.lucentcodeworks.mybot",
       teamId: "ABC1234567",
       rpDomains: ["example.clerk.accounts.dev"],
-      provisioningProfilePath: "/tmp/t3code.provisionprofile",
+      provisioningProfilePath: "/tmp/mybot.provisionprofile",
     });
   });
 
   it("normalizes explicit macOS passkey RP domains and renders required entitlements", () => {
     const configuration = resolveMacPasskeySigningConfiguration({
       T3CODE_APPLE_TEAM_ID: "ABC1234567",
-      T3CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
+      T3CODE_MACOS_PROVISIONING_PROFILE: "/tmp/mybot.provisionprofile",
       T3CODE_CLERK_PASSKEY_RP_DOMAINS:
         " Clerk.Example.com,example.clerk.accounts.dev,clerk.example.com ",
     });
@@ -2074,7 +2074,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       "https://domain-user:domain-secret@example.clerk.accounts.dev/path?token=query-secret";
     const invalidDomainError = captureError({
       T3CODE_APPLE_TEAM_ID: "ABC1234567",
-      T3CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
+      T3CODE_MACOS_PROVISIONING_PROFILE: "/tmp/mybot.provisionprofile",
       T3CODE_CLERK_PASSKEY_RP_DOMAINS: unsafeDomain,
     });
     assert.instanceOf(invalidDomainError, InvalidMacPasskeyRpDomainError);
@@ -2092,14 +2092,14 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       () =>
         resolveMacPasskeySigningConfiguration({
           T3CODE_APPLE_TEAM_ID: "ABC1234567",
-          T3CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
+          T3CODE_MACOS_PROVISIONING_PROFILE: "/tmp/mybot.provisionprofile",
           T3CODE_CLERK_PASSKEY_RP_DOMAINS: "example.clerk.accounts.dev:8443",
         }),
       /Invalid passkey RP domain/u,
     );
     const invalidPublishableKeyError = captureError({
       T3CODE_APPLE_TEAM_ID: "ABC1234567",
-      T3CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
+      T3CODE_MACOS_PROVISIONING_PROFILE: "/tmp/mybot.provisionprofile",
       T3CODE_CLERK_PUBLISHABLE_KEY: "pk_test_%",
     });
     assert.instanceOf(invalidPublishableKeyError, InvalidMacPasskeyPublishableKeyError);
@@ -2135,13 +2135,13 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     Effect.gen(function* () {
       const config = yield* createBuildConfig("mac", "dmg", "1.2.3", true, false, undefined, {
         entitlementsPath: "/tmp/entitlements.mac.plist",
-        provisioningProfilePath: "/tmp/t3code.provisionprofile",
+        provisioningProfilePath: "/tmp/mybot.provisionprofile",
       });
 
       const mac = config.mac as Record<string, unknown>;
       assert.equal(config.appId, "com.lucentcodeworks.mybot");
       assert.equal(mac.entitlements, "/tmp/entitlements.mac.plist");
-      assert.equal(mac.provisioningProfile, "/tmp/t3code.provisionprofile");
+      assert.equal(mac.provisioningProfile, "/tmp/mybot.provisionprofile");
       assert.match(String(mac.sign), /[\\/]scripts[\\/]sign-macos\.ts$/);
       assert.deepStrictEqual(mac.protocols, [
         { name: "MyBot", schemes: ["mybot", "mybot-dev"] },
@@ -2249,7 +2249,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-wsl-runtime-stage-" });
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "mybot-wsl-runtime-stage-" });
         const sourceArchivePath = yield* makeLinuxCliArchiveFixture({
           root,
           stem: "mybot-1.2.3-linux-x64",
@@ -2278,7 +2278,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-wsl-runtime-missing-" });
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "mybot-wsl-runtime-missing-" });
         const error = yield* stageWslRuntimeArchive({
           sourceArchivePath: path.join(root, "mybot-1.2.3-linux-x64.tar.gz"),
           archivePath: path.join(root, WSL_RUNTIME_ARCHIVE_NAME),
@@ -2520,7 +2520,7 @@ it.effect.skipIf(!symlinksSupported)("rebases packaged links into the isolated t
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3code-copy-symlinks-" });
+    const root = yield* fs.makeTempDirectoryScoped({ prefix: "mybot-copy-symlinks-" });
     const source = path.join(root, "source");
     const destination = path.join(root, "destination");
     const packageDir = path.join(source, "node_modules/.pnpm/example@1/node_modules/example");

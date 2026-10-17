@@ -55,7 +55,7 @@ const CODEX_READ_ONLY_NEVER_POLICY = {
 const makeCheckpointWorkspace = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const cwd = yield* fs.makeTempDirectory({ prefix: "t3-orchestrator-v2-thread-fork-" });
+  const cwd = yield* fs.makeTempDirectory({ prefix: "mybot-orchestrator-v2-thread-fork-" });
   yield* fs.writeFileString(path.join(cwd, "README.md"), "# thread fork\n");
   return cwd;
 });

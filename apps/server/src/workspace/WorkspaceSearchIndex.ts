@@ -581,7 +581,7 @@ export const layer = (key: string) => {
 };
 
 export class WorkspaceSearchIndexMap extends LayerMap.Service<WorkspaceSearchIndexMap>()(
-  "t3/workspace/WorkspaceSearchIndexMap",
+  "mybot/workspace/WorkspaceSearchIndexMap",
   {
     lookup: layer,
     idleTimeToLive: WORKSPACE_INDEX_IDLE_TTL,

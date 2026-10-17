@@ -1,7 +1,7 @@
 /**
  * ProviderHost — what a provider package may ask of the server it runs in.
  *
- * Drivers and adapters run inside a T3 server but must not import it. The
+ * Drivers and adapters run inside a MyBot server but must not import it. The
  * server provides this one service; everything a provider needs from its
  * environment (directories, server settings, background demand, attachment
  * files) goes through it, so a provider package depends only on

@@ -264,7 +264,7 @@ const createManager = (
   Effect.flatMap(Effect.service(FileSystem.FileSystem), (fs) =>
     Effect.gen(function* () {
       const { join } = yield* Path.Path;
-      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3code-terminal-" });
+      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "mybot-terminal-" });
       const logsDir = join(baseDir, "userdata", "logs", "terminals");
       const ptyAdapter = options.ptyAdapter ?? new FakePtyAdapter();
 
@@ -1864,7 +1864,7 @@ it.layer(
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const cacheDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-terminal-acp-path-",
+        prefix: "mybot-terminal-acp-path-",
       });
       const installBin = path.join(
         cacheDir,
@@ -2027,9 +2027,9 @@ it.layer(
       const appDir = "/tmp/.mount_T3Codeabc123";
       const { manager, ptyAdapter } = yield* createManager(5, {
         env: {
-          APPIMAGE: "/home/user/T3-Code.AppImage",
+          APPIMAGE: "/home/user/MyBot.AppImage",
           APPDIR: appDir,
-          ARGV0: "/home/user/T3-Code.AppImage",
+          ARGV0: "/home/user/MyBot.AppImage",
           OWD: "/home/user/project",
           PATH: `${appDir}/usr/bin:${appDir}:/usr/local/bin:/usr/bin:/bin`,
           LD_LIBRARY_PATH: `${appDir}/usr/lib:/home/user/.local/lib`,
@@ -2425,7 +2425,7 @@ it.layer(
           Layer.provide(ServerSecretStore.layer),
           Layer.provide(SqlitePersistence.layerMemory),
           Layer.provide(
-            ServerConfig.layerTest(process.cwd(), { prefix: "t3code-terminal-provider-restart-" }),
+            ServerConfig.layerTest(process.cwd(), { prefix: "mybot-terminal-provider-restart-" }),
           ),
         ),
       ),

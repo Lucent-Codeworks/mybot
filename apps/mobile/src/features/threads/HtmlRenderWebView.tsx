@@ -49,7 +49,7 @@ function postTheme(view: WebView<object> | null, theme: HtmlRenderTheme) {
   );
 }
 
-const OVERFLOW_MESSAGE_TYPE = "t3-html-render-overflow";
+const OVERFLOW_MESSAGE_TYPE = "mybot-html-render-overflow";
 
 // Reports which ways the page overflows its frame, so a feed row only takes
 // scroll gestures from a page that can use them.

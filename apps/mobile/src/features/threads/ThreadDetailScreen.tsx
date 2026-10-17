@@ -24,7 +24,7 @@ import type {
   ProviderInteractionMode,
   RuntimeMode,
   RuntimeRequestId,
-  ServerConfig as T3ServerConfig,
+  ServerConfig as MyBotServerConfig,
   ThreadId,
   UsageLimitsReport,
 } from "@mybot/contracts";
@@ -211,7 +211,7 @@ export interface ThreadDetailScreenProps {
   readonly selectedThreadQueueCount: number;
   readonly queuedMessages: ReadonlyArray<QueuedThreadMessage>;
   readonly dispatchingMessageId: MessageId | null;
-  readonly serverConfig: T3ServerConfig | null;
+  readonly serverConfig: MyBotServerConfig | null;
   readonly layoutVariant?: LayoutVariant;
   readonly usesAutomaticContentInsets?: boolean;
   readonly onHeaderMaterialVisibilityChange?: (visible: boolean) => void;

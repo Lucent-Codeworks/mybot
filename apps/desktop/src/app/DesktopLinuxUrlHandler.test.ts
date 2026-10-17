@@ -32,7 +32,7 @@ const makeEnvironment = (path: Path.Path, overrides: Record<string, unknown> = {
     linuxDesktopEntryName: "com.lucentcodeworks.MyBot.desktop",
     linuxWmClass: "mybot",
     linuxApplicationsDir: "/home/alice/.local/share/applications",
-    appImagePath: Option.some("/home/alice/Applications/T3-Code.AppImage"),
+    appImagePath: Option.some("/home/alice/Applications/MyBot.AppImage"),
     path,
     ...overrides,
   } as unknown as DesktopEnvironment.DesktopEnvironment["Service"]);
@@ -161,9 +161,9 @@ describe("DesktopLinuxUrlHandler", () => {
   it("renders a scheme-handler desktop entry with freedesktop Exec quoting", () => {
     const entry = DesktopLinuxUrlHandler.renderUrlHandlerDesktopEntry({
       displayName: "MyBot (Nightly)",
-      execTarget: '/home/al ice/Apps/T3 "100%" $HOME\\x.AppImage',
+      execTarget: '/home/al ice/Apps/MyBot "100%" $HOME\\x.AppImage',
       scheme: "mybot",
-      iconPath: "/home/al ice/icons/T3\\x.png",
+      iconPath: "/home/al ice/icons/MyBot\\x.png",
     });
 
     assert.include(entry, "[Desktop Entry]");
@@ -173,12 +173,12 @@ describe("DesktopLinuxUrlHandler", () => {
     // backslashes plus the sign.
     assert.include(
       entry,
-      'Exec="/home/al ice/Apps/T3 \\\\"100%%\\\\" \\\\$HOME\\\\\\\\x.AppImage" %U',
+      'Exec="/home/al ice/Apps/MyBot \\\\"100%%\\\\" \\\\$HOME\\\\\\\\x.AppImage" %U',
     );
     assert.include(entry, "NoDisplay=true");
     assert.notInclude(entry, "StartupWMClass=");
     assert.include(entry, "MimeType=x-scheme-handler/mybot;");
-    assert.include(entry, "Icon=/home/al ice/icons/T3\\\\x.png");
+    assert.include(entry, "Icon=/home/al ice/icons/MyBot\\\\x.png");
   });
 
   it("carries structured context on registration errors", () => {
@@ -224,7 +224,7 @@ describe("DesktopLinuxUrlHandler", () => {
         );
         assert.include(
           recorded.files[0]?.content,
-          'Exec="/home/alice/Applications/T3-Code.AppImage" %U',
+          'Exec="/home/alice/Applications/MyBot.AppImage" %U',
         );
         assert.include(recorded.files[0]?.content, "MimeType=x-scheme-handler/mybot;");
         assert.deepEqual(recorded.commands, [
@@ -261,7 +261,7 @@ describe("DesktopLinuxUrlHandler", () => {
       yield* runRegister(recorded, {
         existingEntry: DesktopLinuxUrlHandler.renderUrlHandlerDesktopEntry({
           displayName: "MyBot",
-          execTarget: "/home/alice/Applications/T3-Code.AppImage",
+          execTarget: "/home/alice/Applications/MyBot.AppImage",
           scheme: "mybot",
           iconPath: "/home/alice/.local/share/icons/com.lucentcodeworks.MyBot.desktop.png",
         }),
@@ -287,17 +287,17 @@ describe("DesktopLinuxUrlHandler", () => {
     const iconPath = "/home/alice/.local/share/icons/com.lucentcodeworks.MyBot.desktop.png";
     return Effect.gen(function* () {
       yield* runRegister(recorded, {
-        iconSource: "/tmp/.mount_T3/resources/icon.png",
+        iconSource: "/tmp/.mount_MyBot/resources/icon.png",
         existingEntry: DesktopLinuxUrlHandler.renderUrlHandlerDesktopEntry({
           displayName: "MyBot",
-          execTarget: "/home/alice/Applications/T3-Code.AppImage",
+          execTarget: "/home/alice/Applications/MyBot.AppImage",
           scheme: "mybot",
           iconPath,
         }),
       });
       assert.deepEqual(recorded.files, []);
       assert.deepEqual(recorded.copies, [
-        { source: "/tmp/.mount_T3/resources/icon.png", destination: iconPath },
+        { source: "/tmp/.mount_MyBot/resources/icon.png", destination: iconPath },
       ]);
       assert.equal(recorded.commands.at(-1)?.command, "xdg-mime");
     });
@@ -307,7 +307,7 @@ describe("DesktopLinuxUrlHandler", () => {
     const recorded = emptyRecording();
     return Effect.gen(function* () {
       yield* runRegister(recorded, {
-        iconSource: "/tmp/.mount_T3/resources/icon.png",
+        iconSource: "/tmp/.mount_MyBot/resources/icon.png",
         iconCopyError: PlatformError.systemError({
           _tag: "PermissionDenied",
           module: "FileSystem",

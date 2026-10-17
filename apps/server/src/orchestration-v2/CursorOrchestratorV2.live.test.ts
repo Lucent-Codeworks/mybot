@@ -42,7 +42,7 @@ import { CURSOR_MODEL_SELECTION, SUBAGENT_PROMPT } from "./testkit/fixtures/shar
 const layerPlatformTest = NodeServices.layer;
 
 const layerServerConfig = ServerConfig.layerTest(process.cwd(), {
-  prefix: "t3-cursor-v2-live-",
+  prefix: "mybot-cursor-v2-live-",
 });
 
 const layerServerSettings = ServerSettings.layerTest({

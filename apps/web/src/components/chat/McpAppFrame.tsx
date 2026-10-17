@@ -252,7 +252,7 @@ export function McpAppFrame(props: {
     };
   }, [props.environmentId, props.threadId, props.itemId, app.tool]);
   // The bridge belongs to the captured document. A frame that navigates keeps
-  // its window, so a second load stops the app rather than letting a page T3
+  // its window, so a second load stops the app rather than letting a page MyBot
   // never served pose as it. This is not a confidentiality boundary: a frame
   // can always navigate itself, so the app could carry anything it read out
   // in a URL either way.
@@ -300,7 +300,7 @@ export function McpAppFrame(props: {
       };
     };
     // Approvals render in the page, beneath the top layer a full-screen app
-    // occupies, so the app returns inline before T3 asks.
+    // occupies, so the app returns inline before MyBot asks.
     const ask = async (message: string) => {
       flushSync(() => setDisplayMode("inline"));
       const approved = await requestConfirmDialog(message);

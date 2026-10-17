@@ -49,7 +49,7 @@ updates, and refuse or strip the flag anywhere else, so there is only ever one.
 ## Connected apps
 
 `apps/server/src/apps/AppConnections.ts` is an MCP client for the apps a user connects, and the
-T3 MCP server relays them through two fixed tools, `app_tools_list` and `app_tool_call`. Relaying,
+MyBot MCP server relays them through two fixed tools, `app_tools_list` and `app_tool_call`. Relaying,
 instead of adding each app to each provider's MCP config, works the same for every adapter and keeps
 the tool list (part of Claude's query key) stable when apps are added or removed. Configs, including
 tokens and environment values, live in the server secret store and never reach clients; summaries

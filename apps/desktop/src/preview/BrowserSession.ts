@@ -18,7 +18,7 @@ const PREVIEW_PARTITION_PREFIX = "persist:t3code-preview-";
  * still carry the product prefix so `isPartition` can admit them — the
  * `will-attach-webview` gate rejects anything it does not recognise.
  */
-const PREVIEW_EPHEMERAL_PARTITION_PREFIX = "t3code-preview-ephemeral-";
+const PREVIEW_EPHEMERAL_PARTITION_PREFIX = "mybot-preview-ephemeral-";
 const PROFILE_PARTITION_MARKER = "profile-";
 
 export type BrowserSessionPartitionNamespace = "profile";
@@ -37,7 +37,7 @@ const ALLOWED_PREVIEW_PERMISSIONS: ReadonlySet<string> = new Set([
   "geolocation",
   // The Fullscreen API. `DesktopWindow` disables HTML fullscreen window resizing
   // for the app window and every preview guest, so a page that goes fullscreen
-  // fills its own webview instead of taking over the whole T3 window.
+  // fills its own webview instead of taking over the whole MyBot window.
   "fullscreen",
   // Deliberately NOT local-fonts: preview sessions run untrusted web content,
   // and silently granting it would hand every page the user's installed-font

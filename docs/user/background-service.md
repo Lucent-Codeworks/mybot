@@ -94,4 +94,4 @@ Downloads, it may need Full Disk Access for the `mybot` executable listed in
 `~/Library/LaunchAgents/com.t3tools.t3code.service.plist`.
 
 For failures after signing in to MyBot Connect, see
-[connection troubleshooting](./remote-access.md#t3-connect-troubleshooting).
+[connection troubleshooting](./remote-access.md#mybot-connect-troubleshooting).

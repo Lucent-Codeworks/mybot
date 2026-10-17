@@ -291,7 +291,7 @@ const endpointSignal = (name: OtlpSignalName, own: Settings, generic: Settings):
 };
 
 export const load: Effect.Effect<OtelEnvironment> = Config.all({
-  t3: flag(
+  myBot: flag(
     "T3CODE_OTEL_SDK_DISABLED",
     T3CODE_TRUE,
     T3CODE_FALSE,
@@ -318,8 +318,8 @@ export const load: Effect.Effect<OtelEnvironment> = Config.all({
     logs: exporter("OTEL_LOGS_EXPORTER"),
   }),
 }).pipe(
-  Effect.map(({ t3, spec, resource, generic, exporters, ...own }) => {
-    const disabled = t3.value ?? spec.value ?? false;
+  Effect.map(({ myBot, spec, resource, generic, exporters, ...own }) => {
+    const disabled = myBot.value ?? spec.value ?? false;
     // The kill switch wins outright, so the signals say nothing once it is set.
     const signals = disabled
       ? undefined
@@ -333,14 +333,14 @@ export const load: Effect.Effect<OtelEnvironment> = Config.all({
       signals === undefined ? [] : Object.values(signals).flatMap((resolved) => resolved.used),
     );
     const warnings = [
-      t3.warning,
+      myBot.warning,
       spec.warning,
       resource.warning,
       ...Array.from(used, (setting) => setting.warning),
     ].filter((warning) => warning !== undefined);
     if (disabled) {
       warnings.push(
-        t3.value
+        myBot.value
           ? "T3CODE_OTEL_SDK_DISABLED is set, so no telemetry is exported, whatever configured it"
           : "OTEL_SDK_DISABLED is set, so no telemetry is exported, whatever configured it; set T3CODE_OTEL_SDK_DISABLED=false to export anyway",
       );
@@ -382,25 +382,25 @@ export interface SignalEndpoint {
 export const resolveSignalEndpoint = (
   otel: OtelEnvironment,
   signal: SignalName,
-  t3: { readonly url: string | undefined; readonly export: SignalExport },
+  myBot: { readonly url: string | undefined; readonly export: SignalExport },
   ...fallbackUrls: ReadonlyArray<string | undefined>
 ): SignalEndpoint | undefined => {
   if (otel.disabled) {
     return undefined;
   }
-  const t3Url = blankAsUnset(t3.url);
-  if (t3Url !== undefined) {
-    return { url: t3Url, export: t3.export };
+  const myBotUrl = blankAsUnset(myBot.url);
+  if (myBotUrl !== undefined) {
+    return { url: myBotUrl, export: myBot.export };
   }
   return OtelSignal.$match(otel[signal], {
     Export: ({ url, protocol, headers }): SignalEndpoint => ({
       url,
-      export: { protocol, headers, exportIntervalMs: t3.export.exportIntervalMs },
+      export: { protocol, headers, exportIntervalMs: myBot.export.exportIntervalMs },
     }),
     Off: () => undefined,
     Unset: () => {
       const url = fallbackUrls.map(blankAsUnset).find((candidate) => candidate !== undefined);
-      return url === undefined ? undefined : { url, export: t3.export };
+      return url === undefined ? undefined : { url, export: myBot.export };
     },
   });
 };

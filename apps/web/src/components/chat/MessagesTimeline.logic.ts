@@ -199,7 +199,7 @@ export function threadReadTargetTitle(
 }
 
 /**
- * Names the read thread in place of the generic object ("Read a T3 thread" becomes
+ * Names the read thread in place of the generic object ("Read a MyBot thread" becomes
  * `Read thread “Title”`), keeping the label's tense. Null keeps the generic label.
  */
 export function threadReadLabelPrefix(label: string) {

@@ -57,7 +57,7 @@ import { isJavaScriptReplTool } from "@mybot/shared/toolActivity";
 import { useMarkdownCodeHighlight } from "./markdownCodeHighlightState";
 
 import { AppText as Text } from "../../components/AppText";
-import { T3Wordmark } from "../../components/T3Wordmark";
+import { MyBotWordmark } from "../../components/MyBotWordmark";
 import { BrowserAppIcon } from "../../components/BrowserAppIcon";
 import { cn } from "../../lib/cn";
 import { THREAD_WORK_ROW_MIN_HEIGHT, type deriveThreadWorkLogSizing } from "../../lib/layout";
@@ -125,7 +125,10 @@ function WorkLogIcon(props: {
   const colorClassName = props.highlighted ? "accent-foreground" : props.colorClassName;
   if (props.icon === "t3-code") {
     return (
-      <T3Wordmark height={10} {...(colorClassName ? { colorClassName } : { color: props.color })} />
+      <MyBotWordmark
+        height={10}
+        {...(colorClassName ? { colorClassName } : { color: props.color })}
+      />
     );
   }
   if (props.icon === "computer") {
@@ -838,7 +841,7 @@ function WorkspacePreparationRetryButton(props: {
       style={{ opacity: busy ? 0.5 : 1 }}
     >
       <SymbolView name="arrow.clockwise" size={13} tintColorClassName="accent-icon" />
-      <Text className="font-t3-medium text-sm text-foreground">Retry</Text>
+      <Text className="font-mybot-medium text-sm text-foreground">Retry</Text>
     </Pressable>
   );
 }
@@ -932,14 +935,14 @@ const ThreadWorkLogRow = memo(function ThreadWorkLogRow(
             <Text
               className={
                 warning
-                  ? "min-w-0 flex-1 font-t3-medium text-sm text-warning-foreground"
-                  : "min-w-0 flex-1 font-t3-medium text-sm text-adaptive-rose-600-400"
+                  ? "min-w-0 flex-1 font-mybot-medium text-sm text-warning-foreground"
+                  : "min-w-0 flex-1 font-mybot-medium text-sm text-adaptive-rose-600-400"
               }
             >
               {label}
             </Text>
             {props.copied ? (
-              <Text className="pr-1 font-t3-medium text-3xs text-adaptive-emerald-600-400">
+              <Text className="pr-1 font-mybot-medium text-3xs text-adaptive-emerald-600-400">
                 Copied
               </Text>
             ) : null}
@@ -1134,7 +1137,7 @@ const ThreadWorkLogRow = memo(function ThreadWorkLogRow(
 
         <View className="shrink-0 flex-row items-center gap-px">
           {props.copied ? (
-            <Text className="pr-1 font-t3-medium text-3xs text-adaptive-emerald-600-400">
+            <Text className="pr-1 font-mybot-medium text-3xs text-adaptive-emerald-600-400">
               Copied
             </Text>
           ) : null}
@@ -1425,7 +1428,7 @@ export const ThreadAgentSpawnCard = memo(function ThreadAgentSpawnCard(props: {
           <View className="min-w-0 flex-1 gap-0.5">
             <Text
               key={props.rowSizing.textSizeKey}
-              className="font-t3-medium text-sm text-foreground"
+              className="font-mybot-medium text-sm text-foreground"
               numberOfLines={1}
             >
               {summary.title}

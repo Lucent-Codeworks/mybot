@@ -303,7 +303,7 @@ const T3_MCP_TOOLS: Readonly<Record<string, T3McpToolDefinition>> = {
 };
 
 /**
- * The T3 orchestration tool inventory, used to gate loose name matching on
+ * The MyBot orchestration tool inventory, used to gate loose name matching on
  * both the server (ACP MCP identity recovery) and the client (logo branding).
  */
 export const T3_MCP_TOOL_NAMES: ReadonlySet<string> = new Set(Object.keys(T3_MCP_TOOLS));
@@ -313,7 +313,7 @@ function normalizeT3McpToolLabel(value: string): string {
 }
 
 /**
- * ACP agents disagree on how the injected T3 server prefixes its tools:
+ * ACP agents disagree on how the injected MyBot server prefixes its tools:
  * `mcp__t3-code__x` (Claude/Cursor), `t3-code.x` (Codex), plus single
  * underscore, colon, slash, dash, and space separators seen from registry
  * agents. The prefix match is deliberately loose because the display-name
@@ -352,7 +352,7 @@ function resolveT3McpToolName(value: string): string | null {
   return longest;
 }
 
-/** The bare T3 tool name (`html_render`) for any provider's spelling of it. */
+/** The bare MyBot tool name (`html_render`) for any provider's spelling of it. */
 export function resolveT3McpToolId(toolName: string | null | undefined): string | null {
   const name = toolName == null ? null : resolveT3McpToolName(toolName);
   return name !== null && Object.hasOwn(T3_MCP_TOOLS, name) ? name : null;

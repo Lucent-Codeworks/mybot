@@ -1,7 +1,7 @@
 import { createDebugLogger } from "../../lib/debugLog";
 
 /**
- * Debug logging for the mobile terminal pipeline. Prefix: `[t3-terminal]`.
+ * Debug logging for the mobile terminal pipeline. Prefix: `[mybot-terminal]`.
  *
  * Enabled when `__DEV__` is true, or set `globalThis.__T3_TERMINAL_DEBUG__`
  * (or the shared `globalThis.__T3_DEBUG__` filter) in a JS debugger / Metro

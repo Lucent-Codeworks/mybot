@@ -3,7 +3,7 @@ import * as SchemaTransformation from "effect/SchemaTransformation";
 
 import { ProjectScriptIcon } from "./project.ts";
 
-/** File name of the checked-in T3 project file, resolved at the workspace root. */
+/** File name of the checked-in MyBot project file, resolved at the workspace root. */
 export const T3_PROJECT_FILE_NAME = "t3.json";
 
 /** Public URL of the published JSON Schema for {@link T3ProjectFile}. */

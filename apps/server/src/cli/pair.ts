@@ -193,9 +193,9 @@ const formatPairOutput = (input: {
   ].join("\n");
 
 /**
- * Three outcomes, because they drive different decisions: a T3 descriptor
+ * Three outcomes, because they drive different decisions: a MyBot descriptor
  * (pair with it), nothing answering (safe to configure Tailscale Serve), or
- * something answering that is not a T3 server (do NOT overwrite its mapping).
+ * something answering that is not a MyBot server (do NOT overwrite its mapping).
  */
 type EnvironmentProbeResult =
   | { readonly _tag: "descriptor"; readonly descriptor: ExecutionEnvironmentDescriptor }
@@ -375,7 +375,7 @@ const resolveTailscalePairingBase = Effect.fn("pair.resolveTailscalePairingBase"
     });
 
     // Only an unreachable port, or a mapping already fronting this exact
-    // environment, is safe to (re)configure. Any other responder — T3 or not
+    // environment, is safe to (re)configure. Any other responder — MyBot or not
     // — must not have its mapping silently replaced.
     const existing = yield* probeEnvironmentDescriptor(baseUrl);
     if (existing._tag === "descriptor") {

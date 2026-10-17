@@ -92,8 +92,8 @@ import {
 import { ACP_SESSION_MODE_OPTION_ID } from "./sessionConfig.ts";
 import * as AcpSessionRuntime from "./AcpSessionRuntime.ts";
 import {
-  t3AcpPromptWithInstructions,
-  type T3AcpInstructionState,
+  myBotAcpPromptWithInstructions,
+  type MyBotAcpInstructionState,
 } from "@mybot/provider-core/server/orchestrationInstructions";
 import { buildRuntimeInstructions } from "@mybot/provider-core/server/runtimeInstructions";
 import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
@@ -291,9 +291,9 @@ export interface AcpAdapterV2Flavor {
       }
     | undefined;
   /**
-   * Replaces T3's runtime-policy answer to a permission request. Grok's Auto
+   * Replaces MyBot's runtime-policy answer to a permission request. Grok's Auto
    * mode only asks about what its own classifier refused, so those must reach
-   * the user instead of being approved by T3's policy.
+   * the user instead of being approved by MyBot's policy.
    */
   readonly permissionDisposition?: (
     policy: ProviderAdapter.ProviderAdapterV2RuntimePolicy,
@@ -329,7 +329,7 @@ export interface AcpAdapterV2Flavor {
   /**
    * Optional plan-file sniffing (#8358): providers that write their proposed
    * plan to a file mid-turn (Grok plan.md) return its markdown from a tool
-   * call so T3 can show the proposed-plan card while plan mode is active.
+   * call so MyBot can show the proposed-plan card while plan mode is active.
    */
   readonly extractProposedPlanMarkdown?: (toolCall: AcpToolCallState) => string | undefined;
   /**
@@ -376,7 +376,7 @@ export interface AcpAdapterV2Flavor {
   readonly isPersistentBackgroundTool?: (toolCall: AcpToolCallState) => boolean;
   /**
    * Whether a root-session frame belongs to a turn the agent started itself
-   * after background work ended (Grok `task-completed-*`), not to T3's prompt.
+   * after background work ended (Grok `task-completed-*`), not to MyBot's prompt.
    * Such frames never project into a root turn held open for that work; they
    * take the post-settle wake path once the held turn finalizes.
    */
@@ -617,7 +617,7 @@ export const AcpProviderCapabilitiesV2 = {
     appCanCheckpointFilesystem: true,
     supportsNestedCheckpointScopes: true,
     // ACP defines no conversation truncation, so rollback resets the provider
-    // conversation: T3 restores checkpointed state and the next turn starts a
+    // conversation: MyBot restores checkpointed state and the next turn starts a
     // fresh agent session without the rolled-back context.
     providerCanRollbackConversation: true,
     providerRollbackReturnsSnapshot: true,
@@ -630,7 +630,7 @@ export const AcpProviderCapabilitiesV2 = {
     nativeRequestIds: "weak",
   },
   runtimePolicy: {
-    // ACP agents run their own tools; T3 only answers their permission
+    // ACP agents run their own tools; MyBot only answers their permission
     // requests by policy.
     enforcement: "client-boundary",
   },
@@ -691,7 +691,7 @@ function acpMcpContext(
   // optional http support still routinely fail to wire injected http servers
   // through to their backend (codex-acp 1.2.0 and pi-acp both drop them), so
   // every ACP session gets the `mybot acp-mcp-bridge` stdio server, which
-  // forwards JSON-RPC to T3's authenticated MCP endpoint. The credential
+  // forwards JSON-RPC to MyBot's authenticated MCP endpoint. The credential
   // travels via environment variables, never the command line.
   return {
     servers: [
@@ -1683,7 +1683,7 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
               agentTerminalsById.get(sessionScopedId(sessionId, terminalId))?.command;
             return command === undefined ? [] : [command];
           });
-        // Client terminals (Devin) run with the T3 server's privileges, so they
+        // Client terminals (Devin) run with the MyBot server's privileges, so they
         // are policy-checked against the active turn policy; a command the user
         // already approved satisfies an "ask" disposition.
         const clientPolicyGrants = makeAcpClientPolicyGrants();
@@ -1701,7 +1701,7 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
         const providerThreadByNativeSessionId = yield* Ref.make(
           new Map<string, OrchestrationV2ProviderThread>(),
         );
-        // T3 only owns the temporary Plan override. Remember the agent's
+        // MyBot only owns the temporary Plan override. Remember the agent's
         // effective native configuration on entry and restore it on Build.
         const nativeBuildConfigurationBySessionId = new Map<string, AcpNativeBuildConfiguration>();
         const initialSessionActivationFailure = yield* Ref.make<{
@@ -1712,7 +1712,9 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
           yield* Ref.make<AcpSessionRuntime.AcpSessionRuntimeStartResult | null>(null);
         const activeSelection = yield* Ref.make<ModelSelection | null>(null);
         const activeInteractionMode = yield* Ref.make<ProviderInteractionMode | null>(null);
-        const promptInstructionStates = yield* Ref.make(new Map<string, T3AcpInstructionState>());
+        const promptInstructionStates = yield* Ref.make(
+          new Map<string, MyBotAcpInstructionState>(),
+        );
         const runtimeRestartRequired = yield* Ref.make(false);
         const runtimeTeardownState = yield* Ref.make<AcpRuntimeTeardownState>({ _tag: "Idle" });
         const runtimeCallbackGeneration = yield* Ref.make(0);
@@ -3327,7 +3329,7 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
           const projectAsCommandExecution = inputVariant === "monitor" || outputIsBashResult;
           // ACP has no typed MCP item, so recover MCP identity from the
           // agent-specific shape and project the same branded dynamic_tool
-          // item native providers produce (e.g. the T3 orchestration tools).
+          // item native providers produce (e.g. the MyBot orchestration tools).
           const mcpIdentity = extractMcpToolCallIdentity(toolCall, {
             embeddedTerminalCommands: embeddedTerminalCommands(
               context.nativeThreadId,
@@ -6789,15 +6791,15 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
           const prompt: Array<EffectAcpSchema.ContentBlock> = [];
           const instructionState = {
             interactionMode: turnInput.runtimePolicy.interactionMode,
-            hasT3Mcp: (yield* readMcpContext(turnInput.threadId)).servers.length > 0,
-          } satisfies T3AcpInstructionState;
+            hasMyBotMcp: (yield* readMcpContext(turnInput.threadId)).servers.length > 0,
+          } satisfies MyBotAcpInstructionState;
           const previousInstructionState = (yield* Ref.get(promptInstructionStates)).get(sessionId);
           const messageText = providerMessageTextWithAttachmentPaths({
             text: turnInput.message.text,
             attachments: turnInput.message.attachments,
             resolveAttachmentPath: host.resolveAttachmentPath,
           });
-          const text = t3AcpPromptWithInstructions({
+          const text = myBotAcpPromptWithInstructions({
             prompt: messageText,
             state: instructionState,
             ...(previousInstructionState === undefined

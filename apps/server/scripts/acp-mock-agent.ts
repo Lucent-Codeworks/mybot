@@ -488,7 +488,7 @@ const program = Effect.gen(function* () {
       parameterizedModelPicker = request.capabilities?._meta?.parameterizedModelPicker === true;
       return {
         protocolVersion: 2,
-        info: { name: "t3-acp-mock-agent", version: "0.0.0" },
+        info: { name: "mybot-acp-mock-agent", version: "0.0.0" },
         _meta: { modelState: modelState() },
         capabilities: {
           session: {
@@ -1109,11 +1109,11 @@ const program = Effect.gen(function* () {
             rawOutput: {
               action: {
                 type: "search",
-                query: "t3 code",
+                query: "mybot code",
                 sources: [
                   { type: "url", url: "https://t3.codes" },
                   { type: "url", url: "https://t3.codes" },
-                  { type: "url", url: "https://github.com/pingdotgg/t3code" },
+                  { type: "url", url: "https://github.com/Lucent-Codeworks/mybot" },
                 ],
               },
               id: "grok-web-search",

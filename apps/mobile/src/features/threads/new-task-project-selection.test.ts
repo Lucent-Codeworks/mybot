@@ -32,8 +32,8 @@ function makeProject(
 
 function makeScope(projects: ReadonlyArray<EnvironmentProject>): HomeProjectScope {
   return {
-    key: "environment:/work/t3code",
-    title: "T3 Code",
+    key: "environment:/work/mybot",
+    title: "MyBot",
     representative: projects[0]!,
     projects,
     projectRefs: projects.map((project) => ({
@@ -45,14 +45,14 @@ function makeScope(projects: ReadonlyArray<EnvironmentProject>): HomeProjectScop
 
 describe("getProjectScopeSelectionTarget", () => {
   it("keeps the current environment when it hosts the selected logical project", () => {
-    const projects = [makeProject("t3code-mac", "mac"), makeProject("t3code-server", "server")];
+    const projects = [makeProject("mybot-mac", "mac"), makeProject("mybot-server", "server")];
     expect(getProjectScopeSelectionTarget(makeScope(projects), EnvironmentId.make("server"))).toBe(
       projects[1],
     );
   });
 
   it("falls back to the representative when the current environment does not host the project", () => {
-    const projects = [makeProject("t3code-mac", "mac"), makeProject("t3code-server", "server")];
+    const projects = [makeProject("mybot-mac", "mac"), makeProject("mybot-server", "server")];
     expect(getProjectScopeSelectionTarget(makeScope(projects), EnvironmentId.make("other"))).toBe(
       projects[0],
     );
@@ -61,22 +61,22 @@ describe("getProjectScopeSelectionTarget", () => {
 
 describe("resolveEnvironmentProjectMatch", () => {
   it("matches by workspace basename, then title", () => {
-    const selected = makeProject("t3code", "mac", { workspaceRoot: "/Users/me/t3code" });
+    const selected = makeProject("mybot", "mac", { workspaceRoot: "/Users/me/mybot" });
     const byBasename = [
       makeProject("other", "server"),
-      makeProject("srv", "server", { workspaceRoot: "/home/me/t3code" }),
+      makeProject("srv", "server", { workspaceRoot: "/home/me/mybot" }),
     ];
     expect(resolveEnvironmentProjectMatch(byBasename, selected)).toBe(byBasename[1]);
 
     const byTitle = [
       makeProject("other", "server"),
-      makeProject("srv", "server", { title: "t3code" }),
+      makeProject("srv", "server", { title: "mybot" }),
     ];
     expect(resolveEnvironmentProjectMatch(byTitle, selected)).toBe(byTitle[1]);
   });
 
   it("falls back to the first project on the target so the draft has a key to carry over to", () => {
-    const selected = makeProject("t3code", "mac");
+    const selected = makeProject("mybot", "mac");
     const target = [makeProject("unrelated", "server"), makeProject("also-unrelated", "server")];
     expect(resolveEnvironmentProjectMatch(target, selected)).toBe(target[0]);
     expect(resolveEnvironmentProjectMatch([], selected)).toBeNull();
@@ -85,14 +85,14 @@ describe("resolveEnvironmentProjectMatch", () => {
 
 describe("resolveDraftProjectSelection", () => {
   it("preserves an explicit project selection", () => {
-    const project = makeProject("t3code");
+    const project = makeProject("mybot");
     expect(
-      resolveDraftProjectSelection("environment:t3code", [project], [makeScope([project])]),
+      resolveDraftProjectSelection("environment:mybot", [project], [makeScope([project])]),
     ).toEqual({ kind: "preserve" });
   });
 
   it("selects the only physical project when no project was explicitly selected", () => {
-    const project = makeProject("t3code");
+    const project = makeProject("mybot");
     expect(resolveDraftProjectSelection(null, [project], [makeScope([project])])).toEqual({
       kind: "select",
       project,
@@ -100,7 +100,7 @@ describe("resolveDraftProjectSelection", () => {
   });
 
   it("selects one logical project even when it has multiple physical workspaces", () => {
-    const projects = [makeProject("t3code"), makeProject("t3code-2"), makeProject("t3code-3")];
+    const projects = [makeProject("mybot"), makeProject("mybot-2"), makeProject("mybot-3")];
     expect(resolveDraftProjectSelection(null, projects, [makeScope(projects)])).toEqual({
       kind: "select",
       project: projects[0],
@@ -108,7 +108,7 @@ describe("resolveDraftProjectSelection", () => {
   });
 
   it("does not preserve a project key that is missing from the catalog", () => {
-    const project = makeProject("t3code");
+    const project = makeProject("mybot");
     expect(
       resolveDraftProjectSelection("environment:removed", [project], [makeScope([project])]),
     ).toEqual({
@@ -131,7 +131,7 @@ describe("filterProjectScopes", () => {
   });
 
   it("matches logical names and workspace names or paths without case sensitivity", () => {
-    expect(filterProjectScopes(scopes, "  T3 CODE ")).toEqual([code]);
+    expect(filterProjectScopes(scopes, "  MYBOT ")).toEqual([code]);
     expect(filterProjectScopes(scopes, "DESKTOP")).toEqual([code]);
     expect(filterProjectScopes(scopes, "REMOTE-WORKSPACE")).toEqual([code]);
     expect(filterProjectScopes(scopes, "documentation")).toEqual([docs]);

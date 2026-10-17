@@ -57,7 +57,7 @@ function mockProcess(exit: number | PlatformError.PlatformError) {
 
 const devServerInput = {
   mode: "dev:server",
-  t3Home: "/tmp/t3code-dev-runner",
+  t3Home: "/tmp/mybot-dev-runner",
   browser: undefined,
   autoBootstrapProjectFromCwd: undefined,
   logWebSocketEvents: undefined,
@@ -1239,7 +1239,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
     describe("t3 home precedence", () => {
       const makeWorktree = Effect.acquireRelease(
         Effect.sync(() => {
-          const root = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-devrunner-"));
+          const root = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "mybot-devrunner-"));
           NodeFS.writeFileSync(
             NodePath.join(root, ".git"),
             "gitdir: /elsewhere/.git/worktrees/x\n",

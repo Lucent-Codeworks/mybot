@@ -13,7 +13,7 @@ const makeCheckpointWorkspaceEffect = Effect.fn("makeCheckpointWorkspace")(funct
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const cwd = yield* fs.makeTempDirectory({
-    prefix: `t3-orchestrator-v2-${fixtureName}-`,
+    prefix: `mybot-orchestrator-v2-${fixtureName}-`,
   });
   yield* fs.writeFileString(path.join(cwd, "README.md"), `# ${fixtureName}\n`);
   for (const [relativePath, contents] of Object.entries(files)) {

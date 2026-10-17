@@ -1,4 +1,4 @@
-// @effect-diagnostics nodeBuiltinImport:off globalTimers:off globalDate:off - This host-side fixture creates an isolated local T3 environment.
+// @effect-diagnostics nodeBuiltinImport:off globalTimers:off globalDate:off - This host-side fixture creates an isolated local MyBot environment.
 import * as NodeFSP from "node:fs/promises";
 import * as NodePath from "node:path";
 import * as NodeSqlite from "node:sqlite";
@@ -248,7 +248,7 @@ function minutesBefore(now: number, minutes: number): string {
   return new Date(now - minutes * 60_000).toISOString();
 }
 
-async function seedT3CodeWorkspace(workspaceRoot: string): Promise<void> {
+async function seedMyBotWorkspace(workspaceRoot: string): Promise<void> {
   await NodeFSP.mkdir(NodePath.join(workspaceRoot, "apps/mobile/src/features/home"), {
     recursive: true,
   });
@@ -591,7 +591,7 @@ export async function seedShowcaseEnvironment(input: {
   if (!workspaceRoot) throw new Error("The primary showcase workspace is not configured.");
   const dbPath = NodePath.join(input.baseDir, "userdata", "statev2.sqlite");
   if (primaryProject.id === SHOWCASE_PROJECT_ID) {
-    await seedT3CodeWorkspace(workspaceRoot);
+    await seedMyBotWorkspace(workspaceRoot);
   }
   await Promise.all(
     projects

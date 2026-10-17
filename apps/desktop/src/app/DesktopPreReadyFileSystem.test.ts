@@ -21,7 +21,7 @@ it.layer(NodeServices.layer)("DesktopPreReadyFileSystem", (it) => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-pre-ready-fs-" });
+      const root = yield* fileSystem.makeTempDirectoryScoped({ prefix: "mybot-pre-ready-fs-" });
       yield* fileSystem.makeDirectory(path.join(root, "MyBot (Alpha)"));
       yield* fileSystem.writeFileString(path.join(root, "MyBot (Alpha)", "Local State"), "keys");
 
@@ -37,7 +37,7 @@ it.layer(NodeServices.layer)("DesktopPreReadyFileSystem", (it) => {
     () =>
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
-        const root = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-pre-ready-fs-" });
+        const root = yield* fileSystem.makeTempDirectoryScoped({ prefix: "mybot-pre-ready-fs-" });
         yield* fileSystem.chmod(root, 0o000);
         yield* Effect.addFinalizer(() => fileSystem.chmod(root, 0o700).pipe(Effect.orDie));
 

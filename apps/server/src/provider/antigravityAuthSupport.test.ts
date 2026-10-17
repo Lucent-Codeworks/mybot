@@ -567,11 +567,11 @@ it.layer(NodeServices.layer)("Antigravity profile preparation", (it) => {
         profileDirectory: path.join(directory, "profile"),
         baseEnv: { PATH: path.dirname(process.execPath) },
       });
-      expect(profile.browserCommand).not.toContain("/packaged/t3");
+      expect(profile.browserCommand).not.toContain("/packaged/mybot");
       expect(yield* fs.exists(profile.acpDirectory)).toBe(true);
     }).pipe(
       Effect.provideService(HostProcess.IsExecutable, true),
-      Effect.provideService(HostProcess.ExecutablePath, "/packaged/t3"),
+      Effect.provideService(HostProcess.ExecutablePath, "/packaged/mybot"),
     ),
   );
 

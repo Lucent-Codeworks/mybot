@@ -80,7 +80,7 @@ function detectResourceMonitorLinuxLibc(): ResourceMonitorLinuxLibc {
 }
 
 export const ResourceMonitorHostLinuxLibc = Context.Reference<ResourceMonitorLinuxLibc>(
-  "t3/resourceTelemetry/ResourceMonitorHostLinuxLibc",
+  "mybot/resourceTelemetry/ResourceMonitorHostLinuxLibc",
   {
     defaultValue: detectResourceMonitorLinuxLibc,
   },

@@ -59,8 +59,8 @@ const fakePowerShell = (initial: string) => {
       const env = options.env ?? {};
       let exitCode = 0;
       let stdout = "";
-      if (env.T3_SET === "1") {
-        registry.path = env.T3_PATH ?? "";
+      if (env.MYBOT_SET === "1") {
+        registry.path = env.MYBOT_PATH ?? "";
         registry.writes += 1;
       } else if (registry.failReads) {
         exitCode = 1;
@@ -229,7 +229,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const home = yield* fs.makeTempDirectoryScoped();
-      // T3 Code shares the T3 home and writes its own `t3` launcher there.
+      // T3 Code shares the same home and writes its own `t3` launcher there.
       const t3CodeLauncher = path.join(home, ".t3", "bin", "t3");
       const t3CodeContent =
         "#!/bin/sh\n# Written by T3 Code: runs the desktop app's bundled t3 CLI.\n";
@@ -259,7 +259,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       const path = yield* Path.Path;
       const home = yield* fs.makeTempDirectoryScoped();
       const command = yield* commandIn({ home });
-      // Left by a previous T3 home after this run's startup cleanup.
+      // Left by a previous MyBot home after this run's startup cleanup.
       const oldLauncher = path.join(home, "old-t3", "bin", "t3");
       yield* fs.makeDirectory(path.dirname(oldLauncher), { recursive: true });
       yield* fs.writeFileString(oldLauncher, `#!/bin/sh\n# ${DesktopCliShim.LEGACY_MARKER}\n`);

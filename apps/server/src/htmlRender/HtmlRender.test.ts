@@ -27,7 +27,7 @@ import * as HtmlRender from "./HtmlRender.ts";
 import * as PreviewBrowser from "../preview/PreviewBrowser.ts";
 
 // Real-browser tests run only when this names a chrome-headless-shell, for
-// example one T3 installed under <T3 home>/tools/chrome-headless-shell.
+// example one MyBot installed under <T3 home>/tools/chrome-headless-shell.
 const TEST_BROWSER_ENV = "T3CODE_TEST_HEADLESS_SHELL";
 
 const layerHtmlRender = (
@@ -49,7 +49,7 @@ const layerHtmlRender = (
         }),
       ),
     ),
-    Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "t3-html-render-" })),
+    Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "mybot-html-render-" })),
     Layer.provideMerge(NodeServices.layer),
   );
 const layerTest = layerHtmlRender();
@@ -62,7 +62,7 @@ describe("HtmlRender", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const htmlRender = yield* HtmlRender.HtmlRender;
-      const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-html-images-" });
+      const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "mybot-html-images-" });
       const png = path.join(directory, "shot.png");
       const svg = path.join(directory, "logo.svg");
       yield* fileSystem.writeFile(png, PNG_BYTES);
@@ -102,7 +102,7 @@ describe("HtmlRender", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const htmlRender = yield* HtmlRender.HtmlRender;
-      const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-html-images-" });
+      const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "mybot-html-images-" });
       const svg = path.join(directory, "styled.svg");
       const source = [
         '<?xml version="1.0"?>',
@@ -123,7 +123,7 @@ describe("HtmlRender", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const htmlRender = yield* HtmlRender.HtmlRender;
-      const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-html-images-" });
+      const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "mybot-html-images-" });
       const folder = path.join(directory, "folder.png");
       yield* fileSystem.makeDirectory(folder);
       const missing = path.join(directory, "missing.jpg");
@@ -245,7 +245,7 @@ describe("HtmlRender", () => {
           const preview = yield* htmlRender.preview({
             html: [
               '<!doctype html><html><head></head><body><div id="page" tabindex="0" style="height:300px;background:var(--accent)"></div>',
-              '<img src="/nonexistent/t3-missing.png" hidden>',
+              '<img src="/nonexistent/mybot-missing.png" hidden>',
               "<script>",
               "const root = getComputedStyle(document.documentElement);",
               'const page = document.getElementById("page"); page.focus();',
@@ -267,7 +267,7 @@ describe("HtmlRender", () => {
             width: 400,
             contentHeight: 300,
             capturedHeight: 300,
-            missingImages: ["/nonexistent/t3-missing.png"],
+            missingImages: ["/nonexistent/mybot-missing.png"],
           });
           // Headless Chrome prefers light, so a dark background proves the theme fragment applied.
           expect(preview.consoleMessages).toEqual(
@@ -301,7 +301,9 @@ describe("HtmlRender", () => {
           const fileSystem = yield* FileSystem.FileSystem;
           const path = yield* Path.Path;
           const htmlRender = yield* HtmlRender.HtmlRender;
-          const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-html-files-" });
+          const directory = yield* fileSystem.makeTempDirectoryScoped({
+            prefix: "mybot-html-files-",
+          });
           const secret = path.join(directory, "secret.js");
           yield* fileSystem.writeFileString(secret, 'window.secret = "abc123";');
           const secretUrl = NodeURL.pathToFileURL(secret).href;

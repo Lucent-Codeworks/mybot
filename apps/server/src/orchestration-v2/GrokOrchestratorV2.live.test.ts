@@ -41,7 +41,7 @@ import { GROK_MODEL_SELECTION } from "./testkit/fixtures/shared.ts";
 const layerPlatformTest = NodeServices.layer;
 
 const layerServerConfig = ServerConfig.layerTest(process.cwd(), {
-  prefix: "t3-grok-v2-live-",
+  prefix: "mybot-grok-v2-live-",
 });
 
 const layerServerSettings = ServerSettings.layerTest({

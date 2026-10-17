@@ -216,7 +216,9 @@ describe("provider installation routing", () => {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const platform = yield* HostProcess.Platform;
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-provider-install-route-" });
+      const directory = yield* fs.makeTempDirectoryScoped({
+        prefix: "mybot-provider-install-route-",
+      });
       const binary = platform === "win32" ? "agy-test.exe" : "agy-test";
       const executable = path.join(directory, binary);
       yield* fs.writeFileString(executable, "test");
@@ -243,7 +245,9 @@ describe("provider installation routing", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-provider-install-route-" });
+      const directory = yield* fs.makeTempDirectoryScoped({
+        prefix: "mybot-provider-install-route-",
+      });
       const binaryPath = path.join(directory, "missing");
       const harness = yield* makeHarness({
         settings: {

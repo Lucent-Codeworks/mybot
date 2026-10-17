@@ -166,7 +166,7 @@ export const makeClaudeTextGeneration = Effect.fn("makeClaudeTextGeneration")(fu
     const runClaudeCommand = Effect.fn("runClaudeJson.runClaudeCommand")(function* () {
       // Titles need only the supplied prompt, not configuration from the project.
       const workingDirectory = yield* fileSystem
-        .makeTempDirectoryScoped({ prefix: "t3code-claude-title-" })
+        .makeTempDirectoryScoped({ prefix: "mybot-claude-title-" })
         .pipe(
           Effect.mapError((cause) =>
             normalizeCliError("claude", operation, cause, "Failed to create title directory"),

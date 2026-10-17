@@ -1276,7 +1276,7 @@ it.layer(
         }).pipe(
           Effect.provide(
             ServerConfig.layerTest(process.cwd(), {
-              prefix: "t3-codex-retired-model-cache-",
+              prefix: "mybot-codex-retired-model-cache-",
             }).pipe(Layer.provideMerge(NodeServices.layer)),
           ),
         ),
@@ -1626,7 +1626,7 @@ it.layer(
             Layer.provideMerge(layerInstanceRegistry),
             Layer.provideMerge(
               ServerConfig.layerTest(process.cwd(), {
-                prefix: "t3-provider-registry-background-refresh-",
+                prefix: "mybot-provider-registry-background-refresh-",
               }),
             ),
             Layer.provideMerge(NodeServices.layer),
@@ -1763,7 +1763,7 @@ it.layer(
             Layer.provideMerge(layerInstanceRegistry),
             Layer.provideMerge(
               ServerConfig.layerTest(process.cwd(), {
-                prefix: "t3-provider-registry-workspace-snapshot-",
+                prefix: "mybot-provider-registry-workspace-snapshot-",
               }),
             ),
             Layer.provideMerge(NodeServices.layer),
@@ -2028,7 +2028,7 @@ it.layer(
             Layer.provideMerge(layerInstanceRegistry),
             Layer.provideMerge(
               ServerConfig.layerTest(process.cwd(), {
-                prefix: "t3-provider-registry-reconnect-refresh-",
+                prefix: "mybot-provider-registry-reconnect-refresh-",
               }),
             ),
             Layer.provideMerge(NodeServices.layer),
@@ -2204,7 +2204,7 @@ it.layer(
             Layer.provideMerge(instanceRegistryLayer),
             Layer.provideMerge(
               ServerConfig.layerTest(process.cwd(), {
-                prefix: "t3-provider-registry-shared-refresh-",
+                prefix: "mybot-provider-registry-shared-refresh-",
               }),
             ),
             Layer.provideMerge(NodeServices.layer),
@@ -2310,7 +2310,7 @@ it.layer(
             Layer.provideMerge(layerInstanceRegistry),
             Layer.provideMerge(
               ServerConfig.layerTest(process.cwd(), {
-                prefix: "t3-provider-registry-merged-persist-",
+                prefix: "mybot-provider-registry-merged-persist-",
               }),
             ),
             Layer.provideMerge(layerBackgroundPolicyAlwaysRun),
@@ -2438,7 +2438,7 @@ it.layer(
               Layer.provideMerge(layerInstanceRegistry),
               Layer.provideMerge(
                 ServerConfig.layerTest(process.cwd(), {
-                  prefix: "t3-provider-registry-opencode-authoritative-persist-",
+                  prefix: "mybot-provider-registry-opencode-authoritative-persist-",
                 }),
               ),
               Layer.provideMerge(NodeServices.layer),
@@ -2541,7 +2541,7 @@ it.layer(
             Layer.provideMerge(layerInstanceRegistry),
             Layer.provideMerge(
               ServerConfig.layerTest(process.cwd(), {
-                prefix: "t3-provider-registry-refresh-failure-",
+                prefix: "mybot-provider-registry-refresh-failure-",
               }),
             ),
             Layer.provideMerge(layerBackgroundPolicyAlwaysRun),
@@ -2657,7 +2657,7 @@ it.layer(
             Layer.provideMerge(layerInstanceRegistry),
             Layer.provideMerge(
               ServerConfig.layerTest(process.cwd(), {
-                prefix: "t3-provider-registry-sync-failure-",
+                prefix: "mybot-provider-registry-sync-failure-",
               }),
             ),
             Layer.provideMerge(layerBackgroundPolicyAlwaysRun),
@@ -2751,7 +2751,7 @@ it.layer(
           Layer.provideMerge(ServerSecretStore.layer),
           Layer.provideMerge(
             ServerConfig.layerTest(process.cwd(), {
-              prefix: "t3-provider-registry-",
+              prefix: "mybot-provider-registry-",
             }),
           ),
           Layer.provideMerge(layerTestHttpClient),
@@ -2856,7 +2856,7 @@ it.layer(
           Layer.provideMerge(ServerSecretStore.layer),
           Layer.provideMerge(
             ServerConfig.layerTest(process.cwd(), {
-              prefix: "t3-provider-registry-",
+              prefix: "mybot-provider-registry-",
             }),
           ),
           Layer.provideMerge(layerTestHttpClient),
@@ -2976,7 +2976,7 @@ it.layer(
           Layer.provideMerge(ServerSecretStore.layer),
           Layer.provideMerge(
             ServerConfig.layerTest(process.cwd(), {
-              prefix: "t3-provider-registry-",
+              prefix: "mybot-provider-registry-",
             }),
           ),
           Layer.provideMerge(layerTestHttpClient),
@@ -3036,7 +3036,7 @@ it.layer(
             Layer.provideMerge(ServerSecretStore.layer),
             Layer.provideMerge(
               ServerConfig.layerTest(process.cwd(), {
-                prefix: "t3-provider-registry-",
+                prefix: "mybot-provider-registry-",
               }),
             ),
             Layer.provideMerge(layerTestHttpClient),
@@ -3408,7 +3408,7 @@ it.layer(
     );
 
     it.effect("runs Claude status probes with the configured CLAUDE_CONFIG_DIR", () => {
-      const claudeConfigDir = "/tmp/t3code-claude-home";
+      const claudeConfigDir = "/tmp/mybot-claude-home";
       const recorded = recordingMockSpawnerLayer((args) => {
         const joined = args.join(" ");
         if (joined === "--version") return { stdout: "1.0.0\n", stderr: "", code: 0 };

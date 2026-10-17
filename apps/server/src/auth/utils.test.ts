@@ -12,7 +12,7 @@ describe("deriveAuthClientMetadata", () => {
       request: {
         headers: {
           "user-agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) t3code/0.0.15 Chrome/136.0.7103.93 Electron/36.3.2 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) MyBot/0.1.24 Chrome/136.0.7103.93 Electron/36.3.2 Safari/537.36",
         },
         source: {
           remoteAddress: "::ffff:127.0.0.1",
@@ -86,7 +86,7 @@ describe("session cookie isolation", () => {
       mode: "web",
       port: 3773,
       host: "192.168.1.50",
-      instanceKey: "/srv/t3-one",
+      instanceKey: "/srv/mybot-one",
       environmentId: "environment-one",
       development: false,
     });
@@ -94,7 +94,7 @@ describe("session cookie isolation", () => {
       mode: "web",
       port: 5775,
       host: "192.168.1.50",
-      instanceKey: "/srv/t3-two",
+      instanceKey: "/srv/mybot-two",
       environmentId: "environment-two",
       development: false,
     });
@@ -109,7 +109,7 @@ describe("session cookie isolation", () => {
       mode: "web",
       port: 8080,
       host: "0.0.0.0",
-      instanceKey: "/srv/t3",
+      instanceKey: "/srv/mybot",
       environmentId: "environment-one",
       development: false,
     });
@@ -117,7 +117,7 @@ describe("session cookie isolation", () => {
       mode: "web",
       port: 9090,
       host: "app.example.com",
-      instanceKey: "/srv/t3",
+      instanceKey: "/srv/mybot",
       environmentId: "environment-one",
       development: false,
     });
@@ -144,7 +144,7 @@ describe("session cookie isolation", () => {
         mode: "web",
         port: 5775,
         host: "0.0.0.0",
-        instanceKey: "/tmp/t3-wildcard-dev",
+        instanceKey: "/tmp/mybot-wildcard-dev",
         environmentId: "environment-one",
         development: true,
       }),

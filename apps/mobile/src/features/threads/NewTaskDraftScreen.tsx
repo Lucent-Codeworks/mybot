@@ -356,7 +356,7 @@ export function NewTaskDraftScreen(props: {
   useHardwareKeyboardCommand(cycleEnvironmentCommands, cycleEnvironment);
   // Also guard while a submit is in flight: an Android back press or iOS
   // Cancel would otherwise abandon the screen while the task still starts.
-  // T3 owns /usage-limits only where Limits has data for the selected provider.
+  // MyBot owns /usage-limits only where Limits has data for the selected provider.
   const offersUsageLimits =
     flow.selectedProviderStatus !== null &&
     hasProviderUsageLimits(
@@ -1089,7 +1089,7 @@ export function NewTaskDraftScreen(props: {
       Alert.alert(title, detail);
       return;
     }
-    // T3's own limits command is answered by the thread composer; a new task would
+    // MyBot's own limits command is answered by the thread composer; a new task would
     // send it to the agent. A provider's same-named command, or a prompt carrying
     // attachments, goes through as usual.
     if (
@@ -1348,7 +1348,7 @@ export function NewTaskDraftScreen(props: {
   // like web, and puts the project picker beside the machine as a control.
   const hero = flow.isScratchDraft ? (
     <View className="items-center gap-2 px-6" testID="new-task-hero">
-      <Text className="text-center text-2xl font-t3-medium tracking-tight text-foreground">
+      <Text className="text-center text-2xl font-mybot-medium tracking-tight text-foreground">
         What should we work on?
       </Text>
       {/* Wraps onto two lines only when a long machine name leaves no room. */}
@@ -1368,11 +1368,11 @@ export function NewTaskDraftScreen(props: {
   ) : (
     <View className="items-center gap-6 px-6" testID="new-task-hero">
       <View className="w-full items-center gap-1.5">
-        <Text className="text-center text-2xl font-t3-medium tracking-tight text-foreground">
+        <Text className="text-center text-2xl font-mybot-medium tracking-tight text-foreground">
           What should we build
         </Text>
         <View className="max-w-full flex-row items-center justify-center">
-          <Text className="text-2xl font-t3-medium tracking-tight text-foreground">in </Text>
+          <Text className="text-2xl font-mybot-medium tracking-tight text-foreground">in </Text>
           <Pressable
             accessibilityHint="Opens the project picker"
             accessibilityLabel={selectedProjectLabel ?? selectedProject.title}
@@ -1382,13 +1382,13 @@ export function NewTaskDraftScreen(props: {
             className="min-w-0 max-w-[250px] border-b border-foreground-muted active:opacity-65"
           >
             <Text
-              className="text-2xl font-t3-medium tracking-tight text-foreground"
+              className="text-2xl font-mybot-medium tracking-tight text-foreground"
               numberOfLines={1}
             >
               {selectedProjectLabel ?? selectedProject.title}
             </Text>
           </Pressable>
-          <Text className="text-2xl font-t3-medium tracking-tight text-foreground">?</Text>
+          <Text className="text-2xl font-mybot-medium tracking-tight text-foreground">?</Text>
         </View>
       </View>
 

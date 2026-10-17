@@ -338,7 +338,7 @@ export const makeCodexInstallation = Effect.fn("makeCodexInstallation")(function
       if (executablePath === null) return null;
       // Keep launcher symlinks intact: version-manager shims dispatch by their invoked name.
       const realExecutablePath = yield* fs.realPath(executablePath);
-      // A PATH entry pointing into T3's download remains a managed installation.
+      // A PATH entry pointing into MyBot's download remains a managed installation.
       const realManaged = yield* fs.realPath(managedDirectory).pipe(Effect.option);
       if (
         realExecutablePath.startsWith(

@@ -60,10 +60,10 @@ export function resolveProviderCompatibility(
   policies: ReadonlyArray<ProviderCompatibilityPolicy> | undefined,
   driver: ProviderDriverKind,
   version: string | null,
-  t3CodeVersion = packageJson.version,
+  myBotVersion = packageJson.version,
 ): ServerProviderCompatibilityAdvisory | undefined {
   const policy = policies?.find(
-    (entry) => entry.driver === driver && satisfiesSemverRange(t3CodeVersion, entry.t3CodeRange),
+    (entry) => entry.driver === driver && satisfiesSemverRange(myBotVersion, entry.t3CodeRange),
   );
   if (!policy) return undefined;
   const unprefixed = version?.replace(/^v/, "");

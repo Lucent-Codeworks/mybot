@@ -2163,7 +2163,7 @@ const verifyPackagedBundleIsSelfContained = Effect.fn("verifyPackagedBundleIsSel
     const path = yield* Path.Path;
 
     const probeRoot = yield* fs.makeTempDirectoryScoped({
-      prefix: "t3code-bundle-selfcheck-",
+      prefix: "mybot-bundle-selfcheck-",
     });
     const extractedApp = path.join(probeRoot, "extracted");
     const probeApp = path.join(probeRoot, "app");
@@ -2484,7 +2484,7 @@ function stageMacIcons(stageResourcesDir: string, sourcePng: string, verbose: bo
     }
 
     const tmpRoot = yield* fs.makeTempDirectoryScoped({
-      prefix: "t3code-icon-build-",
+      prefix: "mybot-icon-build-",
     });
 
     const iconPngPath = path.join(stageResourcesDir, "icon.png");
@@ -3125,7 +3125,7 @@ export const stageWindowsServerSidecar = Effect.fn("stageWindowsServerSidecar")(
     sidecarDependencies,
   );
   const sidecarPackageJson = {
-    name: "t3code-server",
+    name: "mybot-server",
     version: input.appVersion,
     private: true,
     packageManager: rootPackageJson.packageManager,
@@ -3245,7 +3245,7 @@ export const verifyWindowsPrimaryFffNativeLoad = Effect.fn(
   if (hostPlatform !== "win32" || hostArchitecture !== input.targetArch) return;
 
   const probeRoot = yield* fs.makeTempDirectoryScoped({
-    prefix: "t3code-windows-primary-native-probe-",
+    prefix: "mybot-windows-primary-native-probe-",
   });
   const fffEntryPath = path.join(input.asarPath, "node_modules/@ff-labs/fff-node/dist/index.js");
   const probeEnv = { ...process.env };
@@ -3621,7 +3621,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   const commitHash = yield* resolveGitCommitHash(repoRoot);
   const mkdir = options.keepStage ? fs.makeTempDirectory : fs.makeTempDirectoryScoped;
   const stageRoot = yield* mkdir({
-    prefix: `t3code-desktop-${options.platform}-stage-`,
+    prefix: `mybot-desktop-${options.platform}-stage-`,
   });
 
   const stageAppDir = path.join(stageRoot, "app");

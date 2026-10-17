@@ -171,7 +171,7 @@ describe("buildProviderInstanceUpdatePatch", () => {
     const nextInstance = {
       driver: ProviderDriverKind.make("codex"),
       enabled: true,
-      config: { binaryPath: "/opt/t3/codex" },
+      config: { binaryPath: "/opt/mybot/codex" },
     } satisfies ProviderInstanceConfig;
 
     const patch = buildProviderInstanceUpdatePatch({

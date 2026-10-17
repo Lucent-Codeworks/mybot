@@ -79,7 +79,7 @@ import * as ProviderRegistry from "./provider/ProviderRegistry.ts";
 import * as ProviderUsageLimitsIngestion from "./provider/ProviderUsageLimitsIngestion.ts";
 import * as UsageLimitSources from "./usage/UsageLimitSources.ts";
 import * as ProjectFaviconResolver from "./project/ProjectFaviconResolver.ts";
-import * as T3ProjectFileLoader from "./project/T3ProjectFileLoader.ts";
+import * as MyBotProjectFileLoader from "./project/MyBotProjectFileLoader.ts";
 import * as WorkspaceEntries from "./workspace/WorkspaceEntries.ts";
 import * as WorkspaceFileSystem from "./workspace/WorkspaceFileSystem.ts";
 import * as WorkspacePaths from "./workspace/WorkspacePaths.ts";
@@ -163,7 +163,7 @@ const HTTP_ROUTER_CONFIG = {
 } as const;
 
 // Effect's default preemptive shutdown waits 20s before finalizing request scopes.
-// T3's primary transport is long-lived WebSocket RPC, whose Effect scope finalizer
+// MyBot's primary transport is long-lived WebSocket RPC, whose Effect scope finalizer
 // already closes the websocket gracefully. Do not add an artificial drain before
 // those finalizers get a chance to run.
 const HTTP_PREEMPTIVE_SHUTDOWN_GRACE_MS = 0;
@@ -313,7 +313,7 @@ const layerWorkspace = Layer.mergeAll(
 
 const layerProjectFaviconResolver = ProjectFaviconResolver.layer.pipe(
   Layer.provide(WorkspacePaths.layer),
-  Layer.provide(T3ProjectFileLoader.layer),
+  Layer.provide(MyBotProjectFileLoader.layer),
 );
 
 const layerServerEnvironment = ServerEnvironment.layer.pipe(Layer.provide(ServerSecretStore.layer));

@@ -3562,21 +3562,21 @@ describe("computeStableMessagesTimelineRows", () => {
 });
 
 describe("resolveTimelineToolPresentation", () => {
-  it("pretty prints Claude and Cursor T3 MCP tool names", () => {
+  it("pretty prints Claude and Cursor MyBot MCP tool names", () => {
     expect(resolveTimelineToolPresentation("mcp__t3-code__t3_thread_read")).toEqual({
       displayName: "Read a MyBot thread",
       logo: "t3-code",
     });
   });
 
-  it("pretty prints Codex T3 MCP tool names", () => {
+  it("pretty prints Codex MyBot MCP tool names", () => {
     expect(resolveTimelineToolPresentation("t3-code.create_threads")).toEqual({
       displayName: "Create MyBot threads",
       logo: "t3-code",
     });
   });
 
-  it("pretty prints bare T3 MCP toolkit names", () => {
+  it("pretty prints bare MyBot MCP toolkit names", () => {
     expect(resolveTimelineToolPresentation("list_scheduled_tasks")).toEqual({
       displayName: "List scheduled tasks",
       logo: "t3-code",

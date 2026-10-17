@@ -8,7 +8,7 @@ import { makeComponentLogger } from "./DesktopObservability.ts";
 
 // A desktop install puts no `mybot` on PATH, so commands the server asks a person
 // to run (`sudo mybot browser setup`) had nothing to call. The app keeps a small
-// launcher for its bundled CLI in the T3 home, which is never on PATH and so
+// launcher for its bundled CLI in the MyBot home, which is never on PATH and so
 // never shadows another `mybot`, and the server names it by absolute path in those
 // commands through T3CODE_CLI_PATH. An AppImage mounts somewhere new each run,
 // so its launcher mounts the AppImage itself instead of pointing into it.
@@ -20,7 +20,7 @@ export const MARKER = "Written by MyBot: runs the desktop app's bundled mybot CL
 
 /**
  * The launcher this app wrote while its command was still `t3`. Only this exact
- * marker proves a `t3` is ours: T3 Code shares the T3 home and writes its own
+ * marker proves a `t3` is ours: T3 Code shares the same home and writes its own
  * `t3` launcher there under a different marker.
  */
 export const LEGACY_COMMAND = "t3";
@@ -44,21 +44,21 @@ export type CliShimTarget =
 /**
  * The launcher script. Electron runs the server as plain Node with
  * `ELECTRON_RUN_AS_NODE`, which reads the entry from inside the asar archive.
- * The launcher's own path and the app's T3 home are written in, so the command
+ * The launcher's own path and the app's MyBot home are written in, so the command
  * the server shows is absolute and `sudo`, which clears the environment, still
  * runs against this install's home.
  */
 export const renderCliShim = (input: {
   readonly target: CliShimTarget;
   readonly shimPath: string;
-  readonly t3Home: string;
+  readonly myBotHome: string;
 }) => {
   const { target } = input;
   if (target.kind === "windows") {
-    const utf8 = [target.executable, target.entry, input.shimPath, input.t3Home].some((value) =>
+    const utf8 = [target.executable, target.entry, input.shimPath, input.myBotHome].some((value) =>
       [...value].some((character) => character.codePointAt(0)! > 0x7f),
     );
-    const restore = utf8 ? ["chcp %t3_codepage% >nul"] : [];
+    const restore = utf8 ? ["chcp %mybot_codepage% >nul"] : [];
     return [
       "@echo off",
       `rem ${MARKER}`,
@@ -69,12 +69,12 @@ export const renderCliShim = (input: {
       // switch is left out for the common all-ASCII install.
       ...(utf8
         ? [
-            `for /f "tokens=2 delims=:." %%c in ('chcp') do set "t3_codepage=%%c"`,
+            `for /f "tokens=2 delims=:." %%c in ('chcp') do set "mybot_codepage=%%c"`,
             "chcp 65001 >nul",
           ]
         : []),
       `set "T3CODE_CLI_PATH=${cmdText(input.shimPath)}"`,
-      `if not defined T3CODE_HOME set "T3CODE_HOME=${cmdText(input.t3Home)}"`,
+      `if not defined T3CODE_HOME set "T3CODE_HOME=${cmdText(input.myBotHome)}"`,
       'set "ELECTRON_RUN_AS_NODE=1"',
       // A goto, not a parenthesized block: "Program Files (x86)" would close the block early.
       `if exist ${cmdWord(target.executable)} goto run`,
@@ -83,9 +83,9 @@ export const renderCliShim = (input: {
       "exit /b 127",
       ":run",
       `${cmdWord(target.executable)} ${cmdWord(target.entry)} %*`,
-      'set "t3_exit=%ERRORLEVEL%"',
+      'set "mybot_exit=%ERRORLEVEL%"',
       ...restore,
-      "exit /b %t3_exit%",
+      "exit /b %mybot_exit%",
       "",
     ].join("\r\n");
   }
@@ -93,7 +93,7 @@ export const renderCliShim = (input: {
     "#!/bin/sh",
     `# ${MARKER}`,
     `export T3CODE_CLI_PATH=${shellWord(input.shimPath)}`,
-    `home=${shellWord(input.t3Home)}`,
+    `home=${shellWord(input.myBotHome)}`,
     'export T3CODE_HOME="${T3CODE_HOME:-$home}"',
     "export ELECTRON_RUN_AS_NODE=1",
     `app=${shellWord(target.kind === "appimage" ? target.appImage : target.executable)}`,
@@ -145,7 +145,7 @@ const launcherFor = (
     environment.platform === "win32" ? `${command}.cmd` : command,
   );
 
-/** Where the packaged app keeps its launcher: `<T3 home>/bin/mybot`, `mybot.cmd` on Windows. */
+/** Where the packaged app keeps its launcher: `<MyBot home>/bin/mybot`, `mybot.cmd` on Windows. */
 export const launcherPath = (environment: DesktopEnvironment.DesktopEnvironment["Service"]) =>
   launcherFor(environment, COMMAND);
 
@@ -154,7 +154,7 @@ export const legacyLauncherPath = (environment: DesktopEnvironment.DesktopEnviro
   launcherFor(environment, LEGACY_COMMAND);
 
 /**
- * Writes the packaged app's launcher to `<T3 home>/bin` and returns its path
+ * Writes the packaged app's launcher to `<MyBot home>/bin` and returns its path
  * for the backend's T3CODE_CLI_PATH. Development builds run from a checkout
  * and get none.
  */
@@ -177,7 +177,7 @@ export const install = Effect.gen(function* () {
         // macOS and .deb installs live at a fixed path, so the launcher runs the app directly.
         onNone: () => ({ kind: "direct" as const, executable: process.execPath, entry }),
       });
-  const content = renderCliShim({ target, shimPath, t3Home: environment.baseDir });
+  const content = renderCliShim({ target, shimPath, myBotHome: environment.baseDir });
 
   return yield* Effect.gen(function* () {
     const existing = yield* fs.readFileString(shimPath).pipe(Effect.option);

@@ -278,7 +278,7 @@ interface ViewerState {
 }
 
 interface EncoderWindow {
-  __t3Recorder: {
+  __myBotRecorder: {
     cursor(x: number, y: number, click: boolean): void;
     frame(data: string, width: number): Promise<boolean>;
     stop(): Promise<{ mimeType: string | null; count: number; bytes: number }>;
@@ -455,7 +455,7 @@ const editingCommand = (key: string, modifiers: number) => {
 const CLIPBOARD_TEXT_LIMIT = 1024 * 1024;
 /** Copies reach the viewer only this soon after it last touched the page. */
 const CLIPBOARD_GESTURE_MS = 5_000;
-const CLIPBOARD_BINDING = "__t3PreviewClipboard";
+const CLIPBOARD_BINDING = "__myBotPreviewClipboard";
 // Headless Chromium shares one clipboard between every context, so pages
 // report their own copies instead of the clipboard being read back.
 const CLIPBOARD_SCRIPT = `(() => {
@@ -1509,7 +1509,7 @@ const make = Effect.gen(function* () {
         });
         await encoder.evaluate(
           ([data, width]) =>
-            (globalThis as unknown as EncoderWindow).__t3Recorder.frame(data, width),
+            (globalThis as unknown as EncoderWindow).__myBotRecorder.frame(data, width),
           [firstFrame, tab.page.viewportSize()?.width ?? UNATTACHED_FILL_VIEWPORT.width] as const,
         );
         const opened = await tab.page.context().newCDPSession(tab.page);
@@ -1520,7 +1520,7 @@ const make = Effect.gen(function* () {
           const delivered: Promise<void> = encoder
             .evaluate(
               ([data, width]) =>
-                (globalThis as unknown as EncoderWindow).__t3Recorder.frame(data, width),
+                (globalThis as unknown as EncoderWindow).__myBotRecorder.frame(data, width),
               [frame.data, cssWidth] as const,
             )
             .then(async (accepted) => {
@@ -1598,7 +1598,7 @@ const make = Effect.gen(function* () {
         await Promise.all(recording.framesInFlight);
         await recording.session.detach().catch(constVoid);
         const stopped = await recording.encoder.evaluate(() =>
-          (globalThis as unknown as EncoderWindow).__t3Recorder.stop(),
+          (globalThis as unknown as EncoderWindow).__myBotRecorder.stop(),
         );
         mimeType = stopped.mimeType;
         // Checked before the transfer so an oversized video never lands in this process.
@@ -1610,7 +1610,8 @@ const make = Effect.gen(function* () {
         }
         for (let index = 0; index < stopped.count; index += 1) {
           const chunk = await recording.encoder.evaluate(
-            (chunkIndex) => (globalThis as unknown as EncoderWindow).__t3Recorder.chunk(chunkIndex),
+            (chunkIndex) =>
+              (globalThis as unknown as EncoderWindow).__myBotRecorder.chunk(chunkIndex),
             index,
           );
           chunks.push(Buffer.from(chunk, "base64"));
@@ -1668,7 +1669,7 @@ const make = Effect.gen(function* () {
         void encoder
           ?.evaluate(
             ([px, py, click]) =>
-              (globalThis as unknown as EncoderWindow).__t3Recorder?.cursor(px, py, click),
+              (globalThis as unknown as EncoderWindow).__myBotRecorder?.cursor(px, py, click),
             [x, y, next === "click"] as const,
           )
           .catch(constVoid);

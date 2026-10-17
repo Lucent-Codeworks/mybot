@@ -21,10 +21,10 @@ import { classifyToolActivity } from "@mybot/shared/toolActivity";
 import { toolOutputIndicatesFailure } from "@mybot/shared/toolOutput";
 
 import {
-  summarizeT3ToolCalls,
-  t3ToolResultIndicatesFailure,
-  type T3ToolSummaryCall,
-} from "@mybot/client-runtime/t3ToolSummary";
+  summarizeMyBotToolCalls,
+  myBotToolResultIndicatesFailure,
+  type MyBotToolSummaryCall,
+} from "@mybot/client-runtime/myBotToolSummary";
 
 export type WorkLogToolLifecycleStatus = RuntimeItemStatus | "stopped" | "idle";
 
@@ -131,7 +131,7 @@ function workEntryToolOutput(
     : (data?.output ?? data?.result ?? data?.rawOutput ?? data?.content);
 }
 
-function resolveT3McpToolPresentation(
+function resolveMyBotMcpToolPresentation(
   definition: T3McpToolDefinition | null,
   status: string | undefined,
 ) {
@@ -175,9 +175,9 @@ export function resolveWorkEntryToolPresentation(
 ) {
   const definition = resolveT3McpToolDefinition(workEntryToolName(entry));
   const status = entry.toolLifecycleStatus ?? fallbackStatus;
-  return resolveT3McpToolPresentation(
+  return resolveMyBotMcpToolPresentation(
     definition,
-    definition && t3ToolResultIndicatesFailure(workEntryToolOutput(entry)) ? "failed" : status,
+    definition && myBotToolResultIndicatesFailure(workEntryToolOutput(entry)) ? "failed" : status,
   );
 }
 
@@ -343,7 +343,7 @@ function workEntryIndicatesToolFailureFromOutput(
   if (!workLogEntryIsToolLike(entry)) return false;
   if (
     resolveT3McpToolDefinition(workEntryToolName(entry)) &&
-    t3ToolResultIndicatesFailure(workEntryToolOutput(entry))
+    myBotToolResultIndicatesFailure(workEntryToolOutput(entry))
   ) {
     return true;
   }
@@ -533,7 +533,7 @@ function toolGroupActionLabel(action: ToolGroupAction, count: number): string {
   }
 }
 
-function t3ToolSummaryCall(entry: WorkLogPresentationEntry): T3ToolSummaryCall {
+function myBotToolSummaryCall(entry: WorkLogPresentationEntry): MyBotToolSummaryCall {
   const item = entry.structuredPayload;
   const data =
     entry.toolData !== null && typeof entry.toolData === "object"
@@ -616,29 +616,29 @@ export function summarizeToolGroup(entries: ReadonlyArray<WorkLogPresentationEnt
     ToolGroupAction | T3McpToolSummaryAction,
     {
       action: ToolGroupAction;
-      t3Action: T3McpToolSummaryAction | null;
+      myBotAction: T3McpToolSummaryAction | null;
       entries: WorkLogPresentationEntry[];
     }
   >();
   const sources = new Map<string, ToolActivitySource>();
   for (const entry of entries) {
-    const t3Action = resolveT3McpToolDefinition(workEntryToolName(entry))?.summaryAction ?? null;
-    if (entry.toolSource && t3Action === null) {
+    const myBotAction = resolveT3McpToolDefinition(workEntryToolName(entry))?.summaryAction ?? null;
+    if (entry.toolSource && myBotAction === null) {
       sources.set(entry.toolSource.key, entry.toolSource);
       continue;
     }
     const action = toolGroupAction(entry);
-    const key = t3Action ?? action;
+    const key = myBotAction ?? action;
     const group = groups.get(key);
     if (group) group.entries.push(entry);
-    else groups.set(key, { action, t3Action, entries: [entry] });
+    else groups.set(key, { action, myBotAction, entries: [entry] });
   }
   const summaries = [...groups].map(([action, group], index) => ({
     index,
     count: group.entries.length,
     priority: summaryActionPriority(action),
-    ...(group.t3Action
-      ? summarizeT3ToolCalls(group.t3Action, group.entries.map(t3ToolSummaryCall))
+    ...(group.myBotAction
+      ? summarizeMyBotToolCalls(group.myBotAction, group.entries.map(myBotToolSummaryCall))
       : {
           label: toolGroupActionLabel(
             group.action,

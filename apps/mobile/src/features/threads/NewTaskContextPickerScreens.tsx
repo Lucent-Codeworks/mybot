@@ -59,7 +59,7 @@ function SelectionRow(props: {
     >
       {props.icon ?? null}
       <View className="min-w-0 flex-1 gap-0.5">
-        <Text className="text-base font-t3-medium text-foreground" numberOfLines={1}>
+        <Text className="text-base font-mybot-medium text-foreground" numberOfLines={1}>
           {props.title}
         </Text>
         {props.subtitle ? (

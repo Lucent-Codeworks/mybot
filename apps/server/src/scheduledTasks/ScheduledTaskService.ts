@@ -95,7 +95,7 @@ export function relayHookBaseUrl(input: {
 }
 
 export class ScheduledTaskWebhookOrigin extends Context.Reference<Effect.Effect<WebhookOrigin>>(
-  "t3/scheduledTasks/ScheduledTaskWebhookOrigin",
+  "mybot/scheduledTasks/ScheduledTaskWebhookOrigin",
   {
     defaultValue: () => Effect.succeed({ relayHookBaseUrl: null }),
   },

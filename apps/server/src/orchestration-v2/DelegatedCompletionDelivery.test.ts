@@ -41,7 +41,7 @@ import * as ProviderContinuationRequests from "@mybot/provider-core/server/Provi
 const layerPlatformTest = NodeServices.layer;
 
 const layerServerConfig = ServerConfig.layerTest(process.cwd(), {
-  prefix: "t3-orchestration-v2-delegated-completion-",
+  prefix: "mybot-orchestration-v2-delegated-completion-",
 });
 
 const modelSelection = {

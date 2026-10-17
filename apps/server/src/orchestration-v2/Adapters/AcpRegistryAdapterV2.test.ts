@@ -161,7 +161,7 @@ describe("AcpRegistryAdapterV2", () => {
     });
 
     // A scripted ACP v1 agent: initialize, session/new answered with `setup`,
-    // then the frames T3 must send (and the agent's answers) to apply the
+    // then the frames MyBot must send (and the agent's answers) to apply the
     // user's stored pick from the agent's mode picker.
     const openWithStoredModePick = Effect.fn("openWithStoredModePick")(function* (input: {
       readonly setup: unknown;
@@ -172,7 +172,7 @@ describe("AcpRegistryAdapterV2", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const replayDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-acp-registry-mode-pick-",
+        prefix: "mybot-acp-registry-mode-pick-",
       });
       const statusPath = path.join(replayDir, "status.json");
       const transcript = yield* decodeAcpReplayTranscript(

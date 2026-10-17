@@ -30,7 +30,7 @@ export class RunFinalizationObserver extends Context.Reference<{
     readonly threadId: ThreadId;
     readonly runId: RunId;
   }) => Effect.Effect<void, RunFinalizationRefreshError>;
-}>("t3/orchestration-v2/RunFinalizationObserver", {
+}>("mybot/orchestration-v2/RunFinalizationObserver", {
   defaultValue: () => ({ refresh: () => Effect.void }),
 }) {}
 

@@ -34,7 +34,7 @@ async function loadHooks(commands: ReadonlyArray<SkillCommand> = []) {
       "async function",
     ),
   );
-  await NodeVM.runInNewContext(`${source}\nt3McpExtension(pi)`, {
+  await NodeVM.runInNewContext(`${source}\nmyBotMcpExtension(pi)`, {
     process: { env: {} },
     NodeFSP,
     NodePath,
@@ -117,7 +117,7 @@ describe("Pi MCP tool exposure", () => {
   };
 
   it.each(["session_start", "session_tree", "model_select", "before_agent_start"])(
-    "declares optional T3 tools for OpenAI-compatible gateways at %s",
+    "declares optional MyBot tools for OpenAI-compatible gateways at %s",
     async (hookName) => {
       const bridge = await loadMcpBridge({ modern: true, toolSearchAvailable: true });
       const hook = bridge.handlers.get(hookName);
@@ -290,7 +290,7 @@ describe("Pi MCP tool exposure", () => {
 
 describe("Pi tool discovery permissions", () => {
   it.each(["approval-required", "auto-accept-edits", "auto"])(
-    "allows annotated T3 reads in %s while gating mutations and replacements",
+    "allows annotated MyBot reads in %s while gating mutations and replacements",
     async (runtimeMode) => {
       const bridge = await loadMcpBridge({ modern: true, runtimeMode });
       const hook = bridge.handlers.get("tool_call") as unknown as (
@@ -357,7 +357,7 @@ describe("Pi tool discovery permissions", () => {
         "async function",
       ),
     );
-    await NodeVM.runInNewContext(`${source}\nt3McpExtension(pi)`, {
+    await NodeVM.runInNewContext(`${source}\nmyBotMcpExtension(pi)`, {
       process: { env: { T3_PI_RUNTIME_MODE: "approval-required" } },
       pi: {
         on: (name: string, handler: ToolCallHook) => {
@@ -404,7 +404,7 @@ async function loadRequestHook(): Promise<RequestHook> {
       "async function",
     ),
   );
-  await NodeVM.runInNewContext(`${source}\nt3McpExtension(pi)`, {
+  await NodeVM.runInNewContext(`${source}\nmyBotMcpExtension(pi)`, {
     process: { env: {} },
     pi: { on: (name: string, handler: RequestHook) => handlers.set(name, handler) },
   });

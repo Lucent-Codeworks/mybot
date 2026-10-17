@@ -11,7 +11,7 @@ export interface PierreIconResolution {
   token?: string;
 }
 
-const PIERRE_ICON_SPRITE_ID = "t3code-pierre-file-icon-sprite";
+const PIERRE_ICON_SPRITE_ID = "mybot-pierre-file-icon-sprite";
 
 const T3_FILE_ICON_SPRITE = `
 <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true">
@@ -80,7 +80,7 @@ const T3_FILE_ICON_SPRITE = `
   </symbol>
 </svg>`;
 
-export const T3_PIERRE_ICONS = {
+export const MYBOT_PIERRE_ICONS = {
   set: "complete",
   colored: true,
   spriteSheet: T3_FILE_ICON_SPRITE,
@@ -120,7 +120,7 @@ export const T3_PIERRE_ICONS = {
   },
 } satisfies FileTreeIcons;
 
-const completeIconResolver = createFileTreeIconResolver(T3_PIERRE_ICONS);
+const completeIconResolver = createFileTreeIconResolver(MYBOT_PIERRE_ICONS);
 
 const LANGUAGE_EXTENSION_ALIASES: Record<string, string> = {
   bash: "sh",

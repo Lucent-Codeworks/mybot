@@ -57,7 +57,7 @@ const liveModelSelection = {
 } satisfies ModelSelection;
 
 const layerServerConfig = ServerConfig.layerTest(process.cwd(), {
-  prefix: "t3-acp-registry-v2-live-",
+  prefix: "mybot-acp-registry-v2-live-",
 });
 
 const layerServerSettings = ServerSettings.layerTest({

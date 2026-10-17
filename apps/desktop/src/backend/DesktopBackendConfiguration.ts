@@ -109,7 +109,7 @@ const WSL_FORWARDED_ENV_NAMES = [
   "LUCENT_OTLP_HEADERS",
   "LUCENT_OTLP_PROTOCOL",
   // Forwarded without a WSLENV flag, so the values arrive untranslated. The
-  // server prefers an OTEL endpoint over the bootstrap envelope, so the T3 URLs
+  // server prefers an OTEL endpoint over the bootstrap envelope, so the MyBot URLs
   // travel as variables to keep winning inside the distro as they do on Windows.
   "LUCENT_OTLP_TRACES_URL",
   "LUCENT_OTLP_METRICS_URL",
@@ -250,7 +250,7 @@ const readPersistedBackendObservabilitySettings = Effect.gen(function* () {
 });
 
 // The bootstrap carries the OTLP endpoints to every backend, including a WSL
-// child that lacks the variables. The T3 URLs also travel as variables in
+// child that lacks the variables. The MyBot URLs also travel as variables in
 // WSL_FORWARDED_ENV_NAMES so they outrank a forwarded OTEL endpoint. Env beats
 // the persisted settings file, matching the precedence resolveServerConfig and
 // DesktopObservability apply.
@@ -752,12 +752,12 @@ const resolveWslStartConfig = Effect.fn("desktop.backendConfiguration.resolveWsl
   // the WSL backend the Linux side ends up sharing C:\Users\...\.t3 via
   // /mnt/c, which means both backends read/write the same database and
   // their env-ids collide).
-  const parentEnvWithoutT3Home: Record<string, string | undefined> = {};
+  const parentEnvWithoutMyBotHome: Record<string, string | undefined> = {};
   for (const [key, value] of Object.entries(process.env)) {
     if (key === "T3CODE_HOME") continue;
-    parentEnvWithoutT3Home[key] = value;
+    parentEnvWithoutMyBotHome[key] = value;
   }
-  const wslEnv = mergeWslEnv(parentEnvWithoutT3Home.WSLENV, forwardedEnvNames);
+  const wslEnv = mergeWslEnv(parentEnvWithoutMyBotHome.WSLENV, forwardedEnvNames);
 
   const baseConfig = {
     executablePath: "wsl.exe",
@@ -765,7 +765,7 @@ const resolveWslStartConfig = Effect.fn("desktop.backendConfiguration.resolveWsl
       preflight._tag === "Ready" ? preflight.windowsEntryPath : environment.backendEntryPath,
     cwd: environment.backendCwd,
     env: {
-      ...parentEnvWithoutT3Home,
+      ...parentEnvWithoutMyBotHome,
       ...backendChildEnvPatch(),
       ...forwardedEnv,
       ...(wslEnv !== undefined ? { WSLENV: wslEnv } : {}),

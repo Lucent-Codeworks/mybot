@@ -179,8 +179,8 @@ const knownWindowsCliDirs = (env: NodeJS.ProcessEnv): ReadonlyArray<string> => [
   ),
 ];
 
-const startMarker = (name: string) => `__T3CODE_ENV_${name}_START__`;
-const endMarker = (name: string) => `__T3CODE_ENV_${name}_END__`;
+const startMarker = (name: string) => `__MYBOT_ENV_${name}_START__`;
+const endMarker = (name: string) => `__MYBOT_ENV_${name}_END__`;
 
 const executableName = (command: string): string => command.split(/[\\/]/u).at(-1) ?? command;
 

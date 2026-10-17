@@ -50,9 +50,9 @@ it("reads the served MyBot home back out of a rendered unit or plist", () => {
   // Spaces and specifiers are quoted and escaped on the way in.
   expect(
     BootService.bootServiceBaseDirOf(
-      BootService.renderBootServiceUnit(plan("/home/theo/T3 Data/100%")),
+      BootService.renderBootServiceUnit(plan("/home/theo/MyBot Data/100%")),
     ),
-  ).toBe("/home/theo/T3 Data/100%");
+  ).toBe("/home/theo/MyBot Data/100%");
   expect(
     BootService.bootServiceBaseDirOf(
       BootService.renderBootServicePlist(plan("/Users/theo/a&b"), {
@@ -118,11 +118,11 @@ it("appends both stdio streams to the boot service log", () => {
 
 it("escapes XML in host paths", () => {
   const plist = BootService.renderBootServicePlist(
-    { ...macPlan, baseDir: "/Users/theo/T3 & <Co>" },
+    { ...macPlan, baseDir: "/Users/theo/MyBot & <Co>" },
     { homeDir: "/Users/theo", environmentPath: "/Users/theo/Tools & <Scripts>:/usr/bin" },
   );
 
-  expect(plist).toContain("<string>/Users/theo/T3 &amp; &lt;Co&gt;</string>");
+  expect(plist).toContain("<string>/Users/theo/MyBot &amp; &lt;Co&gt;</string>");
   expect(plist).toContain("<string>/Users/theo/Tools &amp; &lt;Scripts&gt;:/usr/bin</string>");
 });
 
@@ -132,7 +132,7 @@ const makeHarness = Effect.fn("test.make_boot_service_harness")(function* (
 ) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-boot-service-test-" });
+  const home = yield* fs.makeTempDirectoryScoped({ prefix: "mybot-boot-service-test-" });
   const baseDir = path.join(home, ".t3");
   const statePath = path.join(baseDir, "runtime", "service-state.json");
   // A complete pinned runtime is already present, so install only validates
@@ -587,7 +587,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       yield* service.install();
       commands.length = 0;
       const path = yield* Path.Path;
-      const otherHome = yield* fs.makeTempDirectoryScoped({ prefix: "t3-other-home-" });
+      const otherHome = yield* fs.makeTempDirectoryScoped({ prefix: "mybot-other-home-" });
 
       const other = yield* makeService(undefined, "1.2.3", path.join(otherHome, ".t3"));
       expect(yield* other.restart).toBe(false);

@@ -2,7 +2,7 @@ import type { ScheduledTaskWebhookEndpoint } from "@mybot/contracts";
 import { isLocalLoopbackHost } from "@mybot/shared/hostClassification";
 
 /**
- * Where a sender can call a webhook task, as a client shows it. With T3
+ * Where a sender can call a webhook task, as a client shows it. With MyBot
  * Connect the server returns a public URL; without it the path is resolved on
  * the address this client reaches the environment at.
  */

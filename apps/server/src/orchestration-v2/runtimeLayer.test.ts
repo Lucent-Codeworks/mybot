@@ -66,7 +66,7 @@ import type * as ProviderAdapter from "@mybot/provider-core/server/ProviderAdapt
 const layerPlatformTest = NodeServices.layer;
 
 const layerServerConfig = ServerConfig.layerTest(process.cwd(), {
-  prefix: "t3-orchestration-v2-runtime-layer-",
+  prefix: "mybot-orchestration-v2-runtime-layer-",
 });
 
 const modelSelection = {

@@ -173,11 +173,11 @@ export function useRemoteConnections() {
       if (environment.isRelayManaged) {
         Alert.alert(
           "Remove from this device?",
-          `Forget ${environment.environmentLabel} and its cached threads on this device.\n\nIt stays on your MyBot Connect account and keeps its host space. Deregister it under T3 Account → MyBot Connect to free it.`,
+          `Forget ${environment.environmentLabel} and its cached threads on this device.\n\nIt stays on your MyBot Connect account and keeps its host space. Deregister it under MyBot Account → MyBot Connect to free it.`,
           [
             { text: "Cancel", style: "cancel" },
             {
-              text: "Open T3 Account",
+              text: "Open MyBot Account",
               onPress: () => navigation.navigate("SettingsSheet", { screen: "SettingsAuth" }),
             },
             remove,

@@ -233,7 +233,9 @@ export function ConnectionsNewRouteScreen({
           />
 
           <View collapsable={false} className="gap-2">
-            <Text className="px-4 text-sm font-t3-medium text-foreground-muted">Or enter it</Text>
+            <Text className="px-4 text-sm font-mybot-medium text-foreground-muted">
+              Or enter it
+            </Text>
             <View
               collapsable={false}
               className={cn(
@@ -272,7 +274,7 @@ export function ConnectionsNewRouteScreen({
             </Text>
           </View>
 
-          {hasCloudPublicConfig() ? <T3ConnectSection /> : null}
+          {hasCloudPublicConfig() ? <MyBotConnectSection /> : null}
         </View>
       </ScrollView>
     </SettingsScreen>
@@ -361,7 +363,10 @@ function PairingScanCard(props: {
                 weight="light"
               />
               <Text
-                className={cn("font-t3-medium text-sm", light ? "text-black/70" : "text-white/80")}
+                className={cn(
+                  "font-mybot-medium text-sm",
+                  light ? "text-black/70" : "text-white/80",
+                )}
               >
                 Tap to scan
               </Text>
@@ -379,9 +384,9 @@ function PairingScanCard(props: {
 /**
  * Managed-relay alternative to manual pairing: signed in, the account's
  * published environments connect with a switch; signed out, one row opens the
- * T3 Account sheet.
+ * MyBot Account sheet.
  */
-function T3ConnectSection() {
+function MyBotConnectSection() {
   const { isLoaded, isSignedIn } = useAuth({ treatPendingAsSignedOut: false });
   const navigation = useNavigation();
   const { connectedEnvironments, onSetEnvironmentEnabled, onRemoveEnvironmentPress } =
@@ -393,7 +398,7 @@ function T3ConnectSection() {
 
   return (
     <View collapsable={false} className="gap-2">
-      <Text className="px-4 text-sm font-t3-medium text-foreground-muted">
+      <Text className="px-4 text-sm font-mybot-medium text-foreground-muted">
         Or use the managed relay
       </Text>
       {isSignedIn ? (

@@ -450,7 +450,7 @@ describe("project overrides at environment scope", () => {
   const laptop = EnvironmentId.make("laptop");
   const desk = EnvironmentId.make("desk");
   const fleet = ProjectId.make("fleet");
-  const t3 = ProjectId.make("t3");
+  const mybot = ProjectId.make("mybot");
   const environment = (
     environmentId: EnvironmentId,
     overrides: ServerSettings["projectSettingsOverrides"],
@@ -469,7 +469,7 @@ describe("project overrides at environment scope", () => {
       [
         environment(laptop, {
           [fleet]: { enableAgentDeviceAccess: true, responseStreamingMode: "turn" },
-          [t3]: { responseStreamingMode: "turn" },
+          [mybot]: { responseStreamingMode: "turn" },
         }),
         environment(desk, { [fleet]: { enableAgentDeviceAccess: false } }),
       ],
@@ -486,12 +486,12 @@ describe("project overrides at environment scope", () => {
       [
         environment(laptop, {
           [fleet]: { enableAgentDeviceAccess: true, responseStreamingMode: "turn" },
-          [t3]: { enableAgentDeviceAccess: true },
+          [mybot]: { enableAgentDeviceAccess: true },
         }),
       ],
       [
         { environmentId: laptop, projectId: fleet },
-        { environmentId: laptop, projectId: t3 },
+        { environmentId: laptop, projectId: mybot },
       ],
       ["enableAgentDeviceAccess"],
     );
@@ -501,7 +501,7 @@ describe("project overrides at environment scope", () => {
         label: laptop,
         previous: expect.anything(),
         patch: {
-          projectSettingsOverrides: { [fleet]: { responseStreamingMode: "turn" }, [t3]: null },
+          projectSettingsOverrides: { [fleet]: { responseStreamingMode: "turn" }, [mybot]: null },
         },
       },
     ]);

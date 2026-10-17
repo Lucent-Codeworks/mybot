@@ -473,7 +473,7 @@ export function makeMcpAppHost(options: McpAppHostOptions): McpAppHost {
           finish();
           return;
         }
-        const id = `t3-host-${nextHostRequestId++}`;
+        const id = `mybot-host-${nextHostRequestId++}`;
         hostRequests.set(id, finish);
         timer = setTimeout(() => {
           hostRequests.delete(id);
@@ -537,7 +537,7 @@ function readDownloads(contents: unknown): ReadonlyArray<McpAppDownload> | undef
 }
 
 /**
- * Maps T3's resolved theme variables to the spec's standardized style names, so
+ * Maps MyBot's resolved theme variables to the spec's standardized style names, so
  * apps written for any MCP Apps host pick up the thread's colors and fonts.
  */
 export function mcpAppStyleVariables(

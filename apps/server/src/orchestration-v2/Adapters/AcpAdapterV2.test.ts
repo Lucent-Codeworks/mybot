@@ -874,7 +874,7 @@ describe("AcpAdapterV2", () => {
       assert.include(
         restoredBuild.methods,
         "session/set_config_option",
-        "Build should restore the native mode that T3 temporarily replaced for Plan",
+        "Build should restore the native mode that MyBot temporarily replaced for Plan",
       );
     }).pipe(Effect.provide(layerTest), Effect.scoped),
   );
@@ -1494,7 +1494,7 @@ describe("AcpAdapterV2", () => {
       );
       assert.deepEqual([...childMessages.values()], ["Checking the code.", "ONE"]);
       assert.equal(task?.prompt, "Run pwd, then reply ONE.");
-      // Terminal-fallback MCP calls in a child session keep their T3 identity.
+      // Terminal-fallback MCP calls in a child session keep their MyBot identity.
       assert.isTrue(
         items.some(
           (item) =>
@@ -1899,9 +1899,12 @@ describe("AcpAdapterV2", () => {
         results: undefined,
       });
       assert.deepEqual(webItem("grok-web-search", "completed"), {
-        title: "Web search: t3 code",
-        patterns: ["t3 code"],
-        results: [{ url: "https://t3.codes" }, { url: "https://github.com/pingdotgg/t3code" }],
+        title: "Web search: mybot code",
+        patterns: ["mybot code"],
+        results: [
+          { url: "https://t3.codes" },
+          { url: "https://github.com/Lucent-Codeworks/mybot" },
+        ],
       });
       assert.deepEqual(webItem("grok-web-fetch", "completed")?.results, [
         { url: "https://t3.codes", snippet: "MyBot page" },
@@ -2129,7 +2132,7 @@ describe("AcpAdapterV2", () => {
       const failed = yield* Effect.scoped(
         Effect.gen(function* () {
           const commandPidPath = yield* fileSystem.makeTempFileScoped({
-            prefix: "t3-acp-forced-failure-command-",
+            prefix: "mybot-acp-forced-failure-command-",
           });
           yield* Effect.addFinalizer(() =>
             Effect.sync(() => cleanupPublishedDetachedFixture(commandPidPath)),
@@ -2246,7 +2249,7 @@ describe("AcpAdapterV2", () => {
         new URL("../../../scripts/acp-mock-agent.ts", import.meta.url),
       );
       const commandPidPath = yield* fileSystem.makeTempFileScoped({
-        prefix: "t3-acp-provider-exit-command-",
+        prefix: "mybot-acp-provider-exit-command-",
       });
       yield* Effect.addFinalizer(() =>
         Effect.sync(() => cleanupPublishedDetachedFixture(commandPidPath)),
@@ -2644,7 +2647,7 @@ describe("AcpAdapterV2", () => {
           new URL("../../../scripts/acp-mock-agent.ts", import.meta.url),
         );
         const workspace = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-acp-no-client-fs-",
+          prefix: "mybot-acp-no-client-fs-",
         });
         const probePath = path.join(workspace, "planted.txt");
         const probeLogPath = path.join(workspace, "fs-probe.jsonl");
@@ -12300,7 +12303,7 @@ describe("AcpAdapterV2", () => {
             env: { T3_ACP_SESSION_LIFECYCLE: "1" },
           },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-acp-test", version: "0.0.0" },
+          clientInfo: { name: "mybot-acp-test", version: "0.0.0" },
           ownDetachedProcessGroup: true,
           processGroupPlatform: "win32",
         }).pipe(Layer.provide(Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, spawner))),
@@ -12410,7 +12413,7 @@ describe("AcpAdapterV2", () => {
         AcpSessionRuntime.layer({
           spawn: { command: process.execPath, args: [mockAgentPath], cwd: process.cwd() },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-acp-test", version: "0.0.0" },
+          clientInfo: { name: "mybot-acp-test", version: "0.0.0" },
           ownDetachedProcessGroup: true,
           processGroupPlatform: "win32",
           windowsProcessTreeTerminator: () =>
@@ -12445,7 +12448,7 @@ describe("AcpAdapterV2", () => {
         new URL("../../../scripts/acp-mock-agent.ts", import.meta.url),
       );
       const commandPidPath = yield* fileSystem.makeTempFileScoped({
-        prefix: "t3-acp-failed-teardown-command-",
+        prefix: "mybot-acp-failed-teardown-command-",
       });
       const residualCallbackDir = yield* fileSystem.makeTempDirectoryScoped();
       const residualCallbackResponseLogPath = path.join(residualCallbackDir, "responses.log");
@@ -13453,7 +13456,7 @@ describe("AcpAdapterV2", () => {
       );
       const protocolEvents = yield* Queue.bounded<EffectAcpProtocol.AcpProtocolLogEvent>(256);
       const commandPidPath = yield* fileSystem.makeTempFileScoped({
-        prefix: "t3-acp-direct-stop-command-",
+        prefix: "mybot-acp-direct-stop-command-",
       });
       yield* Effect.addFinalizer(() =>
         Effect.sync(() => cleanupPublishedDetachedFixture(commandPidPath)),
@@ -13873,7 +13876,7 @@ describe("AcpAdapterV2", () => {
       );
       const protocolEvents = yield* Queue.bounded<EffectAcpProtocol.AcpProtocolLogEvent>(256);
       const commandPidPath = yield* fileSystem.makeTempFileScoped({
-        prefix: "t3-acp-restart-active-command-",
+        prefix: "mybot-acp-restart-active-command-",
       });
       yield* Effect.addFinalizer(() =>
         Effect.sync(() => cleanupPublishedDetachedFixture(commandPidPath)),

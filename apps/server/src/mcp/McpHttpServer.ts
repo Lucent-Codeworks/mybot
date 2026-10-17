@@ -104,7 +104,7 @@ const unauthorized = (input: {
 
 /**
  * Resolves a bearer token that is not a provider-session token: an OAuth
- * client signed in from outside T3. Undefined when the token is not one.
+ * client signed in from outside MyBot. Undefined when the token is not one.
  */
 export class McpClientAuthenticator extends Context.Service<
   McpClientAuthenticator,

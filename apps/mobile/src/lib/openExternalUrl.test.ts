@@ -22,7 +22,7 @@ describe("tryOpenExternalUrl", () => {
     openURL.mockResolvedValue(undefined);
 
     await expect(
-      tryOpenExternalUrl("https://github.com/pingdotgg/t3code", "markdown-link"),
+      tryOpenExternalUrl("https://github.com/Lucent-Codeworks/mybot", "markdown-link"),
     ).resolves.toBe(true);
   });
 
@@ -33,7 +33,7 @@ describe("tryOpenExternalUrl", () => {
 
     await expect(
       tryOpenExternalUrl(
-        "https://github.com/pingdotgg/t3code/pull/1?token=secret",
+        "https://github.com/Lucent-Codeworks/mybot/pull/1?token=secret",
         "markdown-link",
       ),
     ).resolves.toBe(false);

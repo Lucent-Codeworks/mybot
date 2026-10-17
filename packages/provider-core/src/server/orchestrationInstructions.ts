@@ -52,25 +52,25 @@ const T3_CODE_ACP_PLAN_MODE_INSTRUCTIONS = `## MyBot interaction mode: Plan
 
 Investigate with read-only actions and do not edit files or otherwise execute the implementation. Resolve discoverable facts before asking questions. When the requirements are decision complete, return a concrete implementation plan and do not start implementing it. Treat this mode as active until MyBot supplies a different interaction-mode instruction.`;
 
-export interface T3AcpInstructionState {
+export interface MyBotAcpInstructionState {
   readonly interactionMode: ProviderInteractionMode;
-  readonly hasT3Mcp: boolean;
+  readonly hasMyBotMcp: boolean;
 }
 
 /**
  * ACP has no system/developer prompt field, so send MyBot-owned context in the
  * first user prompt and whenever the available tools or interaction mode change.
  */
-export function t3AcpPromptWithInstructions(input: {
+export function myBotAcpPromptWithInstructions(input: {
   readonly prompt: string;
-  readonly state: T3AcpInstructionState;
-  readonly previousState?: T3AcpInstructionState;
+  readonly state: MyBotAcpInstructionState;
+  readonly previousState?: MyBotAcpInstructionState;
 }): string {
   // Native slash commands must remain at the start of the prompt.
   if (input.prompt.trimStart().startsWith("/")) return input.prompt;
   if (
     input.previousState?.interactionMode === input.state.interactionMode &&
-    input.previousState.hasT3Mcp === input.state.hasT3Mcp
+    input.previousState.hasMyBotMcp === input.state.hasMyBotMcp
   ) {
     return input.prompt;
   }
@@ -78,7 +78,7 @@ export function t3AcpPromptWithInstructions(input: {
     input.state.interactionMode === "plan"
       ? T3_CODE_ACP_PLAN_MODE_INSTRUCTIONS
       : T3_CODE_ACP_DEFAULT_MODE_INSTRUCTIONS,
-    ...(input.state.hasT3Mcp
+    ...(input.state.hasMyBotMcp
       ? [T3_CODE_BROWSER_TOOL_INSTRUCTIONS.trim(), T3_CODE_ORCHESTRATION_INSTRUCTIONS.trim()]
       : []),
   ];
@@ -90,20 +90,20 @@ export function t3AcpPromptWithInstructions(input: {
  * context in the first prompt. Keep the wrapper explicit so it cannot be
  * mistaken for text authored by the user.
  */
-function prependT3OrchestrationInstructions(prompt: string): string {
+function prependMyBotOrchestrationInstructions(prompt: string): string {
   return `<t3_code_orchestration_instructions>${T3_CODE_ORCHESTRATION_INSTRUCTIONS.trim()}</t3_code_orchestration_instructions>\n\n<user_request>\n${prompt}\n</user_request>`;
 }
 
-export function t3OrchestrationPromptForFirstRun(input: {
+export function myBotOrchestrationPromptForFirstRun(input: {
   readonly prompt: string;
   readonly runOrdinal: number;
-  readonly hasT3Mcp: boolean;
+  readonly hasMyBotMcp: boolean;
 }): string {
-  return input.runOrdinal === 1 && input.hasT3Mcp
-    ? prependT3OrchestrationInstructions(input.prompt)
+  return input.runOrdinal === 1 && input.hasMyBotMcp
+    ? prependMyBotOrchestrationInstructions(input.prompt)
     : input.prompt;
 }
 
-export function t3OrchestrationSystemPrompt(hasT3Mcp: boolean): string | undefined {
-  return hasT3Mcp ? T3_CODE_ORCHESTRATION_INSTRUCTIONS : undefined;
+export function myBotOrchestrationSystemPrompt(hasMyBotMcp: boolean): string | undefined {
+  return hasMyBotMcp ? T3_CODE_ORCHESTRATION_INSTRUCTIONS : undefined;
 }

@@ -180,7 +180,7 @@ const makeParkedWindowsLauncher = Effect.gen(function* () {
       Effect.provide(
         ConfigProvider.layer(
           ConfigProvider.fromEnv({
-            env: { PATH: "C:\\t3-late-editors-test", PATHEXT: ".EXE" },
+            env: { PATH: "C:\\mybot-late-editors-test", PATHEXT: ".EXE" },
           }),
         ),
       ),

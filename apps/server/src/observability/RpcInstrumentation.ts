@@ -176,7 +176,7 @@ const RPC_METHODS_WITH_TRACING_DISABLED: ReadonlySet<string> = new Set([
  * after `RpcScopeAuthorization`, so it wraps authorization and also records rejected calls.
  */
 export class RpcInstrumentation extends RpcMiddleware.Service<RpcInstrumentation>()(
-  "t3/server/RpcInstrumentation",
+  "mybot/server/RpcInstrumentation",
 ) {}
 
 /**

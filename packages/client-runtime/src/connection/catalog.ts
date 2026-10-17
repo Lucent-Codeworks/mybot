@@ -29,7 +29,7 @@ export class BearerConnectionProfile extends Schema.TaggedClass<BearerConnection
      */
     learned: Schema.optionalKey(Schema.Literal(true)),
     /**
-     * "t3-connect" when the route authenticates with the environment's T3
+     * "t3-connect" when the route authenticates with the environment's MyBot
      * Connect credential instead of a stored bearer token.
      */
     authorization: Schema.optionalKey(Schema.Literal("t3-connect")),

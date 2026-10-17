@@ -297,7 +297,7 @@ describe("terminatePosixOwnedProcessTree", () => {
 
       const missingTarget = AcpSessionRuntime.wrapCommandForLinuxCgroup(
         lease,
-        "/nonexistent-t3-probe",
+        "/nonexistent-mybot-probe",
         [],
       );
       const missingTargetResult = NodeChildProcess.spawnSync(
@@ -880,7 +880,7 @@ describe("terminatePosixOwnedProcessTree", () => {
     }),
   );
 
-  it.live("re-admits a still-owned child after PID reuse and never signals the T3 session", () =>
+  it.live("re-admits a still-owned child after PID reuse and never signals the MyBot session", () =>
     Effect.gen(function* () {
       const reused = identity(110, 100, 110, 110, "reused");
       const fixture = makeController({

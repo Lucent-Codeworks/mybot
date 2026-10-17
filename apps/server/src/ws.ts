@@ -1949,7 +1949,7 @@ const layerWsRpc = (
           ),
         [WS_METHODS.serverRefreshProviders]: (input) =>
           Effect.gen(function* () {
-            // Only explicit catalog refreshes bypass T3's caches. Workspace
+            // Only explicit catalog refreshes bypass MyBot's caches. Workspace
             // discovery and background status checks retain their timers.
             if (input.refreshModels) {
               yield* modelManifest.forceRefresh;

@@ -39,7 +39,7 @@ const NOTE = [
  * The recorded background-subagent session cut by a restart right after the
  * root turn settled: the subagent's frames never arrive. A fresh runtime then
  * resumes the native session; each prompt frame it sends is pinned, so these
- * resumed turns are the provider's view of what T3 told it.
+ * resumed turns are the provider's view of what MyBot told it.
  */
 const readRestartTranscript = Effect.fn("readRestartTranscript")(function* (
   resumedPrompts: ReadonlyArray<string>,
@@ -141,7 +141,7 @@ const runRestart = Effect.fn("runRestart")(function* (input: {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const tempDir = yield* Effect.acquireRelease(
-    fs.makeTempDirectory({ prefix: "t3-orchestration-v2-restart-note-" }),
+    fs.makeTempDirectory({ prefix: "mybot-orchestration-v2-restart-note-" }),
     (directory) => fs.remove(directory, { recursive: true, force: true }).pipe(Effect.orDie),
   );
   const materialized = yield* materializeFixtureInput({

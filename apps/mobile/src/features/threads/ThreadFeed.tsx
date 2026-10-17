@@ -682,7 +682,7 @@ function MessageAttachmentFile(props: {
             )}
           </View>
           <View className="min-w-0 flex-1 gap-1">
-            <Text className="font-t3-medium text-sm text-foreground" numberOfLines={2}>
+            <Text className="font-mybot-medium text-sm text-foreground" numberOfLines={2}>
               {attachment.name}
             </Text>
             <Text className="text-xs text-foreground-muted" numberOfLines={1}>
@@ -784,7 +784,7 @@ function ArtifactTemplateCard(props: {
         </View>
       </View>
       <View className="min-w-0 flex-1">
-        <Text className="font-t3-bold text-sm text-foreground" numberOfLines={1}>
+        <Text className="font-mybot-bold text-sm text-foreground" numberOfLines={1}>
           {props.template.displayName}
         </Text>
         <Text className="text-xs text-foreground-muted">
@@ -798,7 +798,7 @@ function ArtifactTemplateCard(props: {
           className="min-h-9 justify-center rounded-lg border border-border bg-subtle px-3 active:opacity-65"
           onPress={() => props.onUse?.(props.template)}
         >
-          <Text className="font-t3-bold text-xs text-foreground">Use template</Text>
+          <Text className="font-mybot-bold text-xs text-foreground">Use template</Text>
         </Pressable>
       ) : null}
     </View>
@@ -952,7 +952,7 @@ function AgentMessageAttribution(props: {
   const navigation = useNavigation();
   const senderThreadId = props.senderThreadId;
   const label = (
-    <Text className="mb-1 pr-1 font-t3-medium text-2xs text-foreground-muted opacity-60">
+    <Text className="mb-1 pr-1 font-mybot-medium text-2xs text-foreground-muted opacity-60">
       Sent by another agent
     </Text>
   );
@@ -1037,7 +1037,7 @@ function renderFeedEntry(
       >
         <Text
           key={props.workRowSizing.textSizeKey}
-          className="font-t3-medium text-sm tabular-nums text-foreground-muted"
+          className="font-mybot-medium text-sm tabular-nums text-foreground-muted"
         >
           {entry.label}
         </Text>
@@ -1187,11 +1187,11 @@ function renderFeedEntry(
           {...(enterAnimated ? { entering: FadeInUp.duration(220) } : {})}
         >
           {presentation.attribution === "automation" ? (
-            <Text className="mb-1 pr-1 font-t3-medium text-2xs text-foreground-muted opacity-60">
+            <Text className="mb-1 pr-1 font-mybot-medium text-2xs text-foreground-muted opacity-60">
               Sent by automation
             </Text>
-          ) : presentation.attribution === "t3code" ? (
-            <Text className="mb-1 pr-1 font-t3-medium text-2xs text-foreground-muted opacity-60">
+          ) : presentation.attribution === "mybot" ? (
+            <Text className="mb-1 pr-1 font-mybot-medium text-2xs text-foreground-muted opacity-60">
               Sent by MyBot
             </Text>
           ) : presentation.attribution === "agent" ? (
@@ -1318,7 +1318,7 @@ function renderFeedEntry(
               >
                 <Text
                   className={cn(
-                    "font-t3-medium text-2xs tracking-wide",
+                    "font-mybot-medium text-2xs tracking-wide",
                     intentBadge.tone === "queued"
                       ? "text-adaptive-amber-700-300"
                       : "text-adaptive-sky-700-300",
@@ -1328,7 +1328,7 @@ function renderFeedEntry(
                 </Text>
               </View>
             ) : null}
-            <Text className="font-t3-medium text-xs tabular-nums text-foreground-secondary">
+            <Text className="font-mybot-medium text-xs tabular-nums text-foreground-secondary">
               {entry.pendingMessage && !entry.acknowledged ? "Pending" : timestampLabel}
             </Text>
             {props.onEditPendingMessage !== null &&
@@ -1445,7 +1445,7 @@ function renderFeedEntry(
                 sourceTitle={props.threadTitle}
               />
             ) : null}
-            <Text className="font-t3-medium text-xs tabular-nums text-foreground-secondary">
+            <Text className="font-mybot-medium text-xs tabular-nums text-foreground-secondary">
               {timestampLabel}
             </Text>
           </View>
@@ -1679,7 +1679,7 @@ function ThreadFeedPlaceholder(props: {
       }}
     >
       <View className="max-w-[320px] items-center gap-2">
-        <Text className="text-center font-t3-bold text-lg text-foreground">{props.title}</Text>
+        <Text className="text-center font-mybot-bold text-lg text-foreground">{props.title}</Text>
         <Text className="text-center text-sm leading-normal text-foreground-secondary">
           {props.detail}
         </Text>

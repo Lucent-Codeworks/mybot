@@ -118,7 +118,7 @@ const withHarness = <A, E, R>(
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
     const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-      prefix: "t3-desktop-backend-config-test-",
+      prefix: "mybot-desktop-backend-config-test-",
     });
 
     return yield* effect.pipe(
@@ -165,7 +165,7 @@ const withPackagedWslHarness = <A, E, R>(
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-      prefix: "t3-desktop-backend-config-test-",
+      prefix: "mybot-desktop-backend-config-test-",
     });
     const archivePath = path.join(baseDir, "wsl-runtime.tar.gz");
     const hashPath = `${archivePath}.sha256`;
@@ -284,7 +284,7 @@ describe("DesktopBackendConfiguration", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "mybot-desktop-backend-config-test-",
       });
       const resourcesPath = path.join(baseDir, "resources");
 
@@ -358,7 +358,7 @@ describe("DesktopBackendConfiguration", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "mybot-desktop-backend-config-test-",
       });
       const entryPath = path.join(baseDir, "apps/server/dist/bin.mjs");
       yield* fileSystem.makeDirectory(path.dirname(entryPath), { recursive: true });
@@ -676,14 +676,14 @@ describe("DesktopBackendConfiguration", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-desktop-backend-config-test-",
+          prefix: "mybot-desktop-backend-config-test-",
         });
         const entryPath = path.join(baseDir, "apps/server/dist/bin.mjs");
         yield* fileSystem.makeDirectory(path.dirname(entryPath), { recursive: true });
         yield* fileSystem.writeFileString(entryPath, "");
 
         const nodePath = "/home/test user's/.nvm/versions/node/v22.0.0/bin/node";
-        const linuxAppRoot = "/tmp/t3 code's launch";
+        const linuxAppRoot = "/tmp/mybot code's launch";
         const linuxEntryPath = `${linuxAppRoot}/apps/server/dist/bin.mjs`;
         const resolvedPath = "/home/test user/bin:/opt/test's tools/bin:/usr/bin:/bin";
         const devServerUrl = "http://127.0.0.1:5733/dev%20assets/?label=hello%20world";
@@ -805,7 +805,7 @@ describe("DesktopBackendConfiguration", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "mybot-desktop-backend-config-test-",
       });
 
       yield* Effect.gen(function* () {
@@ -849,7 +849,7 @@ describe("DesktopBackendConfiguration", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "mybot-desktop-backend-config-test-",
       });
 
       yield* Effect.gen(function* () {
@@ -897,7 +897,7 @@ describe("DesktopBackendConfiguration", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "mybot-desktop-backend-config-test-",
       });
       const settingsPath = path.join(baseDir, "userdata", "settings.json");
       const cause = PlatformError.systemError({
@@ -957,7 +957,7 @@ describe("DesktopBackendConfiguration", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "mybot-desktop-backend-config-test-",
       });
 
       yield* Effect.gen(function* () {
@@ -989,7 +989,7 @@ describe("DesktopBackendConfiguration", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "mybot-desktop-backend-config-test-",
       });
 
       const previousWslEnv = process.env.WSLENV;
@@ -1039,13 +1039,13 @@ describe("DesktopBackendConfiguration", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-desktop-backend-config-test-",
+          prefix: "mybot-desktop-backend-config-test-",
         });
 
         const standard = {
           OTEL_EXPORTER_OTLP_ENDPOINT: "https://collector.example.com:4318/base?api_key=secret",
           OTEL_EXPORTER_OTLP_LOGS_HEADERS: "authorization=Bearer%20token",
-          LUCENT_OTLP_TRACES_URL: "http://t3.example.com:4318/v1/traces",
+          LUCENT_OTLP_TRACES_URL: "http://mybot.example.com:4318/v1/traces",
         };
         const previousWslEnv = process.env.WSLENV;
         // A developer's own OTLP variables would be forwarded too.
@@ -1073,7 +1073,10 @@ describe("DesktopBackendConfiguration", () => {
             const wslEnv = (config.env.WSLENV ?? "").split(":");
             assert.include(wslEnv, "OTEL_EXPORTER_OTLP_ENDPOINT");
             assert.include(wslEnv, "OTEL_EXPORTER_OTLP_LOGS_HEADERS");
-            assert.equal(config.env.LUCENT_OTLP_TRACES_URL, "http://t3.example.com:4318/v1/traces");
+            assert.equal(
+              config.env.LUCENT_OTLP_TRACES_URL,
+              "http://mybot.example.com:4318/v1/traces",
+            );
             assert.include(wslEnv, "LUCENT_OTLP_TRACES_URL");
           }).pipe(
             Effect.provide(
@@ -1104,7 +1107,7 @@ describe("DesktopBackendConfiguration", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "mybot-desktop-backend-config-test-",
       });
 
       const previousWslEnv = process.env.WSLENV;
@@ -1183,7 +1186,7 @@ describe("DesktopBackendConfiguration", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-desktop-backend-config-test-",
+          prefix: "mybot-desktop-backend-config-test-",
         });
 
         yield* Effect.gen(function* () {
@@ -1223,7 +1226,7 @@ describe("DesktopBackendConfiguration", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-desktop-backend-config-test-",
+          prefix: "mybot-desktop-backend-config-test-",
         });
 
         yield* Effect.gen(function* () {
@@ -1264,7 +1267,7 @@ describe("DesktopBackendConfiguration", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "mybot-desktop-backend-config-test-",
       });
 
       yield* Effect.gen(function* () {
@@ -1300,7 +1303,7 @@ describe("DesktopBackendConfiguration", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "mybot-desktop-backend-config-test-",
       });
 
       yield* Effect.gen(function* () {
@@ -1333,7 +1336,7 @@ describe("DesktopBackendConfiguration", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "mybot-desktop-backend-config-test-",
       });
 
       yield* Effect.gen(function* () {
@@ -1375,7 +1378,7 @@ describe("DesktopBackendConfiguration", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "mybot-desktop-backend-config-test-",
       });
 
       yield* Effect.gen(function* () {
@@ -1408,7 +1411,7 @@ describe("DesktopBackendConfiguration", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "mybot-desktop-backend-config-test-",
       });
 
       yield* Effect.gen(function* () {
@@ -1441,7 +1444,7 @@ describe("DesktopBackendConfiguration", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "mybot-desktop-backend-config-test-",
       });
       const resourcesPath = path.join(baseDir, "resources");
       const dirname = `${resourcesPath}/app.asar/apps/desktop/dist-electron`;
@@ -1490,7 +1493,7 @@ describe("DesktopBackendConfiguration", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "mybot-desktop-backend-config-test-",
       });
       const dirname = path.join(baseDir, "apps/desktop/src");
       const releaseMonitorPath = path.join(
@@ -1544,7 +1547,7 @@ describe("DesktopBackendConfiguration", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "mybot-desktop-backend-config-test-",
       });
 
       yield* Effect.gen(function* () {
@@ -1583,7 +1586,7 @@ describe("DesktopBackendConfiguration", () => {
     // a live async effect — otherwise runSync throws in the handler. Build the
     // real WSL layer (not the sync test stub) and resolve the label with a
     // top-level runSync, exactly as the handler does.
-    // oxlint-disable-next-line t3code/no-manual-effect-runtime-in-tests -- This test intentionally replicates the sync IPC handler's runSync path to catch a regression to async-only resolution; it.effect would mask it.
+    // oxlint-disable-next-line mybot/no-manual-effect-runtime-in-tests -- This test intentionally replicates the sync IPC handler's runSync path to catch a regression to async-only resolution; it.effect would mask it.
     const runtime = ManagedRuntime.make(
       DesktopBackendConfiguration.layer.pipe(
         Layer.provideMerge(layerServerExposure),
@@ -1600,7 +1603,7 @@ describe("DesktopBackendConfiguration", () => {
             ),
           ),
         ),
-        Layer.provideMerge(layerEnvironment("/tmp/t3-wsl-isavailable", { platform: "win32" })),
+        Layer.provideMerge(layerEnvironment("/tmp/mybot-wsl-isavailable", { platform: "win32" })),
         Layer.provide(NodeServices.layer),
       ),
     );
@@ -1608,7 +1611,7 @@ describe("DesktopBackendConfiguration", () => {
       const configuration = await runtime.runPromise(
         DesktopBackendConfiguration.DesktopBackendConfiguration,
       );
-      // oxlint-disable-next-line t3code/no-manual-effect-runtime-in-tests -- Same reason: this is the synchronous resolution the IPC handler performs.
+      // oxlint-disable-next-line mybot/no-manual-effect-runtime-in-tests -- Same reason: this is the synchronous resolution the IPC handler performs.
       const label = Effect.runSync(configuration.resolvePrimaryLabel);
       assert.equal(typeof label, "string");
     } finally {

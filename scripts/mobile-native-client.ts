@@ -303,7 +303,7 @@ const main = Command.make(
       });
     const recordPath = path.join(
       home,
-      ".cache/t3code/native-clients",
+      ".cache/mybot/native-clients",
       platform,
       `${yield* digest(device)}.json`,
     );
@@ -339,7 +339,7 @@ const main = Command.make(
           true,
         );
         if (platform === "ios") {
-          const output = yield* fs.makeTempDirectoryScoped({ prefix: "t3-native-client-" });
+          const output = yield* fs.makeTempDirectoryScoped({ prefix: "mybot-native-client-" });
           const { mobile } = yield* roots;
           yield* command("pod", ["install"], true, path.join(mobile, "ios"));
           // Target this simulator only, without Expo's desktop activation or log streaming.

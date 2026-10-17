@@ -99,7 +99,7 @@ const readField = (stdout: string, field: string) => {
 
 // Stands in for the release's self-contained `mybot` executable: the install
 // script only asks it for `--version`.
-const SERVER_ENTRY_SOURCE = '#!/bin/sh\necho "t3code wsl runtime test server 0.0.0"\n';
+const SERVER_ENTRY_SOURCE = '#!/bin/sh\necho "mybot wsl runtime test server 0.0.0"\n';
 
 const makeDistroListSpawner = (result: { readonly stdout?: string; readonly exitCode?: number }) =>
   ChildProcessSpawner.make(() =>
@@ -612,9 +612,9 @@ describe.skipIf(posixShellRunner === null)("WSL runtime install script (executed
         ': > "$work/tar-calls"',
         'PATH="$work/bin:$PATH"',
         "export PATH",
-        `cat > "$work/install.sh" <<'T3CODE_INSTALL_SCRIPT'`,
+        `cat > "$work/install.sh" <<'MYBOT_INSTALL_SCRIPT'`,
         fixture.installScript(),
-        "T3CODE_INSTALL_SCRIPT",
+        "MYBOT_INSTALL_SCRIPT",
         // Both racers run the same file, and neither file path contains the
         // runtime root, so the script's own /proc scan cannot see them.
         'sh "$work/install.sh" > "$work/first.out" 2>&1 &',
@@ -703,9 +703,9 @@ describe.skipIf(posixShellRunner === null)("WSL runtime install script (executed
         'printf ready > "$runtime_parent/sha256-previous/.t3code-wsl-runtime-ready"',
         `touch -d "10 minutes ago" ${sh(fixture.runtimeRoot)}`,
         'touch -d "1 minute ago" "$runtime_parent/sha256-previous"',
-        `cat > ${sh(`${fixture.work}/select.sh`)} <<'T3CODE_SELECT_SCRIPT'`,
+        `cat > ${sh(`${fixture.work}/select.sh`)} <<'MYBOT_SELECT_SCRIPT'`,
         fixture.installScript(),
-        "T3CODE_SELECT_SCRIPT",
+        "MYBOT_SELECT_SCRIPT",
         `sh ${sh(`${fixture.work}/select.sh`)}`,
         `HOME=${sh(`${fixture.work}/home`)}`,
         "export HOME",

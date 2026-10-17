@@ -112,7 +112,7 @@ const unusedEnrichment = { faviconPath: null };
 const layerRuntime = (dbPath: string) => {
   const layerPlatform = NodeServices.layer;
   const layerServerConfig = ServerConfig.layerTest(process.cwd(), {
-    prefix: "t3-project-upgrade-",
+    prefix: "mybot-project-upgrade-",
   });
   return Layer.mergeAll(
     RuntimeLayer.layer.pipe(Layer.provide(RuntimeLayer.layerProjectService)),
@@ -153,7 +153,7 @@ it.live("keeps project settings through the V2 migrations and the first V2 boot"
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const stateDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-project-upgrade-" });
+      const stateDir = yield* fs.makeTempDirectoryScoped({ prefix: "mybot-project-upgrade-" });
       const dbPath = path.join(stateDir, "statev2.sqlite");
 
       // Seed the released V1 schema, then boot the V2 runtime, which runs 055+, on the same file.

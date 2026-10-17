@@ -78,7 +78,7 @@ export interface ProviderTurnAnalyticsContext {
 
 export class ProviderTurnAnalytics extends Context.Reference<{
   readonly record: (properties: Readonly<Record<string, unknown>>) => Effect.Effect<void>;
-}>("t3/orchestration-v2/ProviderTurnAnalytics", {
+}>("mybot/orchestration-v2/ProviderTurnAnalytics", {
   defaultValue: () => ({ record: () => Effect.void }),
 }) {}
 
@@ -455,9 +455,9 @@ export const layer: Layer.Layer<
     );
 
     /**
-     * The provider rewound its conversation outside T3. Retire the runs that
+     * The provider rewound its conversation outside MyBot. Retire the runs that
      * fell off its active branch with the same run, root-node, and checkpoint
-     * updates CheckpointRollbackService writes for a T3 revert. The run
+     * updates CheckpointRollbackService writes for a MyBot revert. The run
      * reporting the rewind performed it and stays, so it keeps lastRunOrdinal.
      */
     const rollBackRewoundRuns = Effect.fn("ProviderEventIngestor.rollBackRewoundRuns")(function* (

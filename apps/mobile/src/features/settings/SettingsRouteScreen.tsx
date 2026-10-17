@@ -78,7 +78,7 @@ function ConfiguredSettingsRouteScreen() {
         <SettingsSection title="Connections">
           <SettingsRow
             icon="person.crop.circle"
-            label="T3 Account"
+            label="MyBot Account"
             value={accountLabel}
             disabled={!isLoaded}
             onPress={() => navigation.navigate("SettingsSheet", { screen: "SettingsAuth" })}

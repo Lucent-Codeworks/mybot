@@ -68,7 +68,7 @@ if (fixture === undefined || variant === undefined) {
 }
 
 const museBinary = process.env.T3_MUSE_BIN ?? "muse";
-// Started as T3 starts it, so Windows needs no T3_MUSE_BIN for Muse's `muse.cmd` launcher.
+// Started as MyBot starts it, so Windows needs no T3_MUSE_BIN for Muse's `muse.cmd` launcher.
 const museStart = Effect.runSync(museLaunch(museBinary));
 const home = process.env.HOME ?? "";
 
@@ -79,7 +79,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /**
  * Makes a recording portable: the workspace becomes `<workspace>` and the home
  * directory `~`, in both directions. Ids, timestamps and model output are kept
- * as recorded; they are opaque to T3 and carry no secrets.
+ * as recorded; they are opaque to MyBot and carry no secrets.
  */
 function normalizeEntries(
   entries: ReadonlyArray<ProviderReplayEntry>,

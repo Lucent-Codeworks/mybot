@@ -58,7 +58,7 @@ const browserHelperSource =
   `process.stderr.on("error",()=>process.exit(0)).write(` +
   `"${ANTIGRAVITY_AUTH_BROWSER_MARKER}"+JSON.stringify(process.argv[1])+"\\n",` +
   `()=>process.exit(0))`;
-const browserPreflightUrl = "https://example.invalid/t3-antigravity-browser-preflight";
+const browserPreflightUrl = "https://example.invalid/mybot-antigravity-browser-preflight";
 
 const removedEnvironmentKeys = new Set([
   "GEMINI_API_KEY",
@@ -176,7 +176,7 @@ function authSupportError(detail: string) {
   return new AcpErrors.AcpTransportError({ detail, cause: undefined });
 }
 
-/** Recognizes native auth failures and interactive login blocked by T3. */
+/** Recognizes native auth failures and interactive login blocked by MyBot. */
 export function isAntigravitySignInRequiredError(error: unknown): boolean {
   return (
     (isAcpRequestError(error) && error.code === -32000) ||
@@ -235,7 +235,7 @@ function antigravityEnvironment(
         : {};
   // The agent is a PyInstaller one-file bundle. It unpacks about 1 GB into
   // the system temp directory per launch and a force kill leaves that behind.
-  // Point it at a T3-owned directory so the driver can reclaim the space.
+  // Point it at a MyBot-owned directory so the driver can reclaim the space.
   const tempDirectory = runtimeTempDirectory ?? profile.tempDirectory;
   return {
     ...environment,
@@ -252,7 +252,7 @@ function antigravityEnvironment(
 }
 
 /**
- * The agent reads its user-global skills under `GEMINI_HOME`, which T3 points
+ * The agent reads its user-global skills under `GEMINI_HOME`, which MyBot points
  * at the private profile. Link the two skill directories back to the user's
  * real `~/.gemini` so global skills load, while MCP servers, hooks, and
  * credentials stay isolated. Best effort: a link that cannot be made only
@@ -567,7 +567,7 @@ export function makeAntigravityStdoutTransform(
     });
 }
 
-/** Receives native 1.1.1 sign-in URLs and T3 browser-helper URLs without logging stderr. */
+/** Receives native 1.1.1 sign-in URLs and MyBot browser-helper URLs without logging stderr. */
 export function makeAntigravityStderrHandler(
   input: {
     readonly onAuthorizationUrl?: (

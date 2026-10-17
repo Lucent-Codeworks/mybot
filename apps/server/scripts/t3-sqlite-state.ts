@@ -53,7 +53,7 @@ export class SqliteStateDatabaseMissingError extends Schema.TaggedError<SqliteSt
   },
 ) {
   override get message(): string {
-    return `Database does not exist at '${this.databasePath}'. Start T3 once to run migrations.`;
+    return `Database does not exist at '${this.databasePath}'. Start MyBot once to run migrations.`;
   }
 }
 
@@ -245,14 +245,14 @@ export const runSqliteState = Effect.fn("runSqliteState")(function* (
   );
 });
 
-const t3SqliteStateCommand = Command.make(
+const myBotSqliteStateCommand = Command.make(
   "t3-sqlite-state",
   {
     operation: Argument.Literals("operation", SqliteStateOperation.literals).pipe(
       Argument.withDescription("Run a read-only query or a backed-up fixture mutation."),
     ),
     baseDir: Flag.String("base-dir").pipe(
-      Flag.withDescription("Explicit T3 base directory containing userdata/statev2.sqlite."),
+      Flag.withDescription("Explicit MyBot base directory containing userdata/statev2.sqlite."),
     ),
     sql: Flag.String("sql").pipe(
       Flag.optional,
@@ -272,12 +272,12 @@ const t3SqliteStateCommand = Command.make(
     }).pipe(Effect.flatMap(encodeSqliteStateResult), Effect.flatMap(Console.log)),
 ).pipe(
   Command.withDescription(
-    "Inspect or seed an isolated T3 SQLite database with automatic backups for writes.",
+    "Inspect or seed an isolated MyBot SQLite database with automatic backups for writes.",
   ),
 );
 
 if (import.meta.main) {
-  Command.run(t3SqliteStateCommand, { version: "0.0.0" }).pipe(
+  Command.run(myBotSqliteStateCommand, { version: "0.0.0" }).pipe(
     Effect.provide(NodeServices.layer),
     NodeRuntime.runMain,
   );

@@ -130,7 +130,7 @@ it.layer(NodeServices.layer)("ServerEnvironmentLive", (it) => {
       const fileSystem = yield* FileSystem.FileSystem;
       const crypto = yield* Crypto.Crypto;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-server-environment-concurrent-test-",
+        prefix: "mybot-server-environment-concurrent-test-",
       });
       const serverConfig = yield* makeServerConfig(baseDir);
       yield* fileSystem.makeDirectory(serverConfig.stateDir, { recursive: true });
@@ -196,7 +196,7 @@ it.layer(NodeServices.layer)("ServerEnvironmentLive", (it) => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-server-environment-test-",
+        prefix: "mybot-server-environment-test-",
       });
 
       const first = yield* Effect.gen(function* () {
@@ -226,7 +226,7 @@ it.layer(NodeServices.layer)("ServerEnvironmentLive", (it) => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-server-environment-publish-test-",
+        prefix: "mybot-server-environment-publish-test-",
       });
       const layerTest = Layer.mergeAll(
         ServerEnvironment.layer.pipe(Layer.provide(ServerSecretStore.layer)),
@@ -272,7 +272,7 @@ it.layer(NodeServices.layer)("ServerEnvironmentLive", (it) => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-server-environment-desktop-update-test-",
+        prefix: "mybot-server-environment-desktop-update-test-",
       });
       const serverConfig = yield* makeServerConfig(baseDir);
       yield* fileSystem.makeDirectory(serverConfig.stateDir, { recursive: true });
@@ -313,7 +313,7 @@ it.layer(NodeServices.layer)("ServerEnvironmentLive", (it) => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-server-environment-error-test-",
+        prefix: "mybot-server-environment-error-test-",
       });
       const serverConfig = yield* makeServerConfig(baseDir);
       const environmentIdPath = serverConfig.environmentIdPath;

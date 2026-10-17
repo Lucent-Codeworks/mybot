@@ -38,7 +38,7 @@ depend on. The stack's `PublishClientConfig` action writes the resulting relay U
 
 In Clerk's OAuth applications settings:
 
-1. Create a public OAuth application for the T3 CLI, using authorization-code exchange with PKCE.
+1. Create a public OAuth application for the MyBot CLI, using authorization-code exchange with PKCE.
 2. Allow the redirect URI `http://127.0.0.1:34338/callback`.
 3. Enable the `openid`, `profile`, `email`, and `offline_access` scopes.
 4. Enable **Device authorization grant** on the application. Headless and SSH authorization use
@@ -103,7 +103,7 @@ Local signed builds additionally use:
 
 ```dotenv
 T3CODE_APPLE_TEAM_ID=ABC1234567
-T3CODE_MACOS_PROVISIONING_PROFILE=/absolute/path/to/t3code.provisionprofile
+T3CODE_MACOS_PROVISIONING_PROFILE=/absolute/path/to/mybot.provisionprofile
 # Override only when the RP domain differs from the Clerk Frontend API hostname.
 T3CODE_CLERK_PASSKEY_RP_DOMAINS=example.clerk.accounts.dev,clerk.example.com
 ```

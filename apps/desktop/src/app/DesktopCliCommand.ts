@@ -17,7 +17,7 @@ import { makeComponentLogger } from "./DesktopObservability.ts";
 const { logInfo, logWarning } = makeComponentLogger("desktop-cli-command");
 
 // Settings → Install `mybot` command, like VS Code's "Install 'code' command".
-// The app's launcher (see DesktopCliShim) lives in the T3 home and is off PATH
+// The app's launcher (see DesktopCliShim) lives in the MyBot home and is off PATH
 // by default. Installing links it into a folder on the user's PATH, or on
 // Windows adds the launcher's folder to the user's PATH. Removing undoes only
 // what installing did: a link that points at one of the app's launchers, or a
@@ -25,7 +25,7 @@ const { logInfo, logWarning } = makeComponentLogger("desktop-cli-command");
 //
 // The command used to be `t3`. On start the app removes its own `t3` launcher
 // and links (proved by DesktopCliShim.LEGACY_MARKER, never by name or path,
-// since T3 Code writes a `t3` into the same T3 home) and installs `mybot` in
+// since T3 Code writes a `t3` into the same home) and installs `mybot` in
 // their place when the old command was installed.
 
 export class DesktopCliCommandError extends Schema.TaggedError<DesktopCliCommandError>()(
@@ -47,7 +47,7 @@ const sameWindowsPath = (left: string, right: string) =>
   left.replace(/[\\/]+$/, "").toLowerCase() === right.replace(/[\\/]+$/, "").toLowerCase();
 
 /**
- * Reads, or with `T3_SET` set writes, the user's PATH in the registry, keeping
+ * Reads, or with `MYBOT_SET` set writes, the user's PATH in the registry, keeping
  * `%VAR%` entries unexpanded. Writes keep REG_EXPAND_SZ (Windows' default for
  * PATH; `SetEnvironmentVariable` would store REG_SZ and break every `%VAR%`
  * entry), then broadcast WM_SETTINGCHANGE so Explorer and the terminals it
@@ -56,16 +56,16 @@ const sameWindowsPath = (left: string, right: string) =>
  */
 const WINDOWS_USER_PATH_SCRIPT = `
 $ErrorActionPreference = 'Stop'
-if ($env:T3_SET -eq '1') {
+if ($env:MYBOT_SET -eq '1') {
   $key = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Environment')
   $kind = [Microsoft.Win32.RegistryValueKind]::ExpandString
   if ($key.GetValueNames() -contains 'Path' -and $key.GetValueKind('Path') -eq 'String') {
     $kind = [Microsoft.Win32.RegistryValueKind]::String
   }
-  $key.SetValue('Path', $env:T3_PATH, $kind)
-  Add-Type -Namespace T3 -Name Env -MemberDefinition '[DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern System.IntPtr SendMessageTimeout(System.IntPtr hWnd, uint Msg, System.UIntPtr wParam, string lParam, uint fuFlags, uint uTimeout, out System.UIntPtr lpdwResult);'
+  $key.SetValue('Path', $env:MYBOT_PATH, $kind)
+  Add-Type -Namespace MyBot -Name Env -MemberDefinition '[DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern System.IntPtr SendMessageTimeout(System.IntPtr hWnd, uint Msg, System.UIntPtr wParam, string lParam, uint fuFlags, uint uTimeout, out System.UIntPtr lpdwResult);'
   $result = [System.UIntPtr]::Zero
-  [void][T3.Env]::SendMessageTimeout([System.IntPtr]0xffff, 0x1A, [System.UIntPtr]::Zero, 'Environment', 2, 5000, [ref]$result)
+  [void][MyBot.Env]::SendMessageTimeout([System.IntPtr]0xffff, 0x1A, [System.UIntPtr]::Zero, 'Environment', 2, 5000, [ref]$result)
 } else {
   $key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment')
   $value = if ($key) { $key.GetValue('Path', '', 'DoNotExpandEnvironmentNames') } else { '' }
@@ -114,7 +114,7 @@ export const make = Effect.gen(function* () {
 
   /**
    * A link to one of the app's launchers, by the marker the launcher carries.
-   * This also finds links made under a previous T3 home, so Remove can clean
+   * This also finds links made under a previous MyBot home, so Remove can clean
    * them up and Install does not add a second.
    */
   const isOurLink = (link: string, marker = DesktopCliShim.MARKER) =>
@@ -147,7 +147,7 @@ export const make = Effect.gen(function* () {
     Effect.mapError(() => fail("Could not read your PATH, so it was left unchanged.")),
   );
   const writeUserPath = (value: string) =>
-    powershell({ T3_SET: "1", T3_PATH: value }).pipe(
+    powershell({ MYBOT_SET: "1", MYBOT_PATH: value }).pipe(
       Effect.asVoid,
       Effect.mapError(() => fail("Could not update your PATH.")),
     );
@@ -231,7 +231,7 @@ export const make = Effect.gen(function* () {
     if (Option.isSome(existing)) {
       const target = yield* fs.readLink(existing.value).pipe(Effect.option);
       if (Option.getOrUndefined(target) === launcher) return yield* state;
-      // A link to a previous T3 home's launcher: point it at this one instead.
+      // A link to a previous MyBot home's launcher: point it at this one instead.
       yield* fs
         .remove(existing.value)
         .pipe(Effect.mapError(() => fail(`Could not replace ${existing.value}.`)));

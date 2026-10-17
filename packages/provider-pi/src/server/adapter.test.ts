@@ -90,7 +90,7 @@ interface FakePi {
   readonly vetoNextSwitch: () => void;
   /** Fields overriding the recorded idle state in the next `get_state` acks, in order. */
   readonly queueState: (data: Record<string, unknown>) => void;
-  /** Change Pi's streaming state before its agent_start event reaches T3. */
+  /** Change Pi's streaming state before its agent_start event reaches MyBot. */
   readonly setStreaming: (streaming: boolean) => void;
   /** Hold the next `get_state` response until the test resolves it. */
   readonly deferNextState: () => void;
@@ -1337,7 +1337,7 @@ describe("PiAdapterV2", () => {
       }).pipe(Effect.scoped, Effect.provide(layerTest)),
   );
 
-  it.effect("stops provider-initiated work that has no T3 turn owner", () =>
+  it.effect("stops provider-initiated work that has no MyBot turn owner", () =>
     Effect.gen(function* () {
       const fake = yield* makeFakePi;
       const { runtime, takeEvent } = yield* openRuntime(fake);
@@ -1360,7 +1360,7 @@ describe("PiAdapterV2", () => {
     }).pipe(Effect.scoped, Effect.provide(layerTest)),
   );
 
-  it.effect("injects the T3 MCP extension and bearer when a session exists", () =>
+  it.effect("injects the MyBot MCP extension and bearer when a session exists", () =>
     Effect.gen(function* () {
       yield* (yield* McpProviderSessions.McpProviderSessions).set({
         environmentId: EnvironmentId.make("environment-pi-mcp"),

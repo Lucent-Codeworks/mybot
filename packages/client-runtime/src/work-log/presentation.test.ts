@@ -311,7 +311,7 @@ describe("summarizeToolGroup", () => {
 });
 
 describe("resolveWorkEntryToolPresentation", () => {
-  it("presents and summarizes every T3 tool using the same structured identity", () => {
+  it("presents and summarizes every MyBot tool using the same structured identity", () => {
     for (const tool of T3_MCP_TOOL_NAMES) {
       const entry: WorkLogPresentationEntry = {
         id: tool,
@@ -432,7 +432,7 @@ describe("resolveWorkEntryToolPresentation", () => {
     });
   });
 
-  it("does not summarize a foreign structured identity as T3 work", () => {
+  it("does not summarize a foreign structured identity as MyBot work", () => {
     const entry: WorkLogPresentationEntry = {
       id: "foreign",
       createdAt: "2026-09-19T00:00:00.000Z",
@@ -570,7 +570,7 @@ describe("resolveWorkEntryToolPresentation", () => {
     ).toBe(completed);
   });
 
-  it("keeps T3 branding for non-browser tools and falls back to the original tool label", () => {
+  it("keeps MyBot branding for non-browser tools and falls back to the original tool label", () => {
     expect(
       resolveWorkEntryToolPresentation({
         label: "mcp__t3_code__task_status",
@@ -868,7 +868,7 @@ describe("toolGroupAction", () => {
 describe("resolveViewedImageAsset", () => {
   const threadId = ThreadId.make("thread-1");
 
-  it("serves t3 attachment paths in place like any other host path", () => {
+  it("serves MyBot attachment paths in place like any other host path", () => {
     const path = "/Users/demo/.t3/dev/attachments/11111111-1111-4111-8111-111111111111.png";
     expect(resolveViewedImageAsset(path, { threadId, workspaceRoot: "/workspace" })).toEqual({
       resource: { _tag: "media-file", threadId, path },
@@ -943,7 +943,7 @@ describe("device group summaries", () => {
     expect(workEntryViewedImagePath(entry)).toBe("/workspace/device.png");
   });
 
-  it("does not classify another server's tools as T3 device controls", () => {
+  it("does not classify another server's tools as MyBot device controls", () => {
     expect(
       summarizeToolGroup([
         {

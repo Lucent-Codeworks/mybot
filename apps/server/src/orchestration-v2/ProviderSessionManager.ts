@@ -254,7 +254,7 @@ export interface ProviderSessionManagerV2LayerOptions {
   readonly idleTimeoutMs?: number;
   /** Cap on how long idle release may be deferred for pending background work. */
   readonly maxIdlePinMs?: number;
-  /** Test replay harnesses can omit T3's MCP server from provider protocol fixtures. */
+  /** Test replay harnesses can omit MyBot's MCP server from provider protocol fixtures. */
   readonly configureMcp?: boolean;
 }
 
@@ -1918,7 +1918,7 @@ export const layerWithOptions = (
                 Effect.gen(function* () {
                   // Some providers can block before a run subscriber exists
                   // (project trust, login, or session-switch hooks). Persist
-                  // their runless request artifacts directly so the normal T3
+                  // their runless request artifacts directly so the normal MyBot
                   // request UI can answer them and unblock session setup.
                   const threadId = sessionScopedRuntimeRequestThreadId(event);
                   if (threadId !== undefined) {

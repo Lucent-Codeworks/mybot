@@ -703,7 +703,7 @@ if [ -z "$REMOTE_PORT" ]; then
   printf '%s\\n' "$REMOTE_PORT" >"$PORT_FILE"
   printf 'managed\\n' >"$MANAGED_FILE"
   if ! wait_ready "@@T3_READY_TIMEOUT_MS@@"; then
-    printf 'Remote T3 server did not become ready on 127.0.0.1:%s.\\n' "$REMOTE_PORT" >&2
+    printf 'Remote MyBot server did not become ready on 127.0.0.1:%s.\\n' "$REMOTE_PORT" >&2
     if [ -s "$LOG_FILE" ]; then
       tail -n 80 "$LOG_FILE" >&2 2>/dev/null || true
     else
@@ -746,7 +746,7 @@ if [ "$REMOTE_MANAGED" != "external" ] && [ -n "$REMOTE_PID" ] && kill -0 "$REMO
     sleep 0.1
   done
   if kill -0 "$REMOTE_PID" 2>/dev/null; then
-    printf 'Remote T3 server with PID %s did not stop within 2 seconds. Its ownership files were kept.\\n' "$REMOTE_PID" >&2
+    printf 'Remote MyBot server with PID %s did not stop within 2 seconds. Its ownership files were kept.\\n' "$REMOTE_PID" >&2
     exit 1
   fi
 fi
@@ -786,7 +786,7 @@ export class SshMissingRunnerError extends Schema.TaggedError<SshMissingRunnerEr
   }
 }
 
-export function buildRemoteT3RunnerScript(input?: RemoteT3RunnerOptions): string {
+export function buildRemoteMyBotRunnerScript(input?: RemoteT3RunnerOptions): string {
   const nodeScriptPath = input?.nodeScriptPath?.trim() || "";
   const archiveVersion = input?.archiveVersion?.trim() || "";
   if (nodeScriptPath === "" && archiveVersion === "") {
@@ -826,7 +826,7 @@ export function buildRemoteLaunchScript(input?: RemoteT3RunnerOptions): string {
   return applyScriptPlaceholders(REMOTE_LAUNCH_SCRIPT, {
     T3_ARCHIVE_MODE: isNodeScriptRunner(input) ? "0" : "1",
     T3_NODE_ENV_SCRIPT: buildRemoteNodeEnvScript(input),
-    T3_RUNNER_SCRIPT: stripTrailingNewlines(buildRemoteT3RunnerScript(input)),
+    T3_RUNNER_SCRIPT: stripTrailingNewlines(buildRemoteMyBotRunnerScript(input)),
     T3_PICK_PORT_SCRIPT: stripTrailingNewlines(REMOTE_PICK_PORT_SCRIPT),
     T3_WAIT_READY_SCRIPT: stripTrailingNewlines(REMOTE_WAIT_READY_SCRIPT),
     T3_DEFAULT_REMOTE_PORT: String(DEFAULT_REMOTE_PORT),
@@ -840,7 +840,7 @@ export function buildRemoteLaunchScript(input?: RemoteT3RunnerOptions): string {
 export function buildRemotePairingScript(stateKey: string, input?: RemoteT3RunnerOptions): string {
   return applyScriptPlaceholders(REMOTE_PAIRING_SCRIPT, {
     T3_STATE_KEY: stateKey,
-    T3_RUNNER_SCRIPT: stripTrailingNewlines(buildRemoteT3RunnerScript(input)),
+    T3_RUNNER_SCRIPT: stripTrailingNewlines(buildRemoteMyBotRunnerScript(input)),
   });
 }
 

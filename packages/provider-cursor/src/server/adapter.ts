@@ -53,7 +53,7 @@ import {
   rewriteCursorSkillMentions,
 } from "./skills.ts";
 import { mergeProviderInstanceEnvironment } from "@mybot/provider-core/server/instanceEnvironment";
-import { t3OrchestrationPromptForFirstRun } from "@mybot/provider-core/server/orchestrationInstructions";
+import { myBotOrchestrationPromptForFirstRun } from "@mybot/provider-core/server/orchestrationInstructions";
 import { buildRuntimeInstructions } from "@mybot/provider-core/server/runtimeInstructions";
 import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
 import { makeProviderFailure } from "@mybot/provider-core/server/failure";
@@ -292,7 +292,7 @@ function nativeThreadId(providerThread: OrchestrationV2ProviderThread): string {
  * plugins. The SDK loads none of them when `settingSources` is omitted.
  * Sandbox policy files are read either way, and hooks can only deny or ask
  * (which local SDK runs reject), so these layers do not loosen the sandbox or
- * approval mode T3 sets.
+ * approval mode MyBot sets.
  */
 const CURSOR_AGENT_SETTING_SOURCES = [
   "project",
@@ -2130,7 +2130,7 @@ export const makeCursorAdapterV2 = Effect.fn("makeCursorAdapterV2")(function* (
                 .map((skill) => skill.name),
             );
           }
-          const userText = t3OrchestrationPromptForFirstRun({
+          const userText = myBotOrchestrationPromptForFirstRun({
             prompt: providerMessageTextWithAttachmentPaths({
               text:
                 cursorSkillNames === undefined
@@ -2140,7 +2140,7 @@ export const makeCursorAdapterV2 = Effect.fn("makeCursorAdapterV2")(function* (
               resolveAttachmentPath: host.resolveAttachmentPath,
             }),
             runOrdinal: turnInput.runOrdinal,
-            hasT3Mcp: mcpServers !== undefined,
+            hasMyBotMcp: mcpServers !== undefined,
           });
           const images = yield* Effect.forEach(
             turnInput.message.attachments.filter(isProviderNativeImageAttachment),

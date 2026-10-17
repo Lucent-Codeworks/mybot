@@ -78,7 +78,7 @@ interface ServiceLauncherProcess {
 }
 
 export const ServiceLauncherHostProcess = Context.Reference<ServiceLauncherProcess>(
-  "t3/cloud/serviceLauncherHostProcess",
+  "mybot/cloud/serviceLauncherHostProcess",
   {
     defaultValue: () => ({
       connected: process.connected && process.send !== undefined,

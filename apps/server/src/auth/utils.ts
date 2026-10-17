@@ -125,7 +125,7 @@ function inferDeviceType(userAgent: string | undefined): AuthClientMetadataDevic
   }
 
   const normalized = userAgent.toLowerCase();
-  if (/bot|crawler|spider|slurp|curl|wget/.test(normalized)) {
+  if (/bot|crawler|spider|slurp|curl|wget/.test(normalized.replaceAll("mybot", ""))) {
     return "bot";
   }
   if (/ipad|tablet/.test(normalized)) {

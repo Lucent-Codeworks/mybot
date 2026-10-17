@@ -13,7 +13,7 @@ import {
   type ModelSelection,
   type ProviderInteractionMode,
   type RuntimeMode,
-  type ServerConfig as T3ServerConfig,
+  type ServerConfig as MyBotServerConfig,
   type UsageLimitsReport,
 } from "@mybot/contracts";
 import {
@@ -159,7 +159,7 @@ export interface ThreadComposerProps {
   readonly selectedThread: EnvironmentThreadShell;
   readonly reportedModelSelection?: ModelSelection | null;
   readonly hasCompactableConversation: boolean;
-  readonly serverConfig: T3ServerConfig | null;
+  readonly serverConfig: MyBotServerConfig | null;
   readonly queueCount: number;
   readonly activeThreadBusy: boolean;
   readonly canStopThread: boolean;
@@ -465,7 +465,7 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
     });
   };
   const { onSendMessage, onChangeDraftMessage, onShowUsageLimits } = props;
-  // T3 owns /usage-limits only where Limits has data for the selected provider;
+  // MyBot owns /usage-limits only where Limits has data for the selected provider;
   // elsewhere the name stays the provider's own and is sent through untouched.
   const usageLimitsOffered =
     selectedProviderStatus !== null &&
@@ -1058,7 +1058,7 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
                 ))}
                 {stripAttachments.length > 3 ? (
                   <View className="size-[30px] items-center justify-center rounded-lg bg-subtle-strong">
-                    <Text className="text-foreground-muted text-2xs font-t3-bold">
+                    <Text className="text-foreground-muted text-2xs font-mybot-bold">
                       +{stripAttachments.length - 3}
                     </Text>
                   </View>
