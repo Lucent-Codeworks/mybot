@@ -31,6 +31,8 @@ export type AppPresetField =
        * such as a database URL.
        */
       readonly getAt?: string;
+      /** The user picks a file (of these types) instead of typing; its bytes are sent base64-encoded. */
+      readonly file?: { readonly accept: string };
     })
   | (AppPresetFieldBase & {
       readonly kind: "select";

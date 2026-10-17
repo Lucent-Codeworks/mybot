@@ -430,9 +430,10 @@ export const EVERYDAY_APPS: ReadonlyArray<AppPreset> = [
       },
       {
         key: "privateKey",
-        label: "Private key (base64)",
+        label: "Private key",
         kind: "secret",
-        help: "The private.key file downloaded when you clicked Generate public and private key on your Vonage application, base64-encoded.",
+        file: { accept: ".key,.pem" },
+        help: "The private.key file your browser downloaded when you clicked Generate public and private key on your Vonage application.",
         getAt: "https://developer.vonage.com/en/application/overview",
       },
       {

@@ -6,7 +6,8 @@ import {
   appPresetTarget,
   buildAppConnectionInput,
 } from "@t3tools/shared/appCatalog";
-import { ExternalLinkIcon, InfoIcon, SearchIcon } from "lucide-react";
+import * as Base64 from "effect/encoding/Base64";
+import { ExternalLinkIcon, FileKeyIcon, InfoIcon, SearchIcon } from "lucide-react";
 import { useDeferredValue, useId, useMemo, useState } from "react";
 
 import { MARKETPLACE_CARD_CLASSNAME } from "../BotMarketplace";
@@ -465,15 +466,24 @@ function PresetField(props: {
         {field.label}
         {field.optional ? " (optional)" : ""}
       </Label>
-      <Input
-        id={props.id}
-        autoFocus={props.autoFocus}
-        type={field.kind === "secret" ? "password" : "text"}
-        autoComplete="off"
-        placeholder={field.placeholder}
-        value={props.value}
-        onChange={(event) => props.onChange(event.target.value)}
-      />
+      {field.file ? (
+        <FileValue
+          id={props.id}
+          accept={field.file.accept}
+          chosen={props.value !== ""}
+          onChange={props.onChange}
+        />
+      ) : (
+        <Input
+          id={props.id}
+          autoFocus={props.autoFocus}
+          type={field.kind === "secret" ? "password" : "text"}
+          autoComplete="off"
+          placeholder={field.placeholder}
+          value={props.value}
+          onChange={(event) => props.onChange(event.target.value)}
+        />
+      )}
       {help}
       {getAt ? (
         <div>
@@ -483,6 +493,47 @@ function PresetField(props: {
           </Button>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/** Picks a file whose bytes become the field's value, base64-encoded. */
+function FileValue(props: {
+  id: string;
+  accept: string;
+  chosen: boolean;
+  onChange: (value: string) => void;
+}) {
+  const [fileName, setFileName] = useState<string | null>(null);
+  return (
+    <div className="flex items-center gap-2">
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={() => document.getElementById(props.id)?.click()}
+      >
+        <FileKeyIcon />
+        {props.chosen ? "Choose another file" : "Choose file"}
+      </Button>
+      <span className="truncate text-muted-foreground text-sm">
+        {props.chosen ? (fileName ?? "File chosen") : "No file chosen"}
+      </span>
+      <input
+        id={props.id}
+        type="file"
+        accept={props.accept}
+        className="sr-only"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (!file) return;
+          void file.arrayBuffer().then((bytes) => {
+            setFileName(file.name);
+            props.onChange(Base64.encode(new Uint8Array(bytes)));
+          });
+        }}
+      />
     </div>
   );
 }
