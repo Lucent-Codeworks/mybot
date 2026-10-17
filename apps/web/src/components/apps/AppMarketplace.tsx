@@ -338,6 +338,16 @@ function PresetAppForm(
                   <AlertDescription>{preset.note}</AlertDescription>
                 </Alert>
               ) : null}
+              {target.steps ? (
+                <div className="flex flex-col gap-1.5">
+                  <p className="font-medium text-sm">Before you connect</p>
+                  <ol className="flex list-decimal flex-col gap-1 ps-5 text-muted-foreground text-sm">
+                    {target.steps.map((step) => (
+                      <li key={step}>{step}</li>
+                    ))}
+                  </ol>
+                </div>
+              ) : null}
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor={`${id}-name`}>Name</Label>
                 <Input
@@ -356,6 +366,7 @@ function PresetAppForm(
                   autoFocus={index === 0}
                   value={values[field.key] ?? ""}
                   onChange={(value) => setValue(field.key, value)}
+                  onOpenLink={props.onOpenLink}
                 />
               ))}
               {requirement ? <p className="text-muted-foreground text-xs">{requirement}.</p> : null}
@@ -369,7 +380,10 @@ function PresetAppForm(
               onClick={() => props.onOpenLink(preset.docsUrl)}
             >
               <ExternalLinkIcon />
-              {preset.name} setup guide
+              {/* A README is for developers; the form above already says how to set up. */}
+              {new URL(preset.docsUrl).hostname === "github.com"
+                ? "Technical details"
+                : `${preset.name} setup guide`}
             </Button>
           </div>
         </div>
@@ -394,6 +408,7 @@ function PresetField(props: {
   autoFocus: boolean;
   value: string;
   onChange: (value: string) => void;
+  onOpenLink: (url: string) => void;
 }) {
   const { field } = props;
   const help = field.help ? <p className="text-muted-foreground text-xs">{field.help}</p> : null;
@@ -443,6 +458,7 @@ function PresetField(props: {
     );
   }
 
+  const getAt = field.getAt;
   return (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={props.id}>
@@ -459,6 +475,14 @@ function PresetField(props: {
         onChange={(event) => props.onChange(event.target.value)}
       />
       {help}
+      {getAt ? (
+        <div>
+          <Button type="button" variant="link" size="xs" onClick={() => props.onOpenLink(getAt)}>
+            <ExternalLinkIcon />
+            Get it from {new URL(getAt).hostname.replace(/^www\./, "")}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -215,7 +215,10 @@ export const BUSINESS_APPS: ReadonlyArray<AppPreset> = [
     official: true,
     keywords: ["expenses", "corporate cards", "spend", "banking"],
     fields: [
-      optionalKeyField("Instead of signing in. An admin creates one under Settings → Developer."),
+      optionalKeyField(
+        "Instead of signing in. An admin opens Developer → Settings → Create Token in the Brex dashboard, picks its data access, then copies it.",
+        "https://dashboard.brex.com/settings/developer",
+      ),
     ],
     transport: tokenOptional("https://api.brex.com/mcp", "oauth"),
   },
@@ -260,7 +263,10 @@ export const BUSINESS_APPS: ReadonlyArray<AppPreset> = [
     official: true,
     keywords: ["billing", "subscriptions", "payments", "saas"],
     fields: [
-      optionalKeyField("Instead of signing in. Create one in Paddle under Developer tools."),
+      optionalKeyField(
+        "Instead of signing in. In Paddle, open Developer tools → Authentication → New API key, give it the permissions your bot needs, then copy it.",
+        "https://developer.paddle.com/api-reference/about/authentication",
+      ),
     ],
     transport: tokenOptional("https://mcp.paddle.com/mcp", "oauth"),
   },
@@ -314,6 +320,11 @@ export const BUSINESS_APPS: ReadonlyArray<AppPreset> = [
     color: "yellow",
     docsUrl: "https://github.com/alpacahq/alpaca-mcp-server",
     note: "Uses paper trading unless you turn on real money.",
+    steps: [
+      "Sign in to the Alpaca dashboard and stay on your Paper account, or switch to Live for real money.",
+      "On the home page, find API Keys and click Generate New Keys.",
+      "Copy the Key ID and the Secret Key right away, since the secret is shown only once.",
+    ],
     connection: "local",
     requires: "uv",
     official: true,
@@ -322,9 +333,16 @@ export const BUSINESS_APPS: ReadonlyArray<AppPreset> = [
       {
         key: "apiKey",
         label: "API key ID",
-        help: "From the Alpaca dashboard, under API keys.",
+        help: "In the Alpaca dashboard, open API Keys → Generate New Keys and copy the Key ID.",
+        getAt: "https://app.alpaca.markets/paper/dashboard/overview",
       },
-      { key: "secretKey", label: "Secret key", kind: "secret" },
+      {
+        key: "secretKey",
+        label: "Secret key",
+        kind: "secret",
+        help: "Shown once next to the Key ID when you generate keys. Copy it then.",
+        getAt: "https://app.alpaca.markets/paper/dashboard/overview",
+      },
       {
         key: "live",
         label: "Trade with real money",

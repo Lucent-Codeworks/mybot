@@ -33,6 +33,11 @@ const transportStrings = (preset: AppPreset, values: Record<string, string>) => 
     : [transport.command, ...transport.args, ...Object.values(transport.env ?? {})];
 };
 
+/** Plain text fields that still hold a credential. */
+const CREDENTIAL_KEYS = new Set(["apiKey", "clientId", "accountSid", "applicationId"]);
+/** Credentials from the user's own system, such as a database, with no provider page to link. */
+const OWN_SYSTEM_CREDENTIALS = new Set(["postgres.uri", "logseq.token"]);
+
 const RUNTIME_OF_COMMAND = { npx: "node", uvx: "uv", docker: "docker" } as const;
 
 describe("the app catalog", () => {
@@ -41,6 +46,22 @@ describe("the app catalog", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const preset of APP_CATALOG) {
       expect(APP_CATEGORIES, preset.id).toContain(preset.category);
+    }
+  });
+
+  // Users are not developers, so a README is no setup guide: every credential says where to
+  // get it, and links to the provider's own page unless it comes from the user's own system.
+  it("says where to get every credential", () => {
+    for (const preset of APP_CATALOG) {
+      for (const field of preset.fields) {
+        if (field.kind === "toggle" || field.kind === "select") continue;
+        if (field.kind !== "secret" && !CREDENTIAL_KEYS.has(field.key)) continue;
+        const name = `${preset.id}.${field.key}`;
+        expect(field.help, name).toBeTruthy();
+        if (OWN_SYSTEM_CREDENTIALS.has(name)) continue;
+        expect(field.getAt, name).toMatch(/^https:\/\//);
+        if (preset.id !== "github") expect(field.getAt, name).not.toMatch(/github\.com/);
+      }
     }
   });
 

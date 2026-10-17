@@ -96,8 +96,9 @@ Each app shows how it connects:
   there, then come back to MyBot. When a sign-in expires and cannot be renewed,
   the app shows **Sign in** in Connected apps and bots tell you it needs signing
   in again.
-- **API key** apps ask for a key or token you create in the app's settings. The
-  setup guide link in each app's form shows where.
+- **API key** apps ask for a key or token you create in the app's settings. Each
+  field says where to find it and links to that page; apps that need more setup,
+  such as creating a Slack app or a Discord bot, list the steps in the form.
 - **Runs on this computer** apps start a small helper program on the computer
   running MyBot. MyBot downloads what they run on the first time you connect
   one, so the first connect can take a minute; only apps whose form says so need
