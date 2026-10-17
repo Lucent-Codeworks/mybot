@@ -93,8 +93,10 @@ jobs:
           retention-days: 1
 
   # One job per platform and architecture (see release-desktop.yml), each on
-  # hardware of its own architecture. The Windows jobs embed the same-arch
-  # Linux CLI archive as the WSL runtime, so the Linux jobs build it.
+  # hardware of its own architecture. Every platform in CLI_ARCHIVE_PLATFORM_KEYS
+  # (packages/shared/src/cliRelease.ts) builds a CLI archive for the release;
+  # macOS x64 has none. The Windows jobs also embed the same-arch Linux CLI
+  # archive as the WSL runtime.
   desktop:
     name: Desktop ${{ matrix.label }}
     needs: [preflight, build_bundle]
@@ -109,7 +111,7 @@ jobs:
             arch: arm64
             rust_target: aarch64-apple-darwin
             resource_key: darwin-arm64
-            cli_archive: false
+            cli_archive: true
           - label: macOS x64
             runner: macos-15-intel
             platform: mac
@@ -141,7 +143,7 @@ jobs:
             arch: x64
             rust_target: x86_64-pc-windows-msvc
             resource_key: win32-x64
-            cli_archive: false
+            cli_archive: true
           - label: Windows arm64
             runner: windows-11-arm
             platform: win
@@ -149,7 +151,7 @@ jobs:
             arch: arm64
             rust_target: aarch64-pc-windows-msvc
             resource_key: win32-arm64
-            cli_archive: false
+            cli_archive: true
     uses: ./.github/workflows/release-desktop.yml
     secrets: inherit
     with:
@@ -203,6 +205,29 @@ jobs:
           merge-multiple: true
           path: release-assets
 
+      - name: Download all CLI archives
+        uses: actions/download-artifact@v8
+        with:
+          pattern: cli-*
+          merge-multiple: true
+          path: release-assets
+
+      # `mybot update`, the install scripts, and the service, SSH, and WSL
+      # runtime installers verify archives against this file, so it is written
+      # from the exact bytes that get uploaded.
+      - name: Write CLI archive checksums
+        run: |
+          set -euo pipefail
+          cd release-assets
+          shopt -s nullglob
+          archives=(mybot-*.tar.gz mybot-*.zip)
+          if [[ ${#archives[@]} -ne 5 ]]; then
+            echo "Expected 5 CLI archives, found ${#archives[@]}: ${archives[*]}" >&2
+            exit 1
+          fi
+          sha256sum "${archives[@]}" > SHA256SUMS
+          cat SHA256SUMS
+
       # electron-updater reads one manifest per platform and picks the file
       # entry whose name carries the running arch, so the per-arch manifests
       # the build jobs wrote are merged back into that one file.
@@ -252,5 +277,7 @@ jobs:
             release-assets/*.exe
             release-assets/*.blockmap
             release-assets/*.yml
+            release-assets/*.tar.gz
+            release-assets/SHA256SUMS
           fail_on_unmatched_files: true
           token: ${{ github.token }}
