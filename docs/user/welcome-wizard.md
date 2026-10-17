@@ -17,7 +17,7 @@ You can add more computers before continuing:
   the pairing link. You can also run `mybot serve --host <address>` and use
   `mybot pair` when the server is already reachable on your network.
 
-Saved computers and computers discovered through T3 Connect are selected by
+Saved computers and computers discovered through MyBot Connect are selected by
 default. Uncheck any you do not want to set up; this does not disconnect them.
 Continue when your selected computers are connected. Setup then checks
 agents across the selected computers.

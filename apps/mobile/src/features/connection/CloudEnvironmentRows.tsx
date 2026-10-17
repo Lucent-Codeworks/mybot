@@ -37,15 +37,15 @@ interface CloudEnvironmentRowsProps {
   readonly showcaseAvailableEnvironments?: ReadonlyArray<RelayEnvironmentView>;
   readonly showcaseSignedIn?: boolean;
   /**
-   * Hide the "T3 Connect" section title when the host provides its own header.
+   * Hide the "MyBot Connect" section title when the host provides its own header.
    */
   readonly showHeader?: boolean;
 }
 
 /**
- * "T3 Connect" section: every environment published to the signed-in account,
+ * "MyBot Connect" section: every environment published to the signed-in account,
  * with connect switches, availability status, and loading/error
- * states. Shared between the Settings environments screen and the T3 Connect
+ * states. Shared between the Settings environments screen and the MyBot Connect
  * onboarding sheet.
  *
  * Already-connected relay environments render even without cloud config or a
@@ -196,7 +196,7 @@ function CloudEnvironmentRowsContent(
 }
 
 /**
- * A saved T3 Connect environment. The switch turns it on or off; off keeps the
+ * A saved MyBot Connect environment. The switch turns it on or off; off keeps the
  * registration and cache but drops the connection and hides its errors.
  * Long-press removes it from this device.
  */

@@ -28,7 +28,7 @@ export interface CloudLinkDesiredState {
 }
 
 /**
- * Drives the primary environment's T3 Connect link. T3 Connect (managed
+ * Drives the primary environment's MyBot Connect link. MyBot Connect (managed
  * tunnel) and agent-activity publishing are independent capabilities backed by
  * a single relay link, so consumers express the full desired state and
  * `reconcileCloudState` applies it: unlink when neither is wanted, otherwise
@@ -124,7 +124,7 @@ export function useCloudLinkController() {
     // actually holds now.
     if (!wantsLink) {
       // Unlink works without a relay token — a failed token read must not
-      // leave the user unable to turn T3 Connect off.
+      // leave the user unable to turn MyBot Connect off.
       const unlinkResult = await unlinkPrimaryEnvironment({
         target,
         clerkToken: tokenResult._tag === "Success" ? (tokenResult.value ?? null) : null,

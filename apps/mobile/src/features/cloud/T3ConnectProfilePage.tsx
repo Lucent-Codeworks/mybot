@@ -49,7 +49,7 @@ function confirmDeregister(environment: RelayClientEnvironmentRecord, onConfirm:
 }
 
 /**
- * The "T3 Connect" custom page inside Clerk's native user profile: every
+ * The "MyBot Connect" custom page inside Clerk's native user profile: every
  * environment registered to the signed-in account, with account-level
  * deregistration. Mirrors the web UserButton page; connections on this device
  * are managed in Settings instead.

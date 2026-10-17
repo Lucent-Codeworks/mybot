@@ -406,7 +406,7 @@ const layerProviderInstallationRefresh = Layer.effectDiscard(
 
 const layerRuntimeCoreDependenciesBase = Layer.mergeAll(
   AgentAwarenessRelay.layer,
-  // Asks T3 Connect to deliver webhooks it held while this environment was offline.
+  // Asks MyBot Connect to deliver webhooks it held while this environment was offline.
   HeldHooksWaker.layer,
   layerThreadSettlementWorker,
   StorageCleanup.layer,

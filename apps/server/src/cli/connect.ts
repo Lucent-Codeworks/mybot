@@ -619,7 +619,7 @@ const connectPublishCommand = Command.make("publish", {
         // Publishing needs the relay to know this environment belongs to you.
         // Establish a tunnel-free publish-only link automatically so signing in
         // is all it takes — the mobile client can still reach the environment
-        // out of band without T3 Connect.
+        // out of band without MyBot Connect.
         if (!(yield* tokens.hasCredential)) {
           yield* Console.log(
             "Run `mybot connect login` first so this environment can be authorized to publish.",
