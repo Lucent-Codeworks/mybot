@@ -111,14 +111,14 @@ function shellSingleQuote(value) {
 export function makeDevelopmentEnvironmentScript(environment) {
   const envEntries = [
     ["VITE_DEV_SERVER_URL", environment.VITE_DEV_SERVER_URL],
-    ["T3CODE_PORT", environment.T3CODE_PORT],
-    ["T3CODE_HOME", environment.T3CODE_HOME],
-    ["T3CODE_COMMIT_HASH", environment.T3CODE_COMMIT_HASH],
+    ["MYBOT_PORT", environment.MYBOT_PORT],
+    ["MYBOT_HOME", environment.MYBOT_HOME],
+    ["MYBOT_COMMIT_HASH", environment.MYBOT_COMMIT_HASH],
     ["LUCENT_OTLP_TRACES_URL", environment.LUCENT_OTLP_TRACES_URL],
     ["LUCENT_OTLP_EXPORT_INTERVAL_MS", environment.LUCENT_OTLP_EXPORT_INTERVAL_MS],
     ["LUCENT_OTLP_HEADERS", environment.LUCENT_OTLP_HEADERS],
     ["LUCENT_OTLP_PROTOCOL", environment.LUCENT_OTLP_PROTOCOL],
-    ["T3CODE_DESKTOP_APP_USER_MODEL_ID", APP_BUNDLE_ID],
+    ["MYBOT_DESKTOP_APP_USER_MODEL_ID", APP_BUNDLE_ID],
   ].filter((entry) => typeof entry[1] === "string" && entry[1].trim().length > 0);
   return [
     ...envEntries.map(

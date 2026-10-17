@@ -4,22 +4,22 @@
 #   irm https://raw.githubusercontent.com/Lucent-Codeworks/mybot/main/scripts/install.ps1 | iex
 #
 # Environment:
-#   T3CODE_CHANNEL           release train to follow: stable, nightly, or preview
+#   MYBOT_CHANNEL           release train to follow: stable, nightly, or preview
 #                            (default: stable; preview is a maintainers' test train)
-#   T3CODE_VERSION           exact version to install (overrides T3CODE_CHANNEL)
-#   T3CODE_HOME              MyBot home directory (default: ~\.t3)
-#   T3CODE_INSTALL_BIN_DIR   where mybot.exe is linked (default: ~\.local\bin)
-#   T3CODE_RELEASE_BASE_URL  mirror for releases/download (default: GitHub)
+#   MYBOT_VERSION           exact version to install (overrides MYBOT_CHANNEL)
+#   MYBOT_HOME              MyBot home directory (default: ~\.t3)
+#   MYBOT_INSTALL_BIN_DIR   where mybot.exe is linked (default: ~\.local\bin)
+#   MYBOT_RELEASE_BASE_URL  mirror for releases/download (default: GitHub)
 #
-# The archive is unpacked into $T3CODE_HOME\runtime\versions\<version>, the
+# The archive is unpacked into $MYBOT_HOME\runtime\versions\<version>, the
 # same layout `mybot service install` uses, so the service reuses this download.
 $ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $repo = "Lucent-Codeworks/mybot"
-$baseUrl = if ($env:T3CODE_RELEASE_BASE_URL) { $env:T3CODE_RELEASE_BASE_URL.TrimEnd("/") } else { "https://github.com/$repo/releases/download" }
-$t3Home = if ($env:T3CODE_HOME) { $env:T3CODE_HOME } else { Join-Path $HOME ".t3" }
-$binDir = if ($env:T3CODE_INSTALL_BIN_DIR) { $env:T3CODE_INSTALL_BIN_DIR } else { Join-Path $HOME ".local\bin" }
+$baseUrl = if ($env:MYBOT_RELEASE_BASE_URL) { $env:MYBOT_RELEASE_BASE_URL.TrimEnd("/") } else { "https://github.com/$repo/releases/download" }
+$t3Home = if ($env:MYBOT_HOME) { $env:MYBOT_HOME } else { Join-Path $HOME ".t3" }
+$binDir = if ($env:MYBOT_INSTALL_BIN_DIR) { $env:MYBOT_INSTALL_BIN_DIR } else { Join-Path $HOME ".local\bin" }
 
 function Fail([string] $message) {
   Write-Error "mybot install: $message"
@@ -114,8 +114,8 @@ $arch = switch ($rawArch) {
   default { Fail "unsupported architecture $rawArch" }
 }
 
-$channel = if ($env:T3CODE_CHANNEL) { $env:T3CODE_CHANNEL } else { "stable" }
-$version = $env:T3CODE_VERSION
+$channel = if ($env:MYBOT_CHANNEL) { $env:MYBOT_CHANNEL } else { "stable" }
+$version = $env:MYBOT_VERSION
 if (-not $version) {
   # Tags are v<semver>; the channel is the prerelease identifier, or none for
   # stable. Only tags of the requested train are considered, so a stable
@@ -124,16 +124,16 @@ if (-not $version) {
     "stable" { '^v\d+\.\d+\.\d+$' }
     "nightly" { '^v\d+\.\d+\.\d+-nightly\.\d+\.\d+$' }
     "preview" { '^v\d+\.\d+\.\d+-preview\.\d+\.\d+$' }
-    default { Fail "T3CODE_CHANNEL must be stable, nightly, or preview" }
+    default { Fail "MYBOT_CHANNEL must be stable, nightly, or preview" }
   }
   $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases?per_page=100" -Headers @{ "User-Agent" = "mybot-install" }
   $tag = ($releases | Where-Object { -not $_.draft -and $_.tag_name -match $tagPattern } | Select-Object -First 1).tag_name
-  if (-not $tag) { Fail "could not find a $channel release; set T3CODE_VERSION" }
+  if (-not $tag) { Fail "could not find a $channel release; set MYBOT_VERSION" }
   $version = $tag.Substring(1)
 }
 if ($version -match '-preview\.') {
-  Write-Warning "mybot $version is a preview build. Preview builds are cut by maintainers from unreleased branches to exercise the release pipeline. They can be broken, receive no fixes, and are never offered as updates. Set T3CODE_CHANNEL=stable (the default) for a supported build."
-  if ($channel -ne "preview" -and -not $env:T3CODE_VERSION) {
+  Write-Warning "mybot $version is a preview build. Preview builds are cut by maintainers from unreleased branches to exercise the release pipeline. They can be broken, receive no fixes, and are never offered as updates. Set MYBOT_CHANNEL=stable (the default) for a supported build."
+  if ($channel -ne "preview" -and -not $env:MYBOT_VERSION) {
     Fail "refusing a preview build that was not explicitly requested"
   }
 }

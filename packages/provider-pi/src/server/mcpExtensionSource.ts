@@ -11,12 +11,12 @@
  */
 import { MYBOT_ORCHESTRATION_INSTRUCTIONS } from "@mybot/provider-core/server/orchestrationInstructions";
 
-export const PI_T3_MCP_EXTENSION_FILENAME = "pi-t3-mcp-extension.ts";
+export const PI_MYBOT_MCP_EXTENSION_FILENAME = "pi-t3-mcp-extension.ts";
 
-export const T3_MCP_URL_ENV = "T3_MCP_URL";
-export const T3_MCP_BEARER_ENV = "T3_MCP_BEARER_TOKEN";
-export const T3_PI_RUNTIME_MODE_ENV = "T3_PI_RUNTIME_MODE";
-export const T3_PI_MCP_EXTENSION_PATH_ENV = "T3_PI_MCP_EXTENSION_PATH";
+export const MYBOT_MCP_URL_ENV = "MYBOT_MCP_URL";
+export const MYBOT_MCP_BEARER_ENV = "MYBOT_MCP_BEARER_TOKEN";
+export const MYBOT_PI_RUNTIME_MODE_ENV = "MYBOT_PI_RUNTIME_MODE";
+export const MYBOT_PI_MCP_EXTENSION_PATH_ENV = "MYBOT_PI_MCP_EXTENSION_PATH";
 
 /**
  * Pi tools whose confirmations the bridge raises as file-change approvals.
@@ -24,16 +24,16 @@ export const T3_PI_MCP_EXTENSION_PATH_ENV = "T3_PI_MCP_EXTENSION_PATH";
  */
 export const PI_FILE_CHANGE_TOOLS = ["edit", "write"] as const;
 
-export const PI_T3_MCP_EXTENSION_SOURCE = `\
+export const PI_MYBOT_MCP_EXTENSION_SOURCE = `\
 import { stripFrontmatter, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import * as NodeFSP from "node:fs/promises";
 import * as NodePath from "node:path";
 import { Type } from "typebox";
 
-const URL_ENV = ${JSON.stringify(T3_MCP_URL_ENV)};
-const TOKEN_ENV = ${JSON.stringify(T3_MCP_BEARER_ENV)};
-const RUNTIME_MODE_ENV = ${JSON.stringify(T3_PI_RUNTIME_MODE_ENV)};
-const EXTENSION_PATH_ENV = ${JSON.stringify(T3_PI_MCP_EXTENSION_PATH_ENV)};
+const URL_ENV = ${JSON.stringify(MYBOT_MCP_URL_ENV)};
+const TOKEN_ENV = ${JSON.stringify(MYBOT_MCP_BEARER_ENV)};
+const RUNTIME_MODE_ENV = ${JSON.stringify(MYBOT_PI_RUNTIME_MODE_ENV)};
+const EXTENSION_PATH_ENV = ${JSON.stringify(MYBOT_PI_MCP_EXTENSION_PATH_ENV)};
 const ORCHESTRATION_INSTRUCTIONS = ${JSON.stringify(MYBOT_ORCHESTRATION_INSTRUCTIONS.trim())};
 const PROTOCOL = "2025-06-18";
 const READ_ONLY_TOOLS = new Set(["read", "grep", "find", "ls"]);
@@ -345,7 +345,7 @@ export default async function myBotMcpExtension(pi: ExtensionAPI) {
   if (endpoint === undefined || token === undefined) {
     pi.on("session_start", async (_event, ctx) => {
       ctx.ui.notify(
-        "t3-code MCP unavailable: T3_MCP_URL or T3_MCP_BEARER_TOKEN is missing.",
+        "t3-code MCP unavailable: MYBOT_MCP_URL or MYBOT_MCP_BEARER_TOKEN is missing.",
         "warning",
       );
     });

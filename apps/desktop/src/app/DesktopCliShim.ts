@@ -10,7 +10,7 @@ import { makeComponentLogger } from "./DesktopObservability.ts";
 // to run (`sudo mybot browser setup`) had nothing to call. The app keeps a small
 // launcher for its bundled CLI in the MyBot home, which is never on PATH and so
 // never shadows another `mybot`, and the server names it by absolute path in those
-// commands through T3CODE_CLI_PATH. An AppImage mounts somewhere new each run,
+// commands through MYBOT_CLI_PATH. An AppImage mounts somewhere new each run,
 // so its launcher mounts the AppImage itself instead of pointing into it.
 const { logInfo, logWarning } = makeComponentLogger("desktop-cli-shim");
 
@@ -73,8 +73,8 @@ export const renderCliShim = (input: {
             "chcp 65001 >nul",
           ]
         : []),
-      `set "T3CODE_CLI_PATH=${cmdText(input.shimPath)}"`,
-      `if not defined T3CODE_HOME set "T3CODE_HOME=${cmdText(input.myBotHome)}"`,
+      `set "MYBOT_CLI_PATH=${cmdText(input.shimPath)}"`,
+      `if not defined MYBOT_HOME set "MYBOT_HOME=${cmdText(input.myBotHome)}"`,
       'set "ELECTRON_RUN_AS_NODE=1"',
       // A goto, not a parenthesized block: "Program Files (x86)" would close the block early.
       `if exist ${cmdWord(target.executable)} goto run`,
@@ -92,9 +92,9 @@ export const renderCliShim = (input: {
   const header = [
     "#!/bin/sh",
     `# ${MARKER}`,
-    `export T3CODE_CLI_PATH=${shellWord(input.shimPath)}`,
+    `export MYBOT_CLI_PATH=${shellWord(input.shimPath)}`,
     `home=${shellWord(input.myBotHome)}`,
-    'export T3CODE_HOME="${T3CODE_HOME:-$home}"',
+    'export MYBOT_HOME="${MYBOT_HOME:-$home}"',
     "export ELECTRON_RUN_AS_NODE=1",
     `app=${shellWord(target.kind === "appimage" ? target.appImage : target.executable)}`,
     'if [ ! -x "$app" ]; then',
@@ -155,7 +155,7 @@ export const legacyLauncherPath = (environment: DesktopEnvironment.DesktopEnviro
 
 /**
  * Writes the packaged app's launcher to `<MyBot home>/bin` and returns its path
- * for the backend's T3CODE_CLI_PATH. Development builds run from a checkout
+ * for the backend's MYBOT_CLI_PATH. Development builds run from a checkout
  * and get none.
  */
 export const install = Effect.gen(function* () {

@@ -101,16 +101,19 @@ describe("ssh tunnel scripts", () => {
   it("installs and runs the release archive without Node, npm, or npx", () => {
     const script = SshTunnel.buildRemoteMyBotRunnerScript(ARCHIVE);
 
-    assert.include(script, "T3_ARCHIVE_VERSION='1.2.3-preview.20260911.4'");
-    assert.include(script, "T3_NODE_SCRIPT_PATH=''");
+    assert.include(script, "MYBOT_ARCHIVE_VERSION='1.2.3-preview.20260911.4'");
+    assert.include(script, "MYBOT_NODE_SCRIPT_PATH=''");
     assert.include(
       script,
-      "T3_RELEASE_BASE_URL='https://github.com/Lucent-Codeworks/mybot/releases/download'",
+      "MYBOT_RELEASE_BASE_URL='https://github.com/Lucent-Codeworks/mybot/releases/download'",
     );
-    assert.include(script, 'T3_RUNTIME_DIR="$HOME/.t3/runtime/versions/$T3_ARCHIVE_VERSION"');
-    assert.include(script, 'T3_ARCHIVE="mybot-$T3_ARCHIVE_VERSION-$T3_PLATFORM-$T3_ARCH.tar.gz"');
+    assert.include(script, 'MYBOT_RUNTIME_DIR="$HOME/.t3/runtime/versions/$MYBOT_ARCHIVE_VERSION"');
+    assert.include(
+      script,
+      'MYBOT_ARCHIVE="mybot-$MYBOT_ARCHIVE_VERSION-$MYBOT_PLATFORM-$MYBOT_ARCH.tar.gz"',
+    );
     assert.include(script, "SHA256SUMS");
-    assert.include(script, 'exec "$T3_RUNTIME_DIR/mybot" "$@"');
+    assert.include(script, 'exec "$MYBOT_RUNTIME_DIR/mybot" "$@"');
     assert.notInclude(script, "npx");
     assert.notInclude(script, "npm exec");
     assert.notInclude(script, "mybot@latest");
@@ -119,46 +122,46 @@ describe("ssh tunnel scripts", () => {
     // the completion marker after acquiring it.
     assert.include(
       script,
-      'T3_LOCK="$HOME/.t3/runtime/versions/.$T3_ARCHIVE_VERSION.install.lock"',
+      'MYBOT_LOCK="$HOME/.t3/runtime/versions/.$MYBOT_ARCHIVE_VERSION.install.lock"',
     );
     // mkdir is the exclusive create; the pid follows atomically. A dead owner
     // is reclaimed at once, a never-published owner after a short grace.
-    assert.include(script, 'while ! mkdir "$T3_LOCK" 2>/dev/null; do');
-    assert.include(script, 'mv "$T3_LOCK/pid.tmp" "$T3_LOCK/pid"');
-    assert.include(script, 'if ! kill -0 "$T3_LOCK_OWNER" 2>/dev/null; then');
-    assert.include(script, 'if [ "$T3_LOCK_UNOWNED" -ge 5 ]; then');
-    assert.include(script, 'if [ "$T3_LOCK_WAITED" -ge 360 ]; then');
-    assert.include(script, '"$T3_STAGING/SHA256SUMS" 30');
-    assert.include(script, '"$T3_STAGING/$T3_ARCHIVE" 240');
-    assert.notInclude(script, "T3_LOCK_CANDIDATE");
+    assert.include(script, 'while ! mkdir "$MYBOT_LOCK" 2>/dev/null; do');
+    assert.include(script, 'mv "$MYBOT_LOCK/pid.tmp" "$MYBOT_LOCK/pid"');
+    assert.include(script, 'if ! kill -0 "$MYBOT_LOCK_OWNER" 2>/dev/null; then');
+    assert.include(script, 'if [ "$MYBOT_LOCK_UNOWNED" -ge 5 ]; then');
+    assert.include(script, 'if [ "$MYBOT_LOCK_WAITED" -ge 360 ]; then');
+    assert.include(script, '"$MYBOT_STAGING/SHA256SUMS" 30');
+    assert.include(script, '"$MYBOT_STAGING/$MYBOT_ARCHIVE" 240');
+    assert.notInclude(script, "MYBOT_LOCK_CANDIDATE");
     assert.notInclude(script, "-mmin");
     assert.equal(script.split("if ! t3_runtime_ready; then").length - 1, 2);
     assert.isBelow(
-      script.indexOf('"$T3_STAGING/mybot" --version'),
-      script.indexOf('> "$T3_STAGING/.install-complete"'),
+      script.indexOf('"$MYBOT_STAGING/mybot" --version'),
+      script.indexOf('> "$MYBOT_STAGING/.install-complete"'),
     );
     // Node discovery is defined for the dev path but only ever invoked inside
     // the node-script branch, which the archive path skips entirely.
     assert.equal(script.split("ensure_remote_node_path || true").length - 1, 1);
     assert.isBelow(
       script.indexOf("ensure_remote_node_path || true"),
-      script.indexOf('exec node "$T3_NODE_SCRIPT_PATH" "$@"'),
+      script.indexOf('exec node "$MYBOT_NODE_SCRIPT_PATH" "$@"'),
     );
     assert.isBelow(
-      script.indexOf('exec node "$T3_NODE_SCRIPT_PATH" "$@"'),
-      script.indexOf("T3_ARCHIVE_VERSION="),
+      script.indexOf('exec node "$MYBOT_NODE_SCRIPT_PATH" "$@"'),
+      script.indexOf("MYBOT_ARCHIVE_VERSION="),
     );
 
     const launch = SshTunnel.buildRemoteLaunchScript({
       ...ARCHIVE,
       releaseBaseUrl: "https://mirror.example/mybot/",
     });
-    assert.include(launch, "T3_ARCHIVE_MODE=1");
-    assert.include(launch, "T3_RELEASE_BASE_URL='https://mirror.example/mybot'");
+    assert.include(launch, "MYBOT_ARCHIVE_MODE=1");
+    assert.include(launch, "MYBOT_RELEASE_BASE_URL='https://mirror.example/mybot'");
     assert.include(launch, '"$RUNNER_FILE" __ssh-helper pick-port "$PORT_FILE"');
     assert.include(launch, '"$RUNNER_FILE" __ssh-helper wait-ready "$REMOTE_PORT"');
     assert.include(launch, '"$RUNNER_FILE" __ssh-helper runtime-port "$DEFAULT_RUNTIME_FILE"');
-    assert.include(SshTunnel.buildRemoteLaunchScript(NODE_SCRIPT), "T3_ARCHIVE_MODE=0");
+    assert.include(SshTunnel.buildRemoteLaunchScript(NODE_SCRIPT), "MYBOT_ARCHIVE_MODE=0");
   });
 
   it("rejects archive versions that are not a single exact version segment", () => {
@@ -179,7 +182,7 @@ describe("ssh tunnel scripts", () => {
     }
     assert.include(
       SshTunnel.buildRemoteMyBotRunnerScript(ARCHIVE),
-      "T3_ARCHIVE_VERSION='1.2.3-preview.20260911.4'",
+      "MYBOT_ARCHIVE_VERSION='1.2.3-preview.20260911.4'",
     );
   });
 
@@ -196,7 +199,7 @@ describe("ssh tunnel scripts", () => {
   it("does not hard-code a remote node engine range", () => {
     const script = SshTunnel.buildRemoteMyBotRunnerScript(NODE_SCRIPT);
 
-    assert.include(script, "T3_NODE_ENGINE_RANGE=''");
+    assert.include(script, "MYBOT_NODE_ENGINE_RANGE=''");
     assert.notInclude(script, TEST_NODE_ENGINE_RANGE);
   });
 
@@ -208,12 +211,12 @@ describe("ssh tunnel scripts", () => {
 
     assert.include(
       script,
-      "T3_NODE_SCRIPT_PATH='/Users/julius/Development/Work/codething-mvp/apps/server/dist/bin.mjs'",
+      "MYBOT_NODE_SCRIPT_PATH='/Users/julius/Development/Work/codething-mvp/apps/server/dist/bin.mjs'",
     );
-    assert.include(script, 'exec node "$T3_NODE_SCRIPT_PATH" "$@"');
-    assert.include(script, "T3_ARCHIVE_VERSION=''");
+    assert.include(script, 'exec node "$MYBOT_NODE_SCRIPT_PATH" "$@"');
+    assert.include(script, "MYBOT_ARCHIVE_VERSION=''");
     assert.include(script, 'prepend_path_if_dir "$HOME/.local/bin"');
-    assert.include(script, `T3_NODE_ENGINE_RANGE='${TEST_NODE_ENGINE_RANGE}'`);
+    assert.include(script, `MYBOT_NODE_ENGINE_RANGE='${TEST_NODE_ENGINE_RANGE}'`);
     assert.include(script, "remote_node_satisfies_engine()");
     assert.include(script, "function satisfiesSemverRange");
     assert.include(script, "satisfiesSemverRange(rawVersion, range)");
@@ -227,14 +230,14 @@ describe("ssh tunnel scripts", () => {
     assert.include(script, 'prepend_path_if_dir "$HOME/.nodenv/shims"');
     assert.include(script, 'NVM_DIR="$HOME/.nvm"');
     assert.include(script, "nvm use --silent default");
-    assert.include(script, 'for T3_NODE_BIN in "$NVM_DIR"/versions/node/*/bin');
+    assert.include(script, 'for MYBOT_NODE_BIN in "$NVM_DIR"/versions/node/*/bin');
     assert.notInclude(script, "ensure $NVM_DIR/nvm.sh is available");
     assert.notInclude(script, "npx");
   });
 
   it("embeds the runner in the launch script byte for byte", () => {
     const runner = SshTunnel.buildRemoteMyBotRunnerScript(ARCHIVE);
-    assert.include(runner, 'printf \'%s\\n\' "$$" > "$T3_LOCK/pid.tmp"');
+    assert.include(runner, 'printf \'%s\\n\' "$$" > "$MYBOT_LOCK/pid.tmp"');
     assert.include(SshTunnel.buildRemoteLaunchScript(ARCHIVE), runner);
   });
 
@@ -253,7 +256,7 @@ describe("ssh tunnel scripts", () => {
     assert.include(launch, "RUNNER_CHANGED=1");
     assert.include(launch, "ensure_remote_node_path()");
     assert.include(launch, "if ! ensure_remote_node_path; then");
-    assert.include(devLaunch, `T3_NODE_ENGINE_RANGE='${TEST_NODE_ENGINE_RANGE}'`);
+    assert.include(devLaunch, `MYBOT_NODE_ENGINE_RANGE='${TEST_NODE_ENGINE_RANGE}'`);
     assert.include(devLaunch, "does not satisfy required range ");
     assert.include(launch, 'kill "$REMOTE_PID" 2>/dev/null || true');
     assert.include(launch, "wait_ready");
@@ -264,7 +267,7 @@ describe("ssh tunnel scripts", () => {
     assert.include(launch, 'wait_ready "60000"');
     assert.include(launch, 'if [ -s "$LOG_FILE" ]; then');
     assert.include(launch, "It wrote nothing to %s");
-    assert.include(launch, "T3_ARCHIVE_VERSION='1.2.3-preview.20260911.4'");
+    assert.include(launch, "MYBOT_ARCHIVE_VERSION='1.2.3-preview.20260911.4'");
     assert.include(
       SshTunnel.buildRemotePairingScript(stateKey, ARCHIVE),
       '"$RUNNER_FILE" auth pairing create --base-dir "$PAIRING_BASE_DIR" --json',
@@ -276,7 +279,7 @@ describe("ssh tunnel scripts", () => {
     assert.notInclude(SshTunnel.buildRemotePairingScript(stateKey, ARCHIVE), "server-home");
     assert.include(
       SshTunnel.buildRemotePairingScript(stateKey, ARCHIVE),
-      "T3_ARCHIVE_VERSION='1.2.3-preview.20260911.4'",
+      "MYBOT_ARCHIVE_VERSION='1.2.3-preview.20260911.4'",
     );
     assert.include(
       SshTunnel.buildRemoteStopScript(stateKey),

@@ -1081,7 +1081,7 @@ function acpMcpFallbackInput(value: string | undefined): Record<string, unknown>
  * its server as "t3-code", and matches are additionally gated on the known
  * MyBot tool inventory, so the separator match can stay loose.
  */
-const T3_MCP_TITLE_CALL =
+const MYBOT_MCP_TITLE_CALL =
   /^(?:mcp[-_]{1,2})?t3[-_ ]?code[-_.:/ ]{1,3}(?<tool>[A-Za-z0-9][A-Za-z0-9_.-]*)(?::.*)?$/i;
 
 /**
@@ -1089,7 +1089,7 @@ const T3_MCP_TITLE_CALL =
  * qwen-code appends ": <args json>" to the same template; Auggie namespaces
  * tool-first as "<tool>_t3-code".
  */
-const T3_MCP_TITLE_SUFFIX_CALL =
+const MYBOT_MCP_TITLE_SUFFIX_CALL =
   /^(?<tool>[A-Za-z0-9][A-Za-z0-9_.-]*?)(?: \(t3[-_ ]?code MCP Server\)(?::|$)|[-_.]t3[-_ ]?code$)/i;
 
 /**
@@ -1097,7 +1097,7 @@ const T3_MCP_TITLE_SUFFIX_CALL =
  * names; Kimi additionally appends ": <raw args json>". Safe only because the
  * match is gated on the known MyBot tool inventory.
  */
-const T3_MCP_BARE_TITLE_CALL = /^(?<tool>[A-Za-z0-9_]+)(?::\s|$)/;
+const MYBOT_MCP_BARE_TITLE_CALL = /^(?<tool>[A-Za-z0-9_]+)(?::\s|$)/;
 
 /**
  * Best-effort recovery of MCP identity from a generic ACP tool call.
@@ -1180,9 +1180,9 @@ export function extractMcpToolCallIdentity(
     if (qualified?.[1] && qualified[2] && !/^t3[-_ ]?code$/i.test(qualified[1]))
       return { server: qualified[1], tool: qualified[2] };
     const match =
-      T3_MCP_TITLE_CALL.exec(trimmed) ??
-      T3_MCP_TITLE_SUFFIX_CALL.exec(trimmed) ??
-      T3_MCP_BARE_TITLE_CALL.exec(trimmed);
+      MYBOT_MCP_TITLE_CALL.exec(trimmed) ??
+      MYBOT_MCP_TITLE_SUFFIX_CALL.exec(trimmed) ??
+      MYBOT_MCP_BARE_TITLE_CALL.exec(trimmed);
     const candidateTool = match?.groups?.tool;
     if (candidateTool !== undefined && MYBOT_MCP_TOOL_NAMES.has(candidateTool)) {
       return { server: "t3-code", tool: candidateTool };

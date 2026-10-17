@@ -44,11 +44,11 @@ describe("DesktopEnvironment", () => {
       const environment = yield* makeEnvironment(
         {},
         {
-          T3CODE_HOME: " /tmp/mybot ",
-          T3CODE_COMMIT_HASH: " 0123456789abcdef ",
-          T3CODE_PORT: "4949",
+          MYBOT_HOME: " /tmp/mybot ",
+          MYBOT_COMMIT_HASH: " 0123456789abcdef ",
+          MYBOT_PORT: "4949",
           VITE_DEV_SERVER_URL: "http://localhost:5173",
-          T3CODE_DEV_REMOTE_T3_SERVER_ENTRY_PATH: " /remote/server.mjs ",
+          MYBOT_DEV_REMOTE_SERVER_ENTRY_PATH: " /remote/server.mjs ",
           LUCENT_OTLP_TRACES_URL: " http://127.0.0.1:4318/v1/traces ",
           LUCENT_OTLP_METRICS_URL: " http://127.0.0.1:4318/v1/metrics ",
           LUCENT_OTLP_LOGS_URL: " http://127.0.0.1:4318/v1/logs ",
@@ -112,7 +112,7 @@ describe("DesktopEnvironment", () => {
       const environment = yield* makeEnvironment(
         {},
         {
-          T3CODE_HOME: "/tmp/mybot",
+          MYBOT_HOME: "/tmp/mybot",
         },
       );
 
@@ -178,7 +178,7 @@ describe("DesktopEnvironment", () => {
       const environment = yield* makeEnvironment(
         {},
         {
-          T3CODE_DESKTOP_APP_USER_MODEL_ID: " com.lucentcodeworks.mybot.dev.local ",
+          MYBOT_DESKTOP_APP_USER_MODEL_ID: " com.lucentcodeworks.mybot.dev.local ",
           VITE_DEV_SERVER_URL: "http://localhost:5173",
         },
       );

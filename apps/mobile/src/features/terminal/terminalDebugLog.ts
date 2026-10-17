@@ -3,13 +3,13 @@ import { createDebugLogger } from "../../lib/debugLog";
 /**
  * Debug logging for the mobile terminal pipeline. Prefix: `[mybot-terminal]`.
  *
- * Enabled when `__DEV__` is true, or set `globalThis.__T3_TERMINAL_DEBUG__`
- * (or the shared `globalThis.__T3_DEBUG__` filter) in a JS debugger / Metro
+ * Enabled when `__DEV__` is true, or set `globalThis.__MYBOT_TERMINAL_DEBUG__`
+ * (or the shared `globalThis.__MYBOT_DEBUG__` filter) in a JS debugger / Metro
  * console to trace release/TestFlight builds.
  */
 const logger = createDebugLogger("terminal", {
   enabledInDev: true,
-  legacyGlobalFlag: "__T3_TERMINAL_DEBUG__",
+  legacyGlobalFlag: "__MYBOT_TERMINAL_DEBUG__",
 });
 
 export function terminalDebugLog(message: string, data?: Record<string, unknown>): void {

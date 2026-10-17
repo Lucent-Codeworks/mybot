@@ -167,7 +167,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
       const layerConfig = ConfigProvider.layer(
         ConfigProvider.fromEnv({
           env: {
-            T3CODE_DEV_AUTH_TOKEN: "  reusable-dev-auth-token-that-is-long-enough  ",
+            MYBOT_DEV_AUTH_TOKEN: "  reusable-dev-auth-token-that-is-long-enough  ",
           },
         }),
       );
@@ -211,7 +211,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         tailscaleServePort: Option.none<number>(),
       };
       const layerConfig = ConfigProvider.layer(
-        ConfigProvider.fromEnv({ env: { T3CODE_DEV_AUTH_TOKEN: secret } }),
+        ConfigProvider.fromEnv({ env: { MYBOT_DEV_AUTH_TOKEN: secret } }),
       );
       const error = yield* resolveServerConfig(flags, Option.none()).pipe(
         Effect.provide(Layer.mergeAll(layerConfig, NetService.layer)),
@@ -264,17 +264,17 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
                 env: {
-                  T3CODE_LOG_LEVEL: "Warn",
-                  T3CODE_MODE: "desktop",
-                  T3CODE_PORT: "4001",
-                  T3CODE_HOST: "0.0.0.0",
-                  T3CODE_HOME: baseDir,
+                  MYBOT_LOG_LEVEL: "Warn",
+                  MYBOT_MODE: "desktop",
+                  MYBOT_PORT: "4001",
+                  MYBOT_HOST: "0.0.0.0",
+                  MYBOT_HOME: baseDir,
                   VITE_DEV_SERVER_URL: "http://127.0.0.1:5173",
-                  T3CODE_DEV_ALLOWED_ORIGINS:
+                  MYBOT_DEV_ALLOWED_ORIGINS:
                     "https://host.example.ts.net, https://phone.example.ts.net ",
-                  T3CODE_NO_BROWSER: "true",
-                  T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "false",
-                  T3CODE_LOG_WS_EVENTS: "true",
+                  MYBOT_NO_BROWSER: "true",
+                  MYBOT_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "false",
+                  MYBOT_LOG_WS_EVENTS: "true",
                 },
               }),
             ),
@@ -337,15 +337,15 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
                 env: {
-                  T3CODE_LOG_LEVEL: "Warn",
-                  T3CODE_MODE: "desktop",
-                  T3CODE_PORT: "4001",
-                  T3CODE_HOST: "0.0.0.0",
-                  T3CODE_HOME: join(NodeOS.tmpdir(), "ignored-base"),
+                  MYBOT_LOG_LEVEL: "Warn",
+                  MYBOT_MODE: "desktop",
+                  MYBOT_PORT: "4001",
+                  MYBOT_HOST: "0.0.0.0",
+                  MYBOT_HOME: join(NodeOS.tmpdir(), "ignored-base"),
                   VITE_DEV_SERVER_URL: "http://127.0.0.1:5173",
-                  T3CODE_NO_BROWSER: "false",
-                  T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "false",
-                  T3CODE_LOG_WS_EVENTS: "false",
+                  MYBOT_NO_BROWSER: "false",
+                  MYBOT_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "false",
+                  MYBOT_LOG_WS_EVENTS: "false",
                 },
               }),
             ),
@@ -415,10 +415,10 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
                 env: {
-                  T3CODE_BOOTSTRAP_FD: String(fd),
-                  T3CODE_NO_BROWSER: "true",
-                  T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
-                  T3CODE_LOG_WS_EVENTS: "true",
+                  MYBOT_BOOTSTRAP_FD: String(fd),
+                  MYBOT_NO_BROWSER: "true",
+                  MYBOT_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
+                  MYBOT_LOG_WS_EVENTS: "true",
                 },
               }),
             ),
@@ -495,7 +495,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
                 env: {
-                  T3CODE_BOOTSTRAP_FD: String(fd),
+                  MYBOT_BOOTSTRAP_FD: String(fd),
                 },
               }),
             ),
@@ -654,12 +654,12 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
                 env: {
-                  T3CODE_MODE: "web",
-                  T3CODE_BOOTSTRAP_FD: String(fd),
-                  T3CODE_HOME: baseDir,
-                  T3CODE_NO_BROWSER: "true",
-                  T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
-                  T3CODE_LOG_WS_EVENTS: "true",
+                  MYBOT_MODE: "web",
+                  MYBOT_BOOTSTRAP_FD: String(fd),
+                  MYBOT_HOME: baseDir,
+                  MYBOT_NO_BROWSER: "true",
+                  MYBOT_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
+                  MYBOT_LOG_WS_EVENTS: "true",
                 },
               }),
             ),
@@ -812,7 +812,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
     }),
   );
 
-  it.effect("lets T3CODE_OTEL_SDK_DISABLED=false override an ambient OTEL_SDK_DISABLED=true", () =>
+  it.effect("lets MYBOT_OTEL_SDK_DISABLED=false override an ambient OTEL_SDK_DISABLED=true", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
@@ -849,7 +849,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
           Layer.mergeAll(
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
-                env: { T3CODE_OTEL_SDK_DISABLED: "false", OTEL_SDK_DISABLED: "true" },
+                env: { MYBOT_OTEL_SDK_DISABLED: "false", OTEL_SDK_DISABLED: "true" },
               }),
             ),
             NetService.layer,
@@ -893,8 +893,8 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
                 env: {
-                  T3CODE_NO_BROWSER: "false",
-                  T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
+                  MYBOT_NO_BROWSER: "false",
+                  MYBOT_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
                 },
               }),
             ),

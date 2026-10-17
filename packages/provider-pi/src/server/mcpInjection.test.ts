@@ -5,11 +5,11 @@ import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 
 import {
-  PI_T3_MCP_EXTENSION_FILENAME,
-  T3_MCP_BEARER_ENV,
-  T3_MCP_URL_ENV,
-  T3_PI_RUNTIME_MODE_ENV,
-  T3_PI_MCP_EXTENSION_PATH_ENV,
+  PI_MYBOT_MCP_EXTENSION_FILENAME,
+  MYBOT_MCP_BEARER_ENV,
+  MYBOT_MCP_URL_ENV,
+  MYBOT_PI_RUNTIME_MODE_ENV,
+  MYBOT_PI_MCP_EXTENSION_PATH_ENV,
 } from "./mcpExtensionSource.ts";
 import {
   buildPiRpcLaunch,
@@ -63,17 +63,17 @@ describe("pi MyBot MCP injection", () => {
       "/tmp/cache/pi-t3-mcp-extension.ts",
     ]);
     assert.notInclude(launch.args, "--no-extensions");
-    assert.equal(launch.env[T3_MCP_URL_ENV], "http://127.0.0.1:43123/mcp");
-    assert.equal(launch.env[T3_MCP_BEARER_ENV], "secret-pi-token");
-    assert.equal(launch.env[T3_PI_RUNTIME_MODE_ENV], "approval-required");
-    assert.equal(launch.env[T3_PI_MCP_EXTENSION_PATH_ENV], "/tmp/cache/pi-t3-mcp-extension.ts");
+    assert.equal(launch.env[MYBOT_MCP_URL_ENV], "http://127.0.0.1:43123/mcp");
+    assert.equal(launch.env[MYBOT_MCP_BEARER_ENV], "secret-pi-token");
+    assert.equal(launch.env[MYBOT_PI_RUNTIME_MODE_ENV], "approval-required");
+    assert.equal(launch.env[MYBOT_PI_MCP_EXTENSION_PATH_ENV], "/tmp/cache/pi-t3-mcp-extension.ts");
 
     const permissionOnly = buildPiRpcLaunch({
       launchArgs: [],
       environment: {
-        [T3_MCP_URL_ENV]: "http://127.0.0.1:9999/stale",
-        [T3_MCP_BEARER_ENV]: "stale-token",
-        [T3_PI_MCP_EXTENSION_PATH_ENV]: "/stale/extension.ts",
+        [MYBOT_MCP_URL_ENV]: "http://127.0.0.1:9999/stale",
+        [MYBOT_MCP_BEARER_ENV]: "stale-token",
+        [MYBOT_PI_MCP_EXTENSION_PATH_ENV]: "/stale/extension.ts",
       },
       mcpSession: undefined,
       extensionPath: "/tmp/cache/pi-t3-mcp-extension.ts",
@@ -86,11 +86,11 @@ describe("pi MyBot MCP injection", () => {
       "/tmp/cache/pi-t3-mcp-extension.ts",
     ]);
     assert.isFalse(permissionOnly.hasMyBotMcp);
-    assert.isUndefined(permissionOnly.env[T3_MCP_URL_ENV]);
-    assert.isUndefined(permissionOnly.env[T3_MCP_BEARER_ENV]);
-    assert.equal(permissionOnly.env[T3_PI_RUNTIME_MODE_ENV], "auto-accept-edits");
+    assert.isUndefined(permissionOnly.env[MYBOT_MCP_URL_ENV]);
+    assert.isUndefined(permissionOnly.env[MYBOT_MCP_BEARER_ENV]);
+    assert.equal(permissionOnly.env[MYBOT_PI_RUNTIME_MODE_ENV], "auto-accept-edits");
     assert.equal(
-      permissionOnly.env[T3_PI_MCP_EXTENSION_PATH_ENV],
+      permissionOnly.env[MYBOT_PI_MCP_EXTENSION_PATH_ENV],
       "/tmp/cache/pi-t3-mcp-extension.ts",
     );
   });
@@ -104,7 +104,7 @@ describe("pi MyBot MCP injection", () => {
       runtimeMode: "auto",
     });
 
-    assert.equal(launch.env[T3_PI_RUNTIME_MODE_ENV], "approval-required");
+    assert.equal(launch.env[MYBOT_PI_RUNTIME_MODE_ENV], "approval-required");
   });
 
   it("forces tools and user extensions off for unattended text generation", () => {
@@ -160,7 +160,7 @@ describe("pi MyBot MCP injection", () => {
       const fs = yield* FileSystem.FileSystem;
       const cacheDir = yield* fs.makeTempDirectoryScoped({ prefix: "mybot-pi-extensions-" });
       const mcpDest = yield* materializePiMyBotMcpExtension(cacheDir);
-      assert.isTrue(mcpDest.endsWith(PI_T3_MCP_EXTENSION_FILENAME));
+      assert.isTrue(mcpDest.endsWith(PI_MYBOT_MCP_EXTENSION_FILENAME));
       const mcpSource = yield* fs.readFileString(mcpDest);
       assert.include(mcpSource, "export default async function myBotMcpExtension");
       assert.include(mcpSource, "before_agent_start");

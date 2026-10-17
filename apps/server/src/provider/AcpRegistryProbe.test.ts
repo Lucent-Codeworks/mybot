@@ -415,7 +415,7 @@ describe("ACP Registry probe", () => {
                 args: [mockAgentPath],
                 env: {
                   ...process.env,
-                  T3_ACP_COMMAND_ADVERTISEMENT_DELAY_MS: "25",
+                  MYBOT_ACP_COMMAND_ADVERTISEMENT_DELAY_MS: "25",
                 },
               },
             }),
@@ -479,8 +479,8 @@ describe("ACP Registry probe", () => {
             args: [mockAgentPath],
             env: {
               ...process.env,
-              T3_ACP_SESSION_LIFECYCLE: "1",
-              T3_ACP_AUTH_METHOD_ID: "mock-login",
+              MYBOT_ACP_SESSION_LIFECYCLE: "1",
+              MYBOT_ACP_AUTH_METHOD_ID: "mock-login",
             },
           },
         }),
@@ -533,7 +533,7 @@ describe("ACP Registry probe", () => {
           spawn: {
             command: "node",
             args: [mockAgentPath],
-            env: { ...process.env, T3_ACP_OMIT_SESSION_LIST_HANDLER: "1" },
+            env: { ...process.env, MYBOT_ACP_OMIT_SESSION_LIST_HANDLER: "1" },
           },
         }),
     });

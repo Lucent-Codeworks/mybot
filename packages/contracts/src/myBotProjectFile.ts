@@ -7,10 +7,10 @@ import { ProjectScriptIcon } from "./project.ts";
 export const MYBOT_PROJECT_FILE_NAME = "t3.json";
 
 /** Public URL of the published JSON Schema for {@link MyBotProjectFile}. */
-export const T3_PROJECT_FILE_SCHEMA_URL = "https://t3.codes/schema/t3.json";
+export const MYBOT_PROJECT_FILE_SCHEMA_URL = "https://t3.codes/schema/t3.json";
 
-const T3_PROJECT_FILE_PATH_MAX_LENGTH = 512;
-const T3_PROJECT_FILE_MAX_SCRIPTS = 50;
+const MYBOT_PROJECT_FILE_PATH_MAX_LENGTH = 512;
+const MYBOT_PROJECT_FILE_MAX_SCRIPTS = 50;
 
 // Annotations go on the encoded (string) side so they survive into the
 // published JSON Schema; decoding still trims and re-validates non-emptiness.
@@ -55,7 +55,7 @@ export type MyBotProjectFileScript = typeof MyBotProjectFileScript.Type;
 export const MyBotProjectFile = Schema.Struct({
   $schema: Schema.optionalKey(
     Schema.String.annotate({
-      description: `URL of the JSON Schema for this file, typically "${T3_PROJECT_FILE_SCHEMA_URL}".`,
+      description: `URL of the JSON Schema for this file, typically "${MYBOT_PROJECT_FILE_SCHEMA_URL}".`,
     }),
   ),
   iconPath: Schema.optionalKey(
@@ -64,7 +64,7 @@ export const MyBotProjectFile = Schema.Struct({
         description:
           'Workspace-relative path to the project icon (e.g. "assets/logo.svg"). Checked before MyBot\'s built-in icon locations.',
       },
-      T3_PROJECT_FILE_PATH_MAX_LENGTH,
+      MYBOT_PROJECT_FILE_PATH_MAX_LENGTH,
     ),
   ),
   scripts: Schema.optionalKey(
@@ -72,7 +72,7 @@ export const MyBotProjectFile = Schema.Struct({
       .annotate({
         description: "Project scripts shared with everyone who opens this repository in MyBot.",
       })
-      .check(Schema.isMaxLength(T3_PROJECT_FILE_MAX_SCRIPTS)),
+      .check(Schema.isMaxLength(MYBOT_PROJECT_FILE_MAX_SCRIPTS)),
   ),
 }).annotate({
   title: "MyBot project file",

@@ -84,16 +84,16 @@ const emptyBackendObservabilitySettings: BackendObservabilitySettings = {
 };
 
 const DESKTOP_BACKEND_ENV_NAMES = [
-  "T3CODE_PORT",
-  "T3CODE_MODE",
-  "T3CODE_NO_BROWSER",
-  "T3CODE_HOST",
-  "T3CODE_DESKTOP_WS_URL",
-  "T3CODE_DESKTOP_LAN_ACCESS",
-  "T3CODE_DESKTOP_LAN_HOST",
-  "T3CODE_DESKTOP_HTTPS_ENDPOINTS",
-  "T3CODE_TAILSCALE_SERVE",
-  "T3CODE_TAILSCALE_SERVE_PORT",
+  "MYBOT_PORT",
+  "MYBOT_MODE",
+  "MYBOT_NO_BROWSER",
+  "MYBOT_HOST",
+  "MYBOT_DESKTOP_WS_URL",
+  "MYBOT_DESKTOP_LAN_ACCESS",
+  "MYBOT_DESKTOP_LAN_HOST",
+  "MYBOT_DESKTOP_HTTPS_ENDPOINTS",
+  "MYBOT_TAILSCALE_SERVE",
+  "MYBOT_TAILSCALE_SERVE_PORT",
 ] as const;
 
 // Env vars that the WSL backend needs but Windows process.env won't forward
@@ -102,9 +102,9 @@ const DESKTOP_BACKEND_ENV_NAMES = [
 const WSL_FORWARDED_ENV_NAMES = [
   "OPENAI_API_KEY",
   "ANTHROPIC_API_KEY",
-  "T3CODE_TELEMETRY_ENABLED",
+  "MYBOT_TELEMETRY_ENABLED",
   // Otherwise the WSL server keeps exporting to endpoints from the bootstrap.
-  "T3CODE_OTEL_SDK_DISABLED",
+  "MYBOT_OTEL_SDK_DISABLED",
   "OTEL_SDK_DISABLED",
   "LUCENT_OTLP_HEADERS",
   "LUCENT_OTLP_PROTOCOL",
@@ -602,9 +602,9 @@ const resolvePrimaryStartConfig = Effect.fn("desktop.backendConfiguration.resolv
         ...backendChildEnvPatch(),
         ELECTRON_RUN_AS_NODE: "1",
         // The server names this launcher in commands it asks a person to run.
-        T3CODE_CLI_PATH: Option.getOrUndefined(input.cliPath),
+        MYBOT_CLI_PATH: Option.getOrUndefined(input.cliPath),
       },
-      // Primary wants process.env (PATH, dev-runner's T3CODE_HOME, etc.).
+      // Primary wants process.env (PATH, dev-runner's MYBOT_HOME, etc.).
       extendEnv: true,
       bootstrap,
       bootstrapDelivery: "fd3",
@@ -747,14 +747,14 @@ const resolveWslStartConfig = Effect.fn("desktop.backendConfiguration.resolveWsl
     }
   }
 
-  // Build an explicit copy of process.env minus T3CODE_HOME (dev-runner
+  // Build an explicit copy of process.env minus MYBOT_HOME (dev-runner
   // exports the Windows-side base dir for the primary; if it leaks into
   // the WSL backend the Linux side ends up sharing C:\Users\...\.t3 via
   // /mnt/c, which means both backends read/write the same database and
   // their env-ids collide).
   const parentEnvWithoutMyBotHome: Record<string, string | undefined> = {};
   for (const [key, value] of Object.entries(process.env)) {
-    if (key === "T3CODE_HOME") continue;
+    if (key === "MYBOT_HOME") continue;
     parentEnvWithoutMyBotHome[key] = value;
   }
   const wslEnv = mergeWslEnv(parentEnvWithoutMyBotHome.WSLENV, forwardedEnvNames);
@@ -770,7 +770,7 @@ const resolveWslStartConfig = Effect.fn("desktop.backendConfiguration.resolveWsl
       ...forwardedEnv,
       ...(wslEnv !== undefined ? { WSLENV: wslEnv } : {}),
     },
-    // env is already a complete process.env minus T3CODE_HOME; pass it
+    // env is already a complete process.env minus MYBOT_HOME; pass it
     // verbatim instead of letting the spawner re-merge process.env on top.
     extendEnv: false,
     bootstrap,

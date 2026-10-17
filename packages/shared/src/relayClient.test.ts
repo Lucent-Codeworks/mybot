@@ -317,7 +317,7 @@ describe("RelayClient", () => {
             Effect.provideService(
               ConfigProvider.ConfigProvider,
               ConfigProvider.fromEnv({
-                env: { PATH: "", T3CODE_CLOUDFLARED_PATH: overridePath },
+                env: { PATH: "", MYBOT_CLOUDFLARED_PATH: overridePath },
               }),
             ),
           ),
@@ -580,7 +580,7 @@ describe("RelayClient", () => {
             yield* writeExecutable(overridePath);
             versions[overridePath] = "2025.6.0";
             const manager = yield* RelayClient.makeCloudflaredRelayClient({ baseDir });
-            const env = { PATH: "", T3CODE_CLOUDFLARED_PATH: overridePath };
+            const env = { PATH: "", MYBOT_CLOUDFLARED_PATH: overridePath };
             const withEnv = Effect.provideService(
               ConfigProvider.ConfigProvider,
               ConfigProvider.fromEnv({ env }),

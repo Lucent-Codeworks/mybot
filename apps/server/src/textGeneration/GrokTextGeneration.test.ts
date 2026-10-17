@@ -76,8 +76,8 @@ it.layer(layerGrokTextGenerationTest)("GrokTextGeneration", (it) => {
 
     return withFakeAcpGrok(
       {
-        T3_ACP_REQUEST_LOG_PATH: requestLogPath,
-        T3_ACP_PROMPT_RESPONSE_TEXT: JSON.stringify({ title: "Add Grok provider" }),
+        MYBOT_ACP_REQUEST_LOG_PATH: requestLogPath,
+        MYBOT_ACP_PROMPT_RESPONSE_TEXT: JSON.stringify({ title: "Add Grok provider" }),
       },
       (textGeneration) =>
         Effect.gen(function* () {
@@ -110,7 +110,7 @@ it.layer(layerGrokTextGenerationTest)("GrokTextGeneration", (it) => {
   it.effect("extracts the JSON object when Grok wraps it in conversational text", () =>
     withFakeAcpGrok(
       {
-        T3_ACP_PROMPT_RESPONSE_TEXT:
+        MYBOT_ACP_PROMPT_RESPONSE_TEXT:
           "Sure! Here's a thread title:\n\n" +
           JSON.stringify({ title: "Investigate failing CI" }) +
           "\n\nLet me know if you need anything else.",
@@ -130,7 +130,7 @@ it.layer(layerGrokTextGenerationTest)("GrokTextGeneration", (it) => {
   it.effect("surfaces ACP request failures as text generation errors", () =>
     withFakeAcpGrok(
       {
-        T3_ACP_PROMPT_RESPONSE_TEXT: JSON.stringify({ title: "unreachable" }),
+        MYBOT_ACP_PROMPT_RESPONSE_TEXT: JSON.stringify({ title: "unreachable" }),
       },
       (textGeneration) =>
         Effect.gen(function* () {
@@ -153,7 +153,7 @@ it.layer(layerGrokTextGenerationTest)("GrokTextGeneration", (it) => {
   it.effect("fails with TextGenerationError when output is empty", () =>
     withFakeAcpGrok(
       {
-        T3_ACP_PROMPT_RESPONSE_TEXT: "   \n  ",
+        MYBOT_ACP_PROMPT_RESPONSE_TEXT: "   \n  ",
       },
       (textGeneration) =>
         Effect.gen(function* () {
@@ -173,7 +173,7 @@ it.layer(layerGrokTextGenerationTest)("GrokTextGeneration", (it) => {
   it.effect("fails with TextGenerationError when output is unparseable JSON", () =>
     withFakeAcpGrok(
       {
-        T3_ACP_PROMPT_RESPONSE_TEXT: "totally not json output from a confused model",
+        MYBOT_ACP_PROMPT_RESPONSE_TEXT: "totally not json output from a confused model",
       },
       (textGeneration) =>
         Effect.gen(function* () {

@@ -155,7 +155,7 @@ it.layer(NodeServices.layer)("root CLI commands", (it) => {
       const desktop = {
         node: "/tmp/.mount_T3abc/mybot",
         entry: "/tmp/.mount_T3abc/resources/app.asar/apps/server/dist/bin.mjs",
-        env: { T3CODE_CLI_PATH: shim },
+        env: { MYBOT_CLI_PATH: shim },
       };
       // The desktop app's shim, quoted for the shell and run as root as is.
       expect(yield* rootCommand(desktop)).toBe(`sudo '${shim}' browser setup`);
@@ -173,7 +173,7 @@ it.layer(NodeServices.layer)("root CLI commands", (it) => {
       ).toBe("sudo /opt/mybot/mybot browser setup");
       // A stale shim path, then no launcher at all, fall back to plain `mybot`.
       expect(
-        yield* rootCommand({ ...desktop, env: { T3CODE_CLI_PATH: path.join(home, "gone") } }),
+        yield* rootCommand({ ...desktop, env: { MYBOT_CLI_PATH: path.join(home, "gone") } }),
       ).toBe('sudo env "PATH=$PATH" mybot browser setup');
     }).pipe(Effect.scoped),
   );

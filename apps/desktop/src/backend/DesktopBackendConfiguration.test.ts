@@ -83,10 +83,10 @@ function layerEnvironment(
       Layer.mergeAll(
         NodeServices.layer,
         DesktopConfig.layerTest({
-          T3CODE_HOME: baseDir,
-          T3CODE_PORT: "9999",
-          T3CODE_MODE: "desktop",
-          T3CODE_DESKTOP_LAN_HOST: "192.168.1.50",
+          MYBOT_HOME: baseDir,
+          MYBOT_PORT: "9999",
+          MYBOT_MODE: "desktop",
+          MYBOT_DESKTOP_LAN_HOST: "192.168.1.50",
           VITE_DEV_SERVER_URL: options?.devServerUrl,
           LUCENT_OTLP_TRACES_URL: options?.otlpTracesUrl,
           LUCENT_OTLP_METRICS_URL: options?.otlpMetricsUrl,
@@ -246,9 +246,9 @@ describe("DesktopBackendConfiguration", () => {
         assert.equal(first.cwd, environment.backendCwd);
         assert.equal(first.captureOutput, true);
         assert.equal(first.env.ELECTRON_RUN_AS_NODE, "1");
-        assert.isUndefined(first.env.T3CODE_PORT);
-        assert.isUndefined(first.env.T3CODE_MODE);
-        assert.isUndefined(first.env.T3CODE_DESKTOP_LAN_HOST);
+        assert.isUndefined(first.env.MYBOT_PORT);
+        assert.isUndefined(first.env.MYBOT_MODE);
+        assert.isUndefined(first.env.MYBOT_DESKTOP_LAN_HOST);
 
         assert.equal(first.bootstrap.mode, "desktop");
         assert.equal(first.bootstrap.noBrowser, true);
@@ -994,11 +994,11 @@ describe("DesktopBackendConfiguration", () => {
 
       const previousWslEnv = process.env.WSLENV;
       const previousDisabled = process.env.OTEL_SDK_DISABLED;
-      const previousTelemetry = process.env.T3CODE_TELEMETRY_ENABLED;
+      const previousTelemetry = process.env.MYBOT_TELEMETRY_ENABLED;
       try {
         delete process.env.WSLENV;
         process.env.OTEL_SDK_DISABLED = "true";
-        process.env.T3CODE_TELEMETRY_ENABLED = "false";
+        process.env.MYBOT_TELEMETRY_ENABLED = "false";
 
         yield* Effect.gen(function* () {
           const configuration = yield* DesktopBackendConfiguration.DesktopBackendConfiguration;
@@ -1006,8 +1006,8 @@ describe("DesktopBackendConfiguration", () => {
 
           assert.equal(config.env.OTEL_SDK_DISABLED, "true");
           assert.include((config.env.WSLENV ?? "").split(":"), "OTEL_SDK_DISABLED");
-          assert.equal(config.env.T3CODE_TELEMETRY_ENABLED, "false");
-          assert.include((config.env.WSLENV ?? "").split(":"), "T3CODE_TELEMETRY_ENABLED");
+          assert.equal(config.env.MYBOT_TELEMETRY_ENABLED, "false");
+          assert.include((config.env.WSLENV ?? "").split(":"), "MYBOT_TELEMETRY_ENABLED");
         }).pipe(
           Effect.provide(
             DesktopBackendConfiguration.layer.pipe(
@@ -1028,7 +1028,7 @@ describe("DesktopBackendConfiguration", () => {
       } finally {
         restoreEnv("WSLENV", previousWslEnv);
         restoreEnv("OTEL_SDK_DISABLED", previousDisabled);
-        restoreEnv("T3CODE_TELEMETRY_ENABLED", previousTelemetry);
+        restoreEnv("MYBOT_TELEMETRY_ENABLED", previousTelemetry);
       }
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
   );

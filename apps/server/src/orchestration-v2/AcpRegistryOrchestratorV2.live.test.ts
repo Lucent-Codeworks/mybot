@@ -41,15 +41,15 @@ import * as McpSessionRegistryTestkit from "../mcp/McpSessionRegistry.testkit.ts
 // official Registry distribution. It uses credentials already owned by the
 // Antigravity agent and never stores them in the test database.
 //
-// T3_ACP_ANTIGRAVITY_LIVE=1 ../../node_modules/.bin/vp test run \
+// MYBOT_ACP_ANTIGRAVITY_LIVE=1 ../../node_modules/.bin/vp test run \
 //   src/orchestration-v2/AcpRegistryOrchestratorV2.live.test.ts
 const layerPlatformTest = NodeServices.layer;
 
-const runAntigravityFixture = process.env.T3_ACP_ANTIGRAVITY_LIVE === "1";
+const runAntigravityFixture = process.env.MYBOT_ACP_ANTIGRAVITY_LIVE === "1";
 const liveAgentId = runAntigravityFixture
   ? "antigravity-acp"
-  : process.env.T3_ACP_REGISTRY_LIVE_AGENT_ID?.trim() || "devin";
-const liveCommandPath = process.env.T3_ACP_REGISTRY_LIVE_COMMAND?.trim();
+  : process.env.MYBOT_ACP_REGISTRY_LIVE_AGENT_ID?.trim() || "devin";
+const liveCommandPath = process.env.MYBOT_ACP_REGISTRY_LIVE_COMMAND?.trim();
 const liveInstanceId = ProviderInstanceId.make("acpRegistry_live");
 const liveModelSelection = {
   instanceId: liveInstanceId,
@@ -148,7 +148,7 @@ const waitForIdle = Effect.fn("AcpRegistryOrchestratorV2Live.waitForIdle")(funct
   return yield* Effect.die(new Error(`Timed out waiting for ACP Registry thread ${threadId}.`));
 });
 
-describe.runIf(runAntigravityFixture || process.env.T3_ACP_REGISTRY_LIVE_ORCHESTRATOR === "1")(
+describe.runIf(runAntigravityFixture || process.env.MYBOT_ACP_REGISTRY_LIVE_ORCHESTRATOR === "1")(
   "ACP Registry V2 live orchestrator",
   () => {
     it.live(

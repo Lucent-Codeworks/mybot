@@ -4,12 +4,12 @@ import * as FileSystem from "effect/FileSystem";
 
 import type { McpProviderSessionConfig } from "@mybot/provider-core/server/mcpSession";
 import {
-  PI_T3_MCP_EXTENSION_FILENAME,
-  PI_T3_MCP_EXTENSION_SOURCE,
-  T3_MCP_BEARER_ENV,
-  T3_MCP_URL_ENV,
-  T3_PI_RUNTIME_MODE_ENV,
-  T3_PI_MCP_EXTENSION_PATH_ENV,
+  PI_MYBOT_MCP_EXTENSION_FILENAME,
+  PI_MYBOT_MCP_EXTENSION_SOURCE,
+  MYBOT_MCP_BEARER_ENV,
+  MYBOT_MCP_URL_ENV,
+  MYBOT_PI_RUNTIME_MODE_ENV,
+  MYBOT_PI_MCP_EXTENSION_PATH_ENV,
 } from "./mcpExtensionSource.ts";
 
 const RESERVED_PI_LAUNCH_ARGUMENTS = new Set([
@@ -232,7 +232,7 @@ function withoutToolSelectionArgs(args: ReadonlyArray<string>): ReadonlyArray<st
 }
 
 function piMyBotMcpExtensionDestPath(cacheDir: string): string {
-  return `${cacheDir.replace(/\\/g, "/")}/${PI_T3_MCP_EXTENSION_FILENAME}`;
+  return `${cacheDir.replace(/\\/g, "/")}/${PI_MYBOT_MCP_EXTENSION_FILENAME}`;
 }
 
 export const materializePiMyBotMcpExtension = Effect.fn("materializePiMyBotMcpExtension")(
@@ -241,8 +241,8 @@ export const materializePiMyBotMcpExtension = Effect.fn("materializePiMyBotMcpEx
     yield* fs.makeDirectory(cacheDir, { recursive: true });
     const dest = piMyBotMcpExtensionDestPath(cacheDir);
     const existing = yield* fs.readFileString(dest).pipe(Effect.orElseSucceed(() => ""));
-    if (existing !== PI_T3_MCP_EXTENSION_SOURCE) {
-      yield* fs.writeFileString(dest, PI_T3_MCP_EXTENSION_SOURCE);
+    if (existing !== PI_MYBOT_MCP_EXTENSION_SOURCE) {
+      yield* fs.writeFileString(dest, PI_MYBOT_MCP_EXTENSION_SOURCE);
     }
     return dest;
   },
@@ -290,27 +290,27 @@ export function buildPiRpcLaunch(input: {
   const environment = { ...input.environment };
   // These values belong to the current MyBot session. Never let a Pi child reuse
   // credentials inherited from the server or a parent provider process.
-  delete environment[T3_MCP_URL_ENV];
-  delete environment[T3_MCP_BEARER_ENV];
-  delete environment[T3_PI_MCP_EXTENSION_PATH_ENV];
+  delete environment[MYBOT_MCP_URL_ENV];
+  delete environment[MYBOT_MCP_BEARER_ENV];
+  delete environment[MYBOT_PI_MCP_EXTENSION_PATH_ENV];
 
   return {
     args,
     env: {
       ...environment,
       ...(hasMyBotExtension && input.extensionPath !== undefined
-        ? { [T3_PI_MCP_EXTENSION_PATH_ENV]: input.extensionPath }
+        ? { [MYBOT_PI_MCP_EXTENSION_PATH_ENV]: input.extensionPath }
         : {}),
       ...(hasMyBotExtension && input.runtimeMode !== undefined
         ? {
-            [T3_PI_RUNTIME_MODE_ENV]:
+            [MYBOT_PI_RUNTIME_MODE_ENV]:
               input.runtimeMode === "auto" ? "approval-required" : input.runtimeMode,
           }
         : {}),
       ...(hasMyBotMcp && input.mcpSession !== undefined
         ? {
-            [T3_MCP_URL_ENV]: input.mcpSession.endpoint,
-            [T3_MCP_BEARER_ENV]: bearerTokenFromAuthorizationHeader(
+            [MYBOT_MCP_URL_ENV]: input.mcpSession.endpoint,
+            [MYBOT_MCP_BEARER_ENV]: bearerTokenFromAuthorizationHeader(
               input.mcpSession.authorizationHeader,
             ),
           }

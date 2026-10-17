@@ -75,7 +75,7 @@ function tool(
   return { displayName, labels, icon, summaryAction };
 }
 
-const T3_MCP_SERVER_ALIASES = new Set(["t3-code", "t3_code", "t3code"]);
+const MYBOT_MCP_SERVER_ALIASES = new Set(["t3-code", "t3_code", "t3code"]);
 
 // Cards, activity rows, summaries, and provider identity recovery share this inventory.
 const MYBOT_MCP_TOOLS: Readonly<Record<string, MyBotMcpToolDefinition>> = {
@@ -326,7 +326,7 @@ function resolveMyBotMcpToolName(value: string): string | null {
     const { server, tool } = mcpMatch.groups;
     return server !== undefined &&
       tool !== undefined &&
-      T3_MCP_SERVER_ALIASES.has(server.toLowerCase())
+      MYBOT_MCP_SERVER_ALIASES.has(server.toLowerCase())
       ? tool
       : null;
   }

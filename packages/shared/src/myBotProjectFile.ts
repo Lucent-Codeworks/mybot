@@ -1,7 +1,7 @@
 import * as Exit from "effect/Exit";
 import * as Schema from "effect/Schema";
 
-import { MyBotProjectFile, T3_PROJECT_FILE_SCHEMA_URL } from "@mybot/contracts";
+import { MyBotProjectFile, MYBOT_PROJECT_FILE_SCHEMA_URL } from "@mybot/contracts";
 
 import { fromLenientJson } from "./schemaJson.ts";
 
@@ -26,7 +26,7 @@ export function parseMyBotProjectFile(contents: string): MyBotProjectFile | null
 /**
  * Build the publishable JSON Schema document for `t3.json` (draft 2020-12).
  *
- * Served from the marketing site at {@link T3_PROJECT_FILE_SCHEMA_URL} so
+ * Served from the marketing site at {@link MYBOT_PROJECT_FILE_SCHEMA_URL} so
  * editors get LSP support via a `$schema` reference.
  */
 export function buildMyBotProjectFileJsonSchema(): Record<string, unknown> {
@@ -35,7 +35,7 @@ export function buildMyBotProjectFileJsonSchema(): Record<string, unknown> {
   const document = Schema.toJsonSchemaDocument(MyBotProjectFile, { onExcessProperty: "error" });
   const jsonSchema: Record<string, unknown> = {
     $schema: "https://json-schema.org/draft/2020-12/schema",
-    $id: T3_PROJECT_FILE_SCHEMA_URL,
+    $id: MYBOT_PROJECT_FILE_SCHEMA_URL,
     ...document.schema,
   };
   if (document.definitions && Object.keys(document.definitions).length > 0) {

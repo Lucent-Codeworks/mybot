@@ -68,13 +68,13 @@ export function retryDelayMs(failures: number, random: number): number {
 
 const TelemetryEnvConfig = Config.all({
   // No default key: events go nowhere until MyBot has its own analytics project.
-  posthogKey: Config.String("T3CODE_POSTHOG_KEY").pipe(Config.withDefault("")),
-  posthogHost: Config.String("T3CODE_POSTHOG_HOST").pipe(
+  posthogKey: Config.String("MYBOT_POSTHOG_KEY").pipe(Config.withDefault("")),
+  posthogHost: Config.String("MYBOT_POSTHOG_HOST").pipe(
     Config.withDefault("https://us.i.posthog.com"),
   ),
-  enabled: Config.Boolean("T3CODE_TELEMETRY_ENABLED").pipe(Config.withDefault(true)),
-  flushBatchSize: Config.Number("T3CODE_TELEMETRY_FLUSH_BATCH_SIZE").pipe(Config.withDefault(20)),
-  maxBufferedEvents: Config.Number("T3CODE_TELEMETRY_MAX_BUFFERED_EVENTS").pipe(
+  enabled: Config.Boolean("MYBOT_TELEMETRY_ENABLED").pipe(Config.withDefault(true)),
+  flushBatchSize: Config.Number("MYBOT_TELEMETRY_FLUSH_BATCH_SIZE").pipe(Config.withDefault(20)),
+  maxBufferedEvents: Config.Number("MYBOT_TELEMETRY_MAX_BUFFERED_EVENTS").pipe(
     Config.withDefault(1_000),
   ),
   wslDistroName: Config.String("WSL_DISTRO_NAME").pipe(Config.option),
