@@ -194,4 +194,70 @@ describe("the app catalog", () => {
       auth: "token",
     });
   });
+
+  // iCloud only sends over STARTTLS on 587, which the email server never uses by default.
+  it("uses STARTTLS for email on ports other than the secure ones", () => {
+    const email = findAppPreset("email")!;
+    const account = { address: "me@icloud.com", password: "p", imapHost: "imap.mail.me.com" };
+    const secure = buildAppConnectionInput(email, {
+      ...account,
+      imapPort: "993",
+      smtpHost: "smtp.gmail.com",
+      smtpPort: "465",
+    });
+    expect("input" in secure && secure.input.transport).not.toHaveProperty(
+      "env.MCP_EMAIL_SERVER_SMTP_START_SSL",
+    );
+    const startTls = buildAppConnectionInput(email, {
+      ...account,
+      imapPort: "143",
+      smtpHost: "smtp.mail.me.com",
+      smtpPort: "587",
+    });
+    expect("input" in startTls && startTls.input.transport).toMatchObject({
+      env: {
+        MCP_EMAIL_SERVER_IMAP_SSL: "false",
+        MCP_EMAIL_SERVER_IMAP_START_SSL: "true",
+        MCP_EMAIL_SERVER_SMTP_SSL: "false",
+        MCP_EMAIL_SERVER_SMTP_START_SSL: "true",
+      },
+    });
+  });
+
+  it("connects Paddle sandbox keys to the sandbox server", () => {
+    const paddle = findAppPreset("paddle")!;
+    const sandbox = buildAppConnectionInput(paddle, { apiKey: "pdl_sdbx_apikey_1" });
+    expect("input" in sandbox && sandbox.input.transport).toEqual({
+      type: "http",
+      url: "https://sandbox-mcp.paddle.com/mcp",
+      bearerToken: "pdl_sdbx_apikey_1",
+      auth: "token",
+    });
+    const live = buildAppConnectionInput(paddle, { apiKey: "pdl_live_apikey_1" });
+    expect("input" in live && live.input.transport).toMatchObject({
+      url: "https://mcp.paddle.com/mcp",
+      auth: "token",
+    });
+    const signIn = buildAppConnectionInput(paddle, {});
+    expect("input" in signIn && signIn.input.transport).toMatchObject({ auth: "oauth" });
+  });
+
+  it("connects Instacart development keys to Instacart's test server", () => {
+    const instacart = findAppPreset("instacart")!;
+    const development = buildAppConnectionInput(instacart, {
+      apiKey: "k",
+      environment: "development",
+    });
+    expect("input" in development && development.input.transport).toMatchObject({
+      url: "https://mcp.dev.instacart.tools/mcp",
+      bearerToken: "k",
+    });
+    const production = buildAppConnectionInput(instacart, {
+      apiKey: "k",
+      environment: "production",
+    });
+    expect("input" in production && production.input.transport).toMatchObject({
+      url: "https://mcp.instacart.com/mcp",
+    });
+  });
 });

@@ -305,11 +305,27 @@ export const EVERYDAY_APPS: ReadonlyArray<AppPreset> = [
         key: "apiKey",
         label: "API key",
         kind: "secret",
-        help: "In the Instacart Developer Dashboard, open API Keys → Create New API Key, choose Production, then click Generate Key and copy it.",
+        help: "In the Instacart Developer Dashboard, open API Keys → Create New API Key, choose its type, then click Generate Key and copy it.",
         getAt: "https://dashboard.instacart.com/",
       },
+      {
+        key: "environment",
+        label: "Key type",
+        kind: "select",
+        default: "production",
+        options: [
+          { value: "production", label: "Production" },
+          { value: "development", label: "Development" },
+        ],
+        help: "Match the type you chose when creating the key. Development keys only work on Instacart's test server.",
+      },
     ],
-    transport: bearer("https://mcp.instacart.com/mcp"),
+    transport: (values) =>
+      bearer(
+        values.environment === "development"
+          ? "https://mcp.dev.instacart.tools/mcp"
+          : "https://mcp.instacart.com/mcp",
+      )(values),
   },
 
   // Phone & SMS
@@ -414,9 +430,10 @@ export const EVERYDAY_APPS: ReadonlyArray<AppPreset> = [
       },
       {
         key: "privateKey",
-        label: "Private key (base64)",
+        label: "Private key",
         kind: "secret",
-        help: "The private.key file downloaded when you clicked Generate public and private key on your Vonage application, base64-encoded.",
+        file: { accept: ".key,.pem" },
+        help: "The private.key file your browser downloaded when you clicked Generate public and private key on your Vonage application.",
         getAt: "https://developer.vonage.com/en/application/overview",
       },
       {

@@ -257,18 +257,27 @@ export const BUSINESS_APPS: ReadonlyArray<AppPreset> = [
     summary: "Work with products, prices, subscriptions, transactions, and reports.",
     category: "Payments & finance",
     color: "yellow",
-    docsUrl: "https://developer.paddle.com/build/tools/ai/mcp",
+    docsUrl: "https://developer.paddle.com/sdks/ai/paddle-mcp/",
     note: "Sign-in starts read-only; grant write access in Paddle under Connectors → MCP.",
     connection: "sign-in",
     official: true,
     keywords: ["billing", "subscriptions", "payments", "saas"],
     fields: [
       optionalKeyField(
-        "Instead of signing in. In Paddle, open Developer tools → Authentication → New API key, give it the permissions your bot needs, then copy it.",
+        "Instead of signing in. In Paddle, open Developer tools → Authentication → New API key, give it the permissions your bot needs, then copy it. A sandbox key connects to your sandbox.",
         "https://developer.paddle.com/api-reference/about/authentication",
       ),
     ],
-    transport: tokenOptional("https://mcp.paddle.com/mcp", "oauth"),
+    // Sandbox keys only work on Paddle's sandbox server, which has no sign-in.
+    transport: (values) =>
+      values.apiKey?.startsWith("pdl_sdbx_")
+        ? {
+            type: "http",
+            url: "https://sandbox-mcp.paddle.com/mcp",
+            bearerToken: values.apiKey,
+            auth: "token",
+          }
+        : tokenOptional("https://mcp.paddle.com/mcp", "oauth")(values),
   },
   {
     id: "polar",
