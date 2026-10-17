@@ -300,7 +300,12 @@ const belongsToBootService = Effect.fn("cli.update.belongs_to_boot_service")(fun
   const runner = yield* ProcessRunner.ProcessRunner;
   if (platform === "linux") {
     const cgroup = yield* fs.readFileString(`/proc/${pid}/cgroup`).pipe(Effect.option);
-    return Option.isSome(cgroup) && cgroup.value.includes("/t3code.service");
+    // The pid comes from this home's runtime state, so a unit still under the
+    // legacy t3code name (before `install` renames it) is ours too.
+    return (
+      Option.isSome(cgroup) &&
+      (cgroup.value.includes("/mybot.service") || cgroup.value.includes("/t3code.service"))
+    );
   }
   if (platform === "darwin") {
     // The service server's parent is the launcher process.

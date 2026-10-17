@@ -25,7 +25,7 @@ const linuxPlan = {
   program: [linuxRuntime, "__service-launcher"],
   baseDir: "/home/theo/.t3",
   logPath: "/home/theo/.t3/userdata/logs/boot-service.log",
-  unitPath: "/home/theo/.config/systemd/user/t3code.service",
+  unitPath: "/home/theo/.config/systemd/user/mybot.service",
 };
 
 it("runs the pinned runtime's own executable as the systemd launcher", () => {
@@ -41,7 +41,7 @@ it("reads the served MyBot home back out of a rendered unit or plist", () => {
     program: [`${baseDir}/runtime/versions/1.2.3/mybot`, "__service-launcher"],
     baseDir,
     logPath: `${baseDir}/userdata/logs/boot-service.log`,
-    unitPath: "/home/theo/.config/systemd/user/t3code.service",
+    unitPath: "/home/theo/.config/systemd/user/mybot.service",
   });
 
   expect(
@@ -75,7 +75,7 @@ const macPlan = {
   program: [macRuntime, "__service-launcher"],
   baseDir: "/Users/theo/.t3",
   logPath: "/Users/theo/.t3/userdata/logs/boot-service.log",
-  unitPath: "/Users/theo/Library/LaunchAgents/com.t3tools.t3code.service.plist",
+  unitPath: "/Users/theo/Library/LaunchAgents/com.lucentcodeworks.mybot.service.plist",
 };
 const macInstallerPath =
   "/opt/homebrew/bin:/Users/theo/.npm-global/bin:/Users/theo/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin";
@@ -166,11 +166,11 @@ const makeHarness = Effect.fn("test.make_boot_service_harness")(function* (
       const failed = command === control.failCommand;
       if (!failed && command === "loginctl enable-linger --no-ask-password 501")
         control.linger = "yes";
-      if (!failed && command === "systemctl --user enable t3code.service") control.enabled = true;
-      if (!failed && command === "systemctl --user restart t3code.service") control.active = true;
+      if (!failed && command === "systemctl --user enable mybot.service") control.enabled = true;
+      if (!failed && command === "systemctl --user restart mybot.service") control.active = true;
       if (
         control.stateAfterStop !== undefined &&
-        (command === "systemctl --user stop t3code.service" ||
+        (command === "systemctl --user stop mybot.service" ||
           command.startsWith("launchctl bootout --wait "))
       ) {
         yield* fs.writeFileString(statePath, control.stateAfterStop).pipe(Effect.orDie);
@@ -243,7 +243,7 @@ const makeHarness = Effect.fn("test.make_boot_service_harness")(function* (
       ),
     );
   const service = yield* makeService();
-  return { service, makeService, fs, statePath, commands, timeouts, control, runtime };
+  return { service, makeService, fs, home, statePath, commands, timeouts, control, runtime };
 });
 
 it.layer(NodeServices.layer)("boot service install", (it) => {
@@ -298,7 +298,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
         );
         expect(yield* fs.readFileString(statePath)).toBe(before);
         expect(yield* fs.readFileString(plan.unitPath)).toBe(unit);
-        expect(commands).not.toContain("systemctl --user stop t3code.service");
+        expect(commands).not.toContain("systemctl --user stop mybot.service");
       }),
   );
 
@@ -372,7 +372,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       expect((yield* service.status).installed).toBe(false);
       // The stop can block up to systemd's 90s TimeoutStopSec; the runner's
       // 60s default would cancel it mid-shutdown.
-      expect(timeouts.get("systemctl --user disable --now t3code.service")).toEqual(
+      expect(timeouts.get("systemctl --user disable --now mybot.service")).toEqual(
         Duration.seconds(120),
       );
     }),
@@ -444,9 +444,9 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
           ),
         ).toEqual(
           platform === "linux"
-            ? ["systemctl --user stop t3code.service", "systemctl --user restart t3code.service"]
+            ? ["systemctl --user stop mybot.service", "systemctl --user restart mybot.service"]
             : [
-                "launchctl bootout --wait gui/501/com.t3tools.t3code.service",
+                "launchctl bootout --wait gui/501/com.lucentcodeworks.mybot.service",
                 `launchctl bootstrap gui/501 ${plan.unitPath}`,
               ],
         );
@@ -573,10 +573,10 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
           (command) => command.startsWith("systemctl ") && !command.includes("show-environment"),
         ),
       ).toEqual([
-        "systemctl --user stop t3code.service",
+        "systemctl --user stop mybot.service",
         "systemctl --user daemon-reload",
-        "systemctl --user enable t3code.service",
-        "systemctl --user restart t3code.service",
+        "systemctl --user enable mybot.service",
+        "systemctl --user restart mybot.service",
       ]);
     }),
   );
@@ -609,9 +609,9 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
           (command) => command.startsWith("systemctl ") && !command.includes("show-environment"),
         ),
       ).toEqual([
-        "systemctl --user stop t3code.service",
+        "systemctl --user stop mybot.service",
         "systemctl --user daemon-reload",
-        "systemctl --user restart t3code.service",
+        "systemctl --user restart mybot.service",
       ]);
     }),
   );
@@ -630,9 +630,9 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
           (command) => command.startsWith("systemctl ") && !command.includes("show-environment"),
         ),
       ).toEqual([
-        "systemctl --user stop t3code.service",
+        "systemctl --user stop mybot.service",
         "systemctl --user daemon-reload",
-        "systemctl --user restart t3code.service",
+        "systemctl --user restart mybot.service",
       ]);
     }),
   );
@@ -664,8 +664,8 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
             (command) => command.startsWith("systemctl ") && !command.includes("show-environment"),
           ),
         ).toEqual([
-          "systemctl --user stop t3code.service",
-          "systemctl --user restart t3code.service",
+          "systemctl --user stop mybot.service",
+          "systemctl --user restart mybot.service",
         ]);
       }
     }),
@@ -687,7 +687,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
 
       expect(
         plan.unitPath.endsWith(
-          path.join("Library", "LaunchAgents", "com.t3tools.t3code.service.plist"),
+          path.join("Library", "LaunchAgents", "com.lucentcodeworks.mybot.service.plist"),
         ),
       ).toBe(true);
       expect(yield* fs.readFileString(plan.unitPath)).toContain(
@@ -709,9 +709,9 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       expect(commands.some((command) => command.startsWith("systemctl "))).toBe(false);
       // A bootout can block up to the plist's 90s ExitTimeOut; the runner's
       // 60s default would cancel it and let bootstrap race a loaded job.
-      expect(timeouts.get("launchctl bootout --wait gui/501/com.t3tools.t3code.service")).toEqual(
-        Duration.seconds(120),
-      );
+      expect(
+        timeouts.get("launchctl bootout --wait gui/501/com.lucentcodeworks.mybot.service"),
+      ).toEqual(Duration.seconds(120));
     }),
   );
 
@@ -726,8 +726,8 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       const error = yield* service.install().pipe(Effect.flip);
       expect(error._tag).toBe("BootServiceCommandError");
       expect(commands.filter((command) => command.startsWith("launchctl "))).toEqual([
-        "launchctl bootout --wait gui/501/com.t3tools.t3code.service",
-        "launchctl enable gui/501/com.t3tools.t3code.service",
+        "launchctl bootout --wait gui/501/com.lucentcodeworks.mybot.service",
+        "launchctl enable gui/501/com.lucentcodeworks.mybot.service",
         `launchctl bootstrap gui/501 ${plistPath}`,
         `launchctl bootstrap gui/501 ${plistPath}`,
       ]);
@@ -789,7 +789,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
     Effect.gen(function* () {
       const { service, control } = yield* makeHarness("darwin");
       yield* service.install();
-      control.failCommand = "launchctl bootout --wait gui/501/com.t3tools.t3code.service";
+      control.failCommand = "launchctl bootout --wait gui/501/com.lucentcodeworks.mybot.service";
 
       yield* service.install();
       expect((yield* service.status).current).toBe(true);
@@ -820,10 +820,172 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
         );
         expect(serviceStateHasPendingUpdate(yield* fs.readFileString(statePath))).toBe(true);
         expect(commands.filter((command) => command.startsWith("launchctl "))).toEqual([
-          "launchctl bootout --wait gui/501/com.t3tools.t3code.service",
+          "launchctl bootout --wait gui/501/com.lucentcodeworks.mybot.service",
           `launchctl bootstrap gui/501 ${plistPath}`,
         ]);
       }
     }),
+  );
+});
+
+const legacyUnitPath = (home: string, platform: "linux" | "darwin") =>
+  platform === "linux"
+    ? `${home}/.config/systemd/user/t3code.service`
+    : `${home}/Library/LaunchAgents/com.t3tools.t3code.service.plist`;
+
+/** A unit as an earlier MyBot or T3 Code wrote it, before either rename. */
+const legacyUnit = (platform: "linux" | "darwin", baseDir: string) =>
+  platform === "linux"
+    ? `[Service]\nEnvironment=T3CODE_HOME=${baseDir}\nEnvironment=T3_BOOT_SERVICE_UNIT=t3code.service\nExecStart=${baseDir}/runtime/versions/1.2.2/t3 __service-launcher\n`
+    : `<plist><dict><key>Label</key><string>com.t3tools.t3code.service</string><key>ProgramArguments</key><array><string>${baseDir}/runtime/versions/1.2.2/t3</string></array><key>EnvironmentVariables</key><dict><key>T3CODE_HOME</key><string>${baseDir}</string></dict></dict></plist>\n`;
+
+it.layer(NodeServices.layer)("boot service legacy t3code names", (it) => {
+  const setup = Effect.fn("test.legacy_setup")(function* (
+    platform: "linux" | "darwin",
+    owner: "mybot" | "t3code",
+  ) {
+    const harness = yield* makeHarness(platform);
+    const { fs, home, makeService } = harness;
+    const baseDir = `${home}/.mybot`;
+    const legacyPath = legacyUnitPath(home, platform);
+    const contents = legacyUnit(platform, owner === "mybot" ? baseDir : `${home}/.t3`);
+    yield* fs.makeDirectory(legacyPath.slice(0, legacyPath.lastIndexOf("/")), {
+      recursive: true,
+    });
+    yield* fs.writeFileString(legacyPath, contents);
+    const service = yield* makeService(undefined, "1.2.3", baseDir);
+    harness.commands.length = 0;
+    return { ...harness, service, baseDir, legacyPath, contents };
+  });
+
+  it.effect("only claims a legacy-named unit that serves a MyBot home", () =>
+    Effect.gen(function* () {
+      const posixPath = yield* Path.Path;
+      const ownedBy = (contents: string) =>
+        BootService.legacyBootServiceOwnedByMyBot(contents, {
+          path: posixPath,
+          userHomeDir: "/home/theo",
+          mybotHomes: ["/srv/mybot", "/home/theo/.mybot"],
+        });
+      // Written before the MYBOT_ rename, by MyBot and by T3 Code.
+      expect(ownedBy("[Service]\nEnvironment=T3CODE_HOME=/home/theo/.mybot\nExecStart=/x\n")).toBe(
+        true,
+      );
+      expect(ownedBy("[Service]\nEnvironment=T3CODE_HOME=/home/theo/.t3\nExecStart=/x\n")).toBe(
+        false,
+      );
+      expect(ownedBy("[Service]\nEnvironment=MYBOT_HOME=/srv/mybot\n")).toBe(true);
+      // Without a home, the runtime it runs decides.
+      expect(
+        ownedBy(
+          "[Service]\nExecStart=/home/theo/.mybot/runtime/versions/1/mybot __service-launcher\n",
+        ),
+      ).toBe(true);
+      expect(
+        ownedBy("[Service]\nExecStart=/home/theo/.t3/runtime/versions/1/t3 __service-launcher\n"),
+      ).toBe(false);
+      expect(
+        ownedBy(
+          "<key>ProgramArguments</key>\n<array>\n<string>/srv/mybot/runtime/v/mybot</string>\n</array>",
+        ),
+      ).toBe(true);
+      // T3 Code's default home is never ours, even when MyBot was pointed at it.
+      expect(
+        BootService.legacyBootServiceOwnedByMyBot(
+          "[Service]\nEnvironment=T3CODE_HOME=/home/theo/.t3\n",
+          { path: posixPath, userHomeDir: "/home/theo", mybotHomes: ["/home/theo/.t3"] },
+        ),
+      ).toBe(false);
+    }),
+  );
+
+  it.effect.each(["linux", "darwin"] as const)(
+    "replaces a MyBot-owned legacy unit on %s",
+    (platform) =>
+      Effect.gen(function* () {
+        const { service, fs, commands, legacyPath, baseDir } = yield* setup(platform, "mybot");
+
+        const status = yield* service.status;
+        expect(status).toMatchObject({
+          installed: true,
+          current: false,
+          installedBaseDir: baseDir,
+          unitPath: legacyPath,
+        });
+
+        commands.length = 0;
+        // Even a declined restart moves off the legacy unit.
+        const plan = yield* service.install({ start: false });
+
+        expect(yield* fs.exists(legacyPath)).toBe(false);
+        expect(plan.unitPath).not.toBe(legacyPath);
+        expect(yield* fs.readFileString(plan.unitPath)).toContain(baseDir);
+        const managerCommands = commands.filter(
+          (command) => command.startsWith("systemctl ") || command.startsWith("launchctl "),
+        );
+        expect(managerCommands).toEqual(
+          platform === "linux"
+            ? [
+                "systemctl --user show-environment",
+                "systemctl --user stop t3code.service",
+                "systemctl --user disable --now t3code.service",
+                "systemctl --user daemon-reload",
+                "systemctl --user daemon-reload",
+                "systemctl --user enable mybot.service",
+                "systemctl --user restart mybot.service",
+              ]
+            : [
+                "launchctl bootout --wait gui/501/com.t3tools.t3code.service",
+                "launchctl bootout --wait gui/501/com.t3tools.t3code.service",
+                "launchctl enable gui/501/com.lucentcodeworks.mybot.service",
+                `launchctl bootstrap gui/501 ${plan.unitPath}`,
+              ],
+        );
+        expect((yield* service.status).current).toBe(true);
+      }),
+  );
+
+  it.effect.each(["linux", "darwin"] as const)(
+    "never touches T3 Code's own service on %s",
+    (platform) =>
+      Effect.gen(function* () {
+        const { service, fs, commands, legacyPath, contents } = yield* setup(platform, "t3code");
+
+        expect(yield* service.status).toMatchObject({ installed: false });
+        const plan = yield* service.install();
+        expect(yield* service.uninstall).toBe(true);
+        expect(yield* service.uninstall).toBe(false);
+
+        expect(plan.unitPath).not.toBe(legacyPath);
+        expect(yield* fs.readFileString(legacyPath)).toBe(contents);
+        expect(commands.filter((command) => command.includes("t3code"))).toEqual([]);
+      }),
+  );
+
+  it.effect.each(["linux", "darwin"] as const)(
+    "uninstall removes the current and a MyBot-owned legacy unit on %s",
+    (platform) =>
+      Effect.gen(function* () {
+        const { service, fs, commands, legacyPath } = yield* setup(platform, "mybot");
+        const status = yield* service.status;
+        // Both on disk, as after an interrupted migration.
+        const currentPath =
+          platform === "linux"
+            ? legacyPath.replace("t3code.service", "mybot.service")
+            : legacyPath.replace("com.t3tools.t3code", "com.lucentcodeworks.mybot");
+        yield* fs.writeFileString(currentPath, "stale");
+        expect(status.installed).toBe(true);
+
+        expect(yield* service.uninstall).toBe(true);
+
+        expect(yield* fs.exists(currentPath)).toBe(false);
+        expect(yield* fs.exists(legacyPath)).toBe(false);
+        expect(commands).toContain(
+          platform === "linux"
+            ? "systemctl --user disable --now t3code.service"
+            : "launchctl bootout --wait gui/501/com.t3tools.t3code.service",
+        );
+        expect((yield* service.status).installed).toBe(false);
+      }),
   );
 });
