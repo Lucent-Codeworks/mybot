@@ -120,11 +120,11 @@ it.effect("sets the selected browser session cookies through the HTTP route", ()
           expect(await retiredScopeResponse.json()).toMatchObject({ reason: "invalid_scope" });
 
           const devCookies = devResponse.headers.getSetCookie();
-          const devCookie = devCookies.find((cookie) => cookie.startsWith("t3_dev_session_"));
+          const devCookie = devCookies.find((cookie) => cookie.startsWith("mybot_dev_session_"));
           expect(devCookie).toContain("HttpOnly");
           expect(devCookie).toContain(`=${DEV_TOKEN};`);
           expect(devCookies).toContainEqual(
-            expect.stringMatching(/^t3_session_[^=]*=;.*Max-Age=0/),
+            expect.stringMatching(/^mybot_session_[^=]*=;.*Max-Age=0/),
           );
           const devCookieHeader = devCookie?.split(";", 1)[0] ?? "";
           const environmentBSession = await environmentB.handler(
@@ -153,8 +153,36 @@ it.effect("sets the selected browser session cookies through the HTTP route", ()
           expect(restrictedResponse.status).toBe(200);
           const restrictedCookies = restrictedResponse.headers.getSetCookie();
           expect(restrictedCookies).toHaveLength(1);
-          expect(restrictedCookies[0]).toMatch(/^t3_session_/);
-          expect(restrictedCookies[0]).not.toContain("t3_dev_session_");
+          expect(restrictedCookies[0]).toMatch(/^mybot_session_/);
+          expect(restrictedCookies[0]).not.toContain("mybot_dev_session_");
+
+          // Sessions saved under the pre-rename `t3_` names keep working and
+          // move onto the current name.
+          const legacyDevSession = await environmentB.handler(
+            new Request("http://127.0.0.1/api/auth/session", {
+              headers: { cookie: devCookieHeader.replace(/^mybot_/, "t3_") },
+            }),
+            requestContext,
+          );
+          expect(await legacyDevSession.json()).toMatchObject({ authenticated: true });
+
+          const sessionCookieHeader = restrictedCookies[0]?.split(";", 1)[0] ?? "";
+          const sessionCookieName = sessionCookieHeader.split("=", 1)[0] ?? "";
+          const legacyCookieName = sessionCookieName.replace(/^mybot_/, "t3_");
+          const legacySession = await environmentA.handler(
+            new Request("http://127.0.0.1/api/auth/session", {
+              headers: { cookie: sessionCookieHeader.replace(/^mybot_/, "t3_") },
+            }),
+            requestContext,
+          );
+          expect(await legacySession.json()).toMatchObject({ authenticated: true });
+          const migratedCookies = legacySession.headers.getSetCookie();
+          expect(migratedCookies).toContainEqual(
+            expect.stringMatching(new RegExp(`^${sessionCookieHeader}; .*HttpOnly`)),
+          );
+          expect(migratedCookies).toContainEqual(
+            expect.stringMatching(new RegExp(`^${legacyCookieName}=;.*Max-Age=0`)),
+          );
         }),
       ([environmentA, environmentB]) =>
         Effect.promise(() => Promise.all([environmentA.dispose(), environmentB.dispose()])),

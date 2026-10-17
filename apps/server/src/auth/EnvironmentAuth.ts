@@ -657,7 +657,7 @@ function parseDpopToken(request: HttpServerRequest.HttpServerRequest): string | 
 export function selectRequestCredential(
   request: HttpServerRequest.HttpServerRequest,
   cookieName: string,
-  legacyCookieName: string | undefined,
+  legacyCookieNames: ReadonlyArray<string>,
 ) {
   const cookieToken = request.cookies[cookieName];
   if (cookieToken !== undefined) {
@@ -674,9 +674,11 @@ export function selectRequestCredential(
     return { token: dpopToken, source: "dpop" } as const;
   }
 
-  const legacyToken = legacyCookieName ? request.cookies[legacyCookieName] : undefined;
-  if (legacyToken !== undefined) {
-    return { token: legacyToken, source: "legacy-cookie" } as const;
+  for (const legacyCookieName of legacyCookieNames) {
+    const legacyToken = request.cookies[legacyCookieName];
+    if (legacyToken !== undefined) {
+      return { token: legacyToken, source: "legacy-cookie", cookieName: legacyCookieName } as const;
+    }
   }
 
   return undefined;
@@ -766,10 +768,12 @@ export const make = Effect.gen(function* () {
     const selectedCredential = selectRequestCredential(
       request,
       sessions.cookieName,
-      sessions.legacyCookieName,
+      sessions.legacyCookieNames,
     );
     const hasAuthorization = request.headers.authorization !== undefined;
-    const devCookieToken = devAuth ? request.cookies[devAuth.cookieName] : undefined;
+    const devCookieToken = devAuth
+      ? (request.cookies[devAuth.cookieName] ?? request.cookies[devAuth.legacyCookieName])
+      : undefined;
     return (
       selectedCredential ??
       (!hasAuthorization && devCookieToken !== undefined

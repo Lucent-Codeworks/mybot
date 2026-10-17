@@ -9,7 +9,9 @@ import * as NodeCrypto from "node:crypto";
 import * as Base64Url from "effect/encoding/Base64Url";
 import * as Result from "effect/Result";
 
-const SESSION_COOKIE_NAME = "t3_session";
+const SESSION_COOKIE_NAME = "mybot_session";
+// Cookie prefix before the MyBot rename. Still accepted so existing browser sessions survive.
+const LEGACY_SESSION_COOKIE_NAME = "t3_session";
 
 /**
  * Cookies are scoped by host but *not* by port, so any two servers that can be
@@ -54,14 +56,20 @@ export function resolveSessionCookieName(input: {
   return `${SESSION_COOKIE_NAME}_${input.port}_${instanceHash}`;
 }
 
-export function resolveLegacySessionCookieName(input: {
-  readonly mode: "web" | "desktop";
-  readonly host: string | undefined;
-  readonly development: boolean;
-}): string | undefined {
+/**
+ * Older cookie names that still authenticate this server, newest first: the
+ * pre-rename `t3_session*` twin of the current name, and the unscoped
+ * `t3_session` a remote web server used before names were scoped per instance.
+ * A session presented under one of these is re-issued under the current name.
+ */
+export function resolveLegacySessionCookieNames(
+  input: Parameters<typeof resolveSessionCookieName>[0],
+): ReadonlyArray<string> {
+  const renamed =
+    LEGACY_SESSION_COOKIE_NAME + resolveSessionCookieName(input).slice(SESSION_COOKIE_NAME.length);
   return input.mode === "web" && !input.development && isRemoteReachableHost(input.host)
-    ? SESSION_COOKIE_NAME
-    : undefined;
+    ? [renamed, LEGACY_SESSION_COOKIE_NAME]
+    : [renamed];
 }
 
 export function isRemoteReachableHost(host: string | undefined): boolean {

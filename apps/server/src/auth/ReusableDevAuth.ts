@@ -25,7 +25,9 @@ export function resolveReusableDevAuth(
   return {
     credential: Redacted.value(token),
     sessionId: AuthSessionId.make(`${REUSABLE_DEV_SESSION_PREFIX}${tokenId}`),
-    cookieName: `t3_dev_session_${tokenId}`,
+    cookieName: `mybot_dev_session_${tokenId}`,
+    // Name before the MyBot rename; still read so dev browsers stay signed in.
+    legacyCookieName: `t3_dev_session_${tokenId}`,
     matches: (credential: string) =>
       NodeCrypto.timingSafeEqual(hash, NodeCrypto.createHash("sha256").update(credential).digest()),
   };

@@ -51,7 +51,7 @@ export type RightPanelSurface =
       attachment?: ChatFileAttachment;
     };
 
-const RIGHT_PANEL_STORAGE_KEY = "t3code:right-panel-state:v2";
+const RIGHT_PANEL_STORAGE_KEY = "mybot:right-panel-state:v2";
 // v9 removed the "plan" surface kind (plans render inline in the transcript).
 // v12 adds the device surface.
 // v14 removes the agents surface; lineage lives in the thread title bar.

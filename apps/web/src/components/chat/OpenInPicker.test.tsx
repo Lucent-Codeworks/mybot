@@ -188,7 +188,7 @@ it.each(["local-exec", "remote-links"] as const)(
     await act(async () => {
       renderer!.root.findByProps({ children: "VS Code" }).parent!.props.onClick();
     });
-    expect(window.localStorage.getItem("t3code:last-editor")).toBe('"vscode"');
+    expect(window.localStorage.getItem("mybot:last-editor")).toBe('"vscode"');
     const openButton = renderer!.root.findByProps({ "aria-label": "Open in VS Code" });
     expect(state.run).not.toHaveBeenCalled();
     expect(state.openUrl).not.toHaveBeenCalled();

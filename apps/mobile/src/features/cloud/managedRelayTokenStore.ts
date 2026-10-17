@@ -3,7 +3,9 @@ import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import * as SecureStore from "expo-secure-store";
 
-const MANAGED_RELAY_TOKEN_CACHE_KEY = "t3code.cloud.relay-access-tokens";
+import { getSecureItem, removeSecureItem } from "../../persistence/mobile-secure-storage";
+
+const MANAGED_RELAY_TOKEN_CACHE_KEY = "mybot.cloud.relay-access-tokens";
 const MANAGED_RELAY_TOKEN_CACHE_VERSION = 1;
 
 const ManagedRelayAccessTokenCacheEntrySchema = Schema.Struct({
@@ -53,7 +55,7 @@ function logStoreFailure(error: ManagedRelayTokenStoreError) {
 }
 
 const loadManagedRelayAccessTokens = Effect.tryPromise({
-  try: () => SecureStore.getItemAsync(MANAGED_RELAY_TOKEN_CACHE_KEY),
+  try: () => getSecureItem(MANAGED_RELAY_TOKEN_CACHE_KEY),
   catch: (cause) =>
     new ManagedRelayTokenStoreError({
       operation: "read",
@@ -107,7 +109,7 @@ const saveManagedRelayAccessTokens = (
   );
 
 const clearManagedRelayAccessTokens = Effect.tryPromise({
-  try: () => SecureStore.deleteItemAsync(MANAGED_RELAY_TOKEN_CACHE_KEY),
+  try: () => removeSecureItem(MANAGED_RELAY_TOKEN_CACHE_KEY),
   catch: (cause) =>
     new ManagedRelayTokenStoreError({
       operation: "clear",

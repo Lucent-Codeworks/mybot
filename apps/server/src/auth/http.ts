@@ -24,6 +24,7 @@ import { causeErrorTag } from "@mybot/shared/observability";
 import * as Clock from "effect/Clock";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
+import * as Result from "effect/Result";
 import * as Schema from "effect/Schema";
 import { identity } from "effect/Function";
 import * as Layer from "effect/Layer";
@@ -199,14 +200,28 @@ export function failEnvironmentInternal(reason: EnvironmentInternalErrorReason, 
   });
 }
 
-const appendSessionCookie = (cookieName: string, token: string, expiresAt: DateTime.DateTime) =>
+/** Moves a session presented under a legacy cookie name onto the current name. */
+const reissueLegacySessionCookie = (input: {
+  readonly cookieName: string;
+  readonly legacyCookieName: string;
+  readonly token: string;
+  readonly expiresAt: DateTime.DateTime;
+}) =>
   Effect.fromResult(
-    Cookies.set(Cookies.empty, cookieName, token, {
-      expires: DateTime.toDate(expiresAt),
+    Cookies.set(Cookies.empty, input.cookieName, input.token, {
+      expires: DateTime.toDate(input.expiresAt),
       httpOnly: true,
       path: "/",
       sameSite: "lax",
-    }),
+    }).pipe(
+      Result.flatMap((cookies) =>
+        Cookies.expireCookie(cookies, input.legacyCookieName, {
+          httpOnly: true,
+          path: "/",
+          sameSite: "lax",
+        }),
+      ),
+    ),
   ).pipe(
     Effect.catch(() => failEnvironmentInternal("browser_session_cookie_failed")),
     Effect.flatMap((cookies) =>
@@ -277,7 +292,7 @@ export const layer = HttpApiBuilder.group(
             const credential = EnvironmentAuth.selectRequestCredential(
               request,
               sessions.cookieName,
-              sessions.legacyCookieName,
+              sessions.legacyCookieNames,
             );
             if (
               credential?.source === "legacy-cookie" &&
@@ -285,7 +300,12 @@ export const layer = HttpApiBuilder.group(
               result.sessionMethod === "browser-session-cookie" &&
               result.expiresAt
             ) {
-              yield* appendSessionCookie(sessions.cookieName, credential.token, result.expiresAt);
+              yield* reissueLegacySessionCookie({
+                cookieName: sessions.cookieName,
+                legacyCookieName: credential.cookieName,
+                token: credential.token,
+                expiresAt: result.expiresAt,
+              });
               yield* appendCredentialResponseHeaders;
             }
             return result;
@@ -304,7 +324,7 @@ export const layer = HttpApiBuilder.group(
             const previousCredential = EnvironmentAuth.selectRequestCredential(
               request,
               sessions.cookieName,
-              sessions.legacyCookieName,
+              sessions.legacyCookieNames,
             );
             const result = yield* serverAuth.createBrowserSession(
               args.payload.credential,
