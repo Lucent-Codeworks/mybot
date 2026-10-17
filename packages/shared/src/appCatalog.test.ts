@@ -224,7 +224,7 @@ describe("the app catalog", () => {
     });
   });
 
-  it("lets email send to anyone and read attachments", () => {
+  it("lets email send to anyone and read and save attachments", () => {
     const email = findAppPreset("email")!;
     const result = buildAppConnectionInput(email, {
       address: "me@example.com",
@@ -238,6 +238,7 @@ describe("the app catalog", () => {
       env: {
         MCP_EMAIL_SERVER_ALLOWED_RECIPIENTS: "*",
         MCP_EMAIL_SERVER_ENABLE_ATTACHMENT_CONTENT: "true",
+        MCP_EMAIL_SERVER_ENABLE_ATTACHMENT_DOWNLOAD: "true",
       },
     });
   });

@@ -235,8 +235,9 @@ const CORE_APPS: ReadonlyArray<AppPreset> = [
         }),
         // The server refuses to send anywhere until recipients are allowed.
         MCP_EMAIL_SERVER_ALLOWED_RECIPIENTS: "*",
-        // Lets the bot read attachments; they are off by default.
+        // Lets the bot read and save attachments; both are off by default.
         MCP_EMAIL_SERVER_ENABLE_ATTACHMENT_CONTENT: "true",
+        MCP_EMAIL_SERVER_ENABLE_ATTACHMENT_DOWNLOAD: "true",
         ...mailTls("IMAP", values.imapPort, "993"),
         ...mailTls("SMTP", values.smtpPort, "465"),
       },
