@@ -194,4 +194,33 @@ describe("the app catalog", () => {
       auth: "token",
     });
   });
+
+  // iCloud only sends over STARTTLS on 587, which the email server never uses by default.
+  it("uses STARTTLS for email on ports other than the secure ones", () => {
+    const email = findAppPreset("email")!;
+    const account = { address: "me@icloud.com", password: "p", imapHost: "imap.mail.me.com" };
+    const secure = buildAppConnectionInput(email, {
+      ...account,
+      imapPort: "993",
+      smtpHost: "smtp.gmail.com",
+      smtpPort: "465",
+    });
+    expect("input" in secure && secure.input.transport).not.toHaveProperty(
+      "env.MCP_EMAIL_SERVER_SMTP_START_SSL",
+    );
+    const startTls = buildAppConnectionInput(email, {
+      ...account,
+      imapPort: "143",
+      smtpHost: "smtp.mail.me.com",
+      smtpPort: "587",
+    });
+    expect("input" in startTls && startTls.input.transport).toMatchObject({
+      env: {
+        MCP_EMAIL_SERVER_IMAP_SSL: "false",
+        MCP_EMAIL_SERVER_IMAP_START_SSL: "true",
+        MCP_EMAIL_SERVER_SMTP_SSL: "false",
+        MCP_EMAIL_SERVER_SMTP_START_SSL: "true",
+      },
+    });
+  });
 });

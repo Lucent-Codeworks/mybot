@@ -26,6 +26,18 @@ import {
 export { APP_CATEGORIES };
 export type { AppCategory, AppConnectionKind, AppPreset, AppPresetField, AppPresetTransport };
 
+/**
+ * The email server's TLS settings for a port: direct TLS on the secure port
+ * (993, 465), STARTTLS on any other, such as 587 for iCloud.
+ */
+const mailTls = (protocol: "IMAP" | "SMTP", port: string | undefined, securePort: string) =>
+  (port || securePort) === securePort
+    ? {}
+    : {
+        [`MCP_EMAIL_SERVER_${protocol}_SSL`]: "false",
+        [`MCP_EMAIL_SERVER_${protocol}_START_SSL`]: "true",
+      };
+
 /** The first catalog, as it shipped. */
 const CORE_APPS: ReadonlyArray<AppPreset> = [
   // Email & calendar
@@ -187,39 +199,43 @@ const CORE_APPS: ReadonlyArray<AppPreset> = [
         key: "imapHost",
         label: "IMAP server",
         placeholder: "imap.example.com",
-        help: "Your provider's incoming mail server, like imap.gmail.com (Gmail), imap.mail.me.com (iCloud), or outlook.office365.com (Outlook). Your email provider's help pages list it.",
+        help: "Your provider's incoming mail server, like imap.gmail.com (Gmail) or imap.mail.me.com (iCloud). For Outlook, use the Outlook app instead.",
       },
       {
         key: "imapPort",
         label: "IMAP port",
         default: "993",
-        help: "Usually 993, the secure IMAP port.",
+        help: "Usually 993. Use 143 if your provider only offers STARTTLS.",
       },
       {
         key: "smtpHost",
         label: "SMTP server",
         placeholder: "smtp.example.com",
-        help: "Your provider's outgoing mail server, like smtp.gmail.com (Gmail), smtp.mail.me.com (iCloud), or smtp.office365.com (Outlook).",
+        help: "Your provider's outgoing mail server, like smtp.gmail.com (Gmail) or smtp.mail.me.com (iCloud).",
       },
       {
         key: "smtpPort",
         label: "SMTP port",
         default: "465",
-        help: "Usually 465, the secure SMTP port. Gmail supports 465.",
+        help: "465 for Gmail and most providers; 587 for iCloud.",
       },
     ],
     transport: (values) => ({
       type: "stdio",
       command: "uvx",
       args: ["mcp-email-server@latest", "stdio"],
-      env: envOf(values, {
-        MCP_EMAIL_SERVER_EMAIL_ADDRESS: "address",
-        MCP_EMAIL_SERVER_PASSWORD: "password",
-        MCP_EMAIL_SERVER_IMAP_HOST: "imapHost",
-        MCP_EMAIL_SERVER_IMAP_PORT: "imapPort",
-        MCP_EMAIL_SERVER_SMTP_HOST: "smtpHost",
-        MCP_EMAIL_SERVER_SMTP_PORT: "smtpPort",
-      }),
+      env: {
+        ...envOf(values, {
+          MCP_EMAIL_SERVER_EMAIL_ADDRESS: "address",
+          MCP_EMAIL_SERVER_PASSWORD: "password",
+          MCP_EMAIL_SERVER_IMAP_HOST: "imapHost",
+          MCP_EMAIL_SERVER_IMAP_PORT: "imapPort",
+          MCP_EMAIL_SERVER_SMTP_HOST: "smtpHost",
+          MCP_EMAIL_SERVER_SMTP_PORT: "smtpPort",
+        }),
+        ...mailTls("IMAP", values.imapPort, "993"),
+        ...mailTls("SMTP", values.smtpPort, "465"),
+      },
     }),
   },
   {
