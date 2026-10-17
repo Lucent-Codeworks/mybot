@@ -318,7 +318,7 @@ const PreviewRecordingStopTool = safeBrowserTool(
 const PreviewTeachStartTool = safeBrowserTool(
   Tool.make("preview_teach_start", {
     description:
-      "Start learning a task the user demonstrates in your browser tab. Open the starting page first. Then tell the user to take control of the tab, do the task once, release control, and reply; end your turn. Only what the user does while in control is recorded; secrets are recorded without their values.",
+      "Start learning a task the user demonstrates in your browser tab. Open the starting page first. Then tell the user to take control of the tab, do the task once, release control, and reply; end your turn. Only what the user does while in control is recorded, including in tabs the page opens; secrets are recorded without their values.",
     parameters: PreviewAutomationTeachStartInput,
     success: Schema.Struct({ ...PreviewAutomationTeachStatus.fields, ...presentationFields }),
     failure: PreviewToolFailure,

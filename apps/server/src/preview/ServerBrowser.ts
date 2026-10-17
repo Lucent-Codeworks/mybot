@@ -355,9 +355,15 @@ interface ServerTab {
   /** Scaled captures rendering now; screencasts stay stopped meanwhile. */
   capturing: number;
   /** A task the user is demonstrating, while a bot learns it. */
-  teaching: { readonly goal: string; readonly steps: Array<string> } | null;
+  teaching: Lesson | null;
   /** Whether this tab already reports the user's navigations to a lesson. */
   teachNavigationWatched: boolean;
+}
+
+/** Shared by a teaching tab and the tabs its page opens, so one lesson spans them. */
+interface Lesson {
+  readonly goal: string;
+  readonly steps: Array<string>;
 }
 
 interface ServerDownload {
@@ -505,7 +511,10 @@ const make = Effect.gen(function* () {
   /** Sessions closed while their tab was still opening; the open discards its page. */
   const closedPendingTabs = new Set<string>();
   /** Popup pages waiting for the tab their `opened` event creates. */
-  const adoptedPages = new Map<string, { readonly page: Page; readonly openerTabId: string }>();
+  const adoptedPages = new Map<
+    string,
+    { readonly page: Page; readonly openerTabId: string; readonly teaching: Lesson | null }
+  >();
   /** Sessions the manager closed, so their tabs end for good. Pruned once dropped. */
   const closedSessions = new Set<string>();
   let hostConnectionId: string | null = null;
@@ -822,9 +831,10 @@ const make = Effect.gen(function* () {
       abortedNavigation: null,
       captureLock: Promise.resolve(),
       capturing: 0,
-      teaching: null,
+      teaching: adopted?.teaching ?? null,
       teachNavigationWatched: false,
     };
+    if (tab.teaching) watchTeachNavigation(tab);
     if (!desktop) {
       await page.setViewportSize(fixedViewportSize(tab.setting) ?? UNATTACHED_FILL_VIEWPORT);
     }
@@ -1146,6 +1156,14 @@ const make = Effect.gen(function* () {
   const teachContexts = new WeakSet<BrowserContext>();
   /** Steps count only while the user drives the tab, never the agent. */
   const userDrives = (tab: ServerTab) => tab.teaching !== null && tab.control.controller !== null;
+  const watchTeachNavigation = (tab: ServerTab) => {
+    if (tab.teachNavigationWatched) return;
+    tab.teachNavigationWatched = true;
+    tab.page.on("framenavigated", (frame) => {
+      if (frame !== tab.page.mainFrame() || !tab.teaching || !userDrives(tab)) return;
+      addTeachStep(tab.teaching.steps, `Went to ${frame.url().slice(0, 300)}`);
+    });
+  };
   const startTeaching = async (tab: ServerTab, goal: string) => {
     const context = tab.page.context();
     if (!teachContexts.has(context)) {
@@ -1157,13 +1175,7 @@ const make = Effect.gen(function* () {
       });
       await context.addInitScript(TEACH_RECORDER_SCRIPT);
     }
-    if (!tab.teachNavigationWatched) {
-      tab.teachNavigationWatched = true;
-      tab.page.on("framenavigated", (frame) => {
-        if (frame !== tab.page.mainFrame() || !tab.teaching || !userDrives(tab)) return;
-        addTeachStep(tab.teaching.steps, `Went to ${frame.url().slice(0, 300)}`);
-      });
-    }
+    watchTeachNavigation(tab);
     // The init script covers later documents; this one is already loaded.
     await tab.page.evaluate(TEACH_RECORDER_SCRIPT).catch(constVoid);
     tab.teaching = { goal, steps: [] };
@@ -1198,6 +1210,13 @@ const make = Effect.gen(function* () {
     const controller = [...opener.viewers].find(
       (viewer) => viewer.id === opener.control.controller,
     );
+    // A tab the user opens mid-lesson is part of the lesson, and theirs to see.
+    const teaching = userDrives(opener) ? opener.teaching : null;
+    if (teaching)
+      addTeachStep(
+        teaching.steps,
+        /^https?:/i.test(url) ? `Opened ${url.slice(0, 300)} in a new tab` : "Opened a new tab",
+      );
     await Effect.runPromise(
       manager.open({
         threadId: opener.threadId,
@@ -1207,17 +1226,18 @@ const make = Effect.gen(function* () {
         // Agent popups stay with the agent and only float when it asks, like its own opens.
         ...(opener.control.agentId === null
           ? {}
-          : { automationOwner: opener.control.agentId, reveal: false }),
+          : { automationOwner: opener.control.agentId, ...(teaching ? {} : { reveal: false }) }),
         beforePublish: (snapshot) =>
           adoptedPages.set(tabKey(snapshot.threadId, snapshot.tabId), {
             page: popup,
             openerTabId: opener.tabId,
+            teaching,
           }),
       }),
     ).then(
       (snapshot) => {
         // The opener stays open behind it, so `window.opener` can still report back.
-        if (opener.control.agentId === null)
+        if (opener.control.agentId === null || teaching)
           controller?.push({ _tag: "popup", tabId: snapshot.tabId });
       },
       async () => {
@@ -1743,7 +1763,7 @@ const make = Effect.gen(function* () {
         return { tabId: tab.tabId, teaching: true } satisfies PreviewAutomationTeachStatus;
       }
       const lesson = tab.teaching;
-      tab.teaching = null;
+      for (const other of tabs.values()) if (other.teaching === lesson) other.teaching = null;
       if (lesson === null)
         throw new ServerBrowserPage.ServerBrowserOperationError(
           "PreviewAutomationExecutionError",
@@ -2336,7 +2356,12 @@ const make = Effect.gen(function* () {
             reportLiveTabs();
           }),
       );
-      if (input.canOperate && tab.control.agentId === null && tab.control.controller === null) {
+      // A lesson's tabs are the user's to drive, so one opened mid-lesson needs no extra take.
+      if (
+        input.canOperate &&
+        (tab.control.agentId === null || tab.teaching !== null) &&
+        tab.control.controller === null
+      ) {
         yield* Effect.promise(() => tab.control.take(viewer.id));
       }
       broadcastControl(tab);
