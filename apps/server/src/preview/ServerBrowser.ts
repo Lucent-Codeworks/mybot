@@ -1175,9 +1175,19 @@ const make = Effect.gen(function* () {
       });
       await context.addInitScript(TEACH_RECORDER_SCRIPT);
     }
+    // The init script covers later documents; this one is already loaded. A
+    // navigation racing the install is fine, since the next document gets the
+    // init script. Any other failure means no step would be seen, so the agent
+    // hears it now rather than after the user has done the whole task.
+    await tab.page.evaluate(TEACH_RECORDER_SCRIPT).catch((cause: unknown) => {
+      const message = cause instanceof Error ? cause.message : String(cause);
+      if (message.includes("Execution context was destroyed")) return;
+      throw new ServerBrowserPage.ServerBrowserOperationError(
+        "PreviewAutomationExecutionError",
+        `Could not start watching this tab, so the user's steps would not be recorded: ${message}`,
+      );
+    });
     watchTeachNavigation(tab);
-    // The init script covers later documents; this one is already loaded.
-    await tab.page.evaluate(TEACH_RECORDER_SCRIPT).catch(constVoid);
     tab.teaching = { goal, steps: [] };
   };
 

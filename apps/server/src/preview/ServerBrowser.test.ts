@@ -1523,6 +1523,39 @@ it.live("a lesson records only what the user does while they control the tab", (
   ).pipe(Effect.provide(layer)),
 );
 
+it.live("a lesson that cannot watch the page fails to start instead of recording nothing", () =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      const { broker, tabId } = yield* ready;
+      contexts[0]!.page.evaluate.mockRejectedValueOnce(
+        new Error("page.evaluate: TypeError: utilityScript.evaluate is not a function"),
+      );
+      const failed = yield* broker
+        .invoke({ scope, tabId, operation: "teachStart", input: { goal: "quote a car" } })
+        .pipe(Effect.flip);
+      expect(failed).toMatchObject({
+        reason: expect.stringContaining("Could not start watching this tab"),
+      });
+      const stop = yield* broker
+        .invoke<PreviewAutomationTeachResult>({ scope, tabId, operation: "teachStop", input: {} })
+        .pipe(Effect.flip);
+      expect(stop).toMatchObject({ reason: expect.stringContaining("No lesson is running") });
+      // A navigation racing the install is covered by the init script.
+      contexts[0]!.page.evaluate.mockRejectedValueOnce(
+        new Error(
+          "page.evaluate: Execution context was destroyed, most likely because of a navigation",
+        ),
+      );
+      yield* broker.invoke({
+        scope,
+        tabId,
+        operation: "teachStart",
+        input: { goal: "quote a car" },
+      });
+    }),
+  ).pipe(Effect.provide(layer)),
+);
+
 it.live("a tab the user opens mid-lesson is shown to them and joins the lesson", () =>
   Effect.scoped(
     Effect.gen(function* () {
