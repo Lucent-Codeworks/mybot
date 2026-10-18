@@ -527,6 +527,55 @@ describe("DesktopUpdates", () => {
     );
   });
 
+  it.effect("logs the stderr electron-updater reports for a failed install command", () => {
+    const harness = makeHarness();
+    const logged: Array<{ level: string; message: unknown; detail: unknown }> = [];
+    const logger = Logger.make(({ fiber, logLevel, message }) => {
+      const annotations = fiber.getRef(References.CurrentLogAnnotations);
+      if (annotations.detail !== undefined) {
+        logged.push({ level: logLevel, message, detail: annotations.detail });
+      }
+    });
+
+    return Effect.scoped(
+      Effect.gen(function* () {
+        const updates = yield* DesktopUpdates.DesktopUpdates;
+        yield* updates.configure;
+        const updaterLogger = harness.updaterLogger();
+        assert.isDefined(updaterLogger);
+
+        // Probing for gksudo/kdesudo logs empty stderr; pkexec then fails with a reason.
+        updaterLogger.error("");
+        updaterLogger.error(
+          "Error executing command as another user: Not authorized\n\nThis incident has been reported.\n",
+        );
+        updaterLogger.warn(new Error("Command pkexec exited with code 127"));
+        yield* flushCallbacks;
+
+        assert.deepEqual(logged, [
+          {
+            level: "Error",
+            message: ["electron-updater log"],
+            detail: "Error executing command as another user: Not authorized",
+          },
+          {
+            level: "Warn",
+            message: ["electron-updater log"],
+            detail: "Command pkexec exited with code 127",
+          },
+        ]);
+      }),
+    ).pipe(
+      Effect.provide(
+        Layer.mergeAll(
+          TestClock.layer(),
+          harness.layer,
+          Logger.layer([logger], { mergeWithExisting: false }),
+        ),
+      ),
+    );
+  });
+
   it.effect("recovers download state after an unexpected setup failure", () => {
     let disableDifferentialCalls = 0;
     const harness = makeHarness({

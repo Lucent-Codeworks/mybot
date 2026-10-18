@@ -4,7 +4,7 @@ import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
 import * as Scope from "effect/Scope";
 
-import { autoUpdater } from "electron-updater";
+import { autoUpdater, type Logger } from "electron-updater";
 
 type AutoUpdater = typeof autoUpdater;
 
@@ -61,6 +61,7 @@ export class ElectronUpdater extends Context.Service<
     readonly setFeedURL: (options: ElectronUpdaterFeedUrl) => Effect.Effect<void>;
     readonly setAutoDownload: (value: boolean) => Effect.Effect<void>;
     readonly setAutoInstallOnAppQuit: (value: boolean) => Effect.Effect<void>;
+    readonly setLogger: (logger: Logger) => Effect.Effect<void>;
     readonly setChannel: (channel: string) => Effect.Effect<void>;
     readonly setAllowPrerelease: (value: boolean) => Effect.Effect<void>;
     readonly allowDowngrade: Effect.Effect<boolean>;
@@ -95,6 +96,11 @@ export const make = ElectronUpdater.of({
   setAutoInstallOnAppQuit: (value) =>
     Effect.suspend(() => {
       autoUpdater.autoInstallOnAppQuit = value;
+      return Effect.void;
+    }),
+  setLogger: (logger) =>
+    Effect.suspend(() => {
+      autoUpdater.logger = logger;
       return Effect.void;
     }),
   setChannel: (channel) =>
