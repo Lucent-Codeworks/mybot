@@ -1,3 +1,4 @@
+import * as HostProcess from "@mybot/shared/HostProcess";
 import * as HttpObservability from "@mybot/shared/httpObservability";
 import { makeLocalFileTracer, makeTraceSink } from "@mybot/shared/observability";
 import * as SharedObservability from "@mybot/shared/observability";
@@ -24,7 +25,7 @@ export const layer = Layer.unwrap(
     // The trace serializer stays in the returned context because the browser
     // trace forwarder exports on the same signal.
     const layerSerialization = SharedObservability.layerOtlpSerialization(traces.protocol);
-    const resource = ServerConfig.otlpResource(config);
+    const resource = ServerConfig.otlpResource(config, yield* HostProcess.telemetryAttributes);
     const attribution = yield* ResourceAttribution.ResourceAttribution;
 
     const layerTraceReferences = Layer.mergeAll(

@@ -121,12 +121,16 @@ export const make = (config: ServerConfig["Service"]) => ServerConfig.of(config)
  * Resource attributes shared by every OTLP exporter, so traces, metrics, and
  * logs report the same service identity to the collector.
  */
-export const otlpResource = (config: ServerConfig["Service"]) => ({
+export const otlpResource = (
+  config: ServerConfig["Service"],
+  host: Readonly<Record<string, string>>,
+) => ({
   serviceName: "mybot-server",
   attributes: {
     "service.namespace": "mybot",
     "service.runtime": "t3-server",
     "service.mode": config.mode,
+    ...host,
   },
 });
 

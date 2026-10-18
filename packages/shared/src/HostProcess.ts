@@ -105,3 +105,12 @@ export const UserId = Context.Reference<number | undefined>("@mybot/shared/HostP
 });
 
 export const isWindows = Effect.map(Platform, (platform) => platform === "win32");
+
+/** The host's OS and CPU as OpenTelemetry resource attributes, so telemetry can be split by platform. */
+export const telemetryAttributes = Effect.gen(function* () {
+  const platform = yield* Platform;
+  return {
+    "os.type": platform === "win32" ? "windows" : platform,
+    "host.arch": yield* Architecture,
+  };
+});

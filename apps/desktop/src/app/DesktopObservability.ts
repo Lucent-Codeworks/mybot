@@ -1,4 +1,5 @@
 import { PRIMARY_LOCAL_ENVIRONMENT_ID } from "@mybot/contracts";
+import * as HostProcess from "@mybot/shared/HostProcess";
 import { makeLocalFileTracer, makeTraceSink, type SignalExport } from "@mybot/shared/observability";
 import * as SharedObservability from "@mybot/shared/observability";
 import * as OtelEnvironment from "@mybot/shared/otelEnvironment";
@@ -630,6 +631,7 @@ const layerTelemetry = Layer.unwrap(
         "service.namespace": "mybot",
         "service.runtime": "desktop",
         "service.mode": environment.isDevelopment ? "development" : "packaged",
+        ...(yield* HostProcess.telemetryAttributes),
       },
     };
 
