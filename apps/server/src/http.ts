@@ -3,10 +3,10 @@ import {
   AuthOrchestrationOperateScope,
   AuthOrchestrationReadScope,
   EnvironmentHttpApi,
-} from "@t3tools/contracts";
-import { isDevProxiedPath } from "@t3tools/shared/devProxy";
-import { injectMcpAppCookieBootstrap, injectMcpAppThemeBootstrap } from "@t3tools/shared/mcpApp";
-import { decodeOtlpTraceRecords } from "@t3tools/shared/observability";
+} from "@mybot/contracts";
+import { isDevProxiedPath } from "@mybot/shared/devProxy";
+import { injectMcpAppCookieBootstrap, injectMcpAppThemeBootstrap } from "@mybot/shared/mcpApp";
+import { decodeOtlpTraceRecords } from "@mybot/shared/observability";
 import * as Data from "effect/Data";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -265,7 +265,7 @@ export const layerBrowserApiCors = Layer.unwrap(
     // Dev uses credentialed requests from Vite or the Electron custom origin, so both must be
     // explicit. Packaged desktop omits credentials and uses Effect's default wildcard origin.
     //
-    // T3CODE_DEV_ALLOWED_ORIGINS covers dev servers reached from a second
+    // MYBOT_DEV_ALLOWED_ORIGINS covers dev servers reached from a second
     // origin — a tailnet name, a LAN IP, a phone. Browser dev normally proxies
     // through Vite and is same-origin (no preflight at all), so this is a
     // safety net for the desktop renderer and any direct-to-backend caller.

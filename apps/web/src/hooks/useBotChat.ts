@@ -1,6 +1,6 @@
-import { scopeProjectRef } from "@t3tools/client-runtime/environment";
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
-import type { ScopedProjectRef } from "@t3tools/contracts";
+import { scopeProjectRef } from "@mybot/client-runtime/environment";
+import type { EnvironmentProject } from "@mybot/client-runtime/state/shell";
+import type { ScopedProjectRef } from "@mybot/contracts";
 import { useCallback, useMemo } from "react";
 
 import { requestNewBot } from "../components/NewBotDialog";

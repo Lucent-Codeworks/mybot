@@ -13,8 +13,8 @@ import {
   type RunId,
   type RuntimeRequestId,
   ThreadId,
-} from "@t3tools/contracts";
-import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
+} from "@mybot/contracts";
+import { resolveProjectSettings } from "@mybot/shared/projectSettings";
 import * as Context from "effect/Context";
 import * as Clock from "effect/Clock";
 import * as Crypto from "effect/Crypto";

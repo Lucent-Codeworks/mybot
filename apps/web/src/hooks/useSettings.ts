@@ -21,24 +21,24 @@ import {
   ServerSettings,
   type ServerSettingsPatch,
   sessionGrantsScope,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import {
   type ClientSettingsPatch,
   type ClientSettings,
   DEFAULT_CLIENT_SETTINGS,
   type EnvironmentIdentificationMode,
   type UnifiedSettings,
-} from "@t3tools/contracts/settings";
-import { safeErrorLogAttributes } from "@t3tools/client-runtime/errors";
+} from "@mybot/contracts/settings";
+import { safeErrorLogAttributes } from "@mybot/client-runtime/errors";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@mybot/client-runtime/state/runtime";
 import {
   filterSharedServerPatch,
   splitSharedServerPatch,
   supportsSharedSettingsSync,
-} from "@t3tools/client-runtime/state/shared-settings";
+} from "@mybot/client-runtime/state/shared-settings";
 import { ensureLocalApi } from "~/localApi";
 import {
   getThemeDefinition,
@@ -50,7 +50,7 @@ import {
 import {
   modelPreferencesMigrationPatch,
   resolveModelPreferences,
-} from "@t3tools/shared/serverSettings";
+} from "@mybot/shared/serverSettings";
 import * as Struct from "effect/Struct";
 import * as Option from "effect/Option";
 import { AsyncResult, Atom } from "effect/reactivity";

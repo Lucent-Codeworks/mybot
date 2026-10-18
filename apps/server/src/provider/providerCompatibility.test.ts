@@ -1,5 +1,5 @@
 import { assert, describe, it } from "@effect/vitest";
-import { ProviderDriverKind, ProviderInstanceId, type ServerProvider } from "@t3tools/contracts";
+import { ProviderDriverKind, ProviderInstanceId, type ServerProvider } from "@mybot/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as Deferred from "effect/Deferred";
 import * as Fiber from "effect/Fiber";
@@ -12,8 +12,8 @@ import * as ServerConfig from "../config.ts";
 import * as ModelManifest from "./ModelManifest.ts";
 import * as ProviderRegistry from "./ProviderRegistry.ts";
 import * as ProviderInstanceRegistry from "./ProviderInstanceRegistry.ts";
-import type { ProviderInstance } from "@t3tools/provider-core/server/driver";
-import { makeManualOnlyProviderMaintenanceCapabilities } from "@t3tools/provider-core/server/maintenanceResolver";
+import type { ProviderInstance } from "@mybot/provider-core/server/driver";
+import { makeManualOnlyProviderMaintenanceCapabilities } from "@mybot/provider-core/server/maintenanceResolver";
 import { BUILT_IN_DRIVERS } from "./builtInDrivers.ts";
 import * as Schema from "effect/Schema";
 import {
@@ -111,14 +111,14 @@ describe("provider compatibility", () => {
       ["1.14.19", "graceful"],
       ["1.14.18", "broken"],
     ] as const) {
-      for (const t3CodeVersion of [V2_RELEASE, "0.0.46-preview.20261002.2598"]) {
+      for (const myBotVersion of [V2_RELEASE, "0.0.46-preview.20261002.2598"]) {
         const advisory = resolveProviderCompatibility(
           ModelManifest.BUNDLED_MODEL_MANIFEST.compatibility,
           opencode,
           version,
-          t3CodeVersion,
+          myBotVersion,
         );
-        assert.strictEqual(advisory?.status, expected, `OpenCode ${version} on ${t3CodeVersion}`);
+        assert.strictEqual(advisory?.status, expected, `OpenCode ${version} on ${myBotVersion}`);
         assert.strictEqual(advisory?.recommendedRange, ">=2.0.18");
       }
     }

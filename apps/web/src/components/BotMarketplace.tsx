@@ -1,4 +1,4 @@
-import type { BotTemplate } from "@t3tools/shared/botTemplates";
+import type { BotTemplate } from "@mybot/shared/botTemplates";
 import { PlusIcon, SearchIcon, UsersIcon } from "lucide-react";
 import { useDeferredValue, useMemo, useState } from "react";
 

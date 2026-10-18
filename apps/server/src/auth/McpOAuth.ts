@@ -13,8 +13,8 @@ import {
   type AuthEnvironmentScope,
   AuthOrchestrationOperateScope,
   AuthOrchestrationReadScope,
-} from "@t3tools/contracts";
-import { encodeOAuthScope } from "@t3tools/shared/oauthScope";
+} from "@mybot/contracts";
+import { encodeOAuthScope } from "@mybot/shared/oauthScope";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
@@ -40,10 +40,10 @@ import {
 
 /**
  * The OAuth authorization server MCP clients (Claude Code, Codex, any agent
- * T3 Code did not launch) use to sign in to this environment's `/mcp`.
+ * MyBot did not launch) use to sign in to this environment's `/mcp`.
  *
  * Every URL is derived from the request's own origin, so the same server
- * answers correctly over loopback, Tailscale Serve and a T3 Connect tunnel.
+ * answers correctly over loopback, Tailscale Serve and a MyBot Connect tunnel.
  * Client registration is stateless: a client id is its signed metadata, so
  * an unauthenticated caller cannot grow server state. Redirects go to a
  * loopback address (a CLI agent on the user's machine) or any https address

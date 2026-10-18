@@ -1,5 +1,5 @@
-import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environment";
-import { resolveEnvironmentMachineKind, type ScopedThreadRef } from "@t3tools/contracts";
+import { scopedThreadKey, scopeThreadRef } from "@mybot/client-runtime/environment";
+import { resolveEnvironmentMachineKind, type ScopedThreadRef } from "@mybot/contracts";
 import { TerminalIcon } from "lucide-react";
 import { type AnimationEvent } from "react";
 import { useEnvironment, usePrimaryEnvironmentId } from "../state/environments";

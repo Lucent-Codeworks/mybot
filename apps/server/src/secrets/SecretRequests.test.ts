@@ -6,7 +6,7 @@ import {
   type OrchestrationV2ServerCommand,
   ThreadId,
   TurnItemId,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Clock from "effect/Clock";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -387,7 +387,7 @@ it.effect("drops values nobody used once they expire, and keeps the rest", () =>
     Effect.provide(
       ServerSecretStore.layer.pipe(
         Layer.provideMerge(
-          ServerConfig.layerTest(process.cwd(), { prefix: "t3-secret-requests-" }),
+          ServerConfig.layerTest(process.cwd(), { prefix: "mybot-secret-requests-" }),
         ),
         Layer.provideMerge(NodeServices.layer),
       ),

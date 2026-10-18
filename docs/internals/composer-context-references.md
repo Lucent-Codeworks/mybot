@@ -1,6 +1,6 @@
 # Composer context references
 
-> For maintainers. Using T3 Code? See [docs/user](../user/).
+> For maintainers. Using MyBot? See [docs/user](../user/).
 
 Inline context references let a user message point at a typed payload from an exact position in
 its prose: an image, a file, a terminal excerpt, a picked page element, a preview annotation, a
@@ -140,7 +140,7 @@ rejects duplicate surface handlers, and provides the unresolved fallback. Termin
 elements, review comments, and preview annotations open structured details popovers; images and
 videos use the shared media modal. Mobile renders context links as their labels.
 
-Review-comment records can carry optional `pullRequest` metadata written before T3 Code dropped
+Review-comment records can carry optional `pullRequest` metadata written before MyBot dropped
 source control. Nothing creates it anymore, but the schema keeps it so stored messages still decode.
 
 ## Attachments

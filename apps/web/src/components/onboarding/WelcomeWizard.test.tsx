@@ -38,7 +38,7 @@ vi.mock("../../state/server", () => ({
 vi.mock("@effect/atom-react", () => ({ useAtomValue: (value: unknown) => value }));
 vi.mock("../../connection/onboarding", () => ({ connectPairing: vi.fn() }));
 vi.mock("../../state/terminal", () => ({ terminalEnvironment: {} }));
-vi.mock("../clerk/useT3ConnectAuthPrompt", () => ({ useT3ConnectAuthPrompt: vi.fn() }));
+vi.mock("../clerk/useMyBotConnectAuthPrompt", () => ({ useMyBotConnectAuthPrompt: vi.fn() }));
 vi.mock("../../cloud/publicConfig", () => ({ hasCloudPublicConfig: () => false }));
 vi.mock("../ThreadTerminalDrawer", () => ({ TerminalViewport: () => null }));
 vi.mock("../settings/ChatGptWelcomeCoordinator", () => ({ ChatGptWelcomeCoordinator: () => null }));

@@ -4,7 +4,7 @@ import {
   type AppCategory,
   type AppPreset,
   findAppPreset,
-} from "@t3tools/shared/appCatalog";
+} from "@mybot/shared/appCatalog";
 
 export type MarketplaceFilter = "all" | "popular" | AppCategory;
 

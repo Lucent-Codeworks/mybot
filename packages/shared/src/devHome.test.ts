@@ -20,7 +20,7 @@ const makeRepo = (
 ) =>
   Effect.acquireRelease(
     Effect.sync(() => {
-      const root = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-devhome-"));
+      const root = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "mybot-devhome-"));
       if (kind === "worktree") {
         NodeFS.writeFileSync(NodePath.join(root, ".git"), "gitdir: /elsewhere/.git/worktrees/x\n");
       } else if (kind === "bare-repo-worktree") {
@@ -95,11 +95,11 @@ describe("resolveGitWorktreePath", () => {
 });
 
 describe("resolveWorktreeT3Home", () => {
-  it.effect("answers with .t3 before the dev runner creates it", () =>
+  it.effect("answers with .mybot before the dev runner creates it", () =>
     Effect.gen(function* () {
       const { root, nested } = yield* makeRepo("worktree");
       const home = yield* resolveWorktreeT3Home(nested);
-      assert.equal(home, NodePath.join(NodePath.resolve(root), ".t3"));
+      assert.equal(home, NodePath.join(NodePath.resolve(root), ".mybot"));
       assert.isFalse(NodeFS.existsSync(home ?? ""));
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
   );

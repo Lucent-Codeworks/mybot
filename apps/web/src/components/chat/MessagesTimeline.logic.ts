@@ -1,16 +1,16 @@
-import { isLiveSubagentTurnItem } from "@t3tools/client-runtime/state/subagentRuntime";
+import { isLiveSubagentTurnItem } from "@mybot/client-runtime/state/subagentRuntime";
 import * as DateTime from "effect/DateTime";
 import * as Equal from "effect/Equal";
 import {
   assistantCitationLabel,
   collectAssistantCitations,
-} from "@t3tools/shared/assistantCitations";
+} from "@mybot/shared/assistantCitations";
 import { shallow } from "zustand/vanilla/shallow";
-import { renderCodexDirectivesForCopy } from "@t3tools/shared/codexMarkdownDirectives";
+import { renderCodexDirectivesForCopy } from "@mybot/shared/codexMarkdownDirectives";
 import {
   commandDisplayText,
   commandProgramName,
-} from "@t3tools/client-runtime/work-log/command-label";
+} from "@mybot/client-runtime/work-log/command-label";
 import {
   liveActivityToolStatus,
   normalizeCompactToolLabel,
@@ -19,11 +19,11 @@ import {
   toolGroupAction,
   toolGroupSummaryKind,
   type ToolGroupSummaryKind,
-} from "@t3tools/client-runtime/work-log/presentation";
+} from "@mybot/client-runtime/work-log/presentation";
 export {
   normalizeCompactToolLabel,
   toolGroupAction,
-} from "@t3tools/client-runtime/work-log/presentation";
+} from "@mybot/client-runtime/work-log/presentation";
 import {
   deriveRevertTurnCountByUserMessageId,
   formatDuration,
@@ -50,24 +50,24 @@ import {
   RunId,
   type ThreadId,
   type TurnItemId,
-} from "@t3tools/contracts";
-import type { ThreadRunSummary } from "@t3tools/client-runtime/state/shell";
+} from "@mybot/contracts";
+import type { ThreadRunSummary } from "@mybot/client-runtime/state/shell";
 import {
-  resolveT3McpToolDefinition,
-  resolveT3McpToolPresentation,
-  type T3McpToolPresentation,
-} from "@t3tools/shared/t3McpToolPresentation";
-import { compactDynamicToolOutput } from "@t3tools/shared/toolOutput";
-import { htmlRenderReferencesEqual, type HtmlRenderReference } from "@t3tools/shared/htmlRender";
-import { mcpAppReferencesEqual, type McpAppReference } from "@t3tools/shared/mcpApp";
-import { dynamicToolTitle } from "@t3tools/shared/toolActivity";
+  resolveMyBotMcpToolDefinition,
+  resolveMyBotMcpToolPresentation,
+  type MyBotMcpToolPresentation,
+} from "@mybot/shared/myBotMcpToolPresentation";
+import { compactDynamicToolOutput } from "@mybot/shared/toolOutput";
+import { htmlRenderReferencesEqual, type HtmlRenderReference } from "@mybot/shared/htmlRender";
+import { mcpAppReferencesEqual, type McpAppReference } from "@mybot/shared/mcpApp";
+import { dynamicToolTitle } from "@mybot/shared/toolActivity";
 import { formatWorkspaceRelativePath } from "../../filePathDisplay";
 import {
   collectToolFilePaths,
   formatReadToolLabel,
   formatSearchToolLabel,
-} from "@t3tools/shared/toolActivity";
-import { isWindowsAbsolutePath } from "@t3tools/shared/path";
+} from "@mybot/shared/toolActivity";
+import { isWindowsAbsolutePath } from "@mybot/shared/path";
 
 function timelineEntryRunId(entry: TimelineEntry): RunId | null {
   if (entry.kind === "message") {
@@ -182,7 +182,7 @@ export function workEntryDisplayLabel(entry: WorkLogEntry, workspaceRoot: string
 export function threadReadTargetId(entry: Pick<WorkLogEntry, "structuredPayload">) {
   const item = entry.structuredPayload;
   if (item?.type !== "dynamic_tool") return null;
-  if (resolveT3McpToolDefinition(item.toolName)?.summaryAction !== "thread-read") return null;
+  if (resolveMyBotMcpToolDefinition(item.toolName)?.summaryAction !== "thread-read") return null;
   const input = item.input;
   const threadId =
     input !== null && typeof input === "object" && "threadId" in input ? input.threadId : null;
@@ -199,7 +199,7 @@ export function threadReadTargetTitle(
 }
 
 /**
- * Names the read thread in place of the generic object ("Read a T3 thread" becomes
+ * Names the read thread in place of the generic object ("Read a MyBot thread" becomes
  * `Read thread “Title”`), keeping the label's tense. Null keeps the generic label.
  */
 export function threadReadLabelPrefix(label: string) {
@@ -667,8 +667,8 @@ function workGroupId(timelineEntryId: string): string {
   return `work-group:${timelineEntryId}`;
 }
 
-export type TimelineToolPresentation = T3McpToolPresentation;
-export const resolveTimelineToolPresentation = resolveT3McpToolPresentation;
+export type TimelineToolPresentation = MyBotMcpToolPresentation;
+export const resolveTimelineToolPresentation = resolveMyBotMcpToolPresentation;
 
 function expandedWorkGroupRow(
   groupId: string,
@@ -1307,7 +1307,7 @@ function withoutSubagentDelegationRows(entries: ReadonlyArray<TimelineEntry>) {
       item?.type !== "dynamic_tool" ||
       item.runId === null ||
       (item.status !== "running" && item.status !== "completed") ||
-      resolveT3McpToolDefinition(item.toolName)?.summaryAction !== "delegate"
+      resolveMyBotMcpToolDefinition(item.toolName)?.summaryAction !== "delegate"
     )
       return true;
     const output = compactDynamicToolOutput(item.output);

@@ -1,4 +1,4 @@
-import { BOT_TEMPLATES } from "@t3tools/shared/botTemplates";
+import { BOT_TEMPLATES } from "@mybot/shared/botTemplates";
 import { iconNames } from "lucide-react/dynamic";
 import { describe, expect, it } from "vite-plus/test";
 

@@ -4,9 +4,9 @@ import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 
-import type { ServerInstallation } from "@t3tools/contracts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { isCommandAvailable } from "@t3tools/shared/shell";
+import type { ServerInstallation } from "@mybot/contracts";
+import * as HostProcess from "@mybot/shared/HostProcess";
+import { isCommandAvailable } from "@mybot/shared/shell";
 
 import packageJson from "../../package.json" with { type: "json" };
 
@@ -150,12 +150,12 @@ const shellWord = (value: string) =>
 /**
  * The launcher a person can type to run this install when `mybot` is not on
  * PATH: the desktop app's `mybot` shim, which the app and the shim itself name in
- * `T3CODE_CLI_PATH`, or a standalone binary's own path. Script installs (a
+ * `MYBOT_CLI_PATH`, or a standalone binary's own path. Script installs (a
  * repo checkout) have no single launcher and keep plain `mybot`.
  */
 const resolveInstallLauncher = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
-  const shim = (yield* HostProcess.Environment).T3CODE_CLI_PATH?.trim();
+  const shim = (yield* HostProcess.Environment).MYBOT_CLI_PATH?.trim();
   if (shim && (yield* fs.exists(shim).pipe(Effect.orElseSucceed(() => false)))) {
     return Option.some(shim);
   }

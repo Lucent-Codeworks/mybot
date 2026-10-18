@@ -1,4 +1,4 @@
-import { CheckpointScopeId, RunId, ThreadId } from "@t3tools/contracts";
+import { CheckpointScopeId, RunId, ThreadId } from "@mybot/contracts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -30,7 +30,7 @@ export class RunFinalizationObserver extends Context.Reference<{
     readonly threadId: ThreadId;
     readonly runId: RunId;
   }) => Effect.Effect<void, RunFinalizationRefreshError>;
-}>("t3/orchestration-v2/RunFinalizationObserver", {
+}>("mybot/orchestration-v2/RunFinalizationObserver", {
   defaultValue: () => ({ refresh: () => Effect.void }),
 }) {}
 

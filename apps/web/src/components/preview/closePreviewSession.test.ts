@@ -1,8 +1,4 @@
-import type {
-  PreviewCloseInput,
-  PreviewSessionSnapshot,
-  ScopedThreadRef,
-} from "@t3tools/contracts";
+import type { PreviewCloseInput, PreviewSessionSnapshot, ScopedThreadRef } from "@mybot/contracts";
 import * as Cause from "effect/Cause";
 import { AsyncResult } from "effect/reactivity";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";

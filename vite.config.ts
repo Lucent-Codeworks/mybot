@@ -5,9 +5,9 @@ import * as NodeURL from "node:url";
 /** Import restrictions every file keeps, including the one module exempt from the glyph rule. */
 const RESTRICTED_IMPORT_PATHS = [
   {
-    name: "@t3tools/client-runtime",
+    name: "@mybot/client-runtime",
     message:
-      "Import from an explicit @t3tools/client-runtime/* subpath. The package has no root export.",
+      "Import from an explicit @mybot/client-runtime/* subpath. The package has no root export.",
   },
   {
     name: "@pierre/diffs/react",
@@ -40,6 +40,7 @@ export default defineConfig({
     environment: "node",
     exclude: [
       "**/.repos/**",
+      "**/.mybot/**",
       "**/.t3/**",
       "**/node_modules/**",
       "**/dist/**",
@@ -101,7 +102,7 @@ export default defineConfig({
       "apps/mobile/uniwind-types.d.ts",
     ],
     plugins: ["eslint", "oxc", "react", "unicorn", "typescript"],
-    jsPlugins: ["./oxlint-plugin-t3code/index.ts", "@shadcn/lint"],
+    jsPlugins: ["./oxlint-plugin-mybot/index.ts", "@shadcn/lint"],
     settings: {
       shadcn: { ui: "~/components/ui" },
     },
@@ -137,29 +138,29 @@ export default defineConfig({
       "typescript/restrict-template-expressions": "off",
       "typescript/unbound-method": "off",
       "eslint/no-restricted-imports": ["error", { paths: RESTRICTED_IMPORT_PATHS }],
-      "t3code/no-global-process-runtime": "error",
-      "t3code/no-inline-schema-compile": "warn",
-      "t3code/no-manual-effect-runtime-in-tests": "error",
-      "t3code/no-native-title-tooltip": "error",
-      "t3code/no-raw-mcp-registration": "error",
-      "t3code/no-test-in-loop": "error",
-      "t3code/no-rpc-permission-bypass": ["error", { allowRawClientAccess: true }],
-      "t3code/no-unscoped-has": "error",
-      "t3code/namespace-node-imports": "error",
-      "t3code/prefer-catch-tags": "error",
-      "t3code/require-centered-scroll-gutter": "error",
-      "t3code/require-suppression-reason": "error",
+      "mybot/no-global-process-runtime": "error",
+      "mybot/no-inline-schema-compile": "warn",
+      "mybot/no-manual-effect-runtime-in-tests": "error",
+      "mybot/no-native-title-tooltip": "error",
+      "mybot/no-raw-mcp-registration": "error",
+      "mybot/no-test-in-loop": "error",
+      "mybot/no-rpc-permission-bypass": ["error", { allowRawClientAccess: true }],
+      "mybot/no-unscoped-has": "error",
+      "mybot/namespace-node-imports": "error",
+      "mybot/prefer-catch-tags": "error",
+      "mybot/require-centered-scroll-gutter": "error",
+      "mybot/require-suppression-reason": "error",
     },
     overrides: [
       {
         files: ["packages/client-runtime/src/state/**", "apps/{web,mobile,desktop}/src/**"],
-        rules: { "t3code/no-rpc-permission-bypass": ["error", { allowRawClientAccess: false }] },
+        rules: { "mybot/no-rpc-permission-bypass": ["error", { allowRawClientAccess: false }] },
       },
       {
         // Only shared command boundaries install the session-backed permission guard.
         files: ["packages/client-runtime/src/state/runtime.ts"],
         rules: {
-          "t3code/no-rpc-permission-bypass": [
+          "mybot/no-rpc-permission-bypass": [
             "error",
             { allowGuardInstallation: true, allowRawClientAccess: false },
           ],
@@ -173,12 +174,12 @@ export default defineConfig({
           "apps/web/src/components/device/DevicePhoneViewport.tsx",
           "apps/web/src/components/device/DeviceDuoViewport.tsx",
         ],
-        rules: { "t3code/no-rpc-permission-bypass": ["error", { allowRawClientAccess: true }] },
+        rules: { "mybot/no-rpc-permission-bypass": ["error", { allowRawClientAccess: true }] },
       },
       {
         // Incompatible hosts cannot open a normal session; their updater uses a dedicated socket.
         files: ["packages/client-runtime/src/connection/outdatedHostUpdate.ts"],
-        rules: { "t3code/no-rpc-permission-bypass": "off" },
+        rules: { "mybot/no-rpc-permission-bypass": "off" },
       },
       {
         // RPC implementation and transport test fixtures need the raw client.
@@ -186,17 +187,17 @@ export default defineConfig({
           "packages/client-runtime/src/rpc/**",
           "**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
         ],
-        rules: { "t3code/no-rpc-permission-bypass": "off" },
+        rules: { "mybot/no-rpc-permission-bypass": "off" },
       },
       {
         // The one place that reads the host platform to seed the injected references.
         files: ["packages/shared/src/HostProcess.ts"],
-        rules: { "t3code/no-global-process-runtime": "off" },
+        rules: { "mybot/no-global-process-runtime": "off" },
       },
       {
         // The registration helpers that only accept handlers built by McpToolAccess.
         files: ["apps/server/src/mcp/McpHttpServer.ts"],
-        rules: { "t3code/no-raw-mcp-registration": "off" },
+        rules: { "mybot/no-raw-mcp-registration": "off" },
       },
       {
         files: ["apps/web/src/**"],
@@ -213,7 +214,7 @@ export default defineConfig({
       },
       {
         files: ["apps/mobile/src/**"],
-        rules: { "t3code/no-mobile-uniwind-theme-escape-hatches": "error" },
+        rules: { "mybot/no-mobile-uniwind-theme-escape-hatches": "error" },
       },
       {
         // React commits state set in a raw ResizeObserver callback after the paint, so derived
@@ -223,7 +224,7 @@ export default defineConfig({
           "apps/web/src/lib/observeResize.ts",
           "**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
         ],
-        rules: { "t3code/no-raw-resize-observer": "error" },
+        rules: { "mybot/no-raw-resize-observer": "error" },
       },
       {
         // Every class in web code must be one Tailwind generates: a typo or a class nothing
@@ -234,7 +235,7 @@ export default defineConfig({
       {
         // State indicators paint inward; decorative rings keep their own geometry.
         files: ["apps/web/src/**"],
-        rules: { "t3code/no-outset-state-indicators": "error" },
+        rules: { "mybot/no-outset-state-indicators": "error" },
       },
       {
         // Colors come from theme tokens so status tones follow custom themes. components/ui
@@ -326,7 +327,7 @@ export default defineConfig({
           "packages/shared/src/**",
         ],
         excludeFiles: ["**/*.test.ts", "**/*.test.tsx"],
-        rules: { "t3code/no-hermes-unsupported-apis": "error" },
+        rules: { "mybot/no-hermes-unsupported-apis": "error" },
       },
       {
         // Reviewed native and third-party interop boundaries that cannot consume a className.
@@ -357,7 +358,7 @@ export default defineConfig({
           "apps/mobile/src/native/SelectableMarkdownText.tsx",
         ],
         rules: {
-          "t3code/no-mobile-uniwind-theme-escape-hatches": ["error", { allowUniwindTheme: true }],
+          "mybot/no-mobile-uniwind-theme-escape-hatches": ["error", { allowUniwindTheme: true }],
         },
       },
     ],

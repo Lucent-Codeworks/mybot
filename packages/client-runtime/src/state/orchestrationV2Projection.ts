@@ -3,11 +3,11 @@ import type {
   OrchestrationV2Run,
   OrchestrationV2ThreadProjection,
   OrchestrationV2TurnItem,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import {
   createOrchestrationV2TurnItemVisibility,
   isOrchestrationV2TurnItemVisible,
-} from "@t3tools/shared/orchestrationV2Timeline";
+} from "@mybot/shared/orchestrationV2Timeline";
 
 export type ApplyOrchestrationV2ProjectionEventOptions = {
   readonly partialTimeline?: boolean;

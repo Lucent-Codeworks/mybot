@@ -67,7 +67,7 @@ const MOBILE_BUILD_ENV = {
   EXPO_NO_GIT_STATUS: "1",
   // Lets the capture build require full screen on iPad so the app can rotate
   // itself to landscape (see app.config.ts).
-  T3_SHOWCASE_CAPTURE_BUILD: "1",
+  MYBOT_SHOWCASE_CAPTURE_BUILD: "1",
   JAVA_HOME:
     NodeProcess.env.JAVA_HOME ??
     (NodeProcess.platform === "darwin"
@@ -417,7 +417,7 @@ function printUsage(config: ShowcaseConfig): void {
   NodeProcess.stdout.write(`App screenshot showcase
 
 Usage:
-  pnpm --filter @t3tools/mobile screenshots [options]
+  pnpm --filter @mybot/mobile screenshots [options]
 
 Options:
   --platform ios|android|all  Capture one platform (repeatable)
@@ -1039,7 +1039,7 @@ async function presentIosLockScreen(udid: string): Promise<void> {
  * pressing on a lit lock screen would unlock the device instead.
  */
 async function wakeIosLockScreen(udid: string): Promise<void> {
-  const probe = NodePath.join(NodeOS.tmpdir(), `t3-showcase-wake-${udid}.png`);
+  const probe = NodePath.join(NodeOS.tmpdir(), `mybot-showcase-wake-${udid}.png`);
   try {
     for (let attempt = 0; attempt < 5; attempt += 1) {
       await delay(2_000);
@@ -1515,7 +1515,7 @@ async function main(): Promise<void> {
   }
 
   const showcaseRootDir = await NodeFSP.mkdtemp(
-    NodePath.join(NodeOS.tmpdir(), "t3-mobile-showcase-"),
+    NodePath.join(NodeOS.tmpdir(), "mybot-mobile-showcase-"),
   );
   const showcaseServers: NodeChildProcess.ChildProcess[] = [];
   const showcaseEnvironments: Array<{

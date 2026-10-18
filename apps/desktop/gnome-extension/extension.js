@@ -73,7 +73,7 @@ function takeSnapshot(animate) {
     try {
       content = window.get_compositor_private().paint_to_content(null);
     } catch (error) {
-      console.warn(`T3 capture preview unavailable: ${error.message}`);
+      console.warn(`MyBot capture preview unavailable: ${error.message}`);
     }
   }
   const metadata = JSON.stringify({
@@ -114,7 +114,7 @@ function takeSnapshot(animate) {
   });
 }
 
-export default class T3SnapShotExtension extends Extension {
+export default class MyBotSnapShotExtension extends Extension {
   enable() {
     this._feedback = new CaptureFeedback();
     this._sessionChanged = Main.sessionMode.connect("updated", () => this._feedback.dispose());

@@ -1,4 +1,4 @@
-import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import type { EnvironmentId, ThreadId } from "@mybot/contracts";
 
 interface ThreadActivityFileContext {
   readonly environmentId: EnvironmentId;

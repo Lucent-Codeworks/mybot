@@ -39,7 +39,7 @@ await server.connect(new StdioServerTransport());
 `;
 
 const echoAppPath = NodePath.join(
-  NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-echo-app-")),
+  NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "mybot-echo-app-")),
   "echo-app.mjs",
 );
 NodeFS.writeFileSync(echoAppPath, ECHO_APP);
@@ -92,7 +92,7 @@ const startHttpEchoApp = Effect.acquireRelease(
 const layerTest = AppConnections.layer.pipe(
   Layer.provideMerge(LocalRuntimes.layer),
   Layer.provideMerge(ServerSecretStore.layer),
-  Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "t3-app-connections-" })),
+  Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "mybot-app-connections-" })),
   Layer.provideMerge(FetchHttpClient.layer),
   Layer.provideMerge(NodeServices.layer),
 );

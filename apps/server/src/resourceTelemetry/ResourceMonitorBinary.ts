@@ -1,4 +1,4 @@
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@mybot/shared/HostProcess";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -80,7 +80,7 @@ function detectResourceMonitorLinuxLibc(): ResourceMonitorLinuxLibc {
 }
 
 export const ResourceMonitorHostLinuxLibc = Context.Reference<ResourceMonitorLinuxLibc>(
-  "t3/resourceTelemetry/ResourceMonitorHostLinuxLibc",
+  "mybot/resourceTelemetry/ResourceMonitorHostLinuxLibc",
   {
     defaultValue: detectResourceMonitorLinuxLibc,
   },
@@ -143,7 +143,7 @@ export const make = Effect.fn("resourceTelemetry.resourceMonitorBinary.make")(fu
   const platformKey = resourceMonitorPlatformKey(platform, architecture);
   const rustTarget = resourceMonitorRustTarget(platform, architecture, linuxLibc);
   const overrideCandidates = [
-    environment.T3CODE_RESOURCE_MONITOR_PATH,
+    environment.MYBOT_RESOURCE_MONITOR_PATH,
     config.resourceMonitorPath,
   ].filter((candidate): candidate is string => Boolean(candidate));
   const bundledCandidates =

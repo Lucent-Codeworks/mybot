@@ -3,11 +3,11 @@
 Connect a phone, browser, or another desktop app to MyBot running on a different
 machine. That machine must stay running and reachable while you work.
 
-## T3 Connect
+## MyBot Connect
 
-T3 Connect makes an environment available to your other devices without setting
+MyBot Connect makes an environment available to your other devices without setting
 up router forwarding. In the desktop app on the host, open **Settings →
-Connections**, sign in, and enable **T3 Connect** for that environment.
+Connections**, sign in, and enable **MyBot Connect** for that environment.
 
 For a command-line host, run:
 
@@ -20,12 +20,12 @@ Follow the sign-in instructions. Setup offers a
 server with `mybot serve`. Saving your sign-in alone does not make the machine
 reachable.
 
-On your other device, sign in to the same T3 Connect account and choose the
+On your other device, sign in to the same MyBot Connect account and choose the
 environment. Over SSH, the CLI prints a browser link and a short code. Open the
 link on any device, confirm the code matches, and approve. The CLI continues on
 its own, so you do not need to forward an OAuth callback port.
 
-T3 Connect renews access credentials when needed without disconnecting a healthy
+MyBot Connect renews access credentials when needed without disconnecting a healthy
 connection. Provider settings keep working after the
 previous credential expires. A failed renewal affects that request; it does not
 disconnect an otherwise healthy conversation.
@@ -65,17 +65,17 @@ another link to share.
 ### Reach one machine several ways
 
 A machine can have more than one route: LAN, Tailscale, another VPN, a public
-URL, SSH, or T3 Connect. Tailscale shares its `100.64.0.0/10` address range with
+URL, SSH, or MyBot Connect. Tailscale shares its `100.64.0.0/10` address range with
 other VPNs such as Cloudflare WARP, so an address in that range shows as VPN
 unless the machine confirms it is on Tailscale. To add a route, choose **Add
-route** in the machine's route list, or next to it in the T3 Connect list.
+route** in the machine's route list, or next to it in the MyBot Connect list.
 Pairing the same machine again over another address also adds a route instead
 of a second machine. A new route is placed by speed, in that order, and you can
 reorder routes at any time.
 
-While connected through T3 Connect or a paired address, MyBot also learns the
+While connected through MyBot Connect or a paired address, MyBot also learns the
 machine's current LAN and Tailscale addresses and adds them as routes, so
-pairing once through T3 Connect is enough to use the LAN at home. When the
+pairing once through MyBot Connect is enough to use the LAN at home. When the
 machine's LAN address changes, for example after it joins another Wi-Fi network,
 the learned route follows it. The machine must allow network access for its LAN
 address to be learned. You can reorder a learned route, but not remove it; it
@@ -91,14 +91,14 @@ return to the app, and every minute, and moves back as soon as one works.
 On web and desktop, select the route count under the machine's name in
 **Settings → Connections** to see its routes. Drag a route to change the order,
 or remove it. On mobile, open the machine under **Settings → Environments** and
-choose **Edit**. Signing out of T3 Connect removes only that route; a machine
+choose **Edit**. Signing out of MyBot Connect removes only that route; a machine
 you can still reach another way stays saved.
 
 Open **Permissions** next to **Routes** in web or desktop, or **Your permissions**
 in the mobile route details, to see what your current connection can do on that
 environment. For a remote environment, this is in its route details. Permissions
 shown there apply only to the route marked **In use**; other routes are not
-checked. Direct pairing and T3 Connect have separate sessions and may grant
+checked. Direct pairing and MyBot Connect have separate sessions and may grant
 different permissions.
 
 ### Balance new threads across machines
@@ -165,7 +165,7 @@ credentials, and agent work stay on the remote machine.
 
 The remote host must be Linux or an Apple Silicon Mac with `curl` or `wget`,
 `tar`, `sha256sum` or `shasum`, and [provider setup](./install.md#providers).
-The first launch downloads MyBot's server to `~/.t3/runtime` on the host, so
+The first launch downloads MyBot's server to `~/.mybot/runtime` on the host, so
 it takes longer than later ones.
 Provider CLIs must be on the `PATH` of a non-interactive login shell there;
 check with:
@@ -228,7 +228,7 @@ any missing libraries with apt. It is safe to run again. Without `sudo`, it
 only reports what it would change.
 
 The browser always runs in Chrome's sandbox. Where you cannot change the host,
-set `T3CODE_SERVER_BROWSER_SANDBOX=0` for the environment to run without it.
+set `MYBOT_SERVER_BROWSER_SANDBOX=0` for the environment to run without it.
 
 ## Connect an outside agent
 
@@ -276,19 +276,19 @@ a client's permissions.
 local changes. Add `filesystem:write` to allow editing files or saving plans to
 the workspace. These scopes control direct file access from the client.
 
-To remove an environment from T3 Connect, open your account menu's **T3 Connect**
-page, or **Settings → T3 Connect** on mobile, and choose **Deregister**. This
+To remove an environment from MyBot Connect, open your account menu's **MyBot Connect**
+page, or **Settings → MyBot Connect** on mobile, and choose **Deregister**. This
 revokes its cloud access and frees its host space even when the environment is
 offline or has been wiped. Removing an environment from a device's connection
 settings only forgets it on that device; it stays registered to your account.
 
-When idle tunnel cleanup is enabled, T3 Connect removes a linked environment's
+When idle tunnel cleanup is enabled, MyBot Connect removes a linked environment's
 tunnel after it stays offline for several minutes. The environment stays linked
-and keeps the same address. When the host starts again or wakes, T3 Connect
+and keeps the same address. When the host starts again or wakes, MyBot Connect
 creates a replacement tunnel on its own. You do not need to pair again. Cleanup
 usually runs five to ten minutes after the tunnel goes down.
 
-T3 Connect also removes the tunnel of an environment running an older version of
+MyBot Connect also removes the tunnel of an environment running an older version of
 MyBot once it has been offline for seven days. That environment shows a message
 asking you to update. Start MyBot on that computer and update it to the latest
 version; it reconnects at the same address without pairing again.
@@ -300,7 +300,7 @@ your login; `mybot connect logout` also clears that login. Background-service
 Treat pairing URLs and authorization codes as passwords. Do not include them in
 screenshots, logs, or bug reports.
 
-## T3 Connect troubleshooting
+## MyBot Connect troubleshooting
 
 Run `mybot connect status` on the host to inspect saved authorization and link
 configuration. It is not a live reachability check. If the environment appears
@@ -316,7 +316,7 @@ when SSH closes, see [background-service troubleshooting](./background-service.m
 | HTTP 408, 429, or 5xx                                     | Check network and relay availability. Startup retries temporary failures for up to ten minutes.                                                      |
 
 After fixing a permanent rejection, restart the host's server. On Linux, use
-`systemctl --user restart t3code.service` for the background service. For a
+`systemctl --user restart mybot.service` for the background service. For a
 foreground server, stop it and run `mybot serve` again with your usual options.
 Include the diagnostic message and trace ID when reporting a persistent failure.
 
@@ -329,7 +329,7 @@ If a computer should only drive work running elsewhere, turn off its local envir
 desktop app, open **Settings → Connections** and switch off **Local
 environment**. MyBot restarts without a local server: no local agents or terminals run, WSL
 backends stay off, and other devices can no longer connect to this computer. Your bots,
-history, and saved connections are kept, and you keep working through pairing, T3 Connect, or SSH.
+history, and saved connections are kept, and you keep working through pairing, MyBot Connect, or SSH.
 
 Switch **Local environment** back on in the same place to restart with your previous local
 settings.

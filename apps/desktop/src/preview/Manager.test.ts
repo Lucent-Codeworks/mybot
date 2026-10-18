@@ -1,12 +1,12 @@
 import { it as effectIt } from "@effect/vitest";
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
-import { DESKTOP_PREVIEW_RECORDING_CAPTURE_TRIGGER } from "@t3tools/contracts";
+import { DESKTOP_PREVIEW_RECORDING_CAPTURE_TRIGGER } from "@mybot/contracts";
 import type {
   DesktopPreviewRecordingFrame,
   DesktopPreviewRecordingInputEvent,
-} from "@t3tools/contracts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { parseKeybindingShortcut } from "@t3tools/shared/keybindings";
+} from "@mybot/contracts";
+import * as HostProcess from "@mybot/shared/HostProcess";
+import { parseKeybindingShortcut } from "@mybot/shared/keybindings";
 import * as Cause from "effect/Cause";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
@@ -272,8 +272,8 @@ const layerBrowserSession = Layer.succeed(
 const layerEnvironment = Layer.succeed(
   DesktopEnvironment.DesktopEnvironment,
   DesktopEnvironment.DesktopEnvironment.of({
-    browserArtifactsDir: "/tmp/t3/dev/browser-artifacts",
-    dirname: "/tmp/t3/desktop",
+    browserArtifactsDir: "/tmp/mybot/dev/browser-artifacts",
+    dirname: "/tmp/mybot/desktop",
     path: {
       join: (...parts: ReadonlyArray<string>) => parts.join("/"),
     },
@@ -2473,7 +2473,7 @@ describe("PreviewManager", () => {
         const artifact = yield* manager.captureScreenshot("tab_1");
 
         expect(capturePage).toHaveBeenCalledOnce();
-        expect(mkdir).toHaveBeenCalledWith("/tmp/t3/dev/browser-artifacts");
+        expect(mkdir).toHaveBeenCalledWith("/tmp/mybot/dev/browser-artifacts");
         expect(writeFile).toHaveBeenCalledWith(artifact.path, png);
         expect(artifact).toMatchObject({
           tabId: "tab_1",
@@ -3544,7 +3544,7 @@ describe("PreviewManager", () => {
             show: false,
             skipTaskbar: true,
             webPreferences: expect.objectContaining({
-              preload: "/tmp/t3/desktop/preview-pip-preload.cjs",
+              preload: "/tmp/mybot/desktop/preview-pip-preload.cjs",
               backgroundThrottling: false,
             }),
           }),
@@ -4393,19 +4393,21 @@ describe("PreviewManager", () => {
   effectIt.effect("reveals only files inside the configured browser artifact directory", () =>
     withManager((manager) =>
       Effect.gen(function* () {
-        yield* manager.revealArtifact("/tmp/t3/dev/browser-artifacts/browser-screenshot-test.png");
+        yield* manager.revealArtifact(
+          "/tmp/mybot/dev/browser-artifacts/browser-screenshot-test.png",
+        );
 
         expect(showItemInFolder).toHaveBeenCalledWith(
-          "/tmp/t3/dev/browser-artifacts/browser-screenshot-test.png",
+          "/tmp/mybot/dev/browser-artifacts/browser-screenshot-test.png",
         );
-        const exit = yield* Effect.exit(manager.revealArtifact("/tmp/t3/dev/settings.json"));
+        const exit = yield* Effect.exit(manager.revealArtifact("/tmp/mybot/dev/settings.json"));
         expect(Exit.isFailure(exit)).toBe(true);
         if (Exit.isSuccess(exit)) return;
         const error = Option.getOrThrow(Cause.findErrorOption(exit.cause));
         expect(error).toMatchObject({
           _tag: "PreviewArtifactPathOutsideDirectoryError",
-          artifactPath: "/tmp/t3/dev/settings.json",
-          artifactDirectory: "/tmp/t3/dev/browser-artifacts",
+          artifactPath: "/tmp/mybot/dev/settings.json",
+          artifactDirectory: "/tmp/mybot/dev/browser-artifacts",
         });
         expect("cause" in error).toBe(false);
       }),
@@ -4415,7 +4417,7 @@ describe("PreviewManager", () => {
   effectIt.effect("copies screenshot artifacts to the system clipboard", () =>
     withManager((manager) =>
       Effect.gen(function* () {
-        const artifactPath = "/tmp/t3/dev/browser-artifacts/browser-screenshot-test.png";
+        const artifactPath = "/tmp/mybot/dev/browser-artifacts/browser-screenshot-test.png";
 
         yield* manager.copyArtifactToClipboard(artifactPath);
 
@@ -4425,15 +4427,15 @@ describe("PreviewManager", () => {
         });
         expect(writeClipboard).toHaveBeenCalledOnce();
         const exit = yield* Effect.exit(
-          manager.copyArtifactToClipboard("/tmp/t3/dev/settings.json"),
+          manager.copyArtifactToClipboard("/tmp/mybot/dev/settings.json"),
         );
         expect(Exit.isFailure(exit)).toBe(true);
         if (Exit.isSuccess(exit)) return;
         const error = Option.getOrThrow(Cause.findErrorOption(exit.cause));
         expect(error).toMatchObject({
           _tag: "PreviewArtifactPathOutsideDirectoryError",
-          artifactPath: "/tmp/t3/dev/settings.json",
-          artifactDirectory: "/tmp/t3/dev/browser-artifacts",
+          artifactPath: "/tmp/mybot/dev/settings.json",
+          artifactDirectory: "/tmp/mybot/dev/browser-artifacts",
         });
         expect("cause" in error).toBe(false);
 

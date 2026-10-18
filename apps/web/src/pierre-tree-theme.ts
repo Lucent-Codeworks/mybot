@@ -13,9 +13,9 @@ export const PIERRE_TREE_UNSAFE_CSS = `
   button[data-type='item'], button[data-type='item']::before { border-radius: var(--radius-md); }
   svg[data-icon-name='t3-tree-icon-loading'] { opacity: 0.6; }
   @media (prefers-reduced-motion: no-preference) {
-    svg[data-icon-name='t3-tree-icon-loading'] { animation: t3-tree-spin 1s linear infinite; }
+    svg[data-icon-name='t3-tree-icon-loading'] { animation: mybot-tree-spin 1s linear infinite; }
   }
-  @keyframes t3-tree-spin { to { transform: rotate(360deg); } }
+  @keyframes mybot-tree-spin { to { transform: rotate(360deg); } }
 `;
 
 /** Host styles that keep a Pierre tree on the active color scheme and foreground. */

@@ -196,7 +196,7 @@ describe("AcpRuntimeModel", () => {
     } as EffectAcpSchema.InitializeResponse);
 
     expect(response.modes).toBeUndefined();
-    expect(response._meta).toMatchObject({ t3SessionLoadReady: "replay_idle" });
+    expect(response._meta).toMatchObject({ myBotSessionLoadReady: "replay_idle" });
   });
 
   it("builds a synthetic load response with initialize mode state", () => {
@@ -1425,7 +1425,7 @@ describe("extractMcpToolCallIdentity", () => {
     });
   });
 
-  it("recovers T3 identity from acp-mcp-call fallback commands", () => {
+  it("recovers MyBot identity from acp-mcp-call fallback commands", () => {
     const toolCall = toolCallFromUpdate({
       sessionUpdate: "tool_call",
       toolCallId: "exec-1",
@@ -1437,13 +1437,13 @@ describe("extractMcpToolCallIdentity", () => {
     expect(
       extractMcpToolCallIdentity(toolCall, {
         embeddedTerminalCommands: [
-          '/usr/bin/node /srv/t3/bin.ts acp-mcp-call delegate_task {"task":"x"}',
+          '/usr/bin/node /srv/mybot/bin.ts acp-mcp-call delegate_task {"task":"x"}',
         ],
       }),
     ).toEqual({ server: "t3-code", tool: "delegate_task", input: { task: "x" } });
   });
 
-  it("recovers T3 identity from pi-acp title-only fallback execs", () => {
+  it("recovers MyBot identity from pi-acp title-only fallback execs", () => {
     // Captured verbatim from pi-acp 0.0.33 2026-08-14: rawInput is null and
     // the command line only appears as the verbatim title, which the
     // presentation layer summarizes into "Ran command".
@@ -1452,7 +1452,7 @@ describe("extractMcpToolCallIdentity", () => {
       toolCallId: "call_JdxnvzjHHrbvyASTLVekLYWV|fc_08f5a805a7159aa6016a7ec4afad548191",
       kind: "execute",
       title:
-        '"$T3_ACP_MCP_NODE" "$T3_ACP_MCP_ENTRYPOINT" acp-mcp-call orchestrator_capabilities \'{}\'',
+        '"$MYBOT_ACP_MCP_NODE" "$MYBOT_ACP_MCP_ENTRYPOINT" acp-mcp-call orchestrator_capabilities \'{}\'',
       status: "in_progress",
       rawInput: null,
       content: [
@@ -1471,7 +1471,7 @@ describe("extractMcpToolCallIdentity", () => {
     });
   });
 
-  it("recovers T3 identity from server-namespaced titles across titleless updates", () => {
+  it("recovers MyBot identity from server-namespaced titles across titleless updates", () => {
     // Captured verbatim from Kilo 7.4.22 2026-08-15: the initial tool_call
     // titles the MCP function "<server>_<tool>" with kind "other", and the
     // completed update carries no title at all, so the merged presentation
@@ -1499,7 +1499,7 @@ describe("extractMcpToolCallIdentity", () => {
     });
   });
 
-  it("recovers T3 identity from Gemini and qwen MCP-server title templates", () => {
+  it("recovers MyBot identity from Gemini and qwen MCP-server title templates", () => {
     // Gemini CLI 0.55.1: "<tool> (<server> MCP Server)"; qwen-code 0.21.12
     // appends ": <args json>" to the same template.
     const gemini = toolCallFromUpdate({
@@ -1525,7 +1525,7 @@ describe("extractMcpToolCallIdentity", () => {
     expect(extractMcpToolCallIdentity(qwen)).toEqual({ server: "t3-code", tool: "task_status" });
   });
 
-  it("recovers T3 identity across the registry agents' naming conventions", () => {
+  it("recovers MyBot identity across the registry agents' naming conventions", () => {
     // One representative per surveyed convention (2026-08 registry builds):
     // droid triple underscore, Copilot hyphen, Amp mangled server + detail
     // tail, cline args tail, Auggie tool-first suffix.
@@ -1556,7 +1556,7 @@ describe("extractMcpToolCallIdentity", () => {
     }
   });
 
-  it("recovers T3 identity from goose _meta despite LLM-rewritten titles", () => {
+  it("recovers MyBot identity from goose _meta despite LLM-rewritten titles", () => {
     // goose enriches titles asynchronously, so only _meta.goose.toolCall is
     // stable; shape from crates/goose/src/acp/server/tool_calls/conversion.rs.
     const toolCall = toolCallFromUpdate({
@@ -1578,7 +1578,7 @@ describe("extractMcpToolCallIdentity", () => {
     });
   });
 
-  it("recovers T3 identity from qwen serverId meta regardless of prefix format", () => {
+  it("recovers MyBot identity from qwen serverId meta regardless of prefix format", () => {
     // qwen-code 0.21.12 emits _meta.serverId + _meta.toolName; serverId is an
     // explicit origin assertion, so a known tool suffix suffices even if the
     // prefix format changes.
@@ -1634,7 +1634,7 @@ describe("extractMcpToolCallIdentity", () => {
     },
   );
 
-  it("uses the asserted server instead of a misleading T3 title", () => {
+  it("uses the asserted server instead of a misleading MyBot title", () => {
     const toolCall = toolCallFromUpdate({
       sessionUpdate: "tool_call",
       toolCallId: "foreign-1",

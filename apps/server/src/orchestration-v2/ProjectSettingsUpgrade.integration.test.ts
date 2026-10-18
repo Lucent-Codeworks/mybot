@@ -1,7 +1,7 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
+import * as McpProviderSessions from "@mybot/provider-core/server/McpProviderSessions";
 import { assert, it } from "@effect/vitest";
-import { ProjectId } from "@t3tools/contracts";
+import { ProjectId } from "@mybot/contracts";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
@@ -11,7 +11,7 @@ import * as Stream from "effect/Stream";
 import * as SqlClient from "effect/sql/SqlClient";
 
 import * as ServerConfig from "../config.ts";
-import * as NodeSqliteClient from "@t3tools/shared/nodeSqliteClient";
+import * as NodeSqliteClient from "@mybot/shared/nodeSqliteClient";
 
 import * as McpSessionRegistryTestkit from "../mcp/McpSessionRegistry.testkit.ts";
 import * as SqlitePersistence from "../persistence/Sqlite.ts";
@@ -112,7 +112,7 @@ const unusedEnrichment = { faviconPath: null };
 const layerRuntime = (dbPath: string) => {
   const layerPlatform = NodeServices.layer;
   const layerServerConfig = ServerConfig.layerTest(process.cwd(), {
-    prefix: "t3-project-upgrade-",
+    prefix: "mybot-project-upgrade-",
   });
   return Layer.mergeAll(
     RuntimeLayer.layer.pipe(Layer.provide(RuntimeLayer.layerProjectService)),
@@ -153,7 +153,7 @@ it.live("keeps project settings through the V2 migrations and the first V2 boot"
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const stateDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-project-upgrade-" });
+      const stateDir = yield* fs.makeTempDirectoryScoped({ prefix: "mybot-project-upgrade-" });
       const dbPath = path.join(stateDir, "statev2.sqlite");
 
       // Seed the released V1 schema, then boot the V2 runtime, which runs 055+, on the same file.

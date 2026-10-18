@@ -6,17 +6,17 @@
  * are discovered through a short-lived ephemeral RPC session
  * (`pi --mode rpc --no-session`), so everything the user configured in
  * `~/.pi/agent` — custom providers, models.json entries, extensions, skills —
- * shows up in T3 without any hardcoded catalog.
+ * shows up in MyBot without any hardcoded catalog.
  */
 import {
   type CustomModelSetting,
   type ServerProvider,
   type ServerProviderModel,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import type { PiSettings } from "../settings.ts";
-import { causeErrorTag } from "@t3tools/shared/observability";
-import { resolveSpawnCommand } from "@t3tools/shared/shell";
-import { compareSemverVersions } from "@t3tools/shared/semver";
+import { causeErrorTag } from "@mybot/shared/observability";
+import { resolveSpawnCommand } from "@mybot/shared/shell";
+import { compareSemverVersions } from "@mybot/shared/semver";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Stream from "effect/Stream";
@@ -35,7 +35,7 @@ import {
   piRecordField as recordField,
   piRecordString as recordString,
 } from "./rpc.ts";
-import * as ProviderLatestVersions from "@t3tools/provider-core/server/ProviderLatestVersions";
+import * as ProviderLatestVersions from "@mybot/provider-core/server/ProviderLatestVersions";
 import {
   buildServerProvider,
   isCommandMissingCause,
@@ -43,11 +43,11 @@ import {
   providerModelsFromSettings,
   spawnAndCollect,
   type ServerProviderDraft,
-} from "@t3tools/provider-core/server/snapshotProbe";
+} from "@mybot/provider-core/server/snapshotProbe";
 import {
   enrichProviderSnapshotWithVersionAdvisory,
   type ProviderMaintenanceCapabilities,
-} from "@t3tools/provider-core/server/maintenanceResolver";
+} from "@mybot/provider-core/server/maintenanceResolver";
 import {
   EMPTY_PI_MODEL_CAPABILITIES,
   thinkingCapabilitiesForPiModel,
@@ -72,7 +72,7 @@ const VERSION_PROBE_TIMEOUT_MS = 4_000;
 const PI_RPC_DISCOVERY_TIMEOUT_MS = 15_000;
 /**
  * get_entries arrived in 0.80.3 and agent_settled landed in source at 0.80.4.
- * Version 0.80.5 was the first published package containing both hooks. T3
+ * Version 0.80.5 was the first published package containing both hooks. MyBot
  * needs them for rollback boundaries and reliable turn terminalization.
  */
 export const MINIMUM_PI_VERSION = "0.80.5";

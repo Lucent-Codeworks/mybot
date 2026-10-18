@@ -54,6 +54,16 @@ node apps/server/dist/bin.mjs
 
 Update a server run this way with `git pull` and a rebuild.
 
+### Where MyBot keeps its data
+
+MyBot keeps its settings, projects, and threads in `~/.mybot`, separate from T3
+Code's `~/.t3`. The first time a MyBot server starts from the `mybot` command,
+over SSH, or inside WSL, it copies your settings, keybindings, themes,
+attachments, provider API keys, projects, and threads from `~/.t3` if it finds
+one. T3 Code's folder is left untouched, and the two apps keep separate data
+from then on. Pairings and device sign-ins are not copied, so pair your clients
+with MyBot again. The desktop app's built-in server starts fresh.
+
 ## Providers
 
 Open **Settings → Providers** in the web or desktop app, select the environment,

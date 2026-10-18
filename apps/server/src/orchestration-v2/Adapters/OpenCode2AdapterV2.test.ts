@@ -22,7 +22,7 @@ import {
   type OrchestrationV2ProviderThread,
   type OrchestrationV2ProviderTurn,
   type ProviderReplayEntry,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Cause from "effect/Cause";
 import * as DateTime from "effect/DateTime";
 import * as Deferred from "effect/Deferred";
@@ -38,20 +38,20 @@ import * as Exit from "effect/Exit";
 import { TestClock } from "effect/testing";
 import { describe } from "vite-plus/test";
 
-import type * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
-import * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
+import type * as ProviderAdapter from "@mybot/provider-core/server/ProviderAdapter";
+import * as McpProviderSessions from "@mybot/provider-core/server/McpProviderSessions";
+import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
+import * as ProviderContinuationRequests from "@mybot/provider-core/server/ProviderContinuationRequests";
 import {
   OPENCODE_2_STILL_STOPPING,
   OPENCODE_PROVIDER,
-  t3McpServerName,
-} from "@t3tools/provider-opencode/testing";
+  myBotMcpServerName,
+} from "@mybot/provider-opencode/testing";
 import { openCode2ReplayRuntime } from "./OpenCode2AdapterV2.testkit.ts";
 import {
   makeProviderReplayGate,
   type ProviderReplayGate,
-} from "@t3tools/provider-testing/replayGate";
+} from "@mybot/provider-testing/replayGate";
 
 const SESSION = "ses_f148ca2deffeJcwCnRQtb0YFNX";
 const WORK = "/work/opencode2";
@@ -83,18 +83,18 @@ const event = (
 });
 const durable = { durable: { aggregateID: SESSION, seq: 1, version: 1 } };
 
-/** The rules T3 gives every session it runs, with only this thread's own T3 MCP server allowed. */
+/** The rules MyBot gives every session it runs, with only this thread's own MyBot MCP server allowed. */
 const mcpRules = [
   { action: "t3-code-*", resource: "*", effect: "deny" },
   { action: "t3-code-thread_opencode2-adapter_*", resource: "*", effect: "allow" },
 ];
-const t3Rules = [{ action: "*", resource: "*", effect: "allow" }, ...mcpRules];
+const myBotRules = [{ action: "*", resource: "*", effect: "allow" }, ...mcpRules];
 /** The thread's title, which the recorded session already carries. */
 const TITLE = "Prime check";
 const sessionInfo = (overrides: Record<string, unknown> = {}) => ({
   id: SESSION,
   title: TITLE,
-  permissions: t3Rules,
+  permissions: myBotRules,
   projectID: "global",
   model: { id: "big-pickle", providerID: "opencode", variant: "default" },
   cost: 0,
@@ -127,7 +127,7 @@ const modelCatalog = {
   ],
 };
 
-/** The prompt id the recorded answer carries; a replay maps it to the one T3 chose. */
+/** The prompt id the recorded answer carries; a replay maps it to the one MyBot chose. */
 const PROMPT_ID = "msg_0eb735d41001NJee1EvVePJAK5";
 const promptAccepted = replyData("session.prompt", {
   id: PROMPT_ID,
@@ -147,7 +147,7 @@ const noOpenRequests: ReadonlyArray<ProviderReplayEntry> = [
 ];
 
 /**
- * A thread's first turn writes T3's instructions entry before it starts; the
+ * A thread's first turn writes MyBot's instructions entry before it starts; the
  * adapter only rewrites it when it changes, so later turns do not.
  */
 const withInstructions = (
@@ -167,7 +167,7 @@ const withInstructions = (
         "skill.list",
       ].includes(String(entry.frame.type)),
   );
-  // T3's MCP server is added before the entry that describes it.
+  // MyBot's MCP server is added before the entry that describes it.
   const after = entries.findIndex(
     (entry, index) =>
       index < first &&
@@ -460,7 +460,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         out("session.create", {
           location: { directory: WORK },
           model: { providerID: "opencode", id: "big-pickle" },
-          permissions: t3Rules,
+          permissions: myBotRules,
           title: "Check whether 391 is prime",
         }),
         replyData("session.create", sessionInfo({ title: "Check whether 391 is prime" })),
@@ -905,7 +905,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         reply("agent.list", agentList),
         out("session.update", { sessionID: SESSION, permissions: supervisedRules }),
         reply("session.update", null),
-        // A subagent's session may use its thread's T3 MCP server.
+        // A subagent's session may use its thread's MyBot MCP server.
         out("session.update", {
           sessionID: CHILD,
           permissions: [...supervisedRules.slice(0, 3), ...mcpRules],
@@ -1301,7 +1301,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         reply("session.interrupt", { interrupted: true }),
         event("session.execution.interrupted", { sessionID: MIDDLE }),
         // Later OpenCode runs the thread's own session by itself: a follow-up
-        // T3 offers a turn for, which marks that everything above was handled.
+        // MyBot offers a turn for, which marks that everything above was handled.
         event("session.execution.started", { sessionID: SESSION }),
       ]).pipe(
         Effect.provideService(ProviderContinuationRequests.ProviderContinuationRequests, {
@@ -1469,7 +1469,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         reply("session.interrupt", { interrupted: true }),
         event("session.execution.interrupted", { sessionID: MIDDLE }),
         // Later OpenCode runs the thread's own session by itself: a follow-up
-        // T3 offers a turn for, which marks that everything above was handled.
+        // MyBot offers a turn for, which marks that everything above was handled.
         event("session.execution.started", { sessionID: SESSION }),
       ]).pipe(
         Effect.provideService(ProviderContinuationRequests.ProviderContinuationRequests, {
@@ -2124,7 +2124,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         [
           ...backgroundLaunch(CHILD),
           event("session.execution.succeeded", { sessionID: SESSION }),
-          out("session.update", { sessionID: CHILD, permissions: t3Rules }),
+          out("session.update", { sessionID: CHILD, permissions: myBotRules }),
           reply("session.update", null),
           out("session.prompt", { sessionID: SESSION, text: "<any>" }),
           reply("session.prompt", {
@@ -2289,7 +2289,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     }).pipe(Effect.scoped),
   );
 
-  it.effect("gives a resumed session T3's rules when it was made with others", () =>
+  it.effect("gives a resumed session MyBot's rules when it was made with others", () =>
     Effect.gen(function* () {
       const runtime = yield* openCode2ReplayRuntimeWithInstructions([
         ...opening,
@@ -2305,7 +2305,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
           }),
         ),
         ...noOpenRequests,
-        out("session.update", { sessionID: SESSION, permissions: t3Rules }),
+        out("session.update", { sessionID: SESSION, permissions: myBotRules }),
         reply("session.update", null),
       ]);
       yield* runtime.resumeThread({
@@ -2359,7 +2359,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
       }).pipe(Effect.scoped),
   );
 
-  it.effect("breaks the thread and forgets it when the session was deleted outside T3", () =>
+  it.effect("breaks the thread and forgets it when the session was deleted outside MyBot", () =>
     Effect.gen(function* () {
       const { runtime, thread } = yield* resumed([
         out("session.prompt", { sessionID: SESSION, text: "<any>" }),
@@ -2411,9 +2411,9 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     }).pipe(Effect.scoped),
   );
 
-  it.effect("stops the requests a session still waits on when a restarted T3 loads it", () =>
+  it.effect("stops the requests a session still waits on when a restarted MyBot loads it", () =>
     Effect.gen(function* () {
-      // T3 restarted while the server kept waiting on an ask T3 no longer shows.
+      // MyBot restarted while the server kept waiting on an ask MyBot no longer shows.
       const runtime = yield* openCode2ReplayRuntimeWithInstructions(
         [
           ...opening,
@@ -2530,7 +2530,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     }).pipe(Effect.scoped),
   );
 
-  it.effect("declines a form T3 cannot show with the reason, instead of leaving it open", () =>
+  it.effect("declines a form MyBot cannot show with the reason, instead of leaving it open", () =>
     Effect.gen(function* () {
       const { runtime, thread } = yield* resumed([
         out("session.prompt", { sessionID: SESSION, text: "<any>" }),
@@ -2656,7 +2656,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
             permissions: [
               ...supervisedRules.slice(0, 3),
               { action: "shell", resource: "echo *", effect: "allow" },
-              // A subagent's session may use its thread's T3 MCP server.
+              // A subagent's session may use its thread's MyBot MCP server.
               ...mcpRules,
             ],
           }),
@@ -2721,7 +2721,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     }).pipe(Effect.scoped),
   );
 
-  it.effect("stops the subagent whose form T3 cannot show or decline", () =>
+  it.effect("stops the subagent whose form MyBot cannot show or decline", () =>
     Effect.gen(function* () {
       const linkForm = {
         id: "frm_0eb79ab35001fkvFECSh3wYNVD",
@@ -3400,7 +3400,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
   );
 
   it.effect(
-    "registers T3's MCP server for the thread alone and removes it when the thread unloads",
+    "registers MyBot's MCP server for the thread alone and removes it when the thread unloads",
     () =>
       Effect.gen(function* () {
         const mcpSessions = yield* McpProviderSessions.McpProviderSessions;
@@ -3417,7 +3417,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         const server = "t3-code-thread_opencode2-adapter";
         const { runtime, thread } = yield* resumed([
           // Registered for the session's directory under the thread's own name;
-          // the session's rules allow only this name's tools (see `t3Rules`).
+          // the session's rules allow only this name's tools (see `myBotRules`).
           out("mcp.add", {
             server,
             "location[directory]": WORK,
@@ -3514,14 +3514,14 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         "thread:delegated-task:command%3Amcp%3A48bef2bf-6d0e-4f7a-9c3b-2e5d8a1f7c40%3Adelegate-task%3Around1",
         "thread:delegated-task:command%3Amcp%3A48bef2bf-6d0e-4f7a-9c3b-2e5d8a1f7c40%3Adelegate-task%3Around2",
       ];
-      const names = yield* Effect.forEach(ids, t3McpServerName);
+      const names = yield* Effect.forEach(ids, myBotMcpServerName);
       for (const name of names) assert.match(name, /^t3-code-[A-Za-z0-9_-]{1,56}$/);
       assert.equal(new Set(names).size, ids.length);
-      assert.deepEqual(yield* Effect.forEach(ids, t3McpServerName), names);
+      assert.deepEqual(yield* Effect.forEach(ids, myBotMcpServerName), names);
       // A digested name is the one the synchronous node:crypto version produced.
       assert.equal(names[0], "t3-code-63abb5df2b188bdd");
       // A name that already fits stays readable.
-      assert.equal(yield* t3McpServerName(threadId), "t3-code-thread_opencode2-adapter");
+      assert.equal(yield* myBotMcpServerName(threadId), "t3-code-thread_opencode2-adapter");
     }).pipe(Effect.provide(NodeCrypto.layer)),
   );
 
@@ -3641,7 +3641,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         out("session.create", {
           location: { directory: custom },
           model: { providerID: "opencode", id: "big-pickle" },
-          permissions: t3Rules,
+          permissions: myBotRules,
         }),
         replyData("session.create", sessionInfo({ location: { directory: custom } })),
         out("session.prompt", { sessionID: SESSION, text: "<any>" }),
@@ -3778,7 +3778,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         }),
         // Uncleared, OpenCode would commit the stage on the next prompt. The
         // clear wakes the session into an empty execution of its own, with no
-        // turn of T3's running: it is no subagent's follow-up.
+        // turn of MyBot's running: it is no subagent's follow-up.
         out("session.revert.clear", { sessionID: SESSION }),
         reply("session.revert.clear", null),
         event("session.revert.cleared", { sessionID: SESSION }),
@@ -3826,7 +3826,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
 
   it.effect("prompts under ids no other session on the server can hold", () =>
     Effect.gen(function* () {
-      // Two T3 databases on one external server repeat thread ids and run
+      // Two MyBot databases on one external server repeat thread ids and run
       // ordinals, so their turns can share an attempt id and their steers a
       // message id. OpenCode refuses a prompt id another session already
       // holds with 409 ConflictError; the replay refuses a client id it
@@ -4218,7 +4218,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     Effect.gen(function* () {
       const first = `msg_t3_turn_${SESSION}:attempt:first`;
       const second = `msg_t3_turn_${SESSION}:attempt:second`;
-      // A runtime that never loaded the session, as after a T3 restart
+      // A runtime that never loaded the session, as after a MyBot restart
       // against a server that kept running.
       const runtime = yield* openCode2ReplayRuntime([
         ...opening,
@@ -4413,7 +4413,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
       const { runtime, thread } = yield* resumed([
         out("session.fork", { sessionID: SESSION }),
         replyData("session.fork", sessionInfo({ id: FORK })),
-        // The fork's T3 MCP server is the target thread's.
+        // The fork's MyBot MCP server is the target thread's.
         out("session.update", {
           sessionID: FORK,
           permissions: [
@@ -4594,7 +4594,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
           }),
           event("session.execution.succeeded", { sessionID: SESSION }),
           event("session.execution.started", { sessionID: CHILD_B }),
-          // The first subagent's report wakes the parent into a reply T3 holds
+          // The first subagent's report wakes the parent into a reply MyBot holds
           // for its continuation.
           event("session.execution.succeeded", { sessionID: CHILD }),
           event("session.inbox.enqueued", {
@@ -4758,7 +4758,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
           requestRuntimeRestart: true,
         });
       }
-      // The stopped subagent's report wakes nothing T3 runs.
+      // The stopped subagent's report wakes nothing MyBot runs.
       yield* Effect.promise(() => gate.waitForReached("settled"));
       gate.release("settled");
       assert.lengthOf(offers, 1);
@@ -4801,7 +4801,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
           }),
           event("session.execution.succeeded", { sessionID: SESSION }),
           event("session.execution.started", { sessionID: CHILD_B }),
-          // The first subagent's report wakes the parent into a reply T3 holds.
+          // The first subagent's report wakes the parent into a reply MyBot holds.
           event("session.execution.succeeded", { sessionID: CHILD }),
           event("session.inbox.enqueued", {
             inboxID: "msg_report",
@@ -5144,7 +5144,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
             delivery: "steer",
           },
         }),
-        // OpenCode starts the follow-up on its own; T3 holds it for its turn.
+        // OpenCode starts the follow-up on its own; MyBot holds it for its turn.
         event("session.execution.started", { sessionID: SESSION }),
         event("session.inbox.delivered", { sessionID: SESSION, inboxID: "msg_report" }),
         // The user steers into the follow-up turn; its execution reads the steer.

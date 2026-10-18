@@ -26,11 +26,11 @@ import * as EffectAcpClient from "effect-acp/client";
 import * as EffectAcpErrors from "effect-acp/errors";
 import type * as EffectAcpSchema from "effect-acp/compat";
 import type * as EffectAcpProtocol from "effect-acp/protocol";
-import { resolveSpawnCommand } from "@t3tools/shared/shell";
-import { AgentScope, AgentScopeThreadId, RAISE_OOM_SCORE_LINE } from "@t3tools/shared/AgentScope";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import { resolveSpawnCommand } from "@mybot/shared/shell";
+import { AgentScope, AgentScopeThreadId, RAISE_OOM_SCORE_LINE } from "@mybot/shared/AgentScope";
+import * as HostProcess from "@mybot/shared/HostProcess";
 
-import { signalProcessGroup } from "@t3tools/provider-core/server/processGroup";
+import { signalProcessGroup } from "@mybot/provider-core/server/processGroup";
 import { appendAcpStderrTail, sanitizeAcpStderrExcerpt } from "./stderr.ts";
 import {
   collectSessionConfigOptionValues,
@@ -283,7 +283,7 @@ export function wrapCommandForLinuxCgroup(
         '  case "$line" in 0::*) [ -z "$actual" ] || exit 126; actual=${line#0::};; esac',
         "done < /proc/self/cgroup || exit 125",
         '[ "$actual" = "$expected" ] || exit 126',
-        "unset ELECTRON_RUN_AS_NODE T3_ACP_CGROUP_WRAPPER",
+        "unset ELECTRON_RUN_AS_NODE MYBOT_ACP_CGROUP_WRAPPER",
         "trap 'exit 125' 0",
         // The trap alone does not cover a failed `exec`: bash — which is
         // /bin/sh on Arch derivatives — exits 127 without running the EXIT
@@ -294,7 +294,7 @@ export function wrapCommandForLinuxCgroup(
         '[ -f "$1" ] && [ -x "$1" ] || exit 125',
         'exec "$@"',
       ].join("\n"),
-      "t3-acp-cgroup-wrapper",
+      "mybot-acp-cgroup-wrapper",
       lease.path,
       lease.relativePath,
       command,
@@ -337,7 +337,7 @@ export function resolveLinuxCgroupTargetCommand(
   return undefined;
 }
 
-const STALE_ACP_CGROUP_SIBLING = /^t3-acp-(\d+)-/;
+const STALE_ACP_CGROUP_SIBLING = /^mybot-acp-(\d+)-/;
 
 export interface SweepStaleLinuxCgroupSiblingsOptions {
   readonly currentPid?: number;
@@ -362,7 +362,7 @@ function defaultReadCgroupPopulated(siblingPath: string): "0" | "1" | undefined 
   return state === "0" || state === "1" ? state : undefined;
 }
 
-/** Best-effort removal of empty `t3-acp-<dead-pid>-*` sibling leases under a parent cgroup. */
+/** Best-effort removal of empty `mybot-acp-<dead-pid>-*` sibling leases under a parent cgroup. */
 export function sweepStaleLinuxCgroupSiblings(
   parentPath: string,
   options: SweepStaleLinuxCgroupSiblingsOptions = {},
@@ -416,7 +416,7 @@ function tryCreateLinuxCgroupLease(
     return undefined;
   }
   sweepStaleLinuxCgroupSiblings(currentPath);
-  const childName = `t3-acp-${process.pid}-${NodeCrypto.randomUUID().replaceAll("-", "")}`;
+  const childName = `mybot-acp-${process.pid}-${NodeCrypto.randomUUID().replaceAll("-", "")}`;
   const childPath = NodePath.join(currentPath, childName);
   const childRelative = NodePath.posix.join(currentRelative, childName);
   if (NodePath.dirname(childPath) !== currentPath) return undefined;
@@ -1338,7 +1338,7 @@ export class AcpSessionRuntime extends Context.Service<
       payload: unknown,
     ) => Effect.Effect<void, EffectAcpErrors.AcpError>;
   }
->()("@t3tools/provider-acp/server/AcpSessionRuntime") {}
+>()("@mybot/provider-acp/server/AcpSessionRuntime") {}
 
 interface AcpStartedState extends AcpSessionRuntimeStartResult {}
 
@@ -1593,7 +1593,7 @@ export const make = (
         : {
             ...options.spawn.env,
             ELECTRON_RUN_AS_NODE: "1",
-            T3_ACP_CGROUP_WRAPPER: "1",
+            MYBOT_ACP_CGROUP_WRAPPER: "1",
           };
     const child = yield* spawner
       .spawn(
@@ -2025,7 +2025,8 @@ export const make = (
           meta !== null &&
           typeof meta === "object" &&
           !Array.isArray(meta) &&
-          (meta as { readonly t3SessionLoadReady?: unknown }).t3SessionLoadReady === "replay_idle";
+          (meta as { readonly myBotSessionLoadReady?: unknown }).myBotSessionLoadReady ===
+            "replay_idle";
         const extractedModelConfigId = extractModelConfigId(sessionSetupResult);
         const nextModelConfigId =
           extractedModelConfigId ?? (syntheticReplayIdle ? current.modelConfigId : undefined);

@@ -1,6 +1,6 @@
 import type { RunResult } from "@cursor/sdk";
-import { ProviderInstanceId } from "@t3tools/contracts";
-import { TextGenerationError } from "@t3tools/provider-core/server/textGeneration";
+import { ProviderInstanceId } from "@mybot/contracts";
+import { TextGenerationError } from "@mybot/provider-core/server/textGeneration";
 import { CursorSettings } from "../settings.ts";
 import { describe, expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
@@ -9,7 +9,7 @@ import * as Fiber from "effect/Fiber";
 import * as Layer from "effect/Layer";
 import * as TestClock from "effect/testing/TestClock";
 import * as Schema from "effect/Schema";
-import { createModelSelection } from "@t3tools/shared/model";
+import { createModelSelection } from "@mybot/shared/model";
 import { beforeEach, vi } from "vite-plus/test";
 
 import { makeCursorTextGeneration } from "./textGeneration.ts";

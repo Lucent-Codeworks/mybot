@@ -6,8 +6,8 @@ import {
   AuthAccessTokenType,
   EnvironmentAuthenticatedAuth,
   EnvironmentHttpApi,
-} from "@t3tools/contracts";
-import { RelayClientTracer } from "@t3tools/shared/relayTracing";
+} from "@mybot/contracts";
+import { RelayClientTracer } from "@mybot/shared/relayTracing";
 import { expect, it } from "@effect/vitest";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
@@ -45,7 +45,7 @@ const layerConfig = Layer.effect(
       devAuthToken: Redacted.make(DEV_TOKEN),
     } satisfies ServerConfig.ServerConfig["Service"];
   }),
-).pipe(Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t3-auth-http-test-" })));
+).pipe(Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "mybot-auth-http-test-" })));
 
 const layerEnvironmentAuth = EnvironmentAuth.layer.pipe(
   Layer.provide(SqlitePersistence.layerMemory),
@@ -120,11 +120,11 @@ it.effect("sets the selected browser session cookies through the HTTP route", ()
           expect(await retiredScopeResponse.json()).toMatchObject({ reason: "invalid_scope" });
 
           const devCookies = devResponse.headers.getSetCookie();
-          const devCookie = devCookies.find((cookie) => cookie.startsWith("t3_dev_session_"));
+          const devCookie = devCookies.find((cookie) => cookie.startsWith("mybot_dev_session_"));
           expect(devCookie).toContain("HttpOnly");
           expect(devCookie).toContain(`=${DEV_TOKEN};`);
           expect(devCookies).toContainEqual(
-            expect.stringMatching(/^t3_session_[^=]*=;.*Max-Age=0/),
+            expect.stringMatching(/^mybot_session_[^=]*=;.*Max-Age=0/),
           );
           const devCookieHeader = devCookie?.split(";", 1)[0] ?? "";
           const environmentBSession = await environmentB.handler(
@@ -153,8 +153,36 @@ it.effect("sets the selected browser session cookies through the HTTP route", ()
           expect(restrictedResponse.status).toBe(200);
           const restrictedCookies = restrictedResponse.headers.getSetCookie();
           expect(restrictedCookies).toHaveLength(1);
-          expect(restrictedCookies[0]).toMatch(/^t3_session_/);
-          expect(restrictedCookies[0]).not.toContain("t3_dev_session_");
+          expect(restrictedCookies[0]).toMatch(/^mybot_session_/);
+          expect(restrictedCookies[0]).not.toContain("mybot_dev_session_");
+
+          // Sessions saved under the pre-rename `t3_` names keep working and
+          // move onto the current name.
+          const legacyDevSession = await environmentB.handler(
+            new Request("http://127.0.0.1/api/auth/session", {
+              headers: { cookie: devCookieHeader.replace(/^mybot_/, "t3_") },
+            }),
+            requestContext,
+          );
+          expect(await legacyDevSession.json()).toMatchObject({ authenticated: true });
+
+          const sessionCookieHeader = restrictedCookies[0]?.split(";", 1)[0] ?? "";
+          const sessionCookieName = sessionCookieHeader.split("=", 1)[0] ?? "";
+          const legacyCookieName = sessionCookieName.replace(/^mybot_/, "t3_");
+          const legacySession = await environmentA.handler(
+            new Request("http://127.0.0.1/api/auth/session", {
+              headers: { cookie: sessionCookieHeader.replace(/^mybot_/, "t3_") },
+            }),
+            requestContext,
+          );
+          expect(await legacySession.json()).toMatchObject({ authenticated: true });
+          const migratedCookies = legacySession.headers.getSetCookie();
+          expect(migratedCookies).toContainEqual(
+            expect.stringMatching(new RegExp(`^${sessionCookieHeader}; .*HttpOnly`)),
+          );
+          expect(migratedCookies).toContainEqual(
+            expect.stringMatching(new RegExp(`^${legacyCookieName}=;.*Max-Age=0`)),
+          );
         }),
       ([environmentA, environmentB]) =>
         Effect.promise(() => Promise.all([environmentA.dispose(), environmentB.dispose()])),
@@ -173,7 +201,7 @@ it.effect("exports only verified MyBot Connect requests", () =>
           return new Tracer.NativeSpan(options);
         },
       });
-    // "DPoP connect" is a T3 Connect session; any other DPoP token is rejected.
+    // "DPoP connect" is a MyBot Connect session; any other DPoP token is rejected.
     const environmentAuth = {
       authenticateHttpRequest: (request: HttpServerRequest.HttpServerRequest) =>
         (request.headers.authorization === "DPoP forged"

@@ -3,7 +3,7 @@ import * as NodeCrypto from "node:crypto";
 
 import * as NodePlatformCrypto from "@effect/platform-node/NodeCrypto";
 import { assert, it } from "@effect/vitest";
-import { ScheduledTaskUpsertInput, SecretRequestError } from "@t3tools/contracts";
+import { ScheduledTaskUpsertInput, SecretRequestError } from "@mybot/contracts";
 import * as DateTime from "effect/DateTime";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
@@ -114,7 +114,7 @@ it.effect("dispatches exactly the rendered prompt and logs the delivery", () =>
       assert.equal(task.nextRunAt, null);
       assert.isDefined(task.webhook);
       assert.isTrue(task.webhook!.path.startsWith("/api/hooks/scheduled-task%3Ahook/"));
-      // Not linked to T3 Connect in tests.
+      // Not linked to MyBot Connect in tests.
       assert.equal(task.webhook!.url, null);
 
       const result = yield* service.triggerWebhook(requestFor(task));

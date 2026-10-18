@@ -7,14 +7,14 @@ import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
 import * as Stream from "effect/Stream";
-import { discardResponseBody, responsePayloads } from "@t3tools/shared/mcpResponsePayloads";
+import { discardResponseBody, responsePayloads } from "@mybot/shared/mcpResponsePayloads";
 
 /**
- * Stdio-to-HTTP bridge for T3's MCP endpoint.
+ * Stdio-to-HTTP bridge for MyBot's MCP endpoint.
  *
  * ACP agents must support stdio MCP servers, while optional http/sse support
  * is unevenly implemented. `mybot acp-mcp-bridge` runs as the stdio MCP server an
- * ACP agent spawns and forwards each JSON-RPC line to T3's authenticated
+ * ACP agent spawns and forwards each JSON-RPC line to MyBot's authenticated
  * streamable-HTTP endpoint: single JSON responses and SSE streams are written
  * back as newline-delimited JSON-RPC, notification acknowledgements (202/204)
  * produce no output, and the `mcp-session-id` / negotiated protocol version
@@ -120,7 +120,7 @@ export function callAcpMcpTool(
         return payloads;
       });
 
-    const initializeId = "t3-acp-cli-initialize";
+    const initializeId = "mybot-acp-cli-initialize";
     const initialized = yield* send({
       jsonrpc: "2.0",
       id: initializeId,
@@ -139,7 +139,7 @@ export function callAcpMcpTool(
     }
     yield* send({ jsonrpc: "2.0", method: "notifications/initialized" });
 
-    const callId = "t3-acp-cli-tool-call";
+    const callId = "mybot-acp-cli-tool-call";
     const responses = yield* send({
       jsonrpc: "2.0",
       id: callId,
@@ -316,10 +316,12 @@ export async function runAcpMcpCliFastPath(
   command: "acp-mcp-bridge" | "acp-mcp-call",
   args: ReadonlyArray<string>,
 ): Promise<void> {
-  const endpoint = process.env.T3_ACP_MCP_ENDPOINT;
-  const authorization = process.env.T3_ACP_MCP_AUTHORIZATION;
+  const endpoint = process.env.MYBOT_ACP_MCP_ENDPOINT;
+  const authorization = process.env.MYBOT_ACP_MCP_AUTHORIZATION;
   if (endpoint === undefined || authorization === undefined) {
-    process.stderr.write(`${command} requires T3_ACP_MCP_ENDPOINT and T3_ACP_MCP_AUTHORIZATION.\n`);
+    process.stderr.write(
+      `${command} requires MYBOT_ACP_MCP_ENDPOINT and MYBOT_ACP_MCP_AUTHORIZATION.\n`,
+    );
     process.exitCode = 2;
     return;
   }

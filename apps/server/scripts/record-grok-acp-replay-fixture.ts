@@ -4,16 +4,16 @@
  * The fixture's own scenario (the same commands and steps the replay test
  * dispatches) runs through the real orchestrator and the real GrokAdapterV2;
  * only the ACP runtime's protocol logger is swapped for a tee. Outbound frames
- * are therefore exactly what T3 sends, and inbound frames exactly what Grok
- * answered. Run from apps/server with the Grok CLI on PATH (or T3_GROK_BIN):
+ * are therefore exactly what MyBot sends, and inbound frames exactly what Grok
+ * answered. Run from apps/server with the Grok CLI on PATH (or MYBOT_GROK_BIN):
  *
  *   node scripts/record-grok-acp-replay-fixture.ts --scenario simple
  */
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { type ProviderReplayEntry } from "@t3tools/contracts";
-import { GrokSettings } from "@t3tools/provider-grok/settings";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { resolveSelfInvocation } from "@t3tools/shared/nodeRuntime";
+import { type ProviderReplayEntry } from "@mybot/contracts";
+import { GrokSettings } from "@mybot/provider-grok/settings";
+import * as HostProcess from "@mybot/shared/HostProcess";
+import { resolveSelfInvocation } from "@mybot/shared/nodeRuntime";
 import * as Clock from "effect/Clock";
 import * as Console from "effect/Console";
 import * as Effect from "effect/Effect";
@@ -23,32 +23,32 @@ import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 import type * as EffectAcpProtocol from "effect-acp/protocol";
 
-import * as TestProviderHost from "@t3tools/provider-testing/TestProviderHost";
+import * as TestProviderHost from "@mybot/provider-testing/TestProviderHost";
 import {
   GROK_DEFAULT_INSTANCE_ID,
   GROK_PROVIDER,
   grokLaunchRuntimeMode,
   makeGrokAdapterV2,
-} from "@t3tools/provider-grok/testing";
-import { ACP_PROTOCOL } from "@t3tools/provider-acp/server/adapter";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
-import type * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
-import * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
+} from "@mybot/provider-grok/testing";
+import { ACP_PROTOCOL } from "@mybot/provider-acp/server/adapter";
+import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
+import type * as ProviderAdapter from "@mybot/provider-core/server/ProviderAdapter";
+import * as ProviderContinuationRequests from "@mybot/provider-core/server/ProviderContinuationRequests";
 import * as ProviderAdapterRegistry from "../src/orchestration-v2/ProviderAdapterRegistry.ts";
 import { provideDeterministicTestRuntime } from "../src/orchestration-v2/testkit/DeterministicRuntime.ts";
 import { ORCHESTRATOR_REPLAY_FIXTURES } from "../src/orchestration-v2/testkit/fixtures/index.ts";
 import { materializeFixtureInput } from "../src/orchestration-v2/testkit/fixtures/shared.ts";
 import { runOrchestratorV2Scenario } from "../src/orchestration-v2/testkit/OrchestratorScenario.ts";
 import * as ProviderReplayHarness from "../src/orchestration-v2/testkit/ProviderReplayHarness.ts";
-import { checkpointWorkspace } from "@t3tools/provider-testing/replayWorkspace";
-import { makeGrokAcpRuntime } from "@t3tools/provider-grok/testing";
-import { buildRuntimeInstructions } from "@t3tools/provider-core/server/runtimeInstructions";
+import { checkpointWorkspace } from "@mybot/provider-testing/replayWorkspace";
+import { makeGrokAcpRuntime } from "@mybot/provider-grok/testing";
+import { buildRuntimeInstructions } from "@mybot/provider-core/server/runtimeInstructions";
 
 const wallClock = Clock.Clock.defaultValue();
 const encodeJson = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 const decodeJson = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Unknown));
 
-// Broadcasts T3 never reads: account tier, marketing, and client UI settings.
+// Broadcasts MyBot never reads: account tier, marketing, and client UI settings.
 const DROPPED_INBOUND_METHODS = new Set(["_x.ai/settings/update", "_x.ai/announcements/update"]);
 const HOME_PLACEHOLDER = "/home/grok-replay";
 
@@ -115,7 +115,7 @@ function makeWireTee() {
     };
   };
   // Grok runs its own wake turns (`task-completed-*`, `notifications-*`,
-  // `subagent-completed-*`) after T3's run can already have settled, and its
+  // `subagent-completed-*`) after MyBot's run can already have settled, and its
   // session roster can report idle before them. Grok is done when no session
   // has a queued or running prompt (`x.ai/queue/changed` vs `turn_completed`),
   // no background task still runs (`background_tasks`), and every spawned
@@ -171,7 +171,7 @@ function wireToEntries(wire: ReadonlyArray<WireMessage>): {
   readonly droppedFrames: number;
 } {
   const entries: Array<ProviderReplayEntry> = [];
-  const t3Requests = new Map<string, string>();
+  const myBotRequests = new Map<string, string>();
   const agentRequests = new Map<string, string>();
   let droppedFrames = 0;
   for (const { direction, message } of wire) {
@@ -183,7 +183,7 @@ function wireToEntries(wire: ReadonlyArray<WireMessage>): {
       }
       const isRequest = message.id !== undefined && message.id !== null;
       if (isRequest) {
-        (direction === "outgoing" ? t3Requests : agentRequests).set(
+        (direction === "outgoing" ? myBotRequests : agentRequests).set(
           String(message.id),
           message.method,
         );
@@ -200,11 +200,11 @@ function wireToEntries(wire: ReadonlyArray<WireMessage>): {
       });
       continue;
     }
-    const pending = direction === "outgoing" ? agentRequests : t3Requests;
+    const pending = direction === "outgoing" ? agentRequests : myBotRequests;
     const method = pending.get(String(message.id));
     if (method === undefined) {
       // Grok answers its own internal requests (e.g. id "skills-reload") on the
-      // shared stream; T3's protocol drops those, so replay never sees them.
+      // shared stream; MyBot's protocol drops those, so replay never sees them.
       droppedFrames += 1;
       continue;
     }
@@ -223,16 +223,16 @@ function wireToEntries(wire: ReadonlyArray<WireMessage>): {
   return { entries, droppedFrames };
 }
 
-const T3_INSTRUCTIONS_BODY = /<t3_code_instructions>\n[\s\S]*?\n<\/t3_code_instructions>/u;
+const MYBOT_INSTRUCTIONS_BODY = /<t3_code_instructions>\n[\s\S]*?\n<\/t3_code_instructions>/u;
 
-/** Replaces T3-owned request content so prompt wording changes do not invalidate recordings. */
+/** Replaces MyBot-owned request content so prompt wording changes do not invalidate recordings. */
 function normalizeOutboundFrame(frame: Record<string, unknown>, runtimeInstructions: string) {
   const params = isRecord(frame.params) ? frame.params : undefined;
   if (params === undefined) return frame;
   switch (frame.method) {
     case "initialize":
-      // Pin what T3 advertises (fs and terminal capabilities decide whether
-      // Grok routes file and shell work through T3, the client type whether
+      // Pin what MyBot advertises (fs and terminal capabilities decide whether
+      // Grok routes file and shell work through MyBot, the client type whether
       // Auto mode asks); the rest is <any>.
       return {
         ...frame,
@@ -263,7 +263,7 @@ function normalizeOutboundFrame(frame: Record<string, unknown>, runtimeInstructi
               ? {
                   ...part,
                   text: part.text.replace(
-                    T3_INSTRUCTIONS_BODY,
+                    MYBOT_INSTRUCTIONS_BODY,
                     "<t3_code_instructions>\n<any>\n</t3_code_instructions>",
                   ),
                 }
@@ -439,7 +439,7 @@ const recordScenario = Effect.fn("recordGrokScenario")(function* (fixtureName: s
   };
 
   const tee = makeWireTee();
-  const settings = { ...DEFAULT_GROK_SETTINGS, binaryPath: process.env.T3_GROK_BIN ?? "grok" };
+  const settings = { ...DEFAULT_GROK_SETTINGS, binaryPath: process.env.MYBOT_GROK_BIN ?? "grok" };
   const layerRegistry = ProviderAdapterRegistry.layerFromAdaptersEffect(
     Effect.gen(function* () {
       const environment = yield* HostProcess.Environment;
@@ -555,7 +555,7 @@ const recordScenario = Effect.fn("recordGrokScenario")(function* (fixtureName: s
       generatedBy: "live-grok-recorder",
       grokVersion: initializeMeta.agentVersion ?? "unknown",
       normalization:
-        "Session ids are fixed UUIDs, the workspace is <workspace>, HOME is /home/grok-replay and the recording user is grok-replay. T3-owned prompt text, MCP servers and initialize params other than clientCapabilities and _meta are <any>. Personal skills, machine identity, account settings and announcement broadcasts are removed, as are responses to Grok-internal request ids that T3's protocol drops. Timestamps are kept as recorded.",
+        "Session ids are fixed UUIDs, the workspace is <workspace>, HOME is /home/grok-replay and the recording user is grok-replay. MyBot-owned prompt text, MCP servers and initialize params other than clientCapabilities and _meta are <any>. Personal skills, machine identity, account settings and announcement broadcasts are removed, as are responses to Grok-internal request ids that MyBot's protocol drops. Timestamps are kept as recorded.",
       droppedFrames,
     },
     entries: [

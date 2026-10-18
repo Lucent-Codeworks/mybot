@@ -1,8 +1,8 @@
-import type { ScheduledTaskWebhookEndpoint } from "@t3tools/contracts";
-import { isLocalLoopbackHost } from "@t3tools/shared/hostClassification";
+import type { ScheduledTaskWebhookEndpoint } from "@mybot/contracts";
+import { isLocalLoopbackHost } from "@mybot/shared/hostClassification";
 
 /**
- * Where a sender can call a webhook task, as a client shows it. With T3
+ * Where a sender can call a webhook task, as a client shows it. With MyBot
  * Connect the server returns a public URL; without it the path is resolved on
  * the address this client reaches the environment at.
  */
@@ -11,7 +11,7 @@ export interface WebhookAddress {
   readonly address: string;
   /** Whether `address` is a full URL a sender can call. */
   readonly copyable: boolean;
-  /** One line on who can reach `address`; null for a T3 Connect URL. */
+  /** One line on who can reach `address`; null for a MyBot Connect URL. */
   readonly note: string | null;
 }
 

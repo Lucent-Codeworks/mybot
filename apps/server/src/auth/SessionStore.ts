@@ -9,7 +9,7 @@ import {
   type ClientSurface,
   RuntimeMode,
   type ServerAuthSessionMethod,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
 import * as DateTime from "effect/DateTime";
@@ -34,7 +34,7 @@ import {
 import {
   base64UrlDecodeUtf8,
   base64UrlEncode,
-  resolveLegacySessionCookieName,
+  resolveLegacySessionCookieNames,
   resolveSessionCookieName,
   signPayload,
   timingSafeEqualBase64Url,
@@ -369,7 +369,7 @@ export class SessionStore extends Context.Service<
   SessionStore,
   {
     readonly cookieName: string;
-    readonly legacyCookieName: string | undefined;
+    readonly legacyCookieNames: ReadonlyArray<string>;
     readonly issue: (input?: {
       readonly ttl?: Duration.Duration;
       readonly subject?: string;
@@ -507,7 +507,7 @@ export const make = Effect.gen(function* () {
     development: serverConfig.devUrl !== undefined,
   } as const;
   const cookieName = resolveSessionCookieName(cookieInput);
-  const legacyCookieName = resolveLegacySessionCookieName(cookieInput);
+  const legacyCookieNames = resolveLegacySessionCookieNames(cookieInput);
   const devAuth = resolveReusableDevAuth(serverConfig);
   if (devAuth) {
     yield* authSessions
@@ -1081,7 +1081,7 @@ export const make = Effect.gen(function* () {
 
   return SessionStore.of({
     cookieName,
-    legacyCookieName,
+    legacyCookieNames,
     issue,
     verify,
     issueWebSocketToken,

@@ -5,13 +5,13 @@ import {
   AssetResource,
   EnvironmentId,
   WS_METHODS,
-} from "@t3tools/contracts";
-import { mediaMimeTypeFromExtension } from "@t3tools/shared/filePreview";
-import { isWindowsAbsolutePath } from "@t3tools/shared/path";
+} from "@mybot/contracts";
+import { mediaMimeTypeFromExtension } from "@mybot/shared/filePreview";
+import { isWindowsAbsolutePath } from "@mybot/shared/path";
 import {
   getProjectFaviconResourceKey,
   isProjectFaviconFallbackUrl,
-} from "@t3tools/shared/projectFavicon";
+} from "@mybot/shared/projectFavicon";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as Result from "effect/Result";

@@ -1,6 +1,6 @@
 // @effect-diagnostics nodeBuiltinImport:off - Effect has no incremental digest.
-import { cliArchiveTarCommand } from "@t3tools/shared/cliRelease";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import { cliArchiveTarCommand } from "@mybot/shared/cliRelease";
+import * as HostProcess from "@mybot/shared/HostProcess";
 import * as Context from "effect/Context";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";

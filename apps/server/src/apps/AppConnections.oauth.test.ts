@@ -202,7 +202,7 @@ const later =
 const layerTest = AppConnections.layer.pipe(
   Layer.provideMerge(LocalRuntimes.layer),
   Layer.provideMerge(ServerSecretStore.layer),
-  Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "t3-app-oauth-" })),
+  Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "mybot-app-oauth-" })),
   Layer.provideMerge(FetchHttpClient.layer),
   Layer.provideMerge(NodeServices.layer),
 );

@@ -8,8 +8,8 @@
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 
-import type { ChatAttachment, ModelSelection } from "@t3tools/contracts";
-import { extractJsonObject } from "@t3tools/shared/schemaJson";
+import type { ChatAttachment, ModelSelection } from "@mybot/contracts";
+import { extractJsonObject } from "@mybot/shared/schemaJson";
 
 import { type ProviderTextGeneration, TextGenerationError } from "./textGeneration.ts";
 import { buildActionReviewPrompt, buildThreadTitlePrompt } from "./textGenerationPrompts.ts";

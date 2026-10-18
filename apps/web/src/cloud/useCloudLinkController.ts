@@ -1,11 +1,11 @@
 import { useAuth } from "@clerk/react";
-import { findErrorTraceId } from "@t3tools/client-runtime/errors";
-import { EnvironmentId, AuthRelayReadScope, AuthRelayWriteScope } from "@t3tools/contracts";
+import { findErrorTraceId } from "@mybot/client-runtime/errors";
+import { EnvironmentId, AuthRelayReadScope, AuthRelayWriteScope } from "@mybot/contracts";
 import {
   isAtomCommandInterrupted,
   settlePromise,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@mybot/client-runtime/state/runtime";
 import { useState } from "react";
 
 import { toastManager } from "../components/ui/toast";
@@ -28,7 +28,7 @@ export interface CloudLinkDesiredState {
 }
 
 /**
- * Drives the primary environment's T3 Connect link. T3 Connect (managed
+ * Drives the primary environment's MyBot Connect link. MyBot Connect (managed
  * tunnel) and agent-activity publishing are independent capabilities backed by
  * a single relay link, so consumers express the full desired state and
  * `reconcileCloudState` applies it: unlink when neither is wanted, otherwise
@@ -58,7 +58,7 @@ export function useCloudLinkController() {
     const message =
       cause instanceof Error ? cause.message : "Could not update MyBot Connect access.";
     const traceId = findErrorTraceId(cause);
-    console.error("[t3-connect] Could not update MyBot Connect", { message, traceId, cause });
+    console.error("[mybot-connect] Could not update MyBot Connect", { message, traceId, cause });
     setOperationError(traceId ? `${message} Trace ID: ${traceId}` : message);
     toastManager.add({
       type: "error",
@@ -124,7 +124,7 @@ export function useCloudLinkController() {
     // actually holds now.
     if (!wantsLink) {
       // Unlink works without a relay token — a failed token read must not
-      // leave the user unable to turn T3 Connect off.
+      // leave the user unable to turn MyBot Connect off.
       const unlinkResult = await unlinkPrimaryEnvironment({
         target,
         clerkToken: tokenResult._tag === "Success" ? (tokenResult.value ?? null) : null,

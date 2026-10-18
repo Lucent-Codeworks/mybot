@@ -9,8 +9,8 @@ import * as Tracer from "effect/Tracer";
 import * as HttpClient from "effect/http/HttpClient";
 import * as HttpClientResponse from "effect/http/HttpClientResponse";
 
-import { DEFAULT_SIGNAL_EXPORT } from "@t3tools/shared/observability";
-import * as OtelEnvironment from "@t3tools/shared/otelEnvironment";
+import { DEFAULT_SIGNAL_EXPORT } from "@mybot/shared/observability";
+import * as OtelEnvironment from "@mybot/shared/otelEnvironment";
 
 import * as ServerConfig from "./config.ts";
 import * as ServerLogger from "./serverLogger.ts";
@@ -43,7 +43,7 @@ const layerConfig = (overrides: Partial<ServerConfig.ServerConfig["Service"]>) =
     ServerConfig.ServerConfig,
     Effect.gen(function* () {
       const path = yield* Path.Path;
-      const baseDir = path.join(NodeOS.tmpdir(), "t3-server-logger-test");
+      const baseDir = path.join(NodeOS.tmpdir(), "mybot-server-logger-test");
       const derivedPaths = yield* ServerConfig.deriveServerPaths(baseDir, undefined);
       return ServerConfig.make({
         logLevel: "Info",

@@ -23,8 +23,8 @@ import {
   type AuthWebSocketTicketResult,
   DpopFailureReason,
   type DpopFailureReason as DpopFailureReasonType,
-} from "@t3tools/contracts";
-import { encodeOAuthScope } from "@t3tools/shared/oauthScope";
+} from "@mybot/contracts";
+import { encodeOAuthScope } from "@mybot/shared/oauthScope";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
 import * as DateTime from "effect/DateTime";
@@ -567,7 +567,7 @@ export class EnvironmentAuth extends Context.Service<
     /**
      * Spends a one-time pairing code as approval for an MCP client with the
      * given access; the code must hold every scope that access grants.
-     * Proof-bound codes (T3 Connect) are refused without being spent, and
+     * Proof-bound codes (MyBot Connect) are refused without being spent, and
      * desktop bootstrap grants never qualify.
      */
     readonly consumeMcpApprovalCode: (
@@ -657,7 +657,7 @@ function parseDpopToken(request: HttpServerRequest.HttpServerRequest): string | 
 export function selectRequestCredential(
   request: HttpServerRequest.HttpServerRequest,
   cookieName: string,
-  legacyCookieName: string | undefined,
+  legacyCookieNames: ReadonlyArray<string>,
 ) {
   const cookieToken = request.cookies[cookieName];
   if (cookieToken !== undefined) {
@@ -674,9 +674,11 @@ export function selectRequestCredential(
     return { token: dpopToken, source: "dpop" } as const;
   }
 
-  const legacyToken = legacyCookieName ? request.cookies[legacyCookieName] : undefined;
-  if (legacyToken !== undefined) {
-    return { token: legacyToken, source: "legacy-cookie" } as const;
+  for (const legacyCookieName of legacyCookieNames) {
+    const legacyToken = request.cookies[legacyCookieName];
+    if (legacyToken !== undefined) {
+      return { token: legacyToken, source: "legacy-cookie", cookieName: legacyCookieName } as const;
+    }
   }
 
   return undefined;
@@ -766,10 +768,12 @@ export const make = Effect.gen(function* () {
     const selectedCredential = selectRequestCredential(
       request,
       sessions.cookieName,
-      sessions.legacyCookieName,
+      sessions.legacyCookieNames,
     );
     const hasAuthorization = request.headers.authorization !== undefined;
-    const devCookieToken = devAuth ? request.cookies[devAuth.cookieName] : undefined;
+    const devCookieToken = devAuth
+      ? (request.cookies[devAuth.cookieName] ?? request.cookies[devAuth.legacyCookieName])
+      : undefined;
     return (
       selectedCredential ??
       (!hasAuthorization && devCookieToken !== undefined
@@ -1325,7 +1329,7 @@ export const make = Effect.gen(function* () {
     code,
     access,
   ) =>
-    // No proof key: a code bound to a T3 Connect client's key fails without being spent.
+    // No proof key: a code bound to a MyBot Connect client's key fails without being spent.
     resolveBootstrapGrant(code.trim()).pipe(
       Effect.catchTags({
         ServerAuthInvalidCredentialError: () =>

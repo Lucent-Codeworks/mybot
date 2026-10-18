@@ -5,7 +5,7 @@ import * as Semaphore from "effect/Semaphore";
 import * as Stream from "effect/Stream";
 import type * as AcpSchema from "effect-acp/compat";
 
-import { responsePayloads } from "@t3tools/shared/mcpResponsePayloads";
+import { responsePayloads } from "@mybot/shared/mcpResponsePayloads";
 
 const MAX_CONNECTIONS = 16;
 const MAX_MESSAGE_BYTES = 8 * 1024 * 1024;
@@ -79,7 +79,7 @@ export interface AcpMcpOverAcpBridge {
   readonly dispose: Effect.Effect<void>;
 }
 
-/** Bridges the unstable ACP transport to T3's authenticated streamable-HTTP MCP endpoint. */
+/** Bridges the unstable ACP transport to MyBot's authenticated streamable-HTTP MCP endpoint. */
 export const makeAcpMcpOverAcpBridge = Effect.fn("AcpMcpOverAcpBridge.make")(function* (
   options: AcpMcpOverAcpBridgeOptions,
 ): Effect.fn.Return<AcpMcpOverAcpBridge> {

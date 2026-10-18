@@ -1,8 +1,8 @@
 // @effect-diagnostics-next-line nodeBuiltinImport:off -- Effect's Crypto has no generateKeyPairSync.
 import * as NodeCrypto from "node:crypto";
 
-import { EnvironmentId, ThreadId } from "@t3tools/contracts";
-import type { RelayAgentActivityAggregateState } from "@t3tools/contracts/relay";
+import { EnvironmentId, ThreadId } from "@mybot/contracts";
+import type { RelayAgentActivityAggregateState } from "@mybot/contracts/relay";
 import { describe, expect, it } from "@effect/vitest";
 import * as DateTime from "effect/DateTime";
 import * as Deferred from "effect/Deferred";
@@ -36,7 +36,7 @@ const layerTest = ApnsClient.layer.pipe(
 describe("ApnsClient", () => {
   const now = DateTime.makeUnsafe(0);
   const state: RelayAgentActivityAggregateState = {
-    title: "T3 Code",
+    title: "MyBot",
     subtitle: "Agent work in progress",
     activeCount: 1,
     updatedAt: DateTime.formatIso(now),

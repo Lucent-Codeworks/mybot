@@ -1,26 +1,26 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, describe, it } from "@effect/vitest";
-import { EnvironmentId, ProviderInstanceId, ThreadId } from "@t3tools/contracts";
+import { EnvironmentId, ProviderInstanceId, ThreadId } from "@mybot/contracts";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 
 import {
-  PI_T3_MCP_EXTENSION_FILENAME,
-  T3_MCP_BEARER_ENV,
-  T3_MCP_URL_ENV,
-  T3_PI_RUNTIME_MODE_ENV,
-  T3_PI_MCP_EXTENSION_PATH_ENV,
+  PI_MYBOT_MCP_EXTENSION_FILENAME,
+  MYBOT_MCP_BEARER_ENV,
+  MYBOT_MCP_URL_ENV,
+  MYBOT_PI_RUNTIME_MODE_ENV,
+  MYBOT_PI_MCP_EXTENSION_PATH_ENV,
 } from "./mcpExtensionSource.ts";
 import {
   buildPiRpcLaunch,
-  materializePiT3McpExtension,
+  materializePiMyBotMcpExtension,
   resolvePiLaunchArgs,
 } from "./mcpInjection.ts";
 
-const threadId = ThreadId.make("thread-pi-t3-mcp");
+const threadId = ThreadId.make("thread-pi-mybot-mcp");
 
 const mcpSession = {
-  environmentId: EnvironmentId.make("environment-pi-t3-mcp"),
+  environmentId: EnvironmentId.make("environment-pi-mybot-mcp"),
   threadId,
   providerSessionId: "mcp-session-pi",
   providerInstanceId: ProviderInstanceId.make("pi"),
@@ -29,7 +29,7 @@ const mcpSession = {
   browserToolsAvailable: true,
 };
 
-describe("pi T3 MCP injection", () => {
+describe("pi MyBot MCP injection", () => {
   it("always adds the permission bridge and configures MCP when available", () => {
     const resolvedArgs = resolvePiLaunchArgs(
       "--extension=/home/user/.pi/agent/extensions/demo.ts --session-dir=/tmp/pi-sessions --provider=anthropic --model=claude-sonnet --tools='' --name=-review --extension-flag=kept",
@@ -63,17 +63,17 @@ describe("pi T3 MCP injection", () => {
       "/tmp/cache/pi-t3-mcp-extension.ts",
     ]);
     assert.notInclude(launch.args, "--no-extensions");
-    assert.equal(launch.env[T3_MCP_URL_ENV], "http://127.0.0.1:43123/mcp");
-    assert.equal(launch.env[T3_MCP_BEARER_ENV], "secret-pi-token");
-    assert.equal(launch.env[T3_PI_RUNTIME_MODE_ENV], "approval-required");
-    assert.equal(launch.env[T3_PI_MCP_EXTENSION_PATH_ENV], "/tmp/cache/pi-t3-mcp-extension.ts");
+    assert.equal(launch.env[MYBOT_MCP_URL_ENV], "http://127.0.0.1:43123/mcp");
+    assert.equal(launch.env[MYBOT_MCP_BEARER_ENV], "secret-pi-token");
+    assert.equal(launch.env[MYBOT_PI_RUNTIME_MODE_ENV], "approval-required");
+    assert.equal(launch.env[MYBOT_PI_MCP_EXTENSION_PATH_ENV], "/tmp/cache/pi-t3-mcp-extension.ts");
 
     const permissionOnly = buildPiRpcLaunch({
       launchArgs: [],
       environment: {
-        [T3_MCP_URL_ENV]: "http://127.0.0.1:9999/stale",
-        [T3_MCP_BEARER_ENV]: "stale-token",
-        [T3_PI_MCP_EXTENSION_PATH_ENV]: "/stale/extension.ts",
+        [MYBOT_MCP_URL_ENV]: "http://127.0.0.1:9999/stale",
+        [MYBOT_MCP_BEARER_ENV]: "stale-token",
+        [MYBOT_PI_MCP_EXTENSION_PATH_ENV]: "/stale/extension.ts",
       },
       mcpSession: undefined,
       extensionPath: "/tmp/cache/pi-t3-mcp-extension.ts",
@@ -85,12 +85,12 @@ describe("pi T3 MCP injection", () => {
       "--extension",
       "/tmp/cache/pi-t3-mcp-extension.ts",
     ]);
-    assert.isFalse(permissionOnly.hasT3Mcp);
-    assert.isUndefined(permissionOnly.env[T3_MCP_URL_ENV]);
-    assert.isUndefined(permissionOnly.env[T3_MCP_BEARER_ENV]);
-    assert.equal(permissionOnly.env[T3_PI_RUNTIME_MODE_ENV], "auto-accept-edits");
+    assert.isFalse(permissionOnly.hasMyBotMcp);
+    assert.isUndefined(permissionOnly.env[MYBOT_MCP_URL_ENV]);
+    assert.isUndefined(permissionOnly.env[MYBOT_MCP_BEARER_ENV]);
+    assert.equal(permissionOnly.env[MYBOT_PI_RUNTIME_MODE_ENV], "auto-accept-edits");
     assert.equal(
-      permissionOnly.env[T3_PI_MCP_EXTENSION_PATH_ENV],
+      permissionOnly.env[MYBOT_PI_MCP_EXTENSION_PATH_ENV],
       "/tmp/cache/pi-t3-mcp-extension.ts",
     );
   });
@@ -104,7 +104,7 @@ describe("pi T3 MCP injection", () => {
       runtimeMode: "auto",
     });
 
-    assert.equal(launch.env[T3_PI_RUNTIME_MODE_ENV], "approval-required");
+    assert.equal(launch.env[MYBOT_PI_RUNTIME_MODE_ENV], "approval-required");
   });
 
   it("forces tools and user extensions off for unattended text generation", () => {
@@ -134,7 +134,7 @@ describe("pi T3 MCP injection", () => {
       "--no-extensions",
       "--no-tools",
     ]);
-    assert.isFalse(launch.hasT3Mcp);
+    assert.isFalse(launch.hasMyBotMcp);
     assert.deepInclude(resolvePiLaunchArgs("--mode text"), {
       ok: false,
       message: "Pi launch argument '--mode' is controlled by MyBot and cannot be overridden.",
@@ -158,11 +158,11 @@ describe("pi T3 MCP injection", () => {
   it.effect("materializes the MCP bridge with namespaced tool registration", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const cacheDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-pi-extensions-" });
-      const mcpDest = yield* materializePiT3McpExtension(cacheDir);
-      assert.isTrue(mcpDest.endsWith(PI_T3_MCP_EXTENSION_FILENAME));
+      const cacheDir = yield* fs.makeTempDirectoryScoped({ prefix: "mybot-pi-extensions-" });
+      const mcpDest = yield* materializePiMyBotMcpExtension(cacheDir);
+      assert.isTrue(mcpDest.endsWith(PI_MYBOT_MCP_EXTENSION_FILENAME));
       const mcpSource = yield* fs.readFileString(mcpDest);
-      assert.include(mcpSource, "export default async function t3McpExtension");
+      assert.include(mcpSource, "export default async function myBotMcpExtension");
       assert.include(mcpSource, "before_agent_start");
       assert.include(mcpSource, 'pi.on("tool_call"');
       assert.include(mcpSource, "Allow ${event.toolName}?");

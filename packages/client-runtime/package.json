@@ -1,5 +1,5 @@
 {
-  "name": "@t3tools/client-runtime",
+  "name": "@mybot/client-runtime",
   "private": true,
   "type": "module",
   "exports": {
@@ -107,9 +107,9 @@
       "types": "./src/voice-input/index.ts",
       "default": "./src/voice-input/index.ts"
     },
-    "./t3ToolSummary": {
-      "types": "./src/t3ToolSummary.ts",
-      "default": "./src/t3ToolSummary.ts"
+    "./myBotToolSummary": {
+      "types": "./src/myBotToolSummary.ts",
+      "default": "./src/myBotToolSummary.ts"
     },
     "./relay": {
       "types": "./src/relay/index.ts",
@@ -381,9 +381,9 @@
     "test": "vp test run"
   },
   "dependencies": {
+    "@mybot/contracts": "workspace:*",
+    "@mybot/shared": "workspace:*",
     "@pierre/diffs": "catalog:",
-    "@t3tools/contracts": "workspace:*",
-    "@t3tools/shared": "workspace:*",
     "effect": "catalog:",
     "three": "0.180.0"
   },

@@ -1,5 +1,5 @@
 import * as Option from "effect/Option";
-import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
+import type { EnvironmentThreadShell } from "@mybot/client-runtime/state/shell";
 import {
   ANTIGRAVITY_DEFAULT_MODEL,
   type AssetCreateUrlInput,
@@ -21,21 +21,21 @@ import {
   type ThreadContextRecord,
   type ThreadId,
   type RunId,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as DateTime from "effect/DateTime";
-import { parseScopedThreadKey } from "@t3tools/client-runtime/environment";
-import { resolveAssetUrl } from "@t3tools/client-runtime/state/assets";
+import { parseScopedThreadKey } from "@mybot/client-runtime/environment";
+import { resolveAssetUrl } from "@mybot/client-runtime/state/assets";
 import {
   squashAtomCommandFailure,
   type AtomCommandResult,
-} from "@t3tools/client-runtime/state/runtime";
-import { videoMimeType } from "@t3tools/shared/video";
+} from "@mybot/client-runtime/state/runtime";
+import { videoMimeType } from "@mybot/shared/video";
 import {
   appendCodexArtifactTemplateUsePrompt,
   codexArtifactTemplateUsePrompt,
   type CodexArtifactTemplate,
-} from "@t3tools/shared/codexArtifactTemplates";
-import { presentThreadShell } from "@t3tools/client-runtime/state/shell";
+} from "@mybot/shared/codexArtifactTemplates";
+import { presentThreadShell } from "@mybot/client-runtime/state/shell";
 import { type ChatMessage, isImageAttachment, type SessionPhase, type Thread } from "../types";
 import { type ComposerImageAttachment, type DraftThreadState } from "../composerDraftStore";
 import { appAtomRegistry } from "../rpc/atomRegistry";

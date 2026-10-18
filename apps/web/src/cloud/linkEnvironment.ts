@@ -14,15 +14,15 @@ import {
   EnvironmentHttpUnauthorizedError,
   EnvironmentId,
   WS_METHODS,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import {
   type RelayEnvironmentLinkResponse,
   type RelayManagedEndpointProviderKind,
-} from "@t3tools/contracts/relay";
-import { EnvironmentRegistry } from "@t3tools/client-runtime/connection";
-import { request, runStream } from "@t3tools/client-runtime/rpc";
-import { makeEnvironmentHttpApiClient } from "@t3tools/client-runtime/rpc";
-import { ManagedRelay, relayProtectedErrorMessage } from "@t3tools/client-runtime/relay";
+} from "@mybot/contracts/relay";
+import { EnvironmentRegistry } from "@mybot/client-runtime/connection";
+import { request, runStream } from "@mybot/client-runtime/rpc";
+import { makeEnvironmentHttpApiClient } from "@mybot/client-runtime/rpc";
+import { ManagedRelay, relayProtectedErrorMessage } from "@mybot/client-runtime/relay";
 
 import * as PrimaryEnvironmentHttpLayer from "../environments/primary/httpLayer";
 import { resolveCloudPublicConfig } from "./publicConfig";
@@ -250,7 +250,7 @@ export function unlinkPrimaryEnvironmentFromCloud(input: {
 
 // "publish_only" links the environment to the relay for agent-activity
 // publishing alone: no managed tunnel is provisioned, so it can be toggled
-// independently of T3 Connect while clients reach the environment out of band.
+// independently of MyBot Connect while clients reach the environment out of band.
 export type CloudLinkMode = "managed" | "publish_only";
 
 const PUBLISH_ONLY_PROVIDER_KIND = "manual" satisfies RelayManagedEndpointProviderKind;
@@ -268,7 +268,7 @@ export function linkPrimaryEnvironmentToCloud(input: {
     const configuredRelayUrl = relayUrl();
     if (!configuredRelayUrl) {
       return yield* new CloudEnvironmentLinkError({
-        message: "T3CODE_RELAY_URL is not configured.",
+        message: "MYBOT_RELAY_URL is not configured.",
       });
     }
     const managedTunnelsEnabled = (input.mode ?? "managed") === "managed";

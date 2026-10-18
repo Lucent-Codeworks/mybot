@@ -1,7 +1,7 @@
 import type {
   RelayAgentActivityAggregateState,
   RelayAgentActivityState,
-} from "@t3tools/contracts/relay";
+} from "@mybot/contracts/relay";
 import * as NodeCryptoLayer from "@effect/platform-node/NodeCrypto";
 import { describe, expect, it } from "@effect/vitest";
 // @effect-diagnostics-next-line nodeBuiltinImport:off -- Effect's Crypto has no generateKeyPairSync.
@@ -77,7 +77,7 @@ const state: RelayAgentActivityState = {
 };
 
 const aggregate: RelayAgentActivityAggregateState = {
-  title: "T3 Code",
+  title: "MyBot",
   subtitle: "Agent work in progress",
   activeCount: 1,
   updatedAt: state.updatedAt,

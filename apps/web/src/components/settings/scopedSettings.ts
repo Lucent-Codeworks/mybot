@@ -8,13 +8,13 @@ import {
   type ProjectSettingsOverrides,
   ServerSettings,
   type ServerSettingsPatch,
-} from "@t3tools/contracts";
-import type { EnvironmentConnectionPhase } from "@t3tools/client-runtime/connection";
+} from "@mybot/contracts";
+import type { EnvironmentConnectionPhase } from "@mybot/client-runtime/connection";
 import {
   clearProjectSettingsOverrides,
   resolveProjectSettings,
   type ProjectSettingSource,
-} from "@t3tools/shared/projectSettings";
+} from "@mybot/shared/projectSettings";
 import * as Equal from "effect/Equal";
 import * as Cause from "effect/Cause";
 

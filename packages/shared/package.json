@@ -1,5 +1,5 @@
 {
-  "name": "@t3tools/shared",
+  "name": "@mybot/shared",
   "private": true,
   "type": "module",
   "exports": {
@@ -10,6 +10,10 @@
     "./orchestrationV2ThreadError": {
       "types": "./src/orchestrationV2ThreadError.ts",
       "import": "./src/orchestrationV2ThreadError.ts"
+    },
+    "./legacyStorageKeys": {
+      "types": "./src/legacyStorageKeys.ts",
+      "import": "./src/legacyStorageKeys.ts"
     },
     "./legacyCliLauncher": {
       "types": "./src/legacyCliLauncher.ts",
@@ -143,9 +147,9 @@
       "types": "./src/projectSettings.ts",
       "import": "./src/projectSettings.ts"
     },
-    "./t3ProjectFile": {
-      "types": "./src/t3ProjectFile.ts",
-      "import": "./src/t3ProjectFile.ts"
+    "./myBotProjectFile": {
+      "types": "./src/myBotProjectFile.ts",
+      "import": "./src/myBotProjectFile.ts"
     },
     "./orchestrationTiming": {
       "types": "./src/orchestrationTiming.ts",
@@ -363,9 +367,9 @@
       "types": "./src/orchestrationV2Timeline.ts",
       "import": "./src/orchestrationV2Timeline.ts"
     },
-    "./t3McpToolPresentation": {
-      "types": "./src/t3McpToolPresentation.ts",
-      "import": "./src/t3McpToolPresentation.ts"
+    "./myBotMcpToolPresentation": {
+      "types": "./src/myBotMcpToolPresentation.ts",
+      "import": "./src/myBotMcpToolPresentation.ts"
     },
     "./Array": {
       "types": "./src/Array.ts",
@@ -473,9 +477,9 @@
     "test": "vp test run --config ../../vite.config.ts --dir ."
   },
   "dependencies": {
+    "@mybot/contracts": "workspace:*",
     "@noble/curves": "catalog:",
     "@noble/hashes": "catalog:",
-    "@t3tools/contracts": "workspace:*",
     "effect": "catalog:",
     "jose": "catalog:",
     "mdast-util-directive": "catalog:",

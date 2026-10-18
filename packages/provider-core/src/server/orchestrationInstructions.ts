@@ -1,6 +1,6 @@
-import type { ProviderInteractionMode } from "@t3tools/contracts";
+import type { ProviderInteractionMode } from "@mybot/contracts";
 
-export const T3_CODE_ORCHESTRATION_INSTRUCTIONS = `
+export const MYBOT_ORCHESTRATION_INSTRUCTIONS = `
 
 ## MyBot orchestration
 
@@ -21,14 +21,14 @@ New threads run in their project's folder. Use \`t3_thread_launch\` for a single
 
 Tool names may include a harness-normalized MCP prefix, such as \`mcp__t3_code__delegate_task\`; the semantics are the same. Some harnesses attach optional MCP servers lazily: if an initial tool-catalog scan does not show MyBot tools, do not conclude that cross-provider delegation is unavailable. Make one bounded direct attempt using the known MyBot tool name on the next tool step. In Codex code mode, for example, call \`tools.mcp__t3_code__orchestrator_capabilities({})\` before reporting that the capability is absent. Keep polling/wait loops bounded, do not duplicate active work, and use stable \`clientRequestId\` values when retrying tools that accept them.
 
-ACP fallback: some ACP agents accept the injected MCP server but fail to expose its tools. When the MyBot tools are absent and \`T3_ACP_MCP_NODE\` is present, call the same tools through the terminal: \`ELECTRON_RUN_AS_NODE=1 "$T3_ACP_MCP_NODE" \${T3_ACP_MCP_ENTRYPOINT:+"$T3_ACP_MCP_ENTRYPOINT"} acp-mcp-call orchestrator_capabilities '{}'\` (\`T3_ACP_MCP_ENTRYPOINT\` is unset when MyBot runs as a standalone executable). Delegate with \`acp-mcp-call delegate_task '{"task":"...","target":{"providerInstanceId":"...","model":"..."},"mode":"async","clientRequestId":"..."}'\`. This is the supported MyBot transport fallback, not an ordinary shell-based substitute for delegation.
+ACP fallback: some ACP agents accept the injected MCP server but fail to expose its tools. When the MyBot tools are absent and \`MYBOT_ACP_MCP_NODE\` is present, call the same tools through the terminal: \`ELECTRON_RUN_AS_NODE=1 "$MYBOT_ACP_MCP_NODE" \${MYBOT_ACP_MCP_ENTRYPOINT:+"$MYBOT_ACP_MCP_ENTRYPOINT"} acp-mcp-call orchestrator_capabilities '{}'\` (\`MYBOT_ACP_MCP_ENTRYPOINT\` is unset when MyBot runs as a standalone executable). Delegate with \`acp-mcp-call delegate_task '{"task":"...","target":{"providerInstanceId":"...","model":"..."},"mode":"async","clientRequestId":"..."}'\`. This is the supported MyBot transport fallback, not an ordinary shell-based substitute for delegation.
 
 ### Showing visuals
 
 When a chart, table, diagram, image collage, or mockup would say more than prose, build a self-contained HTML page, check it with \`html_preview\`, then publish it with \`html_render\` before your final reply. The reader sees the page above that reply, so don't announce or restate it; add only what it doesn't say.
 `;
 
-export const T3_CODE_BROWSER_TOOL_INSTRUCTIONS = `
+export const MYBOT_BROWSER_TOOL_INSTRUCTIONS = `
 
 ## MyBot collaborative browser
 
@@ -44,42 +44,42 @@ Do not switch to global browser skills, Chrome, Node REPL browser automation, st
 - preview calls on an open tab have failed twice on the same step (timeouts, \`chrome-error://\` pages, a different client answering). Quote the raw error and switch without asking the user which browser to use.
 `;
 
-const T3_CODE_ACP_DEFAULT_MODE_INSTRUCTIONS = `## MyBot interaction mode: Default
+const MYBOT_ACP_DEFAULT_MODE_INSTRUCTIONS = `## MyBot interaction mode: Default
 
 Prefer making reasonable assumptions and carrying out the user's request. Ask a concise question only when a missing user decision would materially change the result. Treat this mode as active until MyBot supplies a different interaction-mode instruction.`;
 
-const T3_CODE_ACP_PLAN_MODE_INSTRUCTIONS = `## MyBot interaction mode: Plan
+const MYBOT_ACP_PLAN_MODE_INSTRUCTIONS = `## MyBot interaction mode: Plan
 
 Investigate with read-only actions and do not edit files or otherwise execute the implementation. Resolve discoverable facts before asking questions. When the requirements are decision complete, return a concrete implementation plan and do not start implementing it. Treat this mode as active until MyBot supplies a different interaction-mode instruction.`;
 
-export interface T3AcpInstructionState {
+export interface MyBotAcpInstructionState {
   readonly interactionMode: ProviderInteractionMode;
-  readonly hasT3Mcp: boolean;
+  readonly hasMyBotMcp: boolean;
 }
 
 /**
  * ACP has no system/developer prompt field, so send MyBot-owned context in the
  * first user prompt and whenever the available tools or interaction mode change.
  */
-export function t3AcpPromptWithInstructions(input: {
+export function myBotAcpPromptWithInstructions(input: {
   readonly prompt: string;
-  readonly state: T3AcpInstructionState;
-  readonly previousState?: T3AcpInstructionState;
+  readonly state: MyBotAcpInstructionState;
+  readonly previousState?: MyBotAcpInstructionState;
 }): string {
   // Native slash commands must remain at the start of the prompt.
   if (input.prompt.trimStart().startsWith("/")) return input.prompt;
   if (
     input.previousState?.interactionMode === input.state.interactionMode &&
-    input.previousState.hasT3Mcp === input.state.hasT3Mcp
+    input.previousState.hasMyBotMcp === input.state.hasMyBotMcp
   ) {
     return input.prompt;
   }
   const instructions = [
     input.state.interactionMode === "plan"
-      ? T3_CODE_ACP_PLAN_MODE_INSTRUCTIONS
-      : T3_CODE_ACP_DEFAULT_MODE_INSTRUCTIONS,
-    ...(input.state.hasT3Mcp
-      ? [T3_CODE_BROWSER_TOOL_INSTRUCTIONS.trim(), T3_CODE_ORCHESTRATION_INSTRUCTIONS.trim()]
+      ? MYBOT_ACP_PLAN_MODE_INSTRUCTIONS
+      : MYBOT_ACP_DEFAULT_MODE_INSTRUCTIONS,
+    ...(input.state.hasMyBotMcp
+      ? [MYBOT_BROWSER_TOOL_INSTRUCTIONS.trim(), MYBOT_ORCHESTRATION_INSTRUCTIONS.trim()]
       : []),
   ];
   return `<t3_code_instructions>\n${instructions.join("\n\n")}\n</t3_code_instructions>\n\n<user_request>\n${input.prompt}\n</user_request>`;
@@ -90,20 +90,20 @@ export function t3AcpPromptWithInstructions(input: {
  * context in the first prompt. Keep the wrapper explicit so it cannot be
  * mistaken for text authored by the user.
  */
-function prependT3OrchestrationInstructions(prompt: string): string {
-  return `<t3_code_orchestration_instructions>${T3_CODE_ORCHESTRATION_INSTRUCTIONS.trim()}</t3_code_orchestration_instructions>\n\n<user_request>\n${prompt}\n</user_request>`;
+function prependMyBotOrchestrationInstructions(prompt: string): string {
+  return `<t3_code_orchestration_instructions>${MYBOT_ORCHESTRATION_INSTRUCTIONS.trim()}</t3_code_orchestration_instructions>\n\n<user_request>\n${prompt}\n</user_request>`;
 }
 
-export function t3OrchestrationPromptForFirstRun(input: {
+export function myBotOrchestrationPromptForFirstRun(input: {
   readonly prompt: string;
   readonly runOrdinal: number;
-  readonly hasT3Mcp: boolean;
+  readonly hasMyBotMcp: boolean;
 }): string {
-  return input.runOrdinal === 1 && input.hasT3Mcp
-    ? prependT3OrchestrationInstructions(input.prompt)
+  return input.runOrdinal === 1 && input.hasMyBotMcp
+    ? prependMyBotOrchestrationInstructions(input.prompt)
     : input.prompt;
 }
 
-export function t3OrchestrationSystemPrompt(hasT3Mcp: boolean): string | undefined {
-  return hasT3Mcp ? T3_CODE_ORCHESTRATION_INSTRUCTIONS : undefined;
+export function myBotOrchestrationSystemPrompt(hasMyBotMcp: boolean): string | undefined {
+  return hasMyBotMcp ? MYBOT_ORCHESTRATION_INSTRUCTIONS : undefined;
 }

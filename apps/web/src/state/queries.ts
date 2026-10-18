@@ -1,10 +1,10 @@
 import { useAtomValue } from "@effect/atom-react";
-import { type ComposerPathSearchTarget } from "@t3tools/client-runtime/state/threads";
+import { type ComposerPathSearchTarget } from "@mybot/client-runtime/state/threads";
 import {
   createThreadSearchResultsAtomFamily,
   makeThreadSearchKey,
   type EnvironmentThreadSearchMatch,
-} from "@t3tools/client-runtime/state/thread-search";
+} from "@mybot/client-runtime/state/thread-search";
 import type {
   EnvironmentId,
   ProjectContentMatch,
@@ -12,7 +12,7 @@ import type {
   ProjectEntryKind,
   ThreadId,
   TurnItemId,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import { Atom } from "effect/reactivity";
 import { useEffect, useMemo, useState } from "react";
 

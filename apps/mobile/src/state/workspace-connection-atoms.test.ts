@@ -3,10 +3,10 @@ import {
   PrimaryConnectionTarget,
   type EnvironmentPresentation,
   type NetworkStatus,
-} from "@t3tools/client-runtime/connection";
-import type { EnvironmentCatalogState } from "@t3tools/client-runtime/state/connections";
-import type { EnvironmentShellSummary } from "@t3tools/client-runtime/state/shell";
-import { EnvironmentId, type ServerConfig } from "@t3tools/contracts";
+} from "@mybot/client-runtime/connection";
+import type { EnvironmentCatalogState } from "@mybot/client-runtime/state/connections";
+import type { EnvironmentShellSummary } from "@mybot/client-runtime/state/shell";
+import { EnvironmentId, type ServerConfig } from "@mybot/contracts";
 import * as Option from "effect/Option";
 import { Atom, AtomRegistry } from "effect/reactivity";
 

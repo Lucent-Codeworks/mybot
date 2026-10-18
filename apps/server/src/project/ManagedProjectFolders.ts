@@ -11,8 +11,8 @@
  *
  * @module ManagedProjectFolders
  */
-import { CommandId, ProjectId, type ProjectCreateNewInput } from "@t3tools/contracts";
-import { newProjectFolderName } from "@t3tools/shared/path";
+import { CommandId, ProjectId, type ProjectCreateNewInput } from "@mybot/contracts";
+import { newProjectFolderName } from "@mybot/shared/path";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
 import * as Effect from "effect/Effect";
@@ -24,8 +24,8 @@ import * as Path from "effect/Path";
 import * as PlatformError from "effect/PlatformError";
 import * as Schema from "effect/Schema";
 
-import { BOT_MEMORY_FILE_NAME } from "@t3tools/provider-core/server/runtimeInstructions";
-import { findBotTemplate } from "@t3tools/shared/botTemplates";
+import { BOT_MEMORY_FILE_NAME } from "@mybot/provider-core/server/runtimeInstructions";
+import { findBotTemplate } from "@mybot/shared/botTemplates";
 
 import * as ServerConfig from "../config.ts";
 import * as ServerSettings from "../serverSettings.ts";

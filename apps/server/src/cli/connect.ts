@@ -3,11 +3,11 @@ import {
   EnvironmentHttpApi,
   type RelayClientInstallProgressEvent,
   type RelayClientInstallProgressStage,
-} from "@t3tools/contracts";
-import { RelayOkResponse } from "@t3tools/contracts/relay";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import * as RelayClient from "@t3tools/shared/relayClient";
-import { withRelayClientTracing } from "@t3tools/shared/relayTracing";
+} from "@mybot/contracts";
+import { RelayOkResponse } from "@mybot/contracts/relay";
+import * as HostProcess from "@mybot/shared/HostProcess";
+import * as RelayClient from "@mybot/shared/relayClient";
+import { withRelayClientTracing } from "@mybot/shared/relayTracing";
 import * as Cause from "effect/Cause";
 import * as Config from "effect/Config";
 import * as Console from "effect/Console";
@@ -619,7 +619,7 @@ const connectPublishCommand = Command.make("publish", {
         // Publishing needs the relay to know this environment belongs to you.
         // Establish a tunnel-free publish-only link automatically so signing in
         // is all it takes — the mobile client can still reach the environment
-        // out of band without T3 Connect.
+        // out of band without MyBot Connect.
         if (!(yield* tokens.hasCredential)) {
           yield* Console.log(
             "Run `mybot connect login` first so this environment can be authorized to publish.",

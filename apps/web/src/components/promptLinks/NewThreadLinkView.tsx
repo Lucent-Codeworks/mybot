@@ -1,7 +1,7 @@
-import { scopeProjectRef } from "@t3tools/client-runtime/environment";
-import { resolvePromptLinkModelSelection } from "@t3tools/client-runtime/prompt-links";
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
-import type { NewThreadLink } from "@t3tools/shared/promptLinks";
+import { scopeProjectRef } from "@mybot/client-runtime/environment";
+import { resolvePromptLinkModelSelection } from "@mybot/client-runtime/prompt-links";
+import type { EnvironmentProject } from "@mybot/client-runtime/state/shell";
+import type { NewThreadLink } from "@mybot/shared/promptLinks";
 import { useAtomValue } from "@effect/atom-react";
 import { useLocation } from "@tanstack/react-router";
 import { type ReactNode, useEffect, useEffectEvent, useRef, useState } from "react";

@@ -7,7 +7,7 @@ import {
   ThreadId,
   type OrchestrationV2ThreadShell,
   type Project as ProjectRecord,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as Effect from "effect/Effect";
@@ -81,7 +81,7 @@ it.effect("attributes a launched thread's first message to the calling thread", 
         namedProjectsRoot: "/projects",
       }),
       NodeServices.layer,
-      ServerConfig.layerTest(process.cwd(), { prefix: "t3-source-link-" }).pipe(
+      ServerConfig.layerTest(process.cwd(), { prefix: "mybot-source-link-" }).pipe(
         Layer.provide(NodeServices.layer),
       ),
     );
@@ -173,7 +173,7 @@ it.effect("starts a bot from just a title when workspaceRoot is omitted", () =>
           }),
       }),
       NodeServices.layer,
-      ServerConfig.layerTest(process.cwd(), { prefix: "t3-named-project-" }).pipe(
+      ServerConfig.layerTest(process.cwd(), { prefix: "mybot-named-project-" }).pipe(
         Layer.provide(NodeServices.layer),
       ),
     );
@@ -256,7 +256,7 @@ it.effect("refuses to create a project without a bot or to remove a bot", () =>
         namedProjectsRoot: "/projects",
       }),
       NodeServices.layer,
-      ServerConfig.layerTest(process.cwd(), { prefix: "t3-plain-project-" }).pipe(
+      ServerConfig.layerTest(process.cwd(), { prefix: "mybot-plain-project-" }).pipe(
         Layer.provide(NodeServices.layer),
       ),
     );
@@ -365,7 +365,7 @@ const clientLaunchHarness = (input: {
       namedProjectsRoot: "/projects",
     }),
     NodeServices.layer,
-    ServerConfig.layerTest(process.cwd(), { prefix: "t3-client-launch-" }).pipe(
+    ServerConfig.layerTest(process.cwd(), { prefix: "mybot-client-launch-" }).pipe(
       Layer.provide(NodeServices.layer),
     ),
   );
@@ -519,7 +519,7 @@ it.effect("agents can't delete the built-in MyBot, drop its flag, or give it to 
         namedProjectsRoot: "/projects",
       }),
       NodeServices.layer,
-      ServerConfig.layerTest(process.cwd(), { prefix: "t3-builtin-mybot-" }).pipe(
+      ServerConfig.layerTest(process.cwd(), { prefix: "mybot-builtin-mybot-" }).pipe(
         Layer.provide(NodeServices.layer),
       ),
     );

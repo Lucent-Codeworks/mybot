@@ -17,8 +17,8 @@ import type * as Redacted from "effect/Redacted";
 import * as Schema from "effect/Schema";
 
 import { sweepStalePendingAttachments } from "./attachmentStore.ts";
-import { DEFAULT_SIGNAL_EXPORT, type SignalExport } from "@t3tools/shared/observability";
-import * as OtelEnvironment from "@t3tools/shared/otelEnvironment";
+import { DEFAULT_SIGNAL_EXPORT, type SignalExport } from "@mybot/shared/observability";
+import * as OtelEnvironment from "@mybot/shared/otelEnvironment";
 
 export const DEFAULT_PORT = 3773;
 
@@ -121,12 +121,16 @@ export const make = (config: ServerConfig["Service"]) => ServerConfig.of(config)
  * Resource attributes shared by every OTLP exporter, so traces, metrics, and
  * logs report the same service identity to the collector.
  */
-export const otlpResource = (config: ServerConfig["Service"]) => ({
+export const otlpResource = (
+  config: ServerConfig["Service"],
+  host: Readonly<Record<string, string>>,
+) => ({
   serviceName: "mybot-server",
   attributes: {
     "service.namespace": "mybot",
     "service.runtime": "t3-server",
     "service.mode": config.mode,
+    ...host,
   },
 });
 

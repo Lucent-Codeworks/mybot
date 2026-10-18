@@ -1,5 +1,5 @@
-import type { ClientConnectionMethod, EnvironmentId } from "@t3tools/contracts";
-import type { RelayProtectedError } from "@t3tools/contracts/relay";
+import type { ClientConnectionMethod, EnvironmentId } from "@mybot/contracts";
+import type { RelayProtectedError } from "@mybot/contracts/relay";
 import type { ManagedRelayClientError } from "../relay/managedRelay.ts";
 import { dpopFailureMessage, relayProtectedErrorMessage } from "../relay/errorPresentation.ts";
 import type { RemoteEnvironmentAuthError } from "../authorization/remote.ts";

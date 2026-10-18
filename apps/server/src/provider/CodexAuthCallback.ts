@@ -1,8 +1,8 @@
-import { ProviderSetupError, type CodexAuthCallbackInput } from "@t3tools/contracts";
-import { receiveCodexAuthCallback } from "@t3tools/shared/codexAuthCallback";
-import { codexAuthorizationRequest } from "@t3tools/shared/codexAuthHandoff";
-import { providerAuthReturnUrl } from "@t3tools/shared/providerAuthReturnUrl";
-import { isLoopbackHost } from "@t3tools/shared/preview";
+import { ProviderSetupError, type CodexAuthCallbackInput } from "@mybot/contracts";
+import { receiveCodexAuthCallback } from "@mybot/shared/codexAuthCallback";
+import { codexAuthorizationRequest } from "@mybot/shared/codexAuthHandoff";
+import { providerAuthReturnUrl } from "@mybot/shared/providerAuthReturnUrl";
+import { isLoopbackHost } from "@mybot/shared/preview";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";

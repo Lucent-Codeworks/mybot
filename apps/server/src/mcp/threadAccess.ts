@@ -7,7 +7,7 @@ import {
   type RuntimeMode,
   type ThreadId,
   type OrchestrationV2ThreadShell,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Crypto from "effect/Crypto";
 import * as Effect from "effect/Effect";
 
@@ -51,7 +51,7 @@ export interface CallerLimits {
 export interface Caller {
   readonly scope: McpInvocationContext.McpInvocationScope;
   readonly threads: ThreadManagement.ThreadManagementService["Service"];
-  /** The calling thread, absent for a client signed in from outside T3. */
+  /** The calling thread, absent for a client signed in from outside MyBot. */
   readonly caller: OrchestrationV2ThreadShell | undefined;
   readonly limits: CallerLimits;
 }

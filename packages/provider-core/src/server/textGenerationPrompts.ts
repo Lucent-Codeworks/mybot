@@ -7,7 +7,7 @@
  */
 import * as Schema from "effect/Schema";
 import * as Effect from "effect/Effect";
-import type { ChatAttachment } from "@t3tools/contracts";
+import type { ChatAttachment } from "@mybot/contracts";
 
 import { limitTitleMessage } from "./threadTitleContext.ts";
 import { limitSection } from "./textGenerationUtils.ts";

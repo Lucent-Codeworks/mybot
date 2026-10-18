@@ -44,10 +44,10 @@ import {
   ThreadId,
   SERVER_BROWSER_AUTOMATION_CLIENT_ID,
   type PreviewAppearancePreference,
-} from "@t3tools/contracts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { normalizePreviewUrl } from "@t3tools/shared/preview";
-import { resolvePreviewViewport } from "@t3tools/shared/previewViewport";
+} from "@mybot/contracts";
+import * as HostProcess from "@mybot/shared/HostProcess";
+import { normalizePreviewUrl } from "@mybot/shared/preview";
+import { resolvePreviewViewport } from "@mybot/shared/previewViewport";
 import * as NodeCrypto from "node:crypto";
 import * as NodeFSP from "node:fs/promises";
 import * as NodePath from "node:path";
@@ -278,7 +278,7 @@ interface ViewerState {
 }
 
 interface EncoderWindow {
-  __t3Recorder: {
+  __myBotRecorder: {
     cursor(x: number, y: number, click: boolean): void;
     frame(data: string, width: number): Promise<boolean>;
     stop(): Promise<{ mimeType: string | null; count: number; bytes: number }>;
@@ -455,7 +455,7 @@ const editingCommand = (key: string, modifiers: number) => {
 const CLIPBOARD_TEXT_LIMIT = 1024 * 1024;
 /** Copies reach the viewer only this soon after it last touched the page. */
 const CLIPBOARD_GESTURE_MS = 5_000;
-const CLIPBOARD_BINDING = "__t3PreviewClipboard";
+const CLIPBOARD_BINDING = "__myBotPreviewClipboard";
 // Headless Chromium shares one clipboard between every context, so pages
 // report their own copies instead of the clipboard being read back.
 const CLIPBOARD_SCRIPT = `(() => {
@@ -1175,9 +1175,19 @@ const make = Effect.gen(function* () {
       });
       await context.addInitScript(TEACH_RECORDER_SCRIPT);
     }
+    // The init script covers later documents; this one is already loaded. A
+    // navigation racing the install is fine, since the next document gets the
+    // init script. Any other failure means no step would be seen, so the agent
+    // hears it now rather than after the user has done the whole task.
+    await tab.page.evaluate(TEACH_RECORDER_SCRIPT).catch((cause: unknown) => {
+      const message = cause instanceof Error ? cause.message : String(cause);
+      if (message.includes("Execution context was destroyed")) return;
+      throw new ServerBrowserPage.ServerBrowserOperationError(
+        "PreviewAutomationExecutionError",
+        `Could not start watching this tab, so the user's steps would not be recorded: ${message}`,
+      );
+    });
     watchTeachNavigation(tab);
-    // The init script covers later documents; this one is already loaded.
-    await tab.page.evaluate(TEACH_RECORDER_SCRIPT).catch(constVoid);
     tab.teaching = { goal, steps: [] };
   };
 
@@ -1509,7 +1519,7 @@ const make = Effect.gen(function* () {
         });
         await encoder.evaluate(
           ([data, width]) =>
-            (globalThis as unknown as EncoderWindow).__t3Recorder.frame(data, width),
+            (globalThis as unknown as EncoderWindow).__myBotRecorder.frame(data, width),
           [firstFrame, tab.page.viewportSize()?.width ?? UNATTACHED_FILL_VIEWPORT.width] as const,
         );
         const opened = await tab.page.context().newCDPSession(tab.page);
@@ -1520,7 +1530,7 @@ const make = Effect.gen(function* () {
           const delivered: Promise<void> = encoder
             .evaluate(
               ([data, width]) =>
-                (globalThis as unknown as EncoderWindow).__t3Recorder.frame(data, width),
+                (globalThis as unknown as EncoderWindow).__myBotRecorder.frame(data, width),
               [frame.data, cssWidth] as const,
             )
             .then(async (accepted) => {
@@ -1598,7 +1608,7 @@ const make = Effect.gen(function* () {
         await Promise.all(recording.framesInFlight);
         await recording.session.detach().catch(constVoid);
         const stopped = await recording.encoder.evaluate(() =>
-          (globalThis as unknown as EncoderWindow).__t3Recorder.stop(),
+          (globalThis as unknown as EncoderWindow).__myBotRecorder.stop(),
         );
         mimeType = stopped.mimeType;
         // Checked before the transfer so an oversized video never lands in this process.
@@ -1610,7 +1620,8 @@ const make = Effect.gen(function* () {
         }
         for (let index = 0; index < stopped.count; index += 1) {
           const chunk = await recording.encoder.evaluate(
-            (chunkIndex) => (globalThis as unknown as EncoderWindow).__t3Recorder.chunk(chunkIndex),
+            (chunkIndex) =>
+              (globalThis as unknown as EncoderWindow).__myBotRecorder.chunk(chunkIndex),
             index,
           );
           chunks.push(Buffer.from(chunk, "base64"));
@@ -1668,7 +1679,7 @@ const make = Effect.gen(function* () {
         void encoder
           ?.evaluate(
             ([px, py, click]) =>
-              (globalThis as unknown as EncoderWindow).__t3Recorder?.cursor(px, py, click),
+              (globalThis as unknown as EncoderWindow).__myBotRecorder?.cursor(px, py, click),
             [x, y, next === "click"] as const,
           )
           .catch(constVoid);

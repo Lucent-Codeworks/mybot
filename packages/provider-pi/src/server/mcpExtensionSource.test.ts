@@ -6,7 +6,7 @@ import * as NodeModule from "node:module";
 import * as NodeVM from "node:vm";
 import { assert, describe, expect, it } from "@effect/vitest";
 
-import { PI_T3_MCP_EXTENSION_SOURCE } from "./mcpExtensionSource.ts";
+import { PI_MYBOT_MCP_EXTENSION_SOURCE } from "./mcpExtensionSource.ts";
 import { loadMcpBridge } from "./mcpBridge.testkit.ts";
 
 type RequestHook = (
@@ -29,12 +29,12 @@ async function loadHooks(commands: ReadonlyArray<SkillCommand> = []) {
   const handlers = new Map<string, unknown>();
   // Execute the shipped extension with MCP disabled; this path needs no Typebox.
   const source = NodeModule.stripTypeScriptTypes(
-    PI_T3_MCP_EXTENSION_SOURCE.replace(/^import .*;$/gm, "").replace(
+    PI_MYBOT_MCP_EXTENSION_SOURCE.replace(/^import .*;$/gm, "").replace(
       "export default async function",
       "async function",
     ),
   );
-  await NodeVM.runInNewContext(`${source}\nt3McpExtension(pi)`, {
+  await NodeVM.runInNewContext(`${source}\nmyBotMcpExtension(pi)`, {
     process: { env: {} },
     NodeFSP,
     NodePath,
@@ -117,7 +117,7 @@ describe("Pi MCP tool exposure", () => {
   };
 
   it.each(["session_start", "session_tree", "model_select", "before_agent_start"])(
-    "declares optional T3 tools for OpenAI-compatible gateways at %s",
+    "declares optional MyBot tools for OpenAI-compatible gateways at %s",
     async (hookName) => {
       const bridge = await loadMcpBridge({ modern: true, toolSearchAvailable: true });
       const hook = bridge.handlers.get(hookName);
@@ -290,7 +290,7 @@ describe("Pi MCP tool exposure", () => {
 
 describe("Pi tool discovery permissions", () => {
   it.each(["approval-required", "auto-accept-edits", "auto"])(
-    "allows annotated T3 reads in %s while gating mutations and replacements",
+    "allows annotated MyBot reads in %s while gating mutations and replacements",
     async (runtimeMode) => {
       const bridge = await loadMcpBridge({ modern: true, runtimeMode });
       const hook = bridge.handlers.get("tool_call") as unknown as (
@@ -352,13 +352,13 @@ describe("Pi tool discovery permissions", () => {
     let toolCall: ToolCallHook | undefined;
     let searchPath = "builtin:tool-search";
     const source = NodeModule.stripTypeScriptTypes(
-      PI_T3_MCP_EXTENSION_SOURCE.replace(/^import .*;$/gm, "").replace(
+      PI_MYBOT_MCP_EXTENSION_SOURCE.replace(/^import .*;$/gm, "").replace(
         "export default async function",
         "async function",
       ),
     );
-    await NodeVM.runInNewContext(`${source}\nt3McpExtension(pi)`, {
-      process: { env: { T3_PI_RUNTIME_MODE: "approval-required" } },
+    await NodeVM.runInNewContext(`${source}\nmyBotMcpExtension(pi)`, {
+      process: { env: { MYBOT_PI_RUNTIME_MODE: "approval-required" } },
       pi: {
         on: (name: string, handler: ToolCallHook) => {
           if (name === "tool_call") toolCall = handler;
@@ -399,12 +399,12 @@ async function loadRequestHook(): Promise<RequestHook> {
   const handlers = new Map<string, RequestHook>();
   // Execute the shipped extension with MCP disabled; this path needs no Typebox.
   const source = NodeModule.stripTypeScriptTypes(
-    PI_T3_MCP_EXTENSION_SOURCE.replace(/^import .*;$/gm, "").replace(
+    PI_MYBOT_MCP_EXTENSION_SOURCE.replace(/^import .*;$/gm, "").replace(
       "export default async function",
       "async function",
     ),
   );
-  await NodeVM.runInNewContext(`${source}\nt3McpExtension(pi)`, {
+  await NodeVM.runInNewContext(`${source}\nmyBotMcpExtension(pi)`, {
     process: { env: {} },
     pi: { on: (name: string, handler: RequestHook) => handlers.set(name, handler) },
   });

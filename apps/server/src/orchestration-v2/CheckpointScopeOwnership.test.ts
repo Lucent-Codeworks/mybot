@@ -13,8 +13,8 @@ import {
   ProviderThreadId,
   RunId,
   ThreadId,
-} from "@t3tools/contracts";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
+} from "@mybot/contracts";
+import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
 import { checkpointRefForScopeOrdinal } from "./CheckpointService.ts";
 import * as ProjectionStore from "./ProjectionStore.ts";
 import * as SqlitePersistence from "../persistence/Sqlite.ts";

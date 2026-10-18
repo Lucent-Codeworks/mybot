@@ -4,8 +4,8 @@ import {
   ThreadId,
   type AuthEnvironmentScope,
   type EditorId,
-} from "@t3tools/contracts";
-import { DEFAULT_CLIENT_SETTINGS } from "@t3tools/contracts/settings";
+} from "@mybot/contracts";
+import { DEFAULT_CLIENT_SETTINGS } from "@mybot/contracts/settings";
 import { AsyncResult } from "effect/reactivity";
 import { cloneElement, type ReactElement, type ReactNode } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";

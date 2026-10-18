@@ -1,4 +1,4 @@
-import type { EnvironmentId, ThreadId, TurnItemId } from "@t3tools/contracts";
+import type { EnvironmentId, ThreadId, TurnItemId } from "@mybot/contracts";
 import {
   makeMcpAppHost,
   McpAppHostRefusal,
@@ -7,16 +7,16 @@ import {
   type McpAppCallToolResult,
   type McpAppHost,
   type McpAppHostContext,
-} from "@t3tools/client-runtime/mcp-apps";
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
-import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
-import { CommandId, MessageId } from "@t3tools/contracts";
+} from "@mybot/client-runtime/mcp-apps";
+import { scopeThreadRef } from "@mybot/client-runtime/environment";
+import { squashAtomCommandFailure } from "@mybot/client-runtime/state/runtime";
+import { CommandId, MessageId } from "@mybot/contracts";
 import {
   mcpAppAllowAttribute,
   mcpAppFileName,
   mcpAppReferencesEqual,
   type McpAppReference,
-} from "@t3tools/shared/mcpApp";
+} from "@mybot/shared/mcpApp";
 import * as Predicate from "effect/Predicate";
 import Constants from "expo-constants";
 import { useNavigation } from "@react-navigation/native";
@@ -53,7 +53,7 @@ const ROW_BOTTOM_MARGIN = 8;
 // what it relays with a secret only it holds, and React Native drops anything
 // else. The bridge belongs to the captured document: once the app frame loads
 // a second time (it navigated itself), the outer page stops relaying and says
-// so, rather than letting a page T3 never served pose as the app. This is not
+// so, rather than letting a page MyBot never served pose as the app. This is not
 // a confidentiality boundary: a frame can always navigate itself, so the app
 // could carry anything it read out in a URL either way.
 function outerDocument(src: string, allow: string, secret: string) {
@@ -360,7 +360,7 @@ export function ThreadMcpApp(props: {
       },
       openLink: async (url) => {
         // A WebView cannot tell whether the reader just tapped the app, so it
-        // asks, rather than letting an app leave T3 on a timer.
+        // asks, rather than letting an app leave MyBot on a timer.
         if (!(await confirm(`Open a link from ${app.server}?`, url, "Open"))) {
           throw new McpAppHostRefusal("Declined by the user.");
         }

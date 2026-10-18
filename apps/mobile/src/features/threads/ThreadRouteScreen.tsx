@@ -15,8 +15,8 @@ import {
   EnvironmentId,
   ThreadId,
   type ProjectScript,
-} from "@t3tools/contracts";
-import { projectScriptRuntimeEnv, resolveProjectScripts } from "@t3tools/shared/projectScripts";
+} from "@mybot/contracts";
+import { projectScriptRuntimeEnv, resolveProjectScripts } from "@mybot/shared/projectScripts";
 import { Alert, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useConnectionsReady } from "../../state/workspace";
@@ -50,8 +50,8 @@ import { ThreadDetailScreen, type ThreadDetailScreenProps } from "./ThreadDetail
 import { useAtomCommand } from "../../state/use-atom-command";
 import { useSelectedThreadRequests } from "../../state/use-selected-thread-requests";
 import { useThreadComposerState } from "../../state/use-thread-composer-state";
-import { resolveMergeBackTargetThreadId } from "@t3tools/client-runtime/state/thread-relationships";
-import { resolveLatestMergeBackRun } from "@t3tools/client-runtime/state/thread-workflows";
+import { resolveMergeBackTargetThreadId } from "@mybot/client-runtime/state/thread-relationships";
+import { resolveLatestMergeBackRun } from "@mybot/client-runtime/state/thread-workflows";
 import { threadEnvironment } from "../../state/threads";
 import { projectThreadContentPresentation } from "./threadContentPresentation";
 import { useAppearancePreferences } from "../settings/appearance/AppearancePreferencesProvider";

@@ -2,20 +2,20 @@ import type {
   ThreadPendingApproval,
   ThreadPendingUserInput,
   ThreadUserInputQuestion,
-} from "@t3tools/client-runtime/state/thread-requests";
-import { turnItemIsWorkspacePreparation } from "@t3tools/client-runtime/state/turn-item-presentation";
-import { formatSubagentDisplayTitle } from "@t3tools/client-runtime/state/subagent-display";
-import { isLiveSubagentTurnItem } from "@t3tools/client-runtime/state/subagentRuntime";
-import { extractToolActivityPresentation } from "@t3tools/client-runtime/work-log/tool-presentation";
+} from "@mybot/client-runtime/state/thread-requests";
+import { turnItemIsWorkspacePreparation } from "@mybot/client-runtime/state/turn-item-presentation";
+import { formatSubagentDisplayTitle } from "@mybot/client-runtime/state/subagent-display";
+import { isLiveSubagentTurnItem } from "@mybot/client-runtime/state/subagentRuntime";
+import { extractToolActivityPresentation } from "@mybot/client-runtime/work-log/tool-presentation";
 import {
   turnItemDetailRevision,
   turnItemHasDetail,
   turnItemNeedsDetailFetch,
-} from "@t3tools/client-runtime/work-log/item-detail";
+} from "@mybot/client-runtime/work-log/item-detail";
 import {
   commandDisplayText,
   commandProgramName,
-} from "@t3tools/client-runtime/work-log/command-label";
+} from "@mybot/client-runtime/work-log/command-label";
 import {
   contextCompactionLabel,
   liveThoughtLine,
@@ -29,13 +29,13 @@ import {
   type ToolGroupSummaryKind,
   type WorkLogPresentationEntry,
   type WorkLogToolLifecycleStatus,
-} from "@t3tools/client-runtime/work-log/presentation";
+} from "@mybot/client-runtime/work-log/presentation";
 import {
-  resolveT3McpToolDefinition,
-  resolveT3McpToolPresentation,
-  type T3McpToolLogo,
-  type T3McpToolPresentation,
-} from "@t3tools/shared/t3McpToolPresentation";
+  resolveMyBotMcpToolDefinition,
+  resolveMyBotMcpToolPresentation,
+  type MyBotMcpToolLogo,
+  type MyBotMcpToolPresentation,
+} from "@mybot/shared/myBotMcpToolPresentation";
 import type {
   ChatAttachment,
   MessageId,
@@ -51,8 +51,8 @@ import type {
   RunAttemptId,
   ScheduledTaskId,
   TurnItemId,
-} from "@t3tools/contracts";
-import { RunId, ThreadId } from "@t3tools/contracts";
+} from "@mybot/contracts";
+import { RunId, ThreadId } from "@mybot/contracts";
 import {
   classifyToolActivity,
   collectToolFilePaths,
@@ -60,15 +60,15 @@ import {
   isJavaScriptReplTool,
   formatReadToolLabel,
   formatSearchToolLabel,
-} from "@t3tools/shared/toolActivity";
-import { formatDuration } from "@t3tools/shared/orchestrationTiming";
-import type { HtmlRenderReference } from "@t3tools/shared/htmlRender";
-import type { McpAppReference } from "@t3tools/shared/mcpApp";
+} from "@mybot/shared/toolActivity";
+import { formatDuration } from "@mybot/shared/orchestrationTiming";
+import type { HtmlRenderReference } from "@mybot/shared/htmlRender";
+import type { McpAppReference } from "@mybot/shared/mcpApp";
 import {
   compactDynamicToolOutput,
   htmlRenderFromToolItem,
   mcpAppFromToolItem,
-} from "@t3tools/shared/toolOutput";
+} from "@mybot/shared/toolOutput";
 import * as DateTime from "effect/DateTime";
 
 export type PendingApproval = ThreadPendingApproval;
@@ -111,7 +111,7 @@ export interface ThreadFeedActivity {
     | "warning"
     | "wrench"
     | "zap";
-  readonly logo: T3McpToolLogo | null;
+  readonly logo: MyBotMcpToolLogo | null;
   readonly toolLike: boolean;
   readonly prominent: boolean;
   readonly status: "success" | "failure" | "neutral" | null;
@@ -123,7 +123,7 @@ export interface ThreadFeedActivity {
 }
 
 export interface ThreadFeedMessage {
-  readonly context?: import("@t3tools/contracts").OrchestrationMessageContext | undefined;
+  readonly context?: import("@mybot/contracts").OrchestrationMessageContext | undefined;
   readonly id: MessageId;
   readonly role: "user" | "assistant";
   readonly text: string;
@@ -585,16 +585,18 @@ function itemIcon(item: OrchestrationV2TurnItem): ThreadFeedActivity["icon"] {
   }
 }
 
-function itemToolPresentation(item: OrchestrationV2TurnItem): T3McpToolPresentation | null {
+function itemToolPresentation(item: OrchestrationV2TurnItem): MyBotMcpToolPresentation | null {
   if (item.type !== "dynamic_tool") {
     return null;
   }
-  return resolveT3McpToolPresentation(item.toolName) ?? resolveT3McpToolPresentation(item.title);
+  return (
+    resolveMyBotMcpToolPresentation(item.toolName) ?? resolveMyBotMcpToolPresentation(item.title)
+  );
 }
 
 function itemSummary(
   item: OrchestrationV2TurnItem,
-  toolPresentation: T3McpToolPresentation | null = null,
+  toolPresentation: MyBotMcpToolPresentation | null = null,
 ): string {
   if (item.type === "notification") return item.summary;
   if (item.type === "system_notice") return item.message;
@@ -929,7 +931,7 @@ function groupAdjacentActivities(entries: ReadonlyArray<RawThreadFeedEntry>): Th
         item.type === "dynamic_tool" &&
         item.runId !== null &&
         (item.status === "running" || item.status === "completed") &&
-        resolveT3McpToolDefinition(item.toolName)?.summaryAction === "delegate" &&
+        resolveMyBotMcpToolDefinition(item.toolName)?.summaryAction === "delegate" &&
         !workEntryDisplayIndicatesToolFailure(entry.activity.workEntry)
       ) {
         const output = compactDynamicToolOutput(item.output);

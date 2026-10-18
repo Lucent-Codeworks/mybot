@@ -1,5 +1,5 @@
 /**
- * The T3 Connect link lifecycle of this environment: linking it to the relay,
+ * The MyBot Connect link lifecycle of this environment: linking it to the relay,
  * applying and reading the link, unlinking, answering the relay's signed health
  * and mint requests, and keeping the managed tunnel registered, recovered and
  * released. HTTP handlers, server startup and shutdown all go through it.
@@ -11,7 +11,7 @@ import {
   type EnvironmentCloudLinkStateResult,
   type EnvironmentCloudPreferencesRequest,
   type EnvironmentCloudRelayConfigResult,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import {
   RelayCloudEnvironmentHealthProofPayload,
   type RelayCloudEnvironmentHealthRequest,
@@ -33,8 +33,8 @@ import {
   RelayManagedEndpointRecoveryResponse,
   type RelayManagedEndpointRuntimeConfig,
   RelayOkResponse,
-} from "@t3tools/contracts/relay";
-import { withRelayClientTracing } from "@t3tools/shared/relayTracing";
+} from "@mybot/contracts/relay";
+import { withRelayClientTracing } from "@mybot/shared/relayTracing";
 import {
   normalizeRelayIssuer,
   RELAY_HEALTH_REQUEST_TYP,
@@ -45,8 +45,8 @@ import {
   RELAY_MINT_RESPONSE_TYP,
   signRelayJwt,
   verifyRelayJwt,
-} from "@t3tools/shared/relayJwt";
-import { isSecureRelayUrl } from "@t3tools/shared/relayUrl";
+} from "@mybot/shared/relayJwt";
+import { isSecureRelayUrl } from "@mybot/shared/relayUrl";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
 import * as DateTime from "effect/DateTime";
@@ -254,8 +254,7 @@ export class CloudLinkEndpointUnavailableError extends Schema.TaggedError<CloudL
 }
 
 const INTERNAL_OPERATION_MESSAGES = {
-  "relay-url-unconfigured":
-    "T3CODE_RELAY_URL must be configured as a secure absolute HTTPS origin.",
+  "relay-url-unconfigured": "MYBOT_RELAY_URL must be configured as a secure absolute HTTPS origin.",
   "generate-link-proof": "Could not generate environment link proof.",
   "persist-relay-config": "Could not persist environment relay configuration.",
   "register-endpoint-origin": "Could not register the managed endpoint origin.",
@@ -474,7 +473,7 @@ export class CloudLink extends Context.Service<
     /** Stops the tunnel and forgets the link, including the CLI's wish to keep it. */
     readonly unlink: () => Effect.Effect<EnvironmentCloudRelayConfigResult, CloudLinkInternalError>;
     /**
-     * Saves this environment's T3 Connect preferences, all or nothing, and
+     * Saves this environment's MyBot Connect preferences, all or nothing, and
      * returns the link state. The activity setting is saved first. Holding
      * webhooks while offline is decided by the relay, so the relay is told
      * before the local copy is saved. If either step fails, the activity
@@ -1261,7 +1260,7 @@ const make = Effect.gen(function* () {
       return false;
     }
     // The link belongs to the relay it was installed against, so target the
-    // persisted URL: T3CODE_RELAY_URL may have changed since the link was made.
+    // persisted URL: MYBOT_RELAY_URL may have changed since the link was made.
     const relayUrl = yield* secrets.get(RELAY_URL_SECRET);
     if (Option.isNone(relayUrl)) {
       return false;

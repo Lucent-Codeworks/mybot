@@ -16,7 +16,7 @@ import {
   type OrchestrationV2AppThread,
   type OrchestrationV2ProviderThread,
   type OrchestrationV2ProviderTurn,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Cause from "effect/Cause";
 import * as DateTime from "effect/DateTime";
 import * as Duration from "effect/Duration";
@@ -32,14 +32,14 @@ import * as TestClock from "effect/testing/TestClock";
 import * as ChildProcess from "effect/process/ChildProcess";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 
-import * as TestProviderHost from "@t3tools/provider-testing/TestProviderHost";
-import * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
-import { handoffBudget } from "@t3tools/provider-core/server/handoffBudget";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { toolOutputImages, compactDynamicToolOutput } from "@t3tools/shared/toolOutput";
+import * as TestProviderHost from "@mybot/provider-testing/TestProviderHost";
+import * as ProviderContinuationRequests from "@mybot/provider-core/server/ProviderContinuationRequests";
+import * as McpProviderSessions from "@mybot/provider-core/server/McpProviderSessions";
+import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
+import * as ProviderAdapter from "@mybot/provider-core/server/ProviderAdapter";
+import { handoffBudget } from "@mybot/provider-core/server/handoffBudget";
+import * as HostProcess from "@mybot/shared/HostProcess";
+import { toolOutputImages, compactDynamicToolOutput } from "@mybot/shared/toolOutput";
 import {
   makePiAdapterV2,
   PiAdapterV2Driver,
@@ -90,7 +90,7 @@ interface FakePi {
   readonly vetoNextSwitch: () => void;
   /** Fields overriding the recorded idle state in the next `get_state` acks, in order. */
   readonly queueState: (data: Record<string, unknown>) => void;
-  /** Change Pi's streaming state before its agent_start event reaches T3. */
+  /** Change Pi's streaming state before its agent_start event reaches MyBot. */
   readonly setStreaming: (streaming: boolean) => void;
   /** Hold the next `get_state` response until the test resolves it. */
   readonly deferNextState: () => void;
@@ -1337,7 +1337,7 @@ describe("PiAdapterV2", () => {
       }).pipe(Effect.scoped, Effect.provide(layerTest)),
   );
 
-  it.effect("stops provider-initiated work that has no T3 turn owner", () =>
+  it.effect("stops provider-initiated work that has no MyBot turn owner", () =>
     Effect.gen(function* () {
       const fake = yield* makeFakePi;
       const { runtime, takeEvent } = yield* openRuntime(fake);
@@ -1360,7 +1360,7 @@ describe("PiAdapterV2", () => {
     }).pipe(Effect.scoped, Effect.provide(layerTest)),
   );
 
-  it.effect("injects the T3 MCP extension and bearer when a session exists", () =>
+  it.effect("injects the MyBot MCP extension and bearer when a session exists", () =>
     Effect.gen(function* () {
       yield* (yield* McpProviderSessions.McpProviderSessions).set({
         environmentId: EnvironmentId.make("environment-pi-mcp"),
@@ -1380,9 +1380,9 @@ describe("PiAdapterV2", () => {
       );
       assert.isFalse(spawn.args.includes("--no-extensions"));
       assert.isTrue(extensions.some((path) => path?.endsWith("pi-t3-mcp-extension.ts")));
-      assert.equal(spawn.env.T3_MCP_URL, "http://127.0.0.1:43123/mcp");
-      assert.equal(spawn.env.T3_MCP_BEARER_TOKEN, "secret-pi-token");
-      assert.equal(spawn.env.T3_PI_RUNTIME_MODE, "full-access");
+      assert.equal(spawn.env.MYBOT_MCP_URL, "http://127.0.0.1:43123/mcp");
+      assert.equal(spawn.env.MYBOT_MCP_BEARER_TOKEN, "secret-pi-token");
+      assert.equal(spawn.env.MYBOT_PI_RUNTIME_MODE, "full-access");
     }).pipe(Effect.scoped, Effect.provide(layerTest)),
   );
 

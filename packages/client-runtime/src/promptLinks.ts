@@ -1,5 +1,5 @@
-import type { ModelSelection, ServerProvider } from "@t3tools/contracts";
-import { resolveSelectableModel, type SelectableModelOption } from "@t3tools/shared/model";
+import type { ModelSelection, ServerProvider } from "@mybot/contracts";
+import { resolveSelectableModel, type SelectableModelOption } from "@mybot/shared/model";
 
 /**
  * How web and mobile resolve a prompt link against what this client knows, so a link picks the

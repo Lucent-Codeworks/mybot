@@ -5,7 +5,7 @@ import {
   ProviderDriverKind,
   ProviderInstanceId,
   ProjectId,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import {
   scheduledTaskDefaultModel,
   createDraft,

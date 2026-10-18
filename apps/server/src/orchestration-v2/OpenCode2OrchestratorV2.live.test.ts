@@ -13,7 +13,7 @@
  * `opencode/big-pickle` model; `OPENCODE2_MODEL` picks another (its provider's
  * key comes from the test's environment, which the spawned server inherits).
  * A second run covers plan mode, a workspace command and skill, and `/compact`;
- * a third a generated title, T3's MCP server (`OPENCODE2_MCP_URL` names a
+ * a third a generated title, MyBot's MCP server (`OPENCODE2_MCP_URL` names a
  * stand-in one) and a turn cut off by a killed server. Each step waits up to
  * `OPENCODE2_STEP_WAIT` seconds (120 by default).
  */
@@ -32,7 +32,7 @@ import {
   ProviderDriverKind,
   ProviderInstanceId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
@@ -51,19 +51,19 @@ import * as CodexInstallation from "../provider/CodexInstallation.ts";
 import * as ServerEnvironment from "../environment/ServerEnvironment.ts";
 import * as ModelManifest from "../provider/ModelManifest.ts";
 import * as ProviderInstanceRegistryHydration from "../provider/ProviderInstanceRegistryHydration.ts";
-import * as ProviderLatestVersions from "@t3tools/provider-core/server/ProviderLatestVersions";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
-import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
-import * as OpenCode2Client from "@t3tools/provider-opencode/server/v2/OpenCode2Client";
-import * as OpenCodeRuntime from "@t3tools/provider-opencode/server/OpenCodeRuntime";
-import * as OpenCodeServerLedger from "@t3tools/provider-opencode/server/OpenCodeServerLedger";
+import * as ProviderLatestVersions from "@mybot/provider-core/server/ProviderLatestVersions";
+import * as McpProviderSessions from "@mybot/provider-core/server/McpProviderSessions";
+import * as ProviderEventLoggers from "@mybot/provider-core/server/ProviderEventLoggers";
+import * as OpenCode2Client from "@mybot/provider-opencode/server/v2/OpenCode2Client";
+import * as OpenCodeRuntime from "@mybot/provider-opencode/server/OpenCodeRuntime";
+import * as OpenCodeServerLedger from "@mybot/provider-opencode/server/OpenCodeServerLedger";
 import * as ServerSettings from "../serverSettings.ts";
 import * as EffectWorker from "./EffectWorker.ts";
 import * as Orchestrator from "./Orchestrator.ts";
 import * as ProviderInstanceRegistry from "../provider/ProviderInstanceRegistry.ts";
 import * as RuntimeLayer from "./runtimeLayer.ts";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
-import * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
+import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
+import * as ProviderContinuationRequests from "@mybot/provider-core/server/ProviderContinuationRequests";
 import * as ProviderContinuationService from "./ProviderContinuationService.ts";
 import * as ThreadManagementService from "./ThreadManagementService.ts";
 import * as McpSessionRegistry from "../mcp/McpSessionRegistry.ts";
@@ -92,7 +92,7 @@ const layerSpawnedServers = Layer.succeed(
 );
 
 /**
- * Credentials for T3's MCP server. `OPENCODE2_MCP_URL` points them at a stand-in
+ * Credentials for MyBot's MCP server. `OPENCODE2_MCP_URL` points them at a stand-in
  * MCP server the run can see called; without it they point nowhere, as in replay.
  */
 const MCP_URL = process.env.OPENCODE2_MCP_URL ?? "http://127.0.0.1/mcp";
@@ -120,7 +120,9 @@ const layerMcpRegistry = Layer.succeed(
 );
 
 const layerPlatformTest = NodeServices.layer;
-const layerServerConfig = ServerConfig.layerTest(`${ROOT}/work`, { prefix: "t3-opencode2-live-" });
+const layerServerConfig = ServerConfig.layerTest(`${ROOT}/work`, {
+  prefix: "mybot-opencode2-live-",
+});
 // Isolated OpenCode state: the server never touches the developer's own data.
 const layerServerSettings = ServerSettings.layerTest({
   providerInstances: {
@@ -325,7 +327,7 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        yield* fs.writeFileString(path.join(ROOT, "work", "hello.txt"), "hello from t3 live\n");
+        yield* fs.writeFileString(path.join(ROOT, "work", "hello.txt"), "hello from mybot live\n");
         yield* EffectWorker.runDaemonWithOptions({ concurrency: 2 }).pipe(Effect.forkScoped);
 
         // A status check starts a fresh server, which lists no models for its
@@ -617,7 +619,7 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
         );
 
         // Background: when the child ends after run 1, OpenCode wakes the parent
-        // and T3 opens run 2 for that execution. A child that ends while run 1
+        // and MyBot opens run 2 for that execution. A child that ends while run 1
         // still runs has its report delivered into run 1 instead, which then
         // answers it, and no continuation run opens. Either way the subagent
         // completes and nothing is left running.
@@ -657,7 +659,7 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
         );
 
         // Stop while a background child runs: OpenCode keeps a background
-        // child running past a parent Stop, so T3 stops it, and nothing wakes.
+        // child running past a parent Stop, so MyBot stops it, and nothing wakes.
         const stopThread = yield* thread("stop");
         yield* send(
           stopThread,
@@ -969,7 +971,7 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
   );
 
   it.live(
-    "generates a title, calls T3's MCP server, and reconciles a turn cut off by a killed server",
+    "generates a title, calls MyBot's MCP server, and reconciles a turn cut off by a killed server",
     () =>
       Effect.gen(function* () {
         const work = `${ROOT}/work`;
@@ -1004,7 +1006,7 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
         const runs = (count: number) => (projection: OrchestrationV2ThreadProjection) =>
           projection.runs.length === count && settled(projection);
 
-        // T3's MCP server for this thread: the stand-in's one tool answers a marker.
+        // MyBot's MCP server for this thread: the stand-in's one tool answers a marker.
         if (process.env.OPENCODE2_MCP_URL !== undefined) {
           yield* send(
             threadId,
@@ -1018,7 +1020,7 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
         }
         const before = (yield* orchestrator.getThreadProjection(threadId)).runs.length;
 
-        // The spawned server dies mid-command; T3 restarts it and settles the turn.
+        // The spawned server dies mid-command; MyBot restarts it and settles the turn.
         yield* send(
           threadId,
           "restart-killed",
@@ -1095,7 +1097,7 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
         assert.equal(shell?.status, "completed");
         const reply = done.turnItems.findLast((item) => item.type === "assistant_message");
         assert.include(reply?.type === "assistant_message" ? reply.text : "", "AFTER_DROP");
-        // The thread's T3 MCP server is registered on the external server for now.
+        // The thread's MyBot MCP server is registered on the external server for now.
         const opencode = yield* OpenCode2Client.make.pipe(Effect.provide(FetchHttpClient.layer));
         const api = yield* opencode.connect({
           baseUrl: process.env.OPENCODE2_SERVER_URL!,
@@ -1105,7 +1107,7 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
         assert.deepEqual(
           servers.data.map((server) => server.name),
           [],
-          "an external server gets no T3 MCP server, as with 1.x",
+          "an external server gets no MyBot MCP server, as with 1.x",
         );
       }).pipe(Effect.provide(Layer.merge(layerLive, NodeServices.layer)), Effect.scoped),
     360_000,

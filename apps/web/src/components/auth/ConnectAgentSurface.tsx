@@ -4,9 +4,9 @@ import {
   AuthMcpApprovalError,
   AuthMcpClientAccess,
   type AuthMcpAuthorizationRequest,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import { Radio as RadioPrimitive } from "@base-ui/react/radio";
-import { isLoopbackHost } from "@t3tools/shared/preview";
+import { isLoopbackHost } from "@mybot/shared/preview";
 import { EyeIcon, type LucideIcon } from "lucide-react";
 import type * as Context from "effect/Context";
 import * as Effect from "effect/Effect";

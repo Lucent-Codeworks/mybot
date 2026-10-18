@@ -28,7 +28,7 @@ import {
   PreviewAutomationTypeInput,
   PreviewAutomationUploadInput,
   PreviewAutomationWaitForInput,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Schema from "effect/Schema";
 import * as FileSystem from "effect/FileSystem";
 import { Tool, Toolkit } from "effect/ai";

@@ -4,8 +4,8 @@ import {
   type ProviderDriverKind,
   type ServerProvider,
   type ServerProviderCompatibilityAdvisory,
-} from "@t3tools/contracts";
-import { satisfiesSemverRange } from "@t3tools/shared/semver";
+} from "@mybot/contracts";
+import { satisfiesSemverRange } from "@mybot/shared/semver";
 import * as Schema from "effect/Schema";
 import packageJson from "../../package.json" with { type: "json" };
 
@@ -60,10 +60,10 @@ export function resolveProviderCompatibility(
   policies: ReadonlyArray<ProviderCompatibilityPolicy> | undefined,
   driver: ProviderDriverKind,
   version: string | null,
-  t3CodeVersion = packageJson.version,
+  myBotVersion = packageJson.version,
 ): ServerProviderCompatibilityAdvisory | undefined {
   const policy = policies?.find(
-    (entry) => entry.driver === driver && satisfiesSemverRange(t3CodeVersion, entry.t3CodeRange),
+    (entry) => entry.driver === driver && satisfiesSemverRange(myBotVersion, entry.t3CodeRange),
   );
   if (!policy) return undefined;
   const unprefixed = version?.replace(/^v/, "");

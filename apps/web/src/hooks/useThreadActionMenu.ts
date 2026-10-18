@@ -4,13 +4,13 @@ import {
   isAtomCommandInterrupted,
   settlePromise,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
-import { canSnooze, effectiveSnoozed } from "@t3tools/client-runtime/state/thread-settled";
+} from "@mybot/client-runtime/state/runtime";
+import { canSnooze, effectiveSnoozed } from "@mybot/client-runtime/state/thread-settled";
 import {
   AuthOrchestrationOperateScope,
   type ScopedThreadRef,
   type ThreadId,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import { useRouter } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
 
@@ -37,7 +37,7 @@ import { usePrimaryEnvironmentId } from "../state/environments";
 import { readLocalApi } from "../localApi";
 import { deriveLogicalProjectKey, derivePhysicalProjectKey } from "../logicalProject";
 import { buildPhysicalToLogicalProjectKeyMap } from "../sidebarProjectGrouping";
-import { threadRuntimeCanArchive } from "@t3tools/client-runtime/state/models";
+import { threadRuntimeCanArchive } from "@mybot/client-runtime/state/models";
 import { useCopyToClipboard } from "./useCopyToClipboard";
 import { useClientSettings } from "./useSettings";
 import { useThreadActions } from "./useThreadActions";

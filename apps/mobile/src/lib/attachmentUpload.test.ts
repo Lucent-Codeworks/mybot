@@ -1,4 +1,4 @@
-import { EnvironmentId } from "@t3tools/contracts";
+import { EnvironmentId } from "@mybot/contracts";
 import * as Option from "effect/Option";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
@@ -18,7 +18,7 @@ const mocks = vi.hoisted(() => ({
   readBase64: vi.fn(),
 }));
 
-vi.mock("@t3tools/client-runtime/state/runtime", () => ({
+vi.mock("@mybot/client-runtime/state/runtime", () => ({
   // The client-runtime attachments module resolves the same file through its
   // relative import, so these fakes also feed runAttachmentUploadCycle and
   // verifyPersistedAttachmentUpload.
@@ -641,15 +641,15 @@ describe("prepareTurnAttachments", () => {
       supportsImageUploads: true,
       persistUploadedReferences: persisted,
     });
-    expect(mocks.writeFile).toHaveBeenCalledWith("file:///cache/t3-upload-uuid", "YWJj", {
+    expect(mocks.writeFile).toHaveBeenCalledWith("file:///cache/mybot-upload-uuid", "YWJj", {
       encoding: "base64",
     });
     expect(mocks.upload).toHaveBeenCalledWith(
-      "file:///cache/t3-upload-uuid",
+      "file:///cache/mybot-upload-uuid",
       "https://environment.example/api/attachments/upload/signed",
       expect.objectContaining({ headers: { "Content-Type": "image/png" } }),
     );
-    expect(mocks.deleteFile).toHaveBeenCalledExactlyOnceWith("file:///cache/t3-upload-uuid");
+    expect(mocks.deleteFile).toHaveBeenCalledExactlyOnceWith("file:///cache/mybot-upload-uuid");
     expect(prepared.status).toBe("ready");
     if (prepared.status !== "ready") return;
     expect(prepared.attachments).toEqual([
@@ -699,7 +699,7 @@ describe("prepareTurnAttachments", () => {
       ...saved,
       uploadedAttachmentId: MINTED_ID,
     });
-    expect(mocks.writeFile).toHaveBeenCalledWith("file:///cache/t3-upload-uuid", "YWJj", {
+    expect(mocks.writeFile).toHaveBeenCalledWith("file:///cache/mybot-upload-uuid", "YWJj", {
       encoding: "base64",
     });
   });

@@ -6,13 +6,13 @@
  * trusted alongside a proof the relay signed with its mint key. A request
  * without a valid proof is handled as a direct request.
  */
-import { RelayHookDeliveryProofPayload } from "@t3tools/contracts/relay";
+import { RelayHookDeliveryProofPayload } from "@mybot/contracts/relay";
 import {
   normalizeRelayIssuer,
   RELAY_HOOK_DELIVERY_HEADER,
   RELAY_HOOK_DELIVERY_TYP,
   verifyRelayJwt,
-} from "@t3tools/shared/relayJwt";
+} from "@mybot/shared/relayJwt";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -61,7 +61,7 @@ const make = Effect.gen(function* () {
       );
       const relayUrl = text(yield* secrets.get(RELAY_URL_SECRET));
       const relayIssuer = Option.isSome(issuer) ? issuer : relayUrl;
-      // Not linked to T3 Connect: no relay can be delivering to us.
+      // Not linked to MyBot Connect: no relay can be delivering to us.
       if (Option.isNone(publicKey) || Option.isNone(relayIssuer)) return Option.none();
       const environmentId = yield* environment.getEnvironmentId;
       const payload = yield* verifyRelayJwt({

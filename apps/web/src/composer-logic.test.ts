@@ -1,15 +1,15 @@
-import { resolveComposerDispatchMode } from "@t3tools/client-runtime/state/composer-dispatch";
-import { EnvironmentId, MessageId, ThreadId, type AssistantCitation } from "@t3tools/contracts";
+import { resolveComposerDispatchMode } from "@mybot/client-runtime/state/composer-dispatch";
+import { EnvironmentId, MessageId, ThreadId, type AssistantCitation } from "@mybot/contracts";
 import {
   collectAssistantCitations,
   expandAssistantCitationsForProvider,
   serializeAssistantCitation,
-} from "@t3tools/shared/assistantCitations";
+} from "@mybot/shared/assistantCitations";
 import {
   DEFAULT_RESOLVED_KEYBINDINGS,
   compileResolvedKeybindingsConfig,
   mergeWithDefaultKeybindings,
-} from "@t3tools/shared/keybindings";
+} from "@mybot/shared/keybindings";
 import { describe, expect, it } from "vite-plus/test";
 
 import {

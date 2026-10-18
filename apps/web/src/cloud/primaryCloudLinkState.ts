@@ -3,7 +3,7 @@ import {
   AuthRelayReadScope,
   EnvironmentId,
   type EnvironmentCloudLinkStateResult,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -79,7 +79,7 @@ export function usePrimaryCloudLinkState() {
         : null,
     [primary],
   );
-  // Builds without T3 Connect have no link to read; skip the request.
+  // Builds without MyBot Connect have no link to read; skip the request.
   const atom =
     target && hasCloudPublicConfig() && canReadRelay
       ? primaryCloudLinkStateAtom(targetKey(target))

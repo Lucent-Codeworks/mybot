@@ -37,8 +37,8 @@ const layerEnvironment = (input: {
       Layer.mergeAll(
         NodeServices.layer,
         DesktopConfig.layerTest({
-          T3CODE_HOME: input.baseDir,
-          T3CODE_MODE: "desktop",
+          MYBOT_HOME: input.baseDir,
+          MYBOT_MODE: "desktop",
         }),
       ),
     ),
@@ -54,7 +54,7 @@ const withTempDir = <A, E, R>(
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
     const tempDir = yield* fileSystem.makeTempDirectoryScoped({
-      prefix: "t3-wsl-server-tree-test-",
+      prefix: "mybot-wsl-server-tree-test-",
     });
     return yield* run(tempDir);
   }).pipe(Effect.scoped);
@@ -243,7 +243,7 @@ describe("DesktopWslServerTree", () => {
         });
         yield* fileSystem.writeFileString(path.join(serverRoot, "apps/server/dist/bin.mjs"), "x");
 
-        // T3CODE_HOME is set to tempDir, so the desktop state dir resolves to
+        // MYBOT_HOME is set to tempDir, so the desktop state dir resolves to
         // <tempDir>/userdata (no .t3 segment).
         const treeRoot = path.join(tempDir, "userdata", "wsl-server-tree");
         yield* fileSystem.makeDirectory(path.join(treeRoot, "1.0.0"), { recursive: true });

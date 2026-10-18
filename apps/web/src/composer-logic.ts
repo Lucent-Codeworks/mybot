@@ -1,9 +1,9 @@
-import type { ClientSettings } from "@t3tools/contracts/settings";
-import type { AssistantCitation, ResolvedKeybindingsConfig } from "@t3tools/contracts";
+import type { ClientSettings } from "@mybot/contracts/settings";
+import type { AssistantCitation, ResolvedKeybindingsConfig } from "@mybot/contracts";
 import {
   serializeAssistantCitation,
   withAssistantCitationComment,
-} from "@t3tools/shared/assistantCitations";
+} from "@mybot/shared/assistantCitations";
 import {
   splitPromptIntoComposerSegments,
   type ComposerPromptSegment,

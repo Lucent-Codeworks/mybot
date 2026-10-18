@@ -1,24 +1,24 @@
-import { findErrorTraceId } from "@t3tools/client-runtime/errors";
+import { findErrorTraceId } from "@mybot/client-runtime/errors";
 import {
   type EnvironmentConnectionPresentation,
   RelayConnectionRegistration,
   RelayConnectionTarget,
   orchestrationProtocolCompatibilityError,
-} from "@t3tools/client-runtime/connection";
-import { relayOfflineReasonMessage } from "@t3tools/client-runtime/relay";
+} from "@mybot/client-runtime/connection";
+import { relayOfflineReasonMessage } from "@mybot/client-runtime/relay";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@mybot/client-runtime/state/runtime";
 import {
   type EnvironmentId,
   resolveEnvironmentMachineKind,
   type ServerConfig,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import type {
   RelayClientEnvironmentRecord,
   RelayEnvironmentStatusResponse,
-} from "@t3tools/contracts/relay";
+} from "@mybot/contracts/relay";
 import * as Option from "effect/Option";
 import { type ReactNode, useCallback, useEffect, useEffectEvent, useState } from "react";
 
@@ -70,7 +70,7 @@ function RemoteEnvironmentRowsSkeleton() {
 }
 
 /**
- * The user's T3 Connect environments from relay discovery, each with a
+ * The user's MyBot Connect environments from relay discovery, each with a
  * Connect button. The primary environment is always excluded; already-saved
  * environments are hidden unless `showSavedEnvironments` renders them with
  * their live connection state (used by onboarding, where the full device mesh
@@ -128,7 +128,7 @@ export function CloudEnvironmentConnectRows({
       .filter((environment) => environment.relayManaged)
       .map((environment) => [environment.environmentId, environment]),
   );
-  // Saved over another route only: T3 Connect would be an added fallback.
+  // Saved over another route only: MyBot Connect would be an added fallback.
   const savedWithoutRelay = new Set(
     savedEnvironments
       .filter((environment) => !environment.relayManaged)
@@ -180,7 +180,7 @@ export function CloudEnvironmentConnectRows({
     const message =
       cause instanceof Error ? cause.message : "Could not connect the MyBot Connect environment.";
     const traceId = findErrorTraceId(cause);
-    console.error("[t3-connect] Could not connect environment", { message, traceId, cause });
+    console.error("[mybot-connect] Could not connect environment", { message, traceId, cause });
     toastManager.add({
       type: "error",
       title: "Could not connect environment",
@@ -198,7 +198,7 @@ export function CloudEnvironmentConnectRows({
   };
 
   // During onboarding selection a machine saved over another route already
-  // has its own row elsewhere, and selecting it must not add a T3 Connect
+  // has its own row elsewhere, and selecting it must not add a MyBot Connect
   // route as a side effect, so it is left out here.
   const visibleEnvironments = [...environmentsState.environments.values()].filter(
     ({ environment }) =>

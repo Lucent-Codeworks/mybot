@@ -7,7 +7,7 @@ import {
   StoredProjectIcon,
   ProjectId,
   ProjectScript,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { ComposerContextId, FileContextRecord } from "@t3tools/contracts";
+import type { ComposerContextId, FileContextRecord } from "@mybot/contracts";
 import {
   enrichedContextLinkPresentation,
   enrichedLinkVariantPattern,

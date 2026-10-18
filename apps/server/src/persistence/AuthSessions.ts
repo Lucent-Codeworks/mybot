@@ -12,7 +12,7 @@ import {
   AuthSessionId,
   ClientSurface,
   ServerAuthSessionMethod,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 
 import {
   type AuthSessionRepositoryError,

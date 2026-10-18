@@ -1,6 +1,6 @@
-import type { ThreadContextRecord, UserInputQuestion } from "@t3tools/contracts";
-import { replaceComposerContextReferences } from "@t3tools/shared/composerContextReferences";
-import { formatThreadLink } from "@t3tools/shared/threadLinks";
+import type { ThreadContextRecord, UserInputQuestion } from "@mybot/contracts";
+import { replaceComposerContextReferences } from "@mybot/shared/composerContextReferences";
+import { formatThreadLink } from "@mybot/shared/threadLinks";
 
 /** Question responses carry text, so send thread chips as links with the actual thread IDs. */
 export function projectPendingUserInputAnswer(

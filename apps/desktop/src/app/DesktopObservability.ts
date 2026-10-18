@@ -1,15 +1,12 @@
-import { PRIMARY_LOCAL_ENVIRONMENT_ID } from "@t3tools/contracts";
-import {
-  makeLocalFileTracer,
-  makeTraceSink,
-  type SignalExport,
-} from "@t3tools/shared/observability";
-import * as SharedObservability from "@t3tools/shared/observability";
-import * as OtelEnvironment from "@t3tools/shared/otelEnvironment";
+import { PRIMARY_LOCAL_ENVIRONMENT_ID } from "@mybot/contracts";
+import * as HostProcess from "@mybot/shared/HostProcess";
+import { makeLocalFileTracer, makeTraceSink, type SignalExport } from "@mybot/shared/observability";
+import * as SharedObservability from "@mybot/shared/observability";
+import * as OtelEnvironment from "@mybot/shared/otelEnvironment";
 import {
   parsePersistedServerObservabilitySettings,
   type PersistedServerObservabilitySettings,
-} from "@t3tools/shared/serverSettings";
+} from "@mybot/shared/serverSettings";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
@@ -67,7 +64,7 @@ export class DesktopBackendOutputLogFactory extends Context.Service<
   {
     readonly forInstance: (id: string) => Effect.Effect<DesktopBackendOutputLogShape>;
   }
->()("@t3tools/desktop/app/DesktopObservability/DesktopBackendOutputLogFactory") {}
+>()("@mybot/desktop/app/DesktopObservability/DesktopBackendOutputLogFactory") {}
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
@@ -634,6 +631,7 @@ const layerTelemetry = Layer.unwrap(
         "service.namespace": "mybot",
         "service.runtime": "desktop",
         "service.mode": environment.isDevelopment ? "development" : "packaged",
+        ...(yield* HostProcess.telemetryAttributes),
       },
     };
 

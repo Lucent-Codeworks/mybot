@@ -1,4 +1,4 @@
-import { EnvironmentHttpCommonError, OrchestrationV2ShellSnapshot } from "@t3tools/contracts";
+import { EnvironmentHttpCommonError, OrchestrationV2ShellSnapshot } from "@mybot/contracts";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -100,7 +100,7 @@ export class ShellSnapshotLoader extends Context.Service<
       prepared: PreparedConnection,
     ) => Effect.Effect<Option.Option<OrchestrationV2ShellSnapshot>>;
   }
->()("@t3tools/client-runtime/state/shellSnapshotHttp/ShellSnapshotLoader") {}
+>()("@mybot/client-runtime/state/shellSnapshotHttp/ShellSnapshotLoader") {}
 
 export const layer: Layer.Layer<ShellSnapshotLoader, never, HttpClient.HttpClient> = Layer.effect(
   ShellSnapshotLoader,

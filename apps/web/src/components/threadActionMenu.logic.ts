@@ -1,5 +1,5 @@
-import type { ContextMenuItem } from "@t3tools/contracts";
-import type { SnoozePreset } from "@t3tools/client-runtime/state/thread-settled";
+import type { ContextMenuItem } from "@mybot/contracts";
+import type { SnoozePreset } from "@mybot/client-runtime/state/thread-settled";
 
 /**
  * Ids for the per-thread action menu. Snooze presets are dispatched as

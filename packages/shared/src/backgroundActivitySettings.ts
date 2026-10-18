@@ -4,7 +4,7 @@ import {
   DEFAULT_BACKGROUND_ACTIVITY_PROFILE,
   DEFAULT_PROVIDER_HEALTH_REFRESH_INTERVAL,
   type ServerSettings,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Duration from "effect/Duration";
 
 export interface ResolvedBackgroundActivitySettings {

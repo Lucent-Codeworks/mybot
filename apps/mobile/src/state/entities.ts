@@ -1,20 +1,20 @@
 import { useAtomValue } from "@effect/atom-react";
-import { deriveReportedModelSelection } from "@t3tools/client-runtime/state/thread-execution";
+import { deriveReportedModelSelection } from "@mybot/client-runtime/state/thread-execution";
 
 import { appAtomRegistry } from "./atom-registry";
 import type {
   EnvironmentProject,
   EnvironmentThread,
   EnvironmentThreadShell,
-} from "@t3tools/client-runtime/state/shell";
+} from "@mybot/client-runtime/state/shell";
 import type {
   EnvironmentId,
   ScopedProjectRef,
   ScopedThreadRef,
   ServerConfig,
   ThreadId,
-} from "@t3tools/contracts";
-import { hasThreadLinks, relabelThreadLinks } from "@t3tools/shared/threadLinks";
+} from "@mybot/contracts";
+import { hasThreadLinks, relabelThreadLinks } from "@mybot/shared/threadLinks";
 import { Atom } from "effect/reactivity";
 import { useMemo } from "react";
 

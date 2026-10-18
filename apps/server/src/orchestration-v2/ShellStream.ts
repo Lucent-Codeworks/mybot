@@ -7,8 +7,8 @@ import type {
   OrchestrationV2ThreadShellSnapshot,
   OrchestrationV2ShellStreamItem,
   OrchestrationV2StoredEvent,
-} from "@t3tools/contracts";
-import { OrchestrationV2ThreadShell as ThreadShellSchema } from "@t3tools/contracts";
+} from "@mybot/contracts";
+import { OrchestrationV2ThreadShell as ThreadShellSchema } from "@mybot/contracts";
 import * as Clock from "effect/Clock";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";

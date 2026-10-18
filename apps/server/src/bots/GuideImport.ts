@@ -6,7 +6,7 @@
  */
 import * as NodeZlib from "node:zlib";
 
-import type { ProjectId } from "@t3tools/contracts";
+import type { ProjectId } from "@mybot/contracts";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
 import * as Base64 from "effect/encoding/Base64";

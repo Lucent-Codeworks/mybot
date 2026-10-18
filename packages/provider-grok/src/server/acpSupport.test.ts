@@ -48,7 +48,7 @@ describe("grokAcpSpawnArgs", () => {
     expect(grokAcpSpawnArgs()).toEqual(["agent", "stdio"]);
   });
 
-  it("forces Grok to ask when T3 is Supervised", () => {
+  it("forces Grok to ask when MyBot is Supervised", () => {
     expect(grokAcpSpawnArgs("approval-required")).toEqual([
       "--permission-mode",
       "default",

@@ -1,7 +1,7 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { describe, expect, it } from "@effect/vitest";
-import { cliArchiveTarCommand } from "@t3tools/shared/cliRelease";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import { cliArchiveTarCommand } from "@mybot/shared/cliRelease";
+import * as HostProcess from "@mybot/shared/HostProcess";
 import * as Crypto from "effect/Crypto";
 import * as Effect from "effect/Effect";
 import * as Hex from "effect/encoding/Hex";
@@ -118,7 +118,7 @@ const makeArchive = Effect.fn("test.makeArchive")(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const runner = yield* ProcessRunner.ProcessRunner;
-  const dir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-runtime-fixture-" });
+  const dir = yield* fs.makeTempDirectoryScoped({ prefix: "mybot-runtime-fixture-" });
   yield* fs.makeDirectory(path.join(dir, "uv-fixture"));
   yield* fs.writeFileString(path.join(dir, "uv-fixture", uvx), "#!/bin/sh\n", { mode: 0o755 });
   const archivePath = path.join(dir, "fixture.tar.gz");
@@ -138,7 +138,7 @@ const makeHarness = Effect.fn("test.makeLocalRuntimes")(function* (
   const crypto = yield* Crypto.Crypto;
   const archive = yield* makeArchive();
   const runtimesDir = path.join(
-    yield* fs.makeTempDirectoryScoped({ prefix: "t3-runtimes-test-" }),
+    yield* fs.makeTempDirectoryScoped({ prefix: "mybot-runtimes-test-" }),
     "runtimes",
   );
   const sha256 = options.sha256 ?? Hex.encode(yield* crypto.digest("SHA-256", archive));

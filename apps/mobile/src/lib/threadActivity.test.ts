@@ -18,9 +18,9 @@ import {
   type OrchestrationV2RunAttempt,
   type OrchestrationV2ProjectedTurnItem,
   type OrchestrationV2TurnItem,
-} from "@t3tools/contracts";
-import { resolveUserMessagePresentation } from "@t3tools/client-runtime/user-message";
-import { summarizeToolGroup } from "@t3tools/client-runtime/work-log/presentation";
+} from "@mybot/contracts";
+import { resolveUserMessagePresentation } from "@mybot/client-runtime/user-message";
+import { summarizeToolGroup } from "@mybot/client-runtime/work-log/presentation";
 import * as DateTime from "effect/DateTime";
 import { describe, expect, it } from "vite-plus/test";
 
@@ -1433,9 +1433,9 @@ describe("buildThreadFeed", () => {
     expect(activity?.workEntry.viewedImagePath).toBe("/workspace/reference.png");
   });
 
-  it("pretty prints T3 MCP dynamic tool activities and attaches the product logo", () => {
+  it("pretty prints MyBot MCP dynamic tool activities and attaches the product logo", () => {
     const toolItem: OrchestrationV2TurnItem = {
-      ...base("item-t3-tool", "2026-06-20T00:00:04.000Z", 3),
+      ...base("item-mybot-tool", "2026-06-20T00:00:04.000Z", 3),
       type: "dynamic_tool",
       toolName: "mcp__t3-code__t3_thread_read",
       input: { threadId: "thread-child" },
@@ -1500,7 +1500,7 @@ describe("buildThreadFeed", () => {
     );
   });
 
-  it("uses canonical T3 orchestration summaries in compact work groups", () => {
+  it("uses canonical MyBot orchestration summaries in compact work groups", () => {
     const rows = [
       projected(command("2026-06-20T00:00:01.000Z"), 0),
       ...["mcp__t3-code__t3_thread_send", "t3_code.t3_thread_send", "t3_thread_send"].map(

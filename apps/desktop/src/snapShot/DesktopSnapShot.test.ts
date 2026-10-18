@@ -5,7 +5,7 @@ import {
   DesktopPendingSnapShot,
   type ClientSettings,
   type DesktopSnapShotEvent,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Crypto from "effect/Crypto";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
@@ -936,7 +936,7 @@ it.effect.each(["win32", "darwin", "linux"] as const)(
       shouldRenderRichAnimation: true,
     });
     const bounds = { x: 10, y: 20, width: 800, height: 600 };
-    const t3 = {
+    const myBot = {
       id: 42,
       title: "MyBot",
       appIdentifier: "com.t3tools.T3Code.desktop",
@@ -946,7 +946,7 @@ it.effect.each(["win32", "darwin", "linux"] as const)(
     };
     focusedWindowMock.mockReturnValue({
       getBounds: () => bounds,
-      getTitle: () => t3.title,
+      getTitle: () => myBot.title,
       isDestroyed: () => false,
       isMinimized: () => false,
       isVisible: () => true,
@@ -955,26 +955,26 @@ it.effect.each(["win32", "darwin", "linux"] as const)(
     });
     const images: Uint8Array[] = [];
     activeWindowMock.mockReset().mockResolvedValue({
-      ...t3,
+      ...myBot,
       platform: platform === "darwin" ? "macos" : "windows",
     });
     regionCaptureMock.mockReset().mockResolvedValue({
       width: bounds.width,
       height: bounds.height,
-      png: t3.png,
+      png: myBot.png,
     });
     macCaptureMock.mockReset().mockImplementation(async () => {
-      images.push(t3.png);
-      return { source: { name: t3.title }, png: t3.png };
+      images.push(myBot.png);
+      return { source: { name: myBot.title }, png: myBot.png };
     });
     const activate = vi.fn<(title: string) => Promise<void>>().mockResolvedValue(undefined);
     linuxCaptureMock.mockResolvedValueOnce({
-      png: t3.png,
+      png: myBot.png,
       window: {
-        title: t3.title,
-        appName: t3.owner.name,
-        appIdentifier: t3.appIdentifier,
-        processId: t3.owner.processId,
+        title: myBot.title,
+        appName: myBot.owner.name,
+        appIdentifier: myBot.appIdentifier,
+        processId: myBot.owner.processId,
         bounds,
       },
       feedback: {
@@ -1015,14 +1015,14 @@ it.effect.each(["win32", "darwin", "linux"] as const)(
         yield* Effect.promise(trigger);
 
         const saved = yield* decodePendingMetadata(metadata);
-        assert.equal(saved.source.windowTitle, t3.title);
-        assert.equal(saved.source.appName, t3.owner.name);
-        assert.equal(saved.source.accessibleText, `Window from process ${t3.owner.processId}`);
-        assert.deepEqual(images, [t3.png]);
+        assert.equal(saved.source.windowTitle, myBot.title);
+        assert.equal(saved.source.appName, myBot.owner.name);
+        assert.equal(saved.source.accessibleText, `Window from process ${myBot.owner.processId}`);
+        assert.deepEqual(images, [myBot.png]);
         assert.equal(prepareCaptureRevealMock.mock.calls.length, platform === "win32" ? 1 : 0);
         if (platform === "linux") {
-          assert.equal(saved.source.appIdentifier, t3.appIdentifier);
-          assert.deepEqual(activate.mock.calls, [[t3.title]]);
+          assert.equal(saved.source.appIdentifier, myBot.appIdentifier);
+          assert.deepEqual(activate.mock.calls, [[myBot.title]]);
         }
       }),
     ).pipe(
@@ -2625,8 +2625,8 @@ it.each([
 );
 
 it.each([
-  { names: ["⠙ t3code"], expected: "Verified text" },
-  { names: ["⠋ t3code", "⠙ t3code"], expected: undefined },
+  { names: ["⠙ mybot"], expected: "Verified text" },
+  { names: ["⠋ mybot", "⠙ mybot"], expected: undefined },
 ])("reads a changing Wayland title only when unambiguous: $names", async ({ names, expected }) => {
   vi.stubEnv("XDG_SESSION_TYPE", "wayland");
   const tree = vi.fn(async () => ({ value: "Verified text", children: [] }));
@@ -2642,12 +2642,12 @@ it.each([
     assert.strictEqual(
       await readAccessibleWindowText(
         {
-          title: "⠋ t3code",
+          title: "⠋ mybot",
           bounds: { x: 479, y: 342, width: 700, height: 520 },
           owner: { processId: 123 },
         },
         "linux",
-        "⠋ t3code",
+        "⠋ mybot",
       ),
       expected,
     );

@@ -5,7 +5,7 @@
  * the results. Raw transcripts never leave the machine that produced them.
  *
  * Mirror of `apps/web/src/state/usage.ts` over mobile's atom wiring; the merge
- * rules themselves live in `@t3tools/shared/usageMerge`.
+ * rules themselves live in `@mybot/shared/usageMerge`.
  *
  * @module state/usage
  */
@@ -16,10 +16,10 @@ import {
   type EnvironmentId,
   type UsageSummary,
   type UsageSummaryInput,
-} from "@t3tools/contracts";
-import { needsCursorKeychainAccess, refreshUsage } from "@t3tools/client-runtime/state/usage";
-import { resolveUsageAccess } from "@t3tools/client-runtime/state/usage-access";
-import { mergeUsage, type EnvironmentUsage, type MergedUsage } from "@t3tools/shared/usageMerge";
+} from "@mybot/contracts";
+import { needsCursorKeychainAccess, refreshUsage } from "@mybot/client-runtime/state/usage";
+import { resolveUsageAccess } from "@mybot/client-runtime/state/usage-access";
+import { mergeUsage, type EnvironmentUsage, type MergedUsage } from "@mybot/shared/usageMerge";
 import * as Option from "effect/Option";
 import { AsyncResult, Atom } from "effect/reactivity";
 import { useCallback, useMemo } from "react";

@@ -6,10 +6,10 @@ import * as NodePath from "node:path";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { it } from "@effect/vitest";
-import type { DesktopAppActivationRequest } from "@t3tools/contracts";
-import { resolveDesktopAppControlAddress } from "@t3tools/shared/desktopAppControl";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import * as NetService from "@t3tools/shared/Net";
+import type { DesktopAppActivationRequest } from "@mybot/contracts";
+import { resolveDesktopAppControlAddress } from "@mybot/shared/desktopAppControl";
+import * as HostProcess from "@mybot/shared/HostProcess";
+import * as NetService from "@mybot/shared/Net";
 import * as ConfigProvider from "effect/ConfigProvider";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -125,7 +125,7 @@ const withTempDirectory = <A, E, R>(
 
 describe("mybot server command safety", () => {
   it.effect("rejects unknown command words without creating a home or project", () =>
-    withTempDirectory("t3-cli-unknown-", (root) =>
+    withTempDirectory("mybot-cli-unknown-", (root) =>
       Effect.gen(function* () {
         const baseDir = NodePath.join(root, "home");
         for (const word of [
@@ -149,10 +149,10 @@ describe("mybot server command safety", () => {
   );
 
   it.effect("shows help without creating state", () =>
-    withTempDirectory("t3-cli-help-", (root) =>
+    withTempDirectory("mybot-cli-help-", (root) =>
       Effect.gen(function* () {
         const baseDir = NodePath.join(root, "home");
-        const help = yield* runCli(["help"], { T3CODE_HOME: baseDir }).pipe(Effect.flip);
+        const help = yield* runCli(["help"], { MYBOT_HOME: baseDir }).pipe(Effect.flip);
         expect(help).toMatchObject({ _tag: "ShowHelp", commandPath: ["mybot"], errors: [] });
         expect(yield* pathExists(baseDir)).toBe(false);
       }),
@@ -160,7 +160,7 @@ describe("mybot server command safety", () => {
   );
 
   it.effect("refuses manual startup over a live server before creating directories", () =>
-    withTempDirectory("t3-cli-running-", (root) =>
+    withTempDirectory("mybot-cli-running-", (root) =>
       Effect.gen(function* () {
         const baseDir = NodePath.join(root, "home");
         const stateDir = NodePath.join(baseDir, "userdata");
@@ -186,7 +186,7 @@ describe("mybot server command safety", () => {
           [newDirectory],
           ["start", newDirectory],
         ]) {
-          const error = yield* runCli(args, { T3CODE_HOME: baseDir }).pipe(
+          const error = yield* runCli(args, { MYBOT_HOME: baseDir }).pipe(
             Effect.provideService(
               HostProcess.Platform,
               args[0] === "C:new-project" ? "win32" : platform,
@@ -207,7 +207,7 @@ describe("mybot server command safety", () => {
 
 describe("mybot app", () => {
   it.effect("rejects SSH before it tries to reach a desktop app", () =>
-    withTempDirectory("t3-app-ssh-test-", (root) =>
+    withTempDirectory("mybot-app-ssh-test-", (root) =>
       Effect.gen(function* () {
         const baseDir = NodePath.join(root, "missing-t3-home");
         const error = yield* runCli(["app", "--base-dir", baseDir], {
@@ -225,7 +225,7 @@ describe("mybot app", () => {
   );
 
   it.effect("rejects unsupported platforms without creating state", () =>
-    withTempDirectory("t3-app-platform-test-", (root) =>
+    withTempDirectory("mybot-app-platform-test-", (root) =>
       Effect.gen(function* () {
         const baseDir = NodePath.join(root, "missing-t3-home");
         const error = yield* runCli(["app", "--base-dir", baseDir]).pipe(
@@ -244,7 +244,7 @@ describe("mybot app", () => {
   );
 
   it.effect("does not create state when only a server or no desktop app is running", () =>
-    withTempDirectory("t3-app-missing-test-", (root) =>
+    withTempDirectory("mybot-app-missing-test-", (root) =>
       Effect.gen(function* () {
         const baseDir = NodePath.join(root, "missing-t3-home");
         const error = yield* runCli(["app", "--base-dir", baseDir]).pipe(Effect.flip);
@@ -261,8 +261,8 @@ describe("mybot app", () => {
     ),
   );
 
-  it.effect("uses T3CODE_HOME or --base-dir and sends the default or explicit path", () =>
-    withTempDirectory("t3-app-command-test-", (root) =>
+  it.effect("uses MYBOT_HOME or --base-dir and sends the default or explicit path", () =>
+    withTempDirectory("mybot-app-command-test-", (root) =>
       Effect.gen(function* () {
         const baseDir = NodePath.join(root, "t3-home");
         const explicitPath = NodePath.join(root, "project");
@@ -270,7 +270,7 @@ describe("mybot app", () => {
         const workingDirectory = yield* HostProcess.WorkingDirectory;
         const desktop = yield* fakeDesktop({ baseDir });
 
-        yield* runCli(["app"], { T3CODE_HOME: baseDir });
+        yield* runCli(["app"], { MYBOT_HOME: baseDir });
         yield* runCli(["app", explicitPath, "--base-dir", baseDir]);
 
         expect(desktop.received.map((request) => request.workspaceRoot)).toEqual([
@@ -283,7 +283,7 @@ describe("mybot app", () => {
   );
 
   it.effect("prefers the installed desktop app when a dev desktop is also running", () =>
-    withTempDirectory("t3-app-preferred-test-", (root) =>
+    withTempDirectory("mybot-app-preferred-test-", (root) =>
       Effect.gen(function* () {
         const baseDir = NodePath.join(root, ".t3");
         const desktop = yield* fakeDesktop({ baseDir });
@@ -298,13 +298,13 @@ describe("mybot app", () => {
   );
 
   it.effect("finds the dev desktop when the default desktop socket is absent", () =>
-    withTempDirectory("t3-app-dev-test-", (root) =>
+    withTempDirectory("mybot-app-dev-test-", (root) =>
       Effect.gen(function* () {
         const baseDir = NodePath.join(root, ".t3");
         const development = yield* fakeDesktop({ baseDir, stateSubdirectory: "dev" });
 
         yield* runCli(["app"]);
-        yield* runCli(["app"], { T3CODE_HOME: "   " });
+        yield* runCli(["app"], { MYBOT_HOME: "   " });
 
         expect(development.received).toHaveLength(2);
         expect(yield* pathExists(baseDir)).toBe(false);
@@ -313,13 +313,13 @@ describe("mybot app", () => {
   );
 
   it.effect("never searches a dev state directory for an explicit MyBot home", () =>
-    withTempDirectory("t3-app-explicit-test-", (root) =>
+    withTempDirectory("mybot-app-explicit-test-", (root) =>
       Effect.gen(function* () {
         const baseDir = NodePath.join(root, ".t3");
         const development = yield* fakeDesktop({ baseDir, stateSubdirectory: "dev" });
 
         const flagError = yield* runCli(["app", "--base-dir", baseDir]).pipe(Effect.flip);
-        const envError = yield* runCli(["app"], { T3CODE_HOME: baseDir }).pipe(Effect.flip);
+        const envError = yield* runCli(["app"], { MYBOT_HOME: baseDir }).pipe(Effect.flip);
 
         expect(flagError).toMatchObject({ _tag: "DesktopAppUnreachableError" });
         expect(envError).toMatchObject({ _tag: "DesktopAppUnreachableError" });
@@ -331,7 +331,7 @@ describe("mybot app", () => {
   it.effect.each(["failure", "invalid"] as const)(
     "never falls back after the default desktop sends a %s response",
     (responseKind) =>
-      withTempDirectory("t3-app-response-test-", (root) =>
+      withTempDirectory("mybot-app-response-test-", (root) =>
         Effect.gen(function* () {
           const baseDir = NodePath.join(root, ".t3");
           const desktop = yield* fakeDesktop({

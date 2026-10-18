@@ -3,10 +3,10 @@
  *
  * @module usageTestFormats
  */
-import type { UsageProviderKind } from "@t3tools/contracts";
-import type { TranscriptUsageFormat } from "@t3tools/provider-core/server/usage";
-import { piUsageFormat } from "@t3tools/provider-pi/server/usage";
-import { grokUsageFormat } from "@t3tools/provider-grok/server/usage";
+import type { UsageProviderKind } from "@mybot/contracts";
+import type { TranscriptUsageFormat } from "@mybot/provider-core/server/usage";
+import { piUsageFormat } from "@mybot/provider-pi/server/usage";
+import { grokUsageFormat } from "@mybot/provider-grok/server/usage";
 
 import { claudeUsageFormat } from "../provider/Drivers/claudeUsage.ts";
 import { codexUsageFormat } from "../provider/Drivers/codexUsage.ts";

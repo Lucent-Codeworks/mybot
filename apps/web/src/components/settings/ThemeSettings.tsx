@@ -23,7 +23,7 @@ import {
   type ThemeDefinition,
   type ThemeHalves,
 } from "../../themePalette";
-import { BUILT_IN_THEMES } from "@t3tools/shared/themePalettes";
+import { BUILT_IN_THEMES } from "@mybot/shared/themePalettes";
 import {
   AlertDialog,
   AlertDialogClose,

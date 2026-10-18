@@ -1,6 +1,6 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { describe, expect, it } from "@effect/vitest";
-import { DEFAULT_SERVER_SETTINGS, StorageCleanupReport } from "@t3tools/contracts";
+import { DEFAULT_SERVER_SETTINGS, StorageCleanupReport } from "@mybot/contracts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -20,7 +20,7 @@ const decodeCleanupReport = Schema.decodeSync(StorageCleanupReport);
 const cleanupFixture = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const config = yield* ServerConfig.ServerConfig;
-  let settings: import("@t3tools/contracts").ServerSettings = DEFAULT_SERVER_SETTINGS;
+  let settings: import("@mybot/contracts").ServerSettings = DEFAULT_SERVER_SETTINGS;
   const context = yield* Layer.build(StorageCleanup.layer).pipe(
     Effect.provideService(Settings.ServerSettingsService, {
       getSettings: Effect.sync(() => settings),

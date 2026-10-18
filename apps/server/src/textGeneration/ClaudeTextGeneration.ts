@@ -14,19 +14,19 @@ import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 
-import { type ClaudeSettings } from "@t3tools/contracts";
-import { TextGenerationError } from "@t3tools/provider-core/server/textGeneration";
-import { resolveSpawnCommand } from "@t3tools/shared/shell";
+import { type ClaudeSettings } from "@mybot/contracts";
+import { TextGenerationError } from "@mybot/provider-core/server/textGeneration";
+import { resolveSpawnCommand } from "@mybot/shared/shell";
 
-import * as TextGenerationOperations from "@t3tools/provider-core/server/textGenerationOperations";
+import * as TextGenerationOperations from "@mybot/provider-core/server/textGenerationOperations";
 import {
   normalizeCliError,
   toJsonSchemaObject,
-} from "@t3tools/provider-core/server/textGenerationUtils";
+} from "@mybot/provider-core/server/textGenerationUtils";
 import {
   getModelSelectionStringOptionValue,
   getProviderOptionDescriptors,
-} from "@t3tools/shared/model";
+} from "@mybot/shared/model";
 import {
   BUNDLED_CLAUDE_MODEL_CATALOG,
   type ClaudeModelCatalog,
@@ -166,7 +166,7 @@ export const makeClaudeTextGeneration = Effect.fn("makeClaudeTextGeneration")(fu
     const runClaudeCommand = Effect.fn("runClaudeJson.runClaudeCommand")(function* () {
       // Titles need only the supplied prompt, not configuration from the project.
       const workingDirectory = yield* fileSystem
-        .makeTempDirectoryScoped({ prefix: "t3code-claude-title-" })
+        .makeTempDirectoryScoped({ prefix: "mybot-claude-title-" })
         .pipe(
           Effect.mapError((cause) =>
             normalizeCliError("claude", operation, cause, "Failed to create title directory"),

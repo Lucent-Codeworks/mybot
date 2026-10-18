@@ -1,4 +1,4 @@
-import type { EnvironmentId, EnvironmentMachineKind, ProjectId } from "@t3tools/contracts";
+import type { EnvironmentId, EnvironmentMachineKind, ProjectId } from "@mybot/contracts";
 
 export interface EnvironmentOption {
   environmentId: EnvironmentId;

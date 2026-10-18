@@ -8,8 +8,8 @@ import type {
   SettingSource,
   ToolCall,
 } from "@cursor/sdk";
-import { formatReadToolLabel, formatSearchToolLabel } from "@t3tools/shared/toolActivity";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import { formatReadToolLabel, formatSearchToolLabel } from "@mybot/shared/toolActivity";
+import * as HostProcess from "@mybot/shared/HostProcess";
 import {
   isOrchestrationV2WorkActive,
   defaultInstanceIdForDriver,
@@ -28,7 +28,7 @@ import {
   type OrchestrationV2TurnItem,
   type ProviderInstanceId,
   type ThreadId,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import { CursorSettings } from "../settings.ts";
 import * as DateTime from "effect/DateTime";
 import * as Deferred from "effect/Deferred";
@@ -41,10 +41,10 @@ import * as Ref from "effect/Ref";
 import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
 
-import * as ProviderHost from "@t3tools/provider-core/server/ProviderHost";
-import { mcpToolPresentation } from "@t3tools/provider-core/server/mcpToolPresentation";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
-import * as McpProviderSession from "@t3tools/provider-core/server/mcpSession";
+import * as ProviderHost from "@mybot/provider-core/server/ProviderHost";
+import { mcpToolPresentation } from "@mybot/provider-core/server/mcpToolPresentation";
+import * as McpProviderSessions from "@mybot/provider-core/server/McpProviderSessions";
+import * as McpProviderSession from "@mybot/provider-core/server/mcpSession";
 import { CursorTransportFailure } from "./transportFailure.ts";
 import { cursorSdkModelSelection } from "./sdkModel.ts";
 import {
@@ -52,27 +52,27 @@ import {
   hasCursorSkillMention,
   rewriteCursorSkillMentions,
 } from "./skills.ts";
-import { mergeProviderInstanceEnvironment } from "@t3tools/provider-core/server/instanceEnvironment";
-import { t3OrchestrationPromptForFirstRun } from "@t3tools/provider-core/server/orchestrationInstructions";
-import { buildRuntimeInstructions } from "@t3tools/provider-core/server/runtimeInstructions";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
-import { makeProviderFailure } from "@t3tools/provider-core/server/failure";
-import { turnScopedSelectionTransition } from "@t3tools/provider-core/server/selectionTransition";
+import { mergeProviderInstanceEnvironment } from "@mybot/provider-core/server/instanceEnvironment";
+import { myBotOrchestrationPromptForFirstRun } from "@mybot/provider-core/server/orchestrationInstructions";
+import { buildRuntimeInstructions } from "@mybot/provider-core/server/runtimeInstructions";
+import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
+import { makeProviderFailure } from "@mybot/provider-core/server/failure";
+import { turnScopedSelectionTransition } from "@mybot/provider-core/server/selectionTransition";
 import {
   isProviderNativeImageAttachment,
   providerMessageTextWithAttachmentPaths,
-} from "@t3tools/provider-core/server/attachmentPrompt";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+} from "@mybot/provider-core/server/attachmentPrompt";
+import * as ProviderAdapter from "@mybot/provider-core/server/ProviderAdapter";
 import {
   ProviderAdapterDriverCreateError,
   type ProviderAdapterDriver,
   type ProviderAdapterDriverCreateInput,
-} from "@t3tools/provider-core/server/adapterDriver";
+} from "@mybot/provider-core/server/adapterDriver";
 import {
   makeSubagentChildThread,
   makeSubagentConversationArtifacts,
   subagentThreadTitle,
-} from "@t3tools/provider-core/server/subagentProjection";
+} from "@mybot/provider-core/server/subagentProjection";
 import * as CursorAgentSdk from "./CursorAgentSdk.ts";
 export { cursorSdkModelSelection } from "./sdkModel.ts";
 
@@ -292,7 +292,7 @@ function nativeThreadId(providerThread: OrchestrationV2ProviderThread): string {
  * plugins. The SDK loads none of them when `settingSources` is omitted.
  * Sandbox policy files are read either way, and hooks can only deny or ask
  * (which local SDK runs reject), so these layers do not loosen the sandbox or
- * approval mode T3 sets.
+ * approval mode MyBot sets.
  */
 const CURSOR_AGENT_SETTING_SOURCES = [
   "project",
@@ -2130,7 +2130,7 @@ export const makeCursorAdapterV2 = Effect.fn("makeCursorAdapterV2")(function* (
                 .map((skill) => skill.name),
             );
           }
-          const userText = t3OrchestrationPromptForFirstRun({
+          const userText = myBotOrchestrationPromptForFirstRun({
             prompt: providerMessageTextWithAttachmentPaths({
               text:
                 cursorSkillNames === undefined
@@ -2140,7 +2140,7 @@ export const makeCursorAdapterV2 = Effect.fn("makeCursorAdapterV2")(function* (
               resolveAttachmentPath: host.resolveAttachmentPath,
             }),
             runOrdinal: turnInput.runOrdinal,
-            hasT3Mcp: mcpServers !== undefined,
+            hasMyBotMcp: mcpServers !== undefined,
           });
           const images = yield* Effect.forEach(
             turnInput.message.attachments.filter(isProviderNativeImageAttachment),

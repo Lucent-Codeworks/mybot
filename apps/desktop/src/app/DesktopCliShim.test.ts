@@ -16,7 +16,7 @@ afterEach(() => {
 });
 
 const tempRoot = () => {
-  const root = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-cli-shim-"));
+  const root = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "mybot-cli-shim-"));
   directories.push(root);
   return root;
 };
@@ -26,10 +26,10 @@ const writeExecutable = (path: string, content: string) => {
   NodeFS.writeFileSync(path, content, { mode: 0o755 });
 };
 
-/** Writes the launcher for `target` at `<root>/bin/mybot`, with `<root>/home` as its T3 home. */
+/** Writes the launcher for `target` at `<root>/bin/mybot`, with `<root>/home` as its MyBot home. */
 const writeShim = (root: string, target: CliShimTarget) => {
   const shim = NodePath.join(root, "bin", "mybot");
-  writeExecutable(shim, renderCliShim({ target, shimPath: shim, t3Home: `${root}/home` }));
+  writeExecutable(shim, renderCliShim({ target, shimPath: shim, myBotHome: `${root}/home` }));
   return shim;
 };
 
@@ -41,7 +41,7 @@ const run = (shim: string, args: ReadonlyArray<string>, env: NodeJS.ProcessEnv =
 
 /** An app executable that reports its environment and arguments. */
 const REPORTER =
-  '#!/bin/sh\necho "node=$ELECTRON_RUN_AS_NODE cli=$T3CODE_CLI_PATH home=$T3CODE_HOME"\nprintf "%s\\n" "$@"\nexit 3\n';
+  '#!/bin/sh\necho "node=$ELECTRON_RUN_AS_NODE cli=$MYBOT_CLI_PATH home=$MYBOT_HOME"\nprintf "%s\\n" "$@"\nexit 3\n';
 
 /**
  * A stand-in AppImage whose image holds the reporter. `--appimage-mount`
@@ -112,7 +112,7 @@ describe("renderCliShim", () => {
     });
     // sudo clears the environment, so the launcher supplies its own.
     expect(run(shim, []).stdout).toContain(`home=${root}/home`);
-    expect(run(shim, [], { T3CODE_HOME: "/elsewhere" }).stdout).toContain("home=/elsewhere");
+    expect(run(shim, [], { MYBOT_HOME: "/elsewhere" }).stdout).toContain("home=/elsewhere");
     // Run by a relative path, it still names itself absolutely.
     const relative = NodeChildProcess.spawnSync("./bin/mybot", [], { cwd: root, encoding: "utf8" });
     expect(relative.stdout).toContain(`cli=${shim}`);
@@ -125,10 +125,10 @@ describe("renderCliShim", () => {
     const shim = writeShim(root, {
       kind: "direct",
       executable,
-      entry: "/opt/T3's/app.asar/bin.mjs",
+      entry: "/opt/MyBot's/app.asar/bin.mjs",
     });
     expect(run(shim, ["browser", "setup"]).stdout.split("\n").slice(1)).toEqual([
-      "/opt/T3's/app.asar/bin.mjs",
+      "/opt/MyBot's/app.asar/bin.mjs",
       "browser",
       "setup",
       "",
@@ -152,7 +152,7 @@ describe("renderCliShim", () => {
     const script = renderCliShim({
       target: { kind: "windows", executable, entry: "C:\\Apps\\server.asar\\bin.mjs" },
       shimPath: "C:\\Users\\José\\.t3\\bin\\mybot.cmd",
-      t3Home: "C:\\Users\\José\\.t3",
+      myBotHome: "C:\\Users\\José\\.t3",
     });
     const lines = script.split("\r\n");
     expect(lines).toContain("setlocal EnableExtensions DisableDelayedExpansion");
@@ -163,17 +163,17 @@ describe("renderCliShim", () => {
       (line) => line.includes("whoami") && !/"[^"]*whoami[^"]*"/.test(line),
     );
     expect(bare).toEqual([]);
-    expect(lines).toContain('set "T3CODE_CLI_PATH=C:\\Users\\José\\.t3\\bin\\mybot.cmd"');
+    expect(lines).toContain('set "MYBOT_CLI_PATH=C:\\Users\\José\\.t3\\bin\\mybot.cmd"');
   });
 
   it("switches the Windows console to UTF-8 only when a path needs it", () => {
     const ascii = renderCliShim({
-      target: { kind: "windows", executable: "C:\\T3\\MyBot.exe", entry: "C:\\T3\\bin.mjs" },
+      target: { kind: "windows", executable: "C:\\MyBot\\MyBot.exe", entry: "C:\\MyBot\\bin.mjs" },
       shimPath: "C:\\Users\\me\\.t3\\bin\\mybot.cmd",
-      t3Home: "C:\\Users\\me\\.t3",
+      myBotHome: "C:\\Users\\me\\.t3",
     });
     // A Ctrl-C that ends the batch would leave the console switched.
     expect(ascii).not.toContain("chcp");
-    expect(ascii.split("\r\n")).toContain("exit /b %t3_exit%");
+    expect(ascii.split("\r\n")).toContain("exit /b %mybot_exit%");
   });
 });

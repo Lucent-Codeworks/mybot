@@ -8,7 +8,7 @@
  *
  * @module BuiltInMyBot
  */
-import type { BotProfile, ProjectId } from "@t3tools/contracts";
+import type { BotProfile, ProjectId } from "@mybot/contracts";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";

@@ -1,6 +1,6 @@
 // @effect-diagnostics nodeBuiltinImport:off - Effect has no incremental digest.
 import * as EffectNodeStream from "@effect/platform-node/NodeStream";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@mybot/shared/HostProcess";
 import * as Cause from "effect/Cause";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
@@ -21,7 +21,7 @@ import * as NodeCrypto from "node:crypto";
 import * as ServerConfig from "../config.ts";
 import { openZipArchive } from "../zipArchive.ts";
 
-// The one browser T3 installs on a host. HTML render previews and server
+// The one browser MyBot installs on a host. HTML render previews and server
 // browser tabs both run this pinned Chrome for Testing headless shell, so a host
 // downloads it once; neither uses a browser the user installed. To bump the pin, pick a version
 // from https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json,

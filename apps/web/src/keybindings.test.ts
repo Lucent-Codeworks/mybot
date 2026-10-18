@@ -2,14 +2,14 @@ import { assert, describe, it } from "vite-plus/test";
 import {
   compileResolvedKeybindingsConfig,
   DEFAULT_RESOLVED_KEYBINDINGS,
-} from "@t3tools/shared/keybindings";
+} from "@mybot/shared/keybindings";
 
 import {
   type KeybindingCommand,
   type KeybindingShortcut,
   type KeybindingWhenNode,
   type ResolvedKeybindingsConfig,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import {
   effectiveShortcutsForCommand,
   formatShortcutLabel,

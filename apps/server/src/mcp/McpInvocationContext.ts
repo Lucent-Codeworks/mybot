@@ -7,21 +7,21 @@ import {
   type ProviderInstanceId,
   type RuntimeMode,
   type ThreadId,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 
 const ALL_MCP_CAPABILITIES = ["preview", "orchestration", "device"] as const;
 export type McpCapability = (typeof ALL_MCP_CAPABILITIES)[number];
 
-/** A provider session T3 Code launched for one thread. */
+/** A provider session MyBot launched for one thread. */
 export interface McpThreadCaller {
   readonly threadId: ThreadId;
   readonly providerSessionId: string;
   readonly providerInstanceId: ProviderInstanceId;
 }
 
-/** An agent T3 Code did not launch, signed in through MCP OAuth. */
+/** An agent MyBot did not launch, signed in through MCP OAuth. */
 export interface McpClientCaller {
   readonly sessionId: string;
   readonly label: string;

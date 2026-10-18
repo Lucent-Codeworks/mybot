@@ -6,9 +6,9 @@ import {
   type RunId,
   OrchestratorMcpFailure,
   type OrchestrationV2Command,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import * as Effect from "effect/Effect";
-import { modelSelectionCommandType } from "@t3tools/shared/model";
+import { modelSelectionCommandType } from "@mybot/shared/model";
 
 import * as McpToolAccess from "../../McpToolAccess.ts";
 import {

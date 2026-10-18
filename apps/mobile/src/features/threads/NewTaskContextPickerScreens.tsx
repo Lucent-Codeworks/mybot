@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { resolveEnvironmentMachineKind } from "@t3tools/contracts";
+import { resolveEnvironmentMachineKind } from "@mybot/contracts";
 import * as Haptics from "expo-haptics";
 import { useNavigation } from "@react-navigation/native";
 import { Platform, Pressable, ScrollView, View } from "react-native";
@@ -59,7 +59,7 @@ function SelectionRow(props: {
     >
       {props.icon ?? null}
       <View className="min-w-0 flex-1 gap-0.5">
-        <Text className="text-base font-t3-medium text-foreground" numberOfLines={1}>
+        <Text className="text-base font-mybot-medium text-foreground" numberOfLines={1}>
           {props.title}
         </Text>
         {props.subtitle ? (

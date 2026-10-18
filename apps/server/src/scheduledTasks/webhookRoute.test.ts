@@ -12,13 +12,13 @@ import * as HttpRouter from "effect/http/HttpRouter";
 import * as HttpApi from "effect/http-api/HttpApi";
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";
 
-import { RELAY_HOOK_DELIVERY_TYP, signRelayJwt } from "@t3tools/shared/relayJwt";
+import { RELAY_HOOK_DELIVERY_TYP, signRelayJwt } from "@mybot/shared/relayJwt";
 import {
   EnvironmentHttpApi,
   EnvironmentId,
   ScheduledTaskWebhookDeliveryId,
   ScheduledTaskError,
-} from "@t3tools/contracts";
+} from "@mybot/contracts";
 import {
   ScheduledTaskService,
   type WebhookTriggerRequest,
@@ -39,7 +39,7 @@ const mintKeys = NodeCrypto.generateKeyPairSync("ed25519", {
   privateKeyEncoding: { format: "pem", type: "pkcs8" },
   publicKeyEncoding: { format: "pem", type: "spki" },
 });
-/** The secrets a T3 Connect-linked environment holds, keyed by name. */
+/** The secrets a MyBot Connect-linked environment holds, keyed by name. */
 const linkedSecrets: ReadonlyMap<string, string> = new Map([
   [CLOUD_MINT_PUBLIC_KEY, mintKeys.publicKey],
   [RELAY_ISSUER_SECRET, relayIssuer],

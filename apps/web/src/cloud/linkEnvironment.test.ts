@@ -3,8 +3,8 @@ import {
   EnvironmentId,
   type RelayClientInstallProgressEvent,
   WS_METHODS,
-} from "@t3tools/contracts";
-import { RelayWebClientId } from "@t3tools/contracts/relay";
+} from "@mybot/contracts";
+import { RelayWebClientId } from "@mybot/contracts/relay";
 import { describe, expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -18,11 +18,11 @@ import {
   type PreparedConnection,
   PrimaryConnectionTarget,
   EnvironmentSupervisor,
-} from "@t3tools/client-runtime/connection";
-import { type RpcSession } from "@t3tools/client-runtime/rpc";
-import { EnvironmentRegistry } from "@t3tools/client-runtime/connection";
-import { ManagedRelay } from "@t3tools/client-runtime/relay";
-import { layerRemoteHttpClient } from "@t3tools/client-runtime/rpc";
+} from "@mybot/client-runtime/connection";
+import { type RpcSession } from "@mybot/client-runtime/rpc";
+import { EnvironmentRegistry } from "@mybot/client-runtime/connection";
+import { ManagedRelay } from "@mybot/client-runtime/relay";
+import { layerRemoteHttpClient } from "@mybot/client-runtime/rpc";
 import { __resetDesktopPrimaryAuthForTests } from "../environments/primary/desktopAuth";
 
 import {
@@ -142,7 +142,7 @@ function bodyText(body: BodyInit | null | undefined): string {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.stubEnv("VITE_T3CODE_RELAY_URL", "https://relay.example.test");
+  vi.stubEnv("VITE_MYBOT_RELAY_URL", "https://relay.example.test");
   relayClientInstallDialog.requestConfirmation.mockResolvedValue(true);
 });
 

@@ -1,18 +1,18 @@
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import type { ProviderInstanceId } from "@t3tools/contracts";
+import type { ProviderInstanceId } from "@mybot/contracts";
 import {
   type ProviderTextGeneration,
   TextGenerationError,
-} from "@t3tools/provider-core/server/textGeneration";
+} from "@mybot/provider-core/server/textGeneration";
 
 import * as ProviderInstanceRegistry from "../provider/ProviderInstanceRegistry.ts";
 
 export type {
   ThreadTitleGenerationInput,
   ThreadTitleGenerationResult,
-} from "@t3tools/provider-core/server/textGeneration";
+} from "@mybot/provider-core/server/textGeneration";
 
 /**
  * TextGeneration - Service tag for thread title generation, routed to the

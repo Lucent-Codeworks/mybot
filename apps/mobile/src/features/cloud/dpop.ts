@@ -7,8 +7,10 @@ import * as Result from "effect/Result";
 import * as Schema from "effect/Schema";
 import * as ExpoCrypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
+
+import { getSecureItem } from "../../persistence/mobile-secure-storage";
 import { p256 } from "@noble/curves/nist";
-import { DpopPublicJwk, normalizeDpopHtu } from "@t3tools/shared/dpopCommon";
+import { DpopPublicJwk, normalizeDpopHtu } from "@mybot/shared/dpopCommon";
 import * as Layer from "effect/Layer";
 
 export class CloudDpopError extends Data.TaggedError("CloudDpopError")<{
@@ -86,7 +88,7 @@ export interface DpopProofKeyPair {
   readonly thumbprint: string;
 }
 
-const DPOP_PROOF_KEY_STORAGE_KEY = "t3code.cloud.dpop-proof-key";
+const DPOP_PROOF_KEY_STORAGE_KEY = "mybot.cloud.dpop-proof-key";
 
 function base64UrlToBytes(value: string): Uint8Array {
   return Result.getOrThrow(Base64Url.decode(value));
@@ -198,7 +200,7 @@ export function loadOrCreateDpopProofKeyPair(): Effect.Effect<
 > {
   return Effect.gen(function* () {
     const stored = yield* Effect.tryPromise({
-      try: () => SecureStore.getItemAsync(DPOP_PROOF_KEY_STORAGE_KEY),
+      try: () => getSecureItem(DPOP_PROOF_KEY_STORAGE_KEY),
       catch: cloudDpopError("Could not read the DPoP proof key."),
     });
     if (stored) {

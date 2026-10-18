@@ -1,4 +1,4 @@
-import type { EnvironmentId, ProjectScript, ThreadId } from "@t3tools/contracts";
+import type { EnvironmentId, ProjectScript, ThreadId } from "@mybot/contracts";
 import { useNavigation } from "@react-navigation/native";
 import { useCallback, useMemo } from "react";
 import { NativeHeaderToolbar } from "../../native/StackHeader";

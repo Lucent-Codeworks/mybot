@@ -4,7 +4,7 @@
  * adapter and the real `@muse-code/sdk` `Connection` run unchanged; only the
  * stdio pipe underneath is replayed.
  *
- * Transcript entries are MSP JSON-RPC lines. `expect_outbound` is one line T3
+ * Transcript entries are MSP JSON-RPC lines. `expect_outbound` is one line MyBot
  * wrote to Muse's stdin and `emit_inbound` is one line Muse wrote to stdout.
  * Every host begins with a synthetic `host_start` outbound record carrying its
  * `muse serve` arguments; records of the Nth host (N > 1) carry an `@hN` label
@@ -21,28 +21,28 @@ import {
   ProviderReplayEntry,
   type ProviderReplayEntry as ProviderReplayEntryType,
   type ProviderReplayTranscript,
-} from "@t3tools/contracts";
-import { MuseSettings } from "@t3tools/provider-muse/settings";
+} from "@mybot/contracts";
+import { MuseSettings } from "@mybot/provider-muse/settings";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
 
-import * as TestProviderHost from "@t3tools/provider-testing/TestProviderHost";
+import * as TestProviderHost from "@mybot/provider-testing/TestProviderHost";
 import {
   museInitializeParams,
   museServeArgs,
   museWorkspaceRoot,
   type MuseSdkHost,
   type MuseSdkHostOptions,
-} from "@t3tools/provider-muse/testing";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
+} from "@mybot/provider-muse/testing";
+import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
 import * as ProviderAdapterRegistry from "../ProviderAdapterRegistry.ts";
-import * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
+import * as ProviderContinuationRequests from "@mybot/provider-core/server/ProviderContinuationRequests";
 import type { OrchestratorV2ProviderReplayHarness } from "../testkit/ProviderReplayHarness.ts";
-import type { ProviderReplayGate } from "@t3tools/provider-testing/replayGate";
-import { materializeReplayTranscriptWorkspace } from "@t3tools/provider-testing/replayTranscript";
-import { makeMuseAdapterV2 } from "@t3tools/provider-muse/server";
+import type { ProviderReplayGate } from "@mybot/provider-testing/replayGate";
+import { materializeReplayTranscriptWorkspace } from "@mybot/provider-testing/replayTranscript";
+import { makeMuseAdapterV2 } from "@mybot/provider-muse/server";
 
 export const MUSE_PROVIDER_KIND = "muse";
 export const MUSE_MSP_REPLAY_PROTOCOL = "muse.msp-jsonl";
@@ -386,7 +386,7 @@ class MuseReplayController {
       }
       this.cursor += 1;
       emitted = true;
-      // Output a host wrote after T3 released it was never observed.
+      // Output a host wrote after MyBot released it was never observed.
       if (!host.open) continue;
       const frame = entry.frame;
       // Responses carry the client's request id; server requests carry their own.

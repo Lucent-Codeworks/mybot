@@ -1,6 +1,6 @@
-import { ConnectionTransientError } from "@t3tools/client-runtime/connection";
-import { EnvironmentId, ThreadId } from "@t3tools/contracts";
-import { ConnectionCatalogDocument, Persistence } from "@t3tools/client-runtime/platform";
+import { ConnectionTransientError } from "@mybot/client-runtime/connection";
+import { EnvironmentId, ThreadId } from "@mybot/contracts";
+import { ConnectionCatalogDocument, Persistence } from "@mybot/client-runtime/platform";
 import { describe, expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";

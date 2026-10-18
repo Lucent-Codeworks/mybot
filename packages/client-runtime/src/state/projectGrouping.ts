@@ -1,5 +1,5 @@
 import { scopedProjectKey, scopeProjectRef } from "../environment/scoped.ts";
-import type { EnvironmentId, ScopedProjectRef } from "@t3tools/contracts";
+import type { EnvironmentId, ScopedProjectRef } from "@mybot/contracts";
 
 import type { EnvironmentProject } from "./models.ts";
 import { normalizeProjectPathForComparison } from "./projects.ts";

@@ -1,6 +1,6 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, expect, it } from "@effect/vitest";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@mybot/shared/HostProcess";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
@@ -41,7 +41,7 @@ it("formats package runner commands from their cache entry paths", () => {
 it("treats stable installs as direct invocations", () => {
   for (const entryPath of [
     "/usr/local/lib/node_modules/mybot/dist/bin.mjs",
-    "/home/theo/Code/work/t3code/apps/server/dist/bin.mjs",
+    "/home/theo/Code/work/mybot/apps/server/dist/bin.mjs",
     "/home/theo/.t3/runtime/0.0.31/node_modules/mybot/dist/bin.mjs",
     "",
   ]) {
@@ -115,7 +115,7 @@ it.layer(NodeServices.layer)("root CLI commands", (it) => {
     );
 
   /** A directory holding an executable `mybot`, to stand in for one on PATH. */
-  const pathWithT3 = Effect.gen(function* () {
+  const pathWithMyBot = Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const bin = yield* fs.makeTempDirectoryScoped();
@@ -138,7 +138,7 @@ it.layer(NodeServices.layer)("root CLI commands", (it) => {
         yield* rootCommand({
           node: "/home/theo/.local/node/bin/node",
           entry: "/home/theo/.local/lib/node_modules/mybot/dist/bin.mjs",
-          path: yield* pathWithT3,
+          path: yield* pathWithMyBot,
         }),
       ).toBe('sudo env "PATH=$PATH" mybot browser setup');
     }).pipe(Effect.scoped),
@@ -153,14 +153,14 @@ it.layer(NodeServices.layer)("root CLI commands", (it) => {
       yield* fs.makeDirectory(path.dirname(shim), { recursive: true });
       yield* fs.writeFileString(shim, "#!/bin/sh\n", { mode: 0o755 });
       const desktop = {
-        node: "/tmp/.mount_T3abc/t3code",
+        node: "/tmp/.mount_T3abc/mybot",
         entry: "/tmp/.mount_T3abc/resources/app.asar/apps/server/dist/bin.mjs",
-        env: { T3CODE_CLI_PATH: shim },
+        env: { MYBOT_CLI_PATH: shim },
       };
       // The desktop app's shim, quoted for the shell and run as root as is.
       expect(yield* rootCommand(desktop)).toBe(`sudo '${shim}' browser setup`);
       // A `mybot` the person put on PATH still wins.
-      expect(yield* rootCommand({ ...desktop, path: yield* pathWithT3 })).toBe(
+      expect(yield* rootCommand({ ...desktop, path: yield* pathWithMyBot })).toBe(
         'sudo env "PATH=$PATH" mybot browser setup',
       );
       // A standalone binary names itself.
@@ -173,7 +173,7 @@ it.layer(NodeServices.layer)("root CLI commands", (it) => {
       ).toBe("sudo /opt/mybot/mybot browser setup");
       // A stale shim path, then no launcher at all, fall back to plain `mybot`.
       expect(
-        yield* rootCommand({ ...desktop, env: { T3CODE_CLI_PATH: path.join(home, "gone") } }),
+        yield* rootCommand({ ...desktop, env: { MYBOT_CLI_PATH: path.join(home, "gone") } }),
       ).toBe('sudo env "PATH=$PATH" mybot browser setup');
     }).pipe(Effect.scoped),
   );

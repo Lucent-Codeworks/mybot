@@ -57,7 +57,7 @@ it.layer(NodeServices.layer)("telemetry identity", (it) => {
     }).pipe(
       Effect.provide(
         ServerConfig.layerTest(process.cwd(), {
-          prefix: "t3-telemetry-identify-anonymous-",
+          prefix: "mybot-telemetry-identify-anonymous-",
         }),
       ),
     ),
@@ -96,7 +96,7 @@ it.layer(NodeServices.layer)("telemetry identity", (it) => {
     }).pipe(
       Effect.provide(
         ServerConfig.layerTest(process.cwd(), {
-          prefix: "t3-telemetry-identify-torn-",
+          prefix: "mybot-telemetry-identify-torn-",
         }),
       ),
     ),
@@ -150,7 +150,7 @@ it.layer(NodeServices.layer)("telemetry identity", (it) => {
       Effect.provide(
         Layer.merge(
           ServerConfig.layerTest(process.cwd(), {
-            prefix: "t3-telemetry-identify-tokenless-",
+            prefix: "mybot-telemetry-identify-tokenless-",
           }),
           Logger.layer([logger], { mergeWithExisting: false }),
         ),
@@ -202,7 +202,7 @@ it.layer(NodeServices.layer)("telemetry identity", (it) => {
       Effect.provide(
         Layer.merge(
           ServerConfig.layerTest(process.cwd(), {
-            prefix: "t3-telemetry-identify-decode-",
+            prefix: "mybot-telemetry-identify-decode-",
           }),
           Logger.layer([logger], { mergeWithExisting: false }),
         ),
@@ -243,7 +243,7 @@ it.layer(NodeServices.layer)("telemetry identity", (it) => {
       Effect.provide(
         Layer.merge(
           ServerConfig.layerTest(process.cwd(), {
-            prefix: "t3-telemetry-identify-read-",
+            prefix: "mybot-telemetry-identify-read-",
           }),
           Logger.layer([logger], { mergeWithExisting: false }),
         ),

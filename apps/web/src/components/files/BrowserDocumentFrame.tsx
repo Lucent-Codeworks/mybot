@@ -1,11 +1,11 @@
-import type { ScopedThreadRef } from "@t3tools/contracts";
+import type { ScopedThreadRef } from "@mybot/contracts";
 import {
   htmlRenderThemeFragment,
   htmlRenderThemeMessage,
   htmlRenderResult,
   readHtmlRenderContentHeight,
   readHtmlRenderLinkRequest,
-} from "@t3tools/shared/htmlRender";
+} from "@mybot/shared/htmlRender";
 import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
 
 import { useOpenLink } from "~/browser/useOpenLink";

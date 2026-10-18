@@ -1,5 +1,5 @@
-import { AuthStandardClientScopes, EnvironmentId, type ServerConfig } from "@t3tools/contracts";
-import { RelayClientTracer } from "@t3tools/shared/relayTracing";
+import { AuthStandardClientScopes, EnvironmentId, type ServerConfig } from "@mybot/contracts";
+import { RelayClientTracer } from "@mybot/shared/relayTracing";
 import { describe, expect, it } from "@effect/vitest";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
@@ -93,7 +93,7 @@ const LAN_ROUTE: ConnectionRoute = {
     }),
   ),
 };
-// LAN first, T3 Connect as the fallback.
+// LAN first, MyBot Connect as the fallback.
 const LAN_THEN_RELAY_ENTRY: ConnectionCatalogEntry = {
   target: LAN_ROUTE.target,
   profile: LAN_ROUTE.profile,
@@ -1747,7 +1747,7 @@ describe("EnvironmentSupervisor routes", () => {
       const harness = yield* makeHarness({
         checkRoute: (route) =>
           Effect.succeed(route.target._tag === "BearerConnectionTarget" ? "silent" : "unchecked"),
-        // Signed out of T3 Connect; the LAN is up but its check timed out.
+        // Signed out of MyBot Connect; the LAN is up but its check timed out.
         prepare: (_attempt, target) =>
           target._tag === "RelayConnectionTarget"
             ? Effect.fail(blocked("Sign in to MyBot Connect."))
@@ -1880,7 +1880,7 @@ describe("EnvironmentSupervisor routes", () => {
       );
       yield* Ref.set(lanAnswers, true);
       yield* TestClock.adjust("60 seconds");
-      // The switch lands back on T3 Connect.
+      // The switch lands back on MyBot Connect.
       yield* awaitState(
         supervisor.state,
         (state) => state.phase === "connected" && state.generation === 2,
@@ -2034,7 +2034,7 @@ describe("EnvironmentSupervisor routes", () => {
           }),
       }).pipe(Effect.provide(harness.dependencies));
 
-      // Connected over T3 Connect, the server reports its LAN address; the
+      // Connected over MyBot Connect, the server reports its LAN address; the
       // learned route ranks first, answers, and the session moves to it.
       yield* awaitState(
         supervisor.state,

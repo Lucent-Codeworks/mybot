@@ -11,10 +11,10 @@
  * @module provider-cursor/server/CursorUsageAccounts
  */
 
-import * as ProviderHost from "@t3tools/provider-core/server/ProviderHost";
-import type { ProviderUsageScan } from "@t3tools/provider-core/server/usage";
-import { writeFileStringAtomically } from "@t3tools/shared/atomicWrite";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as ProviderHost from "@mybot/provider-core/server/ProviderHost";
+import type { ProviderUsageScan } from "@mybot/provider-core/server/usage";
+import { writeFileStringAtomically } from "@mybot/shared/atomicWrite";
+import * as HostProcess from "@mybot/shared/HostProcess";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as Deferred from "effect/Deferred";
@@ -60,7 +60,7 @@ export class CursorUsageAccounts extends Context.Service<
     /** Waits for every cache write scheduled so far, as a restart would need. */
     readonly awaitPersisted: Effect.Effect<void>;
   }
->()("@t3tools/provider-cursor/server/CursorUsageAccounts") {}
+>()("@mybot/provider-cursor/server/CursorUsageAccounts") {}
 
 const make = Effect.gen(function* () {
   const fileSystem = yield* FileSystem.FileSystem;

@@ -1,4 +1,4 @@
-import { findAppPreset } from "@t3tools/shared/appCatalog";
+import { findAppPreset } from "@mybot/shared/appCatalog";
 import { PlugIcon } from "lucide-react";
 
 import { cn } from "~/lib/utils";

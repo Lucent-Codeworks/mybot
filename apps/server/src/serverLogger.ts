@@ -1,4 +1,5 @@
-import * as SharedObservability from "@t3tools/shared/observability";
+import * as HostProcess from "@mybot/shared/HostProcess";
+import * as SharedObservability from "@mybot/shared/observability";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Logger from "effect/Logger";
@@ -13,6 +14,7 @@ export const layer = Effect.gen(function* () {
   const layerMinimumLogLevel = Layer.succeed(References.MinimumLogLevel, config.logLevel);
 
   const logs = config.otlpLogsExport;
+  const host = yield* HostProcess.telemetryAttributes;
   const otlpLogger =
     config.otlpLogsUrl === undefined
       ? undefined
@@ -20,7 +22,7 @@ export const layer = Effect.gen(function* () {
           url: config.otlpLogsUrl,
           exportInterval: `${logs.exportIntervalMs} millis`,
           headers: logs.headers,
-          resource: ServerConfig.otlpResource(config),
+          resource: ServerConfig.otlpResource(config, host),
         });
 
   // `Logger.layer` writes the whole logger set rather than adding to it, so

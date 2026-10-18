@@ -1,8 +1,5 @@
-import type {
-  EnvironmentProject,
-  EnvironmentThreadShell,
-} from "@t3tools/client-runtime/state/shell";
-import { EnvironmentId, ProjectId, ProviderInstanceId, ThreadId } from "@t3tools/contracts";
+import type { EnvironmentProject, EnvironmentThreadShell } from "@mybot/client-runtime/state/shell";
+import { EnvironmentId, ProjectId, ProviderInstanceId, ThreadId } from "@mybot/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import {
@@ -122,12 +119,12 @@ describe("home project scopes", () => {
       makeProject({
         environmentId: EnvironmentId.make("environment-local"),
         id: ProjectId.make("project-local"),
-        title: "t3code",
+        title: "mybot",
       }),
       makeProject({
         environmentId: EnvironmentId.make("environment-remote"),
         id: ProjectId.make("project-remote"),
-        title: "t3code",
+        title: "mybot",
       }),
     ];
 
@@ -142,15 +139,15 @@ describe("home project scopes", () => {
       makeProject({
         environmentId,
         id: ProjectId.make("project-remote-older"),
-        title: "t3code",
-        workspaceRoot: "/remote/t3code",
+        title: "mybot",
+        workspaceRoot: "/remote/mybot",
         updatedAt: "2026-06-01T00:00:00.000Z",
       }),
       makeProject({
         environmentId,
         id: ProjectId.make("project-remote-fresh"),
-        title: "t3code",
-        workspaceRoot: "/remote/t3code/",
+        title: "mybot",
+        workspaceRoot: "/remote/mybot/",
         updatedAt: "2026-06-02T00:00:00.000Z",
       }),
     ];

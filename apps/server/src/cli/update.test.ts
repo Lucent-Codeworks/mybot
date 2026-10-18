@@ -4,7 +4,7 @@ import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Option from "effect/Option";
 import * as Path from "effect/Path";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@mybot/shared/HostProcess";
 
 import { repointLauncher, resolveLauncherPath } from "./update.ts";
 
@@ -13,7 +13,7 @@ it.layer(NodeServices.layer)("mybot update launcher", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-update-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "mybot-update-" });
       const oldExe = path.join(root, "runtime/versions/1.0.0/mybot");
       const newExe = path.join(root, "runtime/versions/2.0.0/mybot");
       const launcher = path.join(root, "bin/mybot");
@@ -39,7 +39,7 @@ it.layer(NodeServices.layer)("mybot update launcher", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-update-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "mybot-update-" });
       const newExe = path.join(root, "runtime/versions/2.0.0/mybot");
       const copy = path.join(root, "copy/mybot");
       const foreign = path.join(root, "foreign/mybot");
@@ -73,7 +73,7 @@ it.layer(NodeServices.layer)("mybot update launcher", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-update-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "mybot-update-" });
       const launcher = path.join(root, "bin/mybot");
       yield* fs.makeDirectory(path.dirname(launcher), { recursive: true });
       yield* fs.writeFileString(launcher, "");

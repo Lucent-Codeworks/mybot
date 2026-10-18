@@ -4,8 +4,8 @@ import {
   ThreadId,
   OrchestratorMcpFailure,
   ProjectId,
-} from "@t3tools/contracts";
-import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
+} from "@mybot/contracts";
+import { resolveProjectSettings } from "@mybot/shared/projectSettings";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as ThreadMessageIntake from "../../../orchestration-v2/ThreadMessageIntake.ts";
