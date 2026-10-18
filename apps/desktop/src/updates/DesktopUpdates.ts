@@ -192,6 +192,7 @@ export class DesktopUpdates extends Context.Service<
 >()("@mybot/desktop/updates/DesktopUpdates") {}
 
 const {
+  logDebug: logUpdaterDebug,
   logInfo: logUpdaterInfo,
   logWarning: logUpdaterWarning,
   logError: logUpdaterError,
@@ -1001,6 +1002,21 @@ export const make = Effect.gen(function* () {
       }
       yield* Ref.set(updaterConfiguredRef, true);
 
+      // electron-updater prints command stderr (pkexec, dpkg) through its logger
+      // and throws only "exited with code N". Route warnings and errors into our
+      // log so a failed install says why. Routine info goes to debug.
+      const forwardUpdaterLog =
+        (log: typeof logUpdaterError) =>
+        (message?: unknown): void => {
+          const text = (message instanceof Error ? message.message : String(message ?? "")).trim();
+          if (text === "") return;
+          runEffect(log("electron-updater log", { detail: redactMessage(text) }));
+        };
+      yield* electronUpdater.setLogger({
+        info: forwardUpdaterLog(logUpdaterDebug),
+        warn: forwardUpdaterLog(logUpdaterWarning),
+        error: forwardUpdaterLog(logUpdaterError),
+      });
       yield* electronUpdater.setAutoDownload(false);
       yield* electronUpdater.setAutoInstallOnAppQuit(false);
       yield* applyAutoUpdaterChannel(settings.updateChannel);

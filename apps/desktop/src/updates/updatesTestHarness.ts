@@ -9,6 +9,8 @@ import * as Option from "effect/Option";
 import * as DesktopBackendPool from "../backend/DesktopBackendPool.ts";
 import * as DesktopConfig from "../app/DesktopConfig.ts";
 import * as DesktopEnvironment from "../app/DesktopEnvironment.ts";
+import type { Logger as ElectronUpdaterLogger } from "electron-updater";
+
 import * as ElectronUpdater from "../electron/ElectronUpdater.ts";
 import * as ElectronWindow from "../electron/ElectronWindow.ts";
 import * as DesktopAppSettings from "../settings/DesktopAppSettings.ts";
@@ -45,6 +47,7 @@ export function makeHarness(options: UpdatesHarnessOptions = {}) {
   let downloadCount = 0;
   let allowDowngrade = false;
   let fullChangelog = false;
+  let updaterLogger: ElectronUpdaterLogger | undefined;
   const feedUrls: ElectronUpdater.ElectronUpdaterFeedUrl[] = [];
   const listeners = new Map<string, Set<(...args: readonly unknown[]) => void>>();
   const sentStates: DesktopUpdateState[] = [];
@@ -74,6 +77,10 @@ export function makeHarness(options: UpdatesHarnessOptions = {}) {
       }),
     setAutoDownload: () => Effect.void,
     setAutoInstallOnAppQuit: () => Effect.void,
+    setLogger: (logger) =>
+      Effect.sync(() => {
+        updaterLogger = logger;
+      }),
     setChannel: () => Effect.void,
     setAllowPrerelease: () => Effect.void,
     allowDowngrade: Effect.sync(() => allowDowngrade),
@@ -262,6 +269,7 @@ export function makeHarness(options: UpdatesHarnessOptions = {}) {
     downloadCount: () => downloadCount,
     feedUrls: (): ElectronUpdater.ElectronUpdaterFeedUrl[] => feedUrls,
     fullChangelog: () => fullChangelog,
+    updaterLogger: () => updaterLogger,
     listenerCount: () =>
       Array.from(listeners.values()).reduce(
         (total, eventListeners) => total + eventListeners.size,
