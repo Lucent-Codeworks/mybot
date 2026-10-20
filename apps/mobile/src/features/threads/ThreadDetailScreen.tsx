@@ -17,6 +17,7 @@ import { HeaderHeightContext } from "@react-navigation/elements";
 import { NativeLayoutObserver } from "../../native/NativeLayoutObserver";
 import { deriveBottomControlInsets, type NativeLayoutMetrics } from "../../lib/reserved-regions";
 import type {
+  BotProfile,
   EnvironmentId,
   MessageId,
   ModelSelection,
@@ -149,6 +150,7 @@ import { useThreadQueuedCount } from "./ThreadQueueControl";
 import type { ThreadContentPresentation } from "./threadContentPresentation";
 import { resolveThreadFeedSubmissionAnchor } from "./thread-feed-live-follow";
 import { useGlobalVoiceInput } from "../voice-input/VoiceInputProvider";
+import { ThreadPet } from "../pets/ThreadPet";
 
 export interface ThreadDetailScreenProps {
   readonly canOperateThread: boolean;
@@ -206,6 +208,8 @@ export interface ThreadDetailScreenProps {
   readonly onCancelQueuedRunEdit: () => void;
   readonly onRemoveQueuedEditAttachment: (attachmentId: string) => void;
   readonly environmentId: EnvironmentId;
+  /** The thread's bot, whose pet sits above the composer. */
+  readonly bot: BotProfile | null | undefined;
   readonly projectWorkspaceRoot: string | null;
   readonly threadCwd: string | null;
   readonly selectedThreadQueueCount: number;
@@ -1268,6 +1272,15 @@ export const ThreadDetailScreen = memo(function ThreadDetailScreen(props: Thread
                   }}
                 />
                 <View className="w-full self-center" style={{ maxWidth: contentMaxWidth }}>
+                  {/* Out of flow, so it neither narrows the composer nor joins the
+                  measured overlay height that insets the feed. */}
+                  <View pointerEvents="none" className="absolute bottom-full left-3">
+                    <ThreadPet
+                      environmentId={props.environmentId}
+                      bot={props.bot}
+                      thread={props.selectedThread}
+                    />
+                  </View>
                   {props.queuedRunEdit !== null ? (
                     <Animated.View
                       className="shrink-0"

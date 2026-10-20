@@ -849,6 +849,7 @@ function ThreadRouteContent(
           onCancelQueuedRunEdit={composer.cancelQueuedRunEdit}
           onRemoveQueuedEditAttachment={composer.onRemoveQueuedEditAttachment}
           environmentId={selectedThread.environmentId}
+          bot={selectedThreadProject?.bot}
           projectWorkspaceRoot={selectedThreadProject?.workspaceRoot ?? null}
           threadCwd={selectedThreadCwd}
           selectedThreadQueueCount={composer.selectedThreadQueueCount}
