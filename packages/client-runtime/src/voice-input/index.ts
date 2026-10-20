@@ -24,3 +24,16 @@ export {
   type ServerTranscriberDependencies,
 } from "./serverTranscriber.ts";
 export { encodeWav16kMono, VOICE_SAMPLE_RATE } from "./wav.ts";
+export {
+  serverVoiceAvailability,
+  voiceDownloadPercent,
+  voiceModelChoices,
+  voiceModelName,
+  voiceSetupStep,
+  voiceStatusLabel,
+  VOICE_OWNER_NOTICE,
+  VOICE_SETUP_MESSAGE,
+  VOICE_SETUP_TITLE,
+  type ServerVoiceAvailability,
+  type VoiceSetupStep,
+} from "./presentation.ts";

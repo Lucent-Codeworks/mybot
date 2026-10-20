@@ -1,3 +1,4 @@
+import { serverVoiceAvailability } from "@mybot/client-runtime/voice-input";
 import type { VoiceInputStatus } from "@mybot/contracts";
 
 /**
@@ -16,12 +17,9 @@ export function webVoiceAvailability(input: {
   readonly hasMediaRecorder: boolean;
   readonly status: VoiceInputStatus | null;
 }): WebVoiceAvailability {
-  if (input.capability !== true) return "hidden";
-  const phase = input.status?.phase;
-  if (phase === "unsupported" || !input.hasMediaRecorder) return "unsupported";
+  const server = serverVoiceAvailability(input);
+  if (server === "hidden") return "hidden";
+  if (server === "unsupported" || !input.hasMediaRecorder) return "unsupported";
   if (!input.secureContext) return "insecure";
-  if (phase === "not-installed" || phase === "failed") return "needs-setup";
-  // A first download has no model to transcribe with yet; the setup prompt shows its progress.
-  if (phase === "downloading" && input.status?.model === null) return "needs-setup";
-  return "ready";
+  return server;
 }

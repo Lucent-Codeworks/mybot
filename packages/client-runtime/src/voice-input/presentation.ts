@@ -1,5 +1,31 @@
 import { VOICE_MODEL_SIZES, type VoiceInputStatus, type VoiceModelId } from "@mybot/contracts";
 
+/** Copy shared by every client's first-use prompt and settings. */
+export const VOICE_SETUP_TITLE = "Set up voice input";
+export const VOICE_SETUP_MESSAGE =
+  "Voice input needs a speech model on your MyBot server (about 150 MB). Download it?";
+export const VOICE_OWNER_NOTICE = "The MyBot server owner needs to turn on voice input.";
+
+/**
+ * Whether a MyBot server can transcribe: `hidden` when it does not advertise
+ * voice input, `needs-setup` while it has no model, and `ready` otherwise,
+ * including while its status is still unknown.
+ */
+export type ServerVoiceAvailability = "hidden" | "unsupported" | "needs-setup" | "ready";
+
+export function serverVoiceAvailability(input: {
+  readonly capability: boolean | undefined;
+  readonly status: VoiceInputStatus | null;
+}): ServerVoiceAvailability {
+  if (input.capability !== true) return "hidden";
+  const phase = input.status?.phase;
+  if (phase === "unsupported") return "unsupported";
+  if (phase === "not-installed" || phase === "failed") return "needs-setup";
+  // A first download has no model to transcribe with yet; the setup prompt shows its progress.
+  if (phase === "downloading" && input.status?.model === null) return "needs-setup";
+  return "ready";
+}
+
 const MODEL_NAMES: Readonly<Record<VoiceModelId, string>> = {
   tiny: "Tiny",
   base: "Base",

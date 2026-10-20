@@ -1,8 +1,12 @@
 import { useAtomValue } from "@effect/atom-react";
+import {
+  voiceModelChoices,
+  voiceStatusLabel,
+  VOICE_OWNER_NOTICE,
+} from "@mybot/client-runtime/voice-input";
 import { DEFAULT_VOICE_MODEL, type EnvironmentId, type VoiceModelId } from "@mybot/contracts";
 import { useState } from "react";
 
-import { VOICE_OWNER_NOTICE } from "../../features/voiceInput/VoiceSetupDialog";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { useVoiceInputStatus, voiceInputEnvironment } from "../../state/voiceInput";
 import { Button } from "../ui/button";
@@ -10,7 +14,6 @@ import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../
 import { SettingsPageContainer, SettingsRow, SettingsSection } from "./settingsLayout";
 import { useSettingsScope } from "./SettingsScopeContext";
 import { searchableSetting } from "./settingsSearch";
-import { voiceModelChoices, voiceStatusLabel } from "./VoiceSettings.logic";
 
 const CHOICES = voiceModelChoices();
 const SELECT_ITEMS = CHOICES.map((choice) => ({

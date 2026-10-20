@@ -2,11 +2,12 @@ import type { VoiceInputStatus } from "@mybot/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import {
+  serverVoiceAvailability,
   voiceDownloadPercent,
   voiceModelChoices,
   voiceSetupStep,
   voiceStatusLabel,
-} from "./VoiceSettings.logic";
+} from "./presentation.ts";
 
 const status = (patch: Partial<VoiceInputStatus>): VoiceInputStatus => ({
   phase: "not-installed",
@@ -111,5 +112,41 @@ describe("voiceSetupStep", () => {
   it("treats an unknown status as not yet started", () => {
     expect(voiceSetupStep(null, false)).toBe("ask");
     expect(voiceSetupStep(status({ phase: "unsupported" }), false)).toBe("unsupported");
+  });
+});
+
+describe("serverVoiceAvailability", () => {
+  it("hides voice input on servers that do not advertise it", () => {
+    expect(serverVoiceAvailability({ capability: undefined, status: null })).toBe("hidden");
+    expect(serverVoiceAvailability({ capability: false, status: null })).toBe("hidden");
+  });
+
+  it("needs setup until a model is installed", () => {
+    for (const phase of ["not-installed", "failed", "downloading"] as const) {
+      expect(serverVoiceAvailability({ capability: true, status: status({ phase }) })).toBe(
+        "needs-setup",
+      );
+    }
+  });
+
+  it("is ready with a model, including while another one downloads", () => {
+    expect(
+      serverVoiceAvailability({
+        capability: true,
+        status: status({ phase: "ready", model: "base" }),
+      }),
+    ).toBe("ready");
+    expect(
+      serverVoiceAvailability({
+        capability: true,
+        status: status({ phase: "downloading", model: "base", pendingModel: "small" }),
+      }),
+    ).toBe("ready");
+  });
+
+  it("reports an unsupported server platform", () => {
+    expect(
+      serverVoiceAvailability({ capability: true, status: status({ phase: "unsupported" }) }),
+    ).toBe("unsupported");
   });
 });

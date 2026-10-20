@@ -1,4 +1,12 @@
 import { useAtomValue } from "@effect/atom-react";
+import {
+  voiceDownloadPercent,
+  voiceSetupStep,
+  voiceStatusLabel,
+  VOICE_OWNER_NOTICE,
+  VOICE_SETUP_MESSAGE,
+  VOICE_SETUP_TITLE,
+} from "@mybot/client-runtime/voice-input";
 import { DEFAULT_VOICE_MODEL, type EnvironmentId } from "@mybot/contracts";
 import { useEffect, useState } from "react";
 
@@ -11,16 +19,9 @@ import {
   DialogPopup,
   DialogTitle,
 } from "../../components/ui/dialog";
-import {
-  voiceDownloadPercent,
-  voiceSetupStep,
-  voiceStatusLabel,
-} from "../../components/settings/VoiceSettings.logic";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { useVoiceInputStatus, voiceInputEnvironment } from "../../state/voiceInput";
 import { closeVoiceInputSetup, useVoiceSetupRequest } from "./voiceInputSetup";
-
-export const VOICE_OWNER_NOTICE = "The MyBot server owner needs to turn on voice input.";
 
 /** Mounted once at the app root; shows the prompt `requestVoiceInputSetup` asks for. */
 export function VoiceSetupDialogHost() {
@@ -51,7 +52,7 @@ function VoiceSetupDialog({ environmentId }: { environmentId: EnvironmentId }) {
     <Dialog open onOpenChange={(open) => !open && closeVoiceInputSetup()}>
       <DialogPopup className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Set up voice input</DialogTitle>
+          <DialogTitle>{VOICE_SETUP_TITLE}</DialogTitle>
           <DialogDescription>
             {downloading || step === "starting"
               ? status
@@ -59,7 +60,7 @@ function VoiceSetupDialog({ environmentId }: { environmentId: EnvironmentId }) {
                 : "Starting…"
               : step === "unsupported" && status
                 ? voiceStatusLabel(status)
-                : "Voice input needs a speech model on your MyBot server (about 150 MB). Download it?"}
+                : VOICE_SETUP_MESSAGE}
           </DialogDescription>
           {!canInstall && !downloading ? (
             <p className="text-muted-foreground text-sm">{VOICE_OWNER_NOTICE}</p>
