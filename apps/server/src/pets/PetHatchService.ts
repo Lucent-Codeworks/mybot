@@ -38,6 +38,7 @@ import { resolveAttachmentPathById } from "../attachmentStore.ts";
 import * as ServerConfig from "../config.ts";
 import * as Orchestrator from "../orchestration-v2/Orchestrator.ts";
 import * as ThreadLaunchService from "../orchestration-v2/ThreadLaunchService.ts";
+import * as ThreadMessageIntake from "../orchestration-v2/ThreadMessageIntake.ts";
 import * as ThreadManagement from "../orchestration-v2/ThreadManagementService.ts";
 import * as ProjectService from "../project/ProjectService.ts";
 import * as ProviderRegistry from "../provider/ProviderRegistry.ts";
@@ -215,38 +216,45 @@ const make = Effect.gen(function* () {
         .makeDirectory(stripsDir(jobId), { recursive: true })
         .pipe(Effect.mapError(() => fail("io", "Couldn't save the hatching job.")));
       yield* writeJob(job);
-      yield* launcher
-        .launch({
-          commandId: CommandId.make(`pet-hatch:${jobId}`),
-          threadId: job.threadId,
-          projectId: input.projectId,
-          title: `Hatching ${input.displayName}`,
-          modelSelection: codex,
-          runtimeMode: "full-access",
-          interactionMode: "default",
-          initialMessage: {
-            messageId: MessageId.make(`pet-hatch:${jobId}`),
-            text: buildHatchPrompt({
-              displayName: input.displayName,
-              description: input.description,
-              jobDir: jobDir(jobId),
-              hasReference: attachments.length > 0,
-            }),
-            attachments,
-          },
-          createdBy: "system",
-          creationSource: "server",
-        })
-        .pipe(
-          Effect.tapError((cause) =>
-            Effect.logWarning("A pet hatching thread failed to launch.", { cause, jobId }).pipe(
-              Effect.andThen(Effect.sync(() => hatchingThreads.delete(job.threadId))),
-              Effect.andThen(fileSystem.remove(jobDir(jobId), { recursive: true })),
-              Effect.ignore,
-            ),
+      // Launched through intake, which claims the pending reference upload into
+      // the thread's store; left pending, the upload sweep deletes it after a day.
+      yield* ThreadMessageIntake.launchThread({
+        commandId: CommandId.make(`pet-hatch:${jobId}`),
+        threadId: job.threadId,
+        projectId: input.projectId,
+        title: `Hatching ${input.displayName}`,
+        modelSelection: codex,
+        runtimeMode: "full-access",
+        interactionMode: "default",
+        initialMessage: {
+          messageId: MessageId.make(`pet-hatch:${jobId}`),
+          text: buildHatchPrompt({
+            displayName: input.displayName,
+            description: input.description,
+            jobDir: jobDir(jobId),
+            hasReference: attachments.length > 0,
+          }),
+          attachments,
+        },
+        createdBy: "system",
+        creationSource: "server",
+      }).pipe(
+        Effect.provideService(ThreadLaunchService.ThreadLaunchService, launcher),
+        Effect.provideService(ServerConfig.ServerConfig, config),
+        Effect.provideService(FileSystem.FileSystem, fileSystem),
+        Effect.tapError((cause) =>
+          Effect.logWarning("A pet hatching thread failed to launch.", { cause, jobId }).pipe(
+            Effect.andThen(Effect.sync(() => hatchingThreads.delete(job.threadId))),
+            Effect.andThen(fileSystem.remove(jobDir(jobId), { recursive: true })),
+            Effect.ignore,
           ),
-          Effect.mapError(() => fail("io", "Couldn't start the hatching thread.")),
-        );
+        ),
+        Effect.mapError((error) =>
+          error._tag === "AttachmentClaimError"
+            ? fail("invalid_image", error.message)
+            : fail("io", "Couldn't start the hatching thread."),
+        ),
+      );
       return job;
     },
   );
@@ -383,6 +391,7 @@ const make = Effect.gen(function* () {
             return yield* finish(job, "failed", yield* runError(job.threadId, latest));
           case "interrupted":
           case "cancelled":
+          case "rolled_back":
             return yield* finish(job, "cancelled", "The hatching thread was stopped.");
           default:
             return;
@@ -416,7 +425,9 @@ const make = Effect.gen(function* () {
     Stream.runForEach((event) => {
       if (
         event.type !== "run.updated" ||
-        !["completed", "failed", "interrupted", "cancelled"].includes(event.payload.status)
+        !["completed", "failed", "interrupted", "cancelled", "rolled_back"].includes(
+          event.payload.status,
+        )
       ) {
         return Effect.void;
       }

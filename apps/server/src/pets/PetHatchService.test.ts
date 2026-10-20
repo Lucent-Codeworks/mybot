@@ -22,6 +22,12 @@ import * as Queue from "effect/Queue";
 import * as Stream from "effect/Stream";
 import { expect } from "vite-plus/test";
 
+import {
+  createPendingAttachmentId,
+  parseThreadSegmentFromAttachmentId,
+  resolveAttachmentPath,
+  toSafeThreadAttachmentSegment,
+} from "../attachmentStore.ts";
 import * as ServerConfig from "../config.ts";
 import * as Orchestrator from "../orchestration-v2/Orchestrator.ts";
 import * as ThreadLaunchService from "../orchestration-v2/ThreadLaunchService.ts";
@@ -127,7 +133,11 @@ const withHatch = <A, E>(
           Effect.sync(() => {
             launches.push(input);
             runStatus.set(input.threadId!, "running");
-            return { threadId: input.threadId } as ThreadLaunchService.ThreadLaunchResult;
+            const messages = input.initialMessage ? [input.initialMessage] : [];
+            return {
+              threadId: input.threadId,
+              projection: { messages },
+            } as unknown as ThreadLaunchService.ThreadLaunchResult;
           }),
       }),
       Layer.mock(ThreadManagementService.ThreadManagementService)({
@@ -278,28 +288,36 @@ it.effect("writes the job and launches a full-access Codex thread pointed at the
   ),
 );
 
-it.effect("attaches the reference image to the first message", () =>
+it.effect("claims the reference upload into the hatch thread's first message", () =>
   withHatch({}, ({ hatch, launches, attachmentsDir }) =>
     Effect.gen(function* () {
       const bytes = strip(2);
-      NodeFS.writeFileSync(NodePath.join(attachmentsDir, "pending-reference.png"), bytes);
-      yield* hatch.start({
-        ...input,
-        referenceAttachmentId: ChatAttachmentId.make("pending-reference"),
+      const referenceId = ChatAttachmentId.make(createPendingAttachmentId("png"));
+      NodeFS.writeFileSync(NodePath.join(attachmentsDir, `${referenceId}.png`), bytes);
+      const job = yield* hatch.start({ ...input, referenceAttachmentId: referenceId });
+      const attachments = launches[0]?.initialMessage?.attachments ?? [];
+      expect(attachments).toHaveLength(1);
+      const claimed = attachments[0]!;
+      expect(claimed).toMatchObject({
+        type: "image",
+        name: "reference.png",
+        mimeType: "image/png",
+        sizeBytes: bytes.byteLength,
       });
-      expect(launches[0]?.initialMessage?.attachments).toEqual([
-        {
-          type: "image",
-          id: "pending-reference",
-          name: "reference.png",
-          mimeType: "image/png",
-          sizeBytes: bytes.byteLength,
-        },
-      ]);
+      // Claimed into the thread's store, so the 24h pending sweep can't delete it.
+      expect(claimed.id).not.toBe(referenceId);
+      expect(parseThreadSegmentFromAttachmentId(claimed.id)).toBe(
+        toSafeThreadAttachmentSegment(job.threadId),
+      );
+      const claimedPath = resolveAttachmentPath({ attachmentsDir, attachment: claimed });
+      expect(NodeFS.readFileSync(claimedPath!)).toEqual(Buffer.from(bytes));
       expect(launches[0]?.initialMessage?.text).toContain("reference image");
 
       const error = (yield* Effect.flip(
-        hatch.start({ ...input, referenceAttachmentId: ChatAttachmentId.make("pending-gone") }),
+        hatch.start({
+          ...input,
+          referenceAttachmentId: ChatAttachmentId.make(createPendingAttachmentId("png")),
+        }),
       )) as PetError;
       expect(error.code).toBe("not_found");
     }),
@@ -390,12 +408,18 @@ it.effect("asks Codex to fix missing strips twice, then fails the job", () =>
   ),
 );
 
-it.effect("marks a stopped hatch cancelled and a failed turn failed", () =>
+it.effect("marks a stopped or rolled-back hatch cancelled and a failed turn failed", () =>
   withHatch({}, (harness) =>
     Effect.gen(function* () {
       const marker = yield* startMarker(harness);
       const stopped = yield* harness.hatch.start(input);
       expect((yield* finishTurn(harness, marker, stopped, "interrupted")).status).toBe("cancelled");
+
+      const rolledBack = yield* harness.hatch.start({ ...input, displayName: "Undo" });
+      expect(yield* finishTurn(harness, marker, rolledBack, "rolled_back")).toMatchObject({
+        status: "cancelled",
+        error: "The hatching thread was stopped.",
+      });
 
       const broken = yield* harness.hatch.start({ ...input, displayName: "Bolt" });
       const failed = yield* finishTurn(harness, marker, broken, "failed");
