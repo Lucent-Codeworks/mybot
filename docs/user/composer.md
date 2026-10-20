@@ -162,17 +162,47 @@ Stashes containing uploaded files must be restored in their original environment
 Those files are retained for 24 hours. After an upload expires, restore the prompt
 and use **Attach again** or remove the missing file before sending.
 
-## Voice input on iPhone
+## Voice input
 
-On supported iPhones with iOS 26 or later, use the composer's microphone to record,
-then confirm to transcribe. Text is inserted where your selection was when
-recording started, ready for you to review and edit before sending.
+Dictate into the composer instead of typing. On web and desktop, click the
+microphone next to attach, press `Cmd+Alt+V` on macOS or `Ctrl+Alt+V` on Windows and
+Linux, or run **Start voice input** from the command palette. On iPhone and Android,
+tap the composer's microphone. Press the shortcut again or `Esc` (**Done** on mobile)
+to insert the text where your cursor was when recording started, ready to review and
+edit. Press `Enter` (**Send** on mobile) to insert it and send it right away.
 
-The first use may download Apple's speech model and needs a network connection.
-Later transcription works offline for that language. Recordings can be up to five
-minutes long. Canceling, leaving the screen, or an audio interruption discards the
-recording and preserves your existing draft. While recording, the screen stays
-awake; it can sleep normally once recording stops.
+Recordings can be up to five minutes long. Canceling discards the recording and
+keeps your draft. If transcription fails, the recording is kept so you can retry or
+discard it.
+
+### Web, desktop, and Android
+
+Your MyBot server transcribes the audio. The first time you tap the microphone on a
+server without a voice model, MyBot asks to download one (about 150 MB) onto that
+MyBot server. Any paired device can do this. If it can't, you'll see "The MyBot
+server owner needs to turn on voice input."
+
+Choose, switch, or remove the model in **Settings → Voice**, which lists each MyBot
+server. On Android, open the server's settings instead. Base is recommended; Tiny is
+faster, and Small and Large turbo are more accurate but slower.
+
+Audio is sent only to your MyBot server and deleted after transcription or
+cancellation. Only the message text is sent when you submit.
+
+Browsers only allow microphone access on a secure connection: `localhost`, Tailscale
+HTTPS, or the MyBot tunnel. A plain `http://` address on your local network can't
+record.
+
+A MyBot server running on macOS can't transcribe voice yet, and voice input shows as
+not available there.
+
+### iPhone
+
+On supported iPhones with iOS 26 or later, transcription runs on your device. The
+first use may download Apple's speech model and needs a network connection. Later
+transcription works offline for that language. Leaving the screen or an audio
+interruption discards the recording and preserves your existing draft. While
+recording, the screen stays awake; it can sleep normally once recording stops.
 
 Voice input records from the first connected microphone in **Settings → Microphone**.
 The list mixes kinds (built-in, other wired, other Bluetooth, CarPlay) with wired and
@@ -181,8 +211,8 @@ for example, put **Other Bluetooth** above your AirPods so a new headset is pref
 while the AirPods microphone stays low. By default, CarPlay comes after the built-in
 microphone.
 
-Transcription runs on your device. MyBot deletes the temporary audio after
-transcription or cancellation; only the message text is sent when you submit.
+MyBot deletes the temporary audio after transcription or cancellation; only the
+message text is sent when you submit.
 
 ## Queued messages
 
