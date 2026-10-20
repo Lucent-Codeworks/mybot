@@ -12,6 +12,7 @@ import {
   FileSearchIcon,
   LinkIcon,
   MessageSquareIcon,
+  MicIcon,
   MonitorIcon,
   MoonIcon,
   PaletteIcon,
@@ -24,6 +25,10 @@ import {
   BotIcon,
 } from "lucide-react";
 import { requestThreadFindOpen } from "./chat/threadFindActionBus";
+import {
+  canToggleComposerVoice,
+  requestComposerVoiceToggle,
+} from "../features/voiceInput/useComposerVoiceInput";
 import {
   useCallback,
   useDeferredValue,
@@ -859,6 +864,22 @@ function OpenCommandPaletteDialog(props: {
       shortcutCommand: "chat.find",
       run: async () => {
         requestThreadFindOpen();
+      },
+    });
+  }
+
+  // Read per render like the prompt link below: the composer's server status and
+  // whether this device may operate it decide if the toggle would do anything.
+  if (paletteRouteTarget !== null && canToggleComposerVoice()) {
+    actionItems.push({
+      kind: "action",
+      value: "action:voice-input",
+      searchTerms: ["voice", "dictate", "dictation", "speak", "talk", "microphone", "mic"],
+      title: "Start voice input",
+      icon: <MicIcon className={ITEM_ICON_CLASS} />,
+      shortcutCommand: "composer.voice",
+      run: async () => {
+        requestComposerVoiceToggle();
       },
     });
   }

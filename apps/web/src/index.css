@@ -2220,6 +2220,59 @@ code {
   }
 }
 
+/* Picture pets (components/pets/PetSprite.tsx) have no atlas, so each reaction
+   is a fixed motion of the whole image. Only the bob repeats, and only while a
+   turn is working. Atlas row keyframes are generated from PET_ROWS in PetSprite. */
+.pet-picture-bob {
+  animation: pet-picture-bob 0.5s steps(2) infinite;
+}
+
+.pet-picture-hop {
+  animation: pet-picture-hop 0.45s ease-out 3;
+}
+
+.pet-picture-jump {
+  animation: pet-picture-jump 0.5s ease-out 1;
+}
+
+.pet-picture-shake {
+  animation: pet-picture-shake 0.12s linear 3;
+}
+
+.pet-picture-failed {
+  filter: drop-shadow(0 0 6px rgb(255 77 77 / 0.55));
+}
+
+@keyframes pet-picture-bob {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes pet-picture-hop {
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes pet-picture-jump {
+  40% {
+    transform: translateY(-16px);
+  }
+}
+
+@keyframes pet-picture-shake {
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+
 /* Rich text composer (Tiptap). The stored prompt stays markdown; only the
    surface renders styled text. Markers (** * ` ~~) appear as non-editable
    widgets while the caret is on styled text. */

@@ -230,6 +230,35 @@ export function isSameOriginRendererNavigation(input: {
   }
 }
 
+/** `scheme://host[:port]`, which unlike `URL.origin` is not "null" for the app's custom scheme. */
+function rendererOrigin(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    return parsed.host === "" ? null : `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Permission decisions for the main window's session. Only the app's own
+ * pages may use the microphone or camera (`media`); every other permission
+ * keeps Electron's default, which grants it.
+ */
+export function allowsMainWindowPermission(input: {
+  readonly permission: string;
+  readonly requestingUrl: string | undefined;
+  readonly applicationUrl: string;
+}): boolean {
+  if (input.permission !== "media") return true;
+  const applicationOrigin = rendererOrigin(input.applicationUrl);
+  return (
+    applicationOrigin !== null &&
+    input.requestingUrl !== undefined &&
+    rendererOrigin(input.requestingUrl) === applicationOrigin
+  );
+}
+
 export function isRetryableDevelopmentRendererLoadFailure(input: {
   readonly applicationUrl: string;
   readonly errorCode: number;
@@ -437,6 +466,20 @@ export const make = Effect.gen(function* () {
     });
 
     yield* rendererHistory.register(window.webContents, { surface: "main" });
+    window.webContents.session.setPermissionRequestHandler(
+      (_webContents, permission, callback, details) =>
+        callback(
+          allowsMainWindowPermission({
+            permission,
+            requestingUrl: details.requestingUrl,
+            applicationUrl,
+          }),
+        ),
+    );
+    window.webContents.session.setPermissionCheckHandler(
+      (_webContents, permission, requestingOrigin) =>
+        allowsMainWindowPermission({ permission, requestingUrl: requestingOrigin, applicationUrl }),
+    );
     if (environment.platform === "darwin") {
       window.setAutoHideCursor(false);
     }

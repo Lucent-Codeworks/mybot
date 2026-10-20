@@ -111,6 +111,8 @@ import * as ThreadLaunchService from "./orchestration-v2/ThreadLaunchService.ts"
 import * as ThreadMessageIntake from "./orchestration-v2/ThreadMessageIntake.ts";
 import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
 import * as TelegramChannel from "./channels/TelegramChannel.ts";
+import * as PetHatchService from "./pets/PetHatchService.ts";
+import * as PetLibrary from "./pets/PetLibrary.ts";
 import * as AppConnections from "./apps/AppConnections.ts";
 import * as ScheduledTasks from "./scheduledTasks/ScheduledTaskService.ts";
 import * as SecretRequests from "./secrets/SecretRequests.ts";
@@ -176,6 +178,8 @@ import {
 } from "./attachmentStore.ts";
 import { parseBase64DataUrl } from "./imageMime.ts";
 import { deletePendingAttachment, issueAttachmentUploadUrl } from "./assets/AttachmentUpload.ts";
+import * as VoiceInput from "./voice/VoiceInput.ts";
+import { issueVoiceUploadUrl } from "./voice/VoiceUpload.ts";
 import * as PortScanner from "./preview/PortScanner.ts";
 import * as WorkspaceEntries from "./workspace/WorkspaceEntries.ts";
 import * as WorkspaceFileSystem from "./workspace/WorkspaceFileSystem.ts";
@@ -1058,6 +1062,8 @@ const layerWsRpc = (
       const providerSessionManager = yield* ProviderSessionManager.ProviderSessionManagerV2;
       const scheduledTasks = yield* ScheduledTasks.ScheduledTaskService;
       const telegram = yield* TelegramChannel.TelegramChannel;
+      const petLibrary = yield* PetLibrary.PetLibrary;
+      const petHatch = yield* PetHatchService.PetHatchService;
       const appConnections = yield* AppConnections.AppConnections;
       const secretRequests = yield* SecretRequests.SecretRequests;
       const deviceService = yield* DeviceService.DeviceService;
@@ -1086,6 +1092,7 @@ const layerWsRpc = (
       const providerMaintenanceRunner = yield* ProviderMaintenanceRunner.ProviderMaintenanceRunner;
       const providerAuth = yield* ProviderAuthService.ProviderAuthService;
       const providerInstallation = yield* makeProviderInstallation();
+      const voiceInput = yield* VoiceInput.VoiceInput;
       const serverSelfUpdate = yield* ServerSelfUpdate.ServerSelfUpdate;
       const config = yield* ServerConfig.ServerConfig;
       const lifecycleEvents = yield* ServerLifecycleEvents.ServerLifecycleEvents;
@@ -1808,6 +1815,15 @@ const layerWsRpc = (
         [WS_METHODS.botsTelegramStatus]: (input) => telegram.status(input.projectId),
         [WS_METHODS.botsTelegramConnect]: (input) => telegram.connect(input.projectId, input.token),
         [WS_METHODS.botsTelegramDisconnect]: (input) => telegram.disconnect(input.projectId),
+        [WS_METHODS.petsList]: () =>
+          Effect.all({ pets: petLibrary.list(), hatchJobs: petHatch.jobs() }),
+        [WS_METHODS.petsListCodex]: () => petLibrary.listCodexCandidates(),
+        [WS_METHODS.petsImport]: (input) =>
+          input.type === "upload" ? petLibrary.importUpload(input) : petLibrary.importCodex(input),
+        [WS_METHODS.petsCreatePicture]: (input) => petLibrary.createPicture(input),
+        [WS_METHODS.petsRename]: (input) => petLibrary.rename(input),
+        [WS_METHODS.petsRemove]: (input) => petLibrary.remove(input),
+        [WS_METHODS.petsHatch]: (input) => petHatch.start(input),
         [WS_METHODS.appConnectionsList]: (_input) => appConnections.list,
         [WS_METHODS.appConnectionsAdd]: (input) => appConnections.add(input),
         [WS_METHODS.appConnectionsRemove]: (input) => appConnections.remove(input.id),
@@ -2123,6 +2139,14 @@ const layerWsRpc = (
         [WS_METHODS.providerInstallCancel]: (input) => providerInstallation.cancel(input),
         [WS_METHODS.providerInstallSubscribe]: (input) => providerInstallation.subscribe(input),
         [WS_METHODS.providerInstallRemove]: (input) => providerInstallation.remove(input),
+        [WS_METHODS.voiceStatusSubscribe]: () => voiceInput.changes,
+        [WS_METHODS.voiceInstall]: (input) => voiceInput.install(input.model),
+        [WS_METHODS.voiceInstallCancel]: () => voiceInput.cancelInstall,
+        [WS_METHODS.voiceRemove]: () => voiceInput.remove,
+        [WS_METHODS.voiceCreateUploadUrl]: (input) => issueVoiceUploadUrl(input),
+        [WS_METHODS.voiceTranscribe]: (input) => voiceInput.transcribe(input.uploadId),
+        [WS_METHODS.voiceTranscriptionCancel]: (input) =>
+          voiceInput.cancelTranscription(input.uploadId).pipe(Effect.as({})),
         [WS_METHODS.serverUpdateServer]: (input) => serverSelfUpdate.update(input),
         [WS_METHODS.serverUpdateServerWithProgress]: (input) =>
           Stream.callback<ServerSelfUpdateProgressEvent, ServerSelfUpdateError>((queue) =>
@@ -2357,6 +2381,7 @@ const layerWsRpc = (
               input.resource._tag === "attachment" ||
               input.resource._tag === "native-app-icon" ||
               input.resource._tag === "tool-output-image" ||
+              input.resource._tag === "pet-sprite" ||
               (input.resource._tag === "media-file" && path.isAbsolute(input.resource.path))
             ) {
               return yield* issueAssetUrl({ resource: input.resource });
@@ -2699,6 +2724,8 @@ export const layer = Layer.unwrap(
     const previewAutomationBroker = yield* PreviewAutomationBroker.PreviewAutomationBroker;
     const serverBrowser = yield* ServerBrowser.ServerBrowser;
     const serverSelfUpdate = yield* ServerSelfUpdate.ServerSelfUpdate;
+    // One instance for the server: it owns the running download and transcriptions.
+    const voiceInput = yield* VoiceInput.VoiceInput;
     const sql = yield* SqlClient.SqlClient;
     return HttpRouter.add(
       "GET",
@@ -2762,6 +2789,7 @@ export const layer = Layer.unwrap(
               Layer.provide(AgentSessionScanner.layer),
               Layer.provide(ProviderMaintenanceRunner.layer),
               Layer.provide(Layer.succeed(ServerSelfUpdate.ServerSelfUpdate, serverSelfUpdate)),
+              Layer.provide(Layer.succeed(VoiceInput.VoiceInput, voiceInput)),
               Layer.provide(OtlpEndpointCheck.layer),
             ),
           ),

@@ -196,6 +196,32 @@ describe("ServerBrowserContexts", () => {
     await pool.close();
   });
 
+  it("runs installed Chrome with its GPU, and the headless shell when Chrome will not start", async () => {
+    const browser = makeBrowser();
+    launches.launch.mockResolvedValue(browser as unknown as Browser);
+    const configuration = { ...options(), installedChrome: vi.fn(async () => "/test/chrome") };
+    const pool = new ServerBrowserContexts(configuration);
+    await pool.contextFor(INCOGNITO_BROWSER_PROFILE_ID);
+    const chromeArgs = launches.launch.mock.calls[0]![0]!.args;
+    expect(launches.launch.mock.calls[0]![0]).toMatchObject({ executablePath: "/test/chrome" });
+    expect(chromeArgs).not.toContain("--disable-gpu");
+    expect(configuration.executable).not.toHaveBeenCalled();
+    await pool.close();
+
+    launches.launch.mockReset();
+    launches.launch.mockRejectedValueOnce(new Error("chrome crashed"));
+    launches.launch.mockResolvedValue(makeBrowser() as unknown as Browser);
+    const fallback = new ServerBrowserContexts(configuration);
+    await fallback.contextFor(INCOGNITO_BROWSER_PROFILE_ID);
+    expect(launches.launch).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        executablePath: "/test/chromium",
+        args: expect.arrayContaining(["--disable-gpu"]),
+      }),
+    );
+    await fallback.close();
+  });
+
   it("retries a failed startup on a later request with sandboxing still enabled", async () => {
     const browser = makeBrowser();
     launches.launch

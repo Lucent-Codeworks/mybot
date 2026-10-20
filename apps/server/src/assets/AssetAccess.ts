@@ -12,6 +12,7 @@ import {
   AssetWorkspacePathValidationError,
   AssetWorkspaceResolutionError,
   AssetWorkspaceRootNormalizationError,
+  PetId,
   ThreadId,
   ToolActivityNativeAppReference,
   TurnItemId,
@@ -56,6 +57,7 @@ import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 import { parseAttachmentFileExtension, resolveAttachmentPathById } from "../attachmentStore.ts";
 import * as ServerConfig from "../config.ts";
 import * as Orchestrator from "../orchestration-v2/Orchestrator.ts";
+import * as PetLibrary from "../pets/PetLibrary.ts";
 import { expandHomePath } from "@mybot/provider-core/server/pathExpansion";
 import * as ProjectFaviconResolver from "../project/ProjectFaviconResolver.ts";
 import * as WorkspacePaths from "../workspace/WorkspacePaths.ts";
@@ -148,6 +150,17 @@ const AssetClaimsSchema = Schema.Union([
     version: Schema.Literal(1),
     kind: Schema.Literal("native-app-icon"),
     app: ToolActivityNativeAppReference,
+    expiresAt: Schema.Number,
+  }),
+  Schema.Struct({
+    version: Schema.Literal(1),
+    kind: Schema.Literal("pet-sprite"),
+    petId: PetId,
+    /**
+     * A cache key, so each new sprite gets a new URL. Resolving does not check
+     * it: an older token still serves the pet's current sprite.
+     */
+    contentHash: Schema.String,
     expiresAt: Schema.Number,
   }),
   Schema.Struct({
@@ -758,6 +771,39 @@ export const issueAssetUrl = Effect.fn("AssetAccess.issueAssetUrl")(function* (i
       imageDimensions = readImageDimensions(image.bytes);
       break;
     }
+    case "pet-sprite": {
+      const resource = input.resource;
+      const petLibrary = yield* PetLibrary.PetLibrary;
+      const sprite = yield* petLibrary
+        .resolveSprite(resource.petId)
+        .pipe(
+          Effect.mapError((cause) =>
+            cause.code === "not_found"
+              ? new AssetWorkspaceAssetNotFoundError({ resource })
+              : new AssetWorkspaceAssetInspectionError({ resource, cause }),
+          ),
+        );
+      const bytes =
+        sprite.kind === "bytes"
+          ? sprite.bytes
+          : yield* fileSystem
+              .readFile(sprite.path)
+              .pipe(
+                Effect.mapError(
+                  (cause) => new AssetWorkspaceAssetInspectionError({ resource, cause }),
+                ),
+              );
+      const crypto = yield* Crypto.Crypto;
+      const contentHash = yield* crypto.digest("SHA-256", bytes).pipe(
+        Effect.map(Hex.encode),
+        Effect.mapError((cause) => new AssetWorkspaceAssetInspectionError({ resource, cause })),
+      );
+      claims = { version: 1, kind: "pet-sprite", petId: resource.petId, contentHash, expiresAt };
+      // Stored sprite types are all `image/<extension>`.
+      fileName = `${resource.petId}-${contentHash}.${sprite.mimeType.slice("image/".length)}`;
+      imageDimensions = readImageDimensions(bytes);
+      break;
+    }
     case "native-app-icon": {
       claims = {
         version: 1,
@@ -780,7 +826,12 @@ export const issueAssetUrl = Effect.fn("AssetAccess.issueAssetUrl")(function* (i
         }),
     ),
   );
-  if (claims.kind === "project-favicon" || claims.kind === "project-favicon-external") {
+  // Bucketed expiry keeps the URL stable between issues, so the browser cache can serve it.
+  if (
+    claims.kind === "project-favicon" ||
+    claims.kind === "project-favicon-external" ||
+    claims.kind === "pet-sprite"
+  ) {
     const issuedAt = yield* Clock.currentTimeMillis;
     expiresAt =
       (Math.floor(issuedAt / PROJECT_FAVICON_TOKEN_BUCKET_MS) + 2) *
@@ -879,6 +930,20 @@ export const resolveAsset = Effect.fn("AssetAccess.resolveAsset")(function* (
       Effect.orElseSucceed(() => null),
     );
     return image ? ({ kind: "bytes", ...image } satisfies ResolvedAsset) : null;
+  }
+
+  if (claims.kind === "pet-sprite") {
+    const petLibrary = yield* PetLibrary.PetLibrary;
+    const petId = claims.petId;
+    const sprite = yield* petLibrary.resolveSprite(petId).pipe(
+      Effect.tapError((cause) =>
+        cause.code === "not_found"
+          ? Effect.void
+          : Effect.logError("Failed to resolve pet sprite.", { petId, cause }),
+      ),
+      Effect.orElseSucceed(() => null),
+    );
+    return sprite satisfies ResolvedAsset | null;
   }
 
   if (claims.kind === "native-app-icon") {

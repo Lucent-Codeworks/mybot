@@ -59,6 +59,13 @@ describe("requestLatencyState", () => {
     expect(getSlowRpcAckRequests()).toEqual([]);
   });
 
+  it("ignores voice transcriptions, which run as long as the recording", () => {
+    trackRpcRequestSent("1", WS_METHODS.voiceTranscribe);
+    vi.advanceTimersByTime(SLOW_RPC_ACK_THRESHOLD_MS * 2);
+
+    expect(getSlowRpcAckRequests()).toEqual([]);
+  });
+
   it("keeps ignoring untracked methods when a display tag is supplied", () => {
     trackRpcRequestSent(
       "1",

@@ -1,0 +1,103 @@
+name: Whisper CLI (macOS)
+
+# Upstream whisper.cpp publishes no macOS CLI binaries, so voice input needs
+# our own. This builds a static, Metal-enabled whisper-cli for arm64 and x86_64
+# and publishes both as a whisper-cli-v<version> release on this repo.
+#
+# After it runs, update the darwin pins in
+# apps/server/src/voice/whisperReleases.ts (url + sha256) from the release's
+# SHA256SUMS.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: whisper.cpp version to build (without the v prefix)
+        required: true
+        default: "1.9.5"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build whisper-cli (macOS)
+    runs-on: macos-14
+    steps:
+      - name: Checkout whisper.cpp
+        uses: actions/checkout@v6
+        with:
+          repository: ggml-org/whisper.cpp
+          ref: v${{ inputs.version }}
+
+      # Both archives build on the arm64 runner; the x86_64 one is a
+      # cross-compile. GGML_NATIVE=OFF keeps it from tuning for the runner.
+      - name: Build and package
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir dist
+          for arch in arm64 x86_64; do
+            case "$arch" in
+              x86_64) name_arch=x64 ;;
+              *) name_arch=$arch ;;
+            esac
+            cmake -B "build-$arch" \
+              -DCMAKE_OSX_ARCHITECTURES="$arch" \
+              -DBUILD_SHARED_LIBS=OFF \
+              -DGGML_METAL=ON \
+              -DGGML_METAL_EMBED_LIBRARY=ON \
+              -DGGML_NATIVE=OFF \
+              -DWHISPER_BUILD_TESTS=OFF \
+              -DCMAKE_BUILD_TYPE=Release
+            cmake --build "build-$arch" --target whisper-cli -j
+            root="whisper-cli-v${VERSION}-darwin-${name_arch}"
+            mkdir "dist/$root"
+            cp "build-$arch/bin/whisper-cli" "dist/$root/whisper-cli"
+            cp LICENSE "dist/$root/LICENSE"
+            archs="$(lipo -archs "dist/$root/whisper-cli")"
+            if [ "$archs" != "$arch" ]; then
+              echo "::error::dist/$root/whisper-cli is '$archs', expected '$arch'"
+              exit 1
+            fi
+            tar -czf "dist/$root.tar.gz" -C dist "$root"
+            rm -r "dist/$root"
+          done
+          # Smoke-test the native build before anything is published.
+          mkdir smoke
+          tar -xzf "dist/whisper-cli-v${VERSION}-darwin-arm64.tar.gz" -C smoke
+          "smoke/whisper-cli-v${VERSION}-darwin-arm64/whisper-cli" -h
+          (cd dist && shasum -a 256 *.tar.gz > SHA256SUMS && cat SHA256SUMS)
+
+      - name: Upload archives
+        uses: actions/upload-artifact@v7
+        with:
+          name: whisper-cli-macos
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download archives
+        uses: actions/download-artifact@v8
+        with:
+          name: whisper-cli-macos
+          path: dist
+
+      # `gh release create` fails when the tag already exists, so a published
+      # release is never overwritten.
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          gh release create "whisper-cli-v${VERSION}" dist/* \
+            --title "whisper-cli v${VERSION} (macOS)" \
+            --notes "macOS whisper-cli builds of whisper.cpp v${VERSION} with Metal, used by MyBot voice input. Not a MyBot app release." \
+            --latest=false

@@ -28,6 +28,7 @@ describe("KeybindingsSettings.logic", () => {
       "composer.host",
       "composer.effort",
       "composer.mode",
+      "composer.voice",
       "modelPicker.previousProvider",
       "modelPicker.nextProvider",
       "thread.copyReference",

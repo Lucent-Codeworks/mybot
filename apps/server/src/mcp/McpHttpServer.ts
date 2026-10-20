@@ -55,6 +55,8 @@ import * as HtmlHandlers from "./toolkits/html/handlers.ts";
 import * as AppsHandlers from "./toolkits/apps/handlers.ts";
 import { AppsToolkit } from "./toolkits/apps/tools.ts";
 import * as BotsHandlers from "./toolkits/bots/handlers.ts";
+import * as PetsHandlers from "./toolkits/pets/handlers.ts";
+import { PetsToolkit } from "./toolkits/pets/tools.ts";
 import { BotsToolkit } from "./toolkits/bots/tools.ts";
 import { HtmlPreviewTool, HtmlPreviewToolkit, HtmlRenderToolkit } from "./toolkits/html/tools.ts";
 
@@ -867,4 +869,5 @@ export const layer = Layer.mergeAll(
   layerHtmlToolkit,
   toolkitRegistration(AppsToolkit, AppsHandlers.layer),
   toolkitRegistration(BotsToolkit, BotsHandlers.layer),
+  toolkitRegistration(PetsToolkit, PetsHandlers.layer),
 ).pipe(Layer.provideMerge(layerMcpTransport));

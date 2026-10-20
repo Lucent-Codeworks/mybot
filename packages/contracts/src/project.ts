@@ -1,6 +1,7 @@
 import * as Schema from "effect/Schema";
 import * as SchemaTransformation from "effect/SchemaTransformation";
 import { ModelSelection } from "./modelSelection.ts";
+import { PetId } from "./pets.ts";
 import {
   CommandId,
   ForwardCompatibleUnion,
@@ -170,6 +171,8 @@ export const BotProfile = Schema.Struct({
   orchestrator: Schema.optional(Schema.Boolean),
   /** Makes the bot a group chat that hosts the conversation with these bots. */
   members: Schema.optional(Schema.Array(ProjectId).check(Schema.isMaxLength(12))),
+  /** The bot's pet. Absent uses the default pet; null shows no pet. */
+  petId: Schema.optional(Schema.NullOr(PetId)),
 });
 export type BotProfile = typeof BotProfile.Type;
 

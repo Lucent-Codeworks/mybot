@@ -18,6 +18,11 @@ interface Options {
   readonly profilesDir: string;
   /** The shared headless browser's executable, installing it on first use. */
   readonly executable: () => Promise<string>;
+  /**
+   * The user's own Google Chrome, if installed. Preferred over the headless
+   * shell, which captcha services recognize as a bot.
+   */
+  readonly installedChrome?: () => Promise<string | undefined>;
   /** Replaces a failed launch's error with the host setup it is missing, if any. */
   readonly diagnose?: (executable: string, cause: unknown) => Promise<unknown>;
   readonly env?: NodeJS.ProcessEnv;
@@ -30,25 +35,83 @@ const UA_PLATFORMS: Partial<Record<NodeJS.Platform, string>> = {
   win32: "Windows",
 };
 
+const GREASE_CHARS = [" ", "(", ":", "-", ".", "/", ")", ";", "=", "?", "_"];
+const GREASE_VERSIONS = ["8", "99", "24"];
+const GREASE_ORDERS = [
+  [0, 1, 2],
+  [0, 2, 1],
+  [1, 0, 2],
+  [1, 2, 0],
+  [2, 0, 1],
+  [2, 1, 0],
+] as const;
+
 /**
- * The headless shell's identity as the Chrome it is built from: its user agent
+ * Chrome's brand list for a major version, as Chromium's
+ * `GenerateBrandVersionList` derives it: the GREASE brand's name, version, and
+ * position all follow from the major version. Sites compare it with the user
+ * agent, so it must match whichever Chrome build runs.
+ */
+export const chromeBrands = (major: number) => {
+  const grease = {
+    brand: `Not${GREASE_CHARS[major % 11]}A${GREASE_CHARS[(major + 1) % 11]}Brand`,
+    version: GREASE_VERSIONS[major % 3]!,
+  };
+  const ordered = [
+    grease,
+    { brand: "Chromium", version: String(major) },
+    { brand: "Google Chrome", version: String(major) },
+  ];
+  const list: Array<{ brand: string; version: string }> = [];
+  GREASE_ORDERS[major % 6]!.forEach((slot, index) => {
+    list[slot] = ordered[index]!;
+  });
+  return list;
+};
+
+const CHROME_PATHS: Partial<Record<NodeJS.Platform, (env: NodeJS.ProcessEnv) => string[]>> = {
+  darwin: () => ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"],
+  linux: () => ["/opt/google/chrome/chrome"],
+  win32: (env) =>
+    [env["LOCALAPPDATA"], env["PROGRAMFILES"], env["PROGRAMFILES(X86)"]].flatMap((root) =>
+      root ? [NodePath.win32.join(root, "Google", "Chrome", "Application", "chrome.exe")] : [],
+    ),
+};
+
+/** Google Chrome where its installer puts it, as Playwright's `chrome` channel looks for it. */
+export const findInstalledChrome = async (
+  platform: NodeJS.Platform,
+  env: NodeJS.ProcessEnv,
+): Promise<string | undefined> => {
+  for (const candidate of CHROME_PATHS[platform]?.(env) ?? []) {
+    if (
+      await NodeFSP.access(candidate, NodeFSP.constants.X_OK).then(
+        () => true,
+        () => false,
+      )
+    )
+      return candidate;
+  }
+  return undefined;
+};
+
+/**
+ * A headless browser's identity as the Chrome it is built from: its user agent
  * without `HeadlessChrome`, and client hints whose brands agree with it. Sites
  * block a user agent that disagrees with `Sec-CH-UA`, so both change together.
  */
 const chromeIdentity = (
   headlessUserAgent: string,
+  product: string,
   host: { readonly platform: NodeJS.Platform; readonly arch: string; readonly release: string },
 ) => {
   const version = /HeadlessChrome\/((\d+)[\d.]*)/.exec(headlessUserAgent);
-  const fullVersion = version?.[1];
+  // Newer Chrome reduces even its headless user agent; the product keeps the build.
+  const fullVersion = /\/(\d[\d.]*)/.exec(product)?.[1] ?? version?.[1];
   const major = version?.[2];
   if (!version || !fullVersion || !major) return null;
-  // Chrome's GREASE brand and order for this major version, as the shell reports them.
-  const brands = (names: (version: string) => string) => [
-    { brand: "Chromium", version: names(major) },
-    { brand: "Google Chrome", version: names(major) },
-    { brand: "Not A(Brand", version: names("99") },
-  ];
+  const brands = (names: (version: string) => string) =>
+    chromeBrands(Number(major)).map(({ brand, version }) => ({ brand, version: names(version) }));
   return {
     // Chrome reduces its user agent to the major version.
     userAgent: headlessUserAgent.replace(version[0], `Chrome/${major}.0.0.0`),
@@ -74,10 +137,30 @@ export const presentAsChrome = async (
   cdp: CDPSession,
   host: { readonly platform: NodeJS.Platform; readonly arch: string },
 ) => {
-  const { userAgent } = await cdp.send("Browser.getVersion");
-  const identity = chromeIdentity(userAgent, { ...host, release: NodeOS.release() });
+  const { userAgent, product } = await cdp.send("Browser.getVersion");
+  const identity = chromeIdentity(userAgent, product, { ...host, release: NodeOS.release() });
   if (identity) await cdp.send("Emulation.setUserAgentOverride", identity);
 };
+
+const launchOptions = (
+  executablePath: string,
+  installedChrome: boolean,
+  env: NodeJS.ProcessEnv,
+) => ({
+  executablePath,
+  env,
+  // People drive these tabs, so they must not announce automation (navigator.webdriver).
+  args: [
+    // Installed Chrome keeps its GPU: a software WebGL renderer marks a bot.
+    ...(installedChrome ? [] : ["--disable-gpu"]),
+    "--force-device-scale-factor=2",
+    "--disable-blink-features=AutomationControlled",
+  ],
+  ignoreDefaultArgs: ["--enable-automation"],
+  headless: true,
+  // Only an explicit operator opt-out disables sandboxing. Launch errors never do.
+  chromiumSandbox: !sandboxDisabled(env),
+});
 
 /** Persistent human profiles keep their storage; isolated agents share a browser, never a context. */
 export class ServerBrowserContexts {
@@ -92,28 +175,20 @@ export class ServerBrowserContexts {
     this.options = options;
   }
 
-  private async launchOptions() {
-    const executablePath = await this.options.executable();
+  /** Launches the user's Chrome if it is installed and starts, else the headless shell. */
+  private async launch<A>(start: (options: ReturnType<typeof launchOptions>) => Promise<A>) {
     const env = this.options.env ?? process.env;
-    return {
-      executablePath,
-      env,
-      // People drive these tabs, so they must not announce automation (navigator.webdriver).
-      args: [
-        "--disable-gpu",
-        "--force-device-scale-factor=2",
-        "--disable-blink-features=AutomationControlled",
-      ],
-      ignoreDefaultArgs: ["--enable-automation"],
-      headless: true,
-      // Only an explicit operator opt-out disables sandboxing. Launch errors never do.
-      chromiumSandbox: !sandboxDisabled(env),
-    };
-  }
-
-  private async launch<A>(options: { readonly executablePath: string }, start: () => Promise<A>) {
+    const chrome = await this.options.installedChrome?.();
+    if (chrome !== undefined) {
+      try {
+        return await start(launchOptions(chrome, true, env));
+      } catch {
+        // The headless shell below still works, and its failure is the one to diagnose.
+      }
+    }
+    const options = launchOptions(await this.options.executable(), false, env);
     try {
-      return await start();
+      return await start(options);
     } catch (cause) {
       throw (await this.options.diagnose?.(options.executablePath, cause)) ?? cause;
     }
@@ -121,14 +196,14 @@ export class ServerBrowserContexts {
 
   private sharedBrowser() {
     if (!this.browser) {
-      const launched = this.launchOptions().then(async (options) => {
+      const launched = (async () => {
         const { chromium } = loadPlaywright();
-        const browser = await this.launch(options, () => chromium.launch(options));
+        const browser = await this.launch((options) => chromium.launch(options));
         browser.on("disconnected", () => {
           if (this.browser === launched) this.browser = undefined;
         });
         return browser;
-      });
+      })();
       this.browser = launched;
       void launched.catch(() => {
         if (this.browser === launched) this.browser = undefined;
@@ -171,10 +246,9 @@ export class ServerBrowserContexts {
       return browser.newContext(contextOptions);
     }
     const directory = this.profileDirectory(profileId);
-    const options = await this.launchOptions();
     const { chromium } = loadPlaywright();
     await NodeFSP.mkdir(directory, { recursive: true });
-    return this.launch(options, () =>
+    return this.launch((options) =>
       chromium.launchPersistentContext(directory, { ...options, ...contextOptions }),
     );
   }

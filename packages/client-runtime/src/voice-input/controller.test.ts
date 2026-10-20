@@ -10,7 +10,11 @@ import {
   type VoiceInputControllerDependencies,
   type VoiceRecorder,
 } from "./controller.ts";
-import type { PreparedVoiceTranscription, VoiceTranscriber } from "./transcription.ts";
+import {
+  VoiceTranscriptionError,
+  type PreparedVoiceTranscription,
+  type VoiceTranscriber,
+} from "./transcription.ts";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -186,7 +190,7 @@ describe("VoiceInputController", () => {
       expect(harness.controller.currentState).toMatchObject({
         phase: "error",
         error: expect.any(String),
-        errorAction: failure === "permission" ? "settings" : "retry",
+        errorAction: failure === "permission" ? "settings" : "retry-transcription",
       });
 
       harness.setDraft(draft({ ownerKey: "environment:other-thread" }));
@@ -614,6 +618,193 @@ describe("VoiceInputController", () => {
     expect(signal.aborted).toBe(true);
     expect(harness.controller.currentState.error).toBe("Audio route changed");
     expect(harness.deleted).toEqual(["file:///voice.m4a", "file:///reset-empty.m4a"]);
+  });
+
+  describe("talk and send", () => {
+    function sendHarness(overrides: Partial<VoiceInputControllerDependencies> = {}) {
+      const events: string[] = [];
+      const submitDraft = vi.fn(() => {
+        events.push("submit");
+      });
+      const harness = createHarness({
+        commitDraft: (text) => events.push(`commit:${text}`),
+        submitDraft,
+        ...overrides,
+      });
+      return { ...harness, events, submitDraft };
+    }
+
+    it('stop("send") inserts then submits once', async () => {
+      const harness = sendHarness();
+      await harness.controller.start();
+      await harness.controller.stop("send");
+
+      expect(harness.events).toEqual(["commit:hello new text", "submit"]);
+      expect(harness.submitDraft).toHaveBeenCalledTimes(1);
+      expect(harness.controller.currentState.phase).toBe("idle");
+    });
+
+    it("stop() does not submit", async () => {
+      const harness = sendHarness();
+      await harness.controller.start();
+      await harness.controller.stop();
+
+      expect(harness.events).toEqual(["commit:hello new text"]);
+      expect(harness.submitDraft).not.toHaveBeenCalled();
+    });
+
+    it("stale draft with send does not submit", async () => {
+      const transcription = deferred<string>();
+      const transcriptionEntered = deferred<void>();
+      const harness = sendHarness({
+        getTranscriber: () => ({
+          prepare: async () =>
+            preparedTranscription(() => {
+              transcriptionEntered.resolve(undefined);
+              return transcription.promise;
+            }),
+        }),
+      });
+      await harness.controller.start();
+      const stopping = harness.controller.stop("send");
+      await transcriptionEntered.promise;
+      harness.setDraft(draft({ text: "hello world!", revision: 2 }));
+      transcription.resolve("late text");
+      await stopping;
+
+      expect(harness.events).toEqual([]);
+      expect(harness.submitDraft).not.toHaveBeenCalled();
+      expect(harness.controller.currentState.error).toContain("draft changed");
+    });
+
+    it("empty transcript with send does not submit", async () => {
+      const harness = sendHarness({
+        getTranscriber: () => ({ prepare: async () => preparedTranscription(async () => "  ") }),
+      });
+      await harness.controller.start();
+      await harness.controller.stop("send");
+
+      expect(harness.events).toEqual([]);
+      expect(harness.submitDraft).not.toHaveBeenCalled();
+      expect(harness.controller.currentState.error).toBe("No speech was detected.");
+    });
+
+    it("shows why the transcriber is unavailable", async () => {
+      const harness = sendHarness({
+        getTranscriber: () => ({
+          prepare: async () =>
+            preparedTranscription(async () => {
+              throw new VoiceTranscriptionError(
+                "unavailable",
+                "Voice input is not set up on this MyBot server.",
+              );
+            }),
+        }),
+      });
+      await harness.controller.start();
+      await harness.controller.stop("send");
+
+      expect(harness.controller.currentState.error).toBe(
+        "Voice input is not set up on this MyBot server.",
+      );
+      expect(harness.submitDraft).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("transcription failure detail", () => {
+    it("shows the server's reason for a failed transcription", async () => {
+      const harness = createHarness({
+        getTranscriber: () => ({
+          prepare: async () =>
+            preparedTranscription(async () => {
+              throw new VoiceTranscriptionError(
+                "transcription-failed",
+                "Recordings can be up to 5 minutes long.",
+              );
+            }),
+        }),
+      });
+      await harness.controller.start();
+      await harness.controller.stop();
+
+      expect(harness.controller.currentState.error).toBe("Recordings can be up to 5 minutes long.");
+    });
+  });
+
+  describe("retrying a failed transcription", () => {
+    function failingOnceHarness(overrides: Partial<VoiceInputControllerDependencies> = {}) {
+      let attempts = 0;
+      const submitDraft = vi.fn();
+      const harness = createHarness({
+        getTranscriber: () => ({
+          prepare: async () =>
+            preparedTranscription(async () => {
+              attempts += 1;
+              if (attempts === 1) throw new Error("server unreachable");
+              return "new text";
+            }),
+        }),
+        submitDraft,
+        ...overrides,
+      });
+      return { ...harness, submitDraft, attempts: () => attempts };
+    }
+
+    it("keeps the recording and inserts it on retry", async () => {
+      const harness = failingOnceHarness();
+      await harness.controller.start();
+      await harness.controller.stop();
+
+      expect(harness.controller.currentState).toMatchObject({
+        phase: "error",
+        errorAction: "retry-transcription",
+      });
+      expect(harness.deleted).toEqual([]);
+
+      await harness.controller.retryTranscription();
+
+      expect(harness.attempts()).toBe(2);
+      expect(harness.commits.map((commit) => commit.text)).toEqual(["hello new text"]);
+      expect(harness.controller.currentState.phase).toBe("idle");
+      expect(harness.deleted).toEqual(["file:///voice.m4a"]);
+      expect(harness.submitDraft).not.toHaveBeenCalled();
+    });
+
+    it("discards the kept recording on cancel", async () => {
+      const harness = failingOnceHarness();
+      await harness.controller.start();
+      await harness.controller.stop();
+
+      harness.controller.cancel();
+
+      expect(harness.controller.currentState.phase).toBe("idle");
+      expect(harness.deleted).toEqual(["file:///voice.m4a"]);
+      await harness.controller.retryTranscription();
+      expect(harness.attempts()).toBe(1);
+    });
+
+    it("submits once when the failed recording was sent", async () => {
+      const harness = failingOnceHarness();
+      await harness.controller.start();
+      await harness.controller.stop("send");
+      expect(harness.submitDraft).not.toHaveBeenCalled();
+
+      await harness.controller.retryTranscription();
+
+      expect(harness.submitDraft).toHaveBeenCalledTimes(1);
+      expect(harness.commits).toHaveLength(1);
+    });
+
+    it("does not keep stale or empty results", async () => {
+      const harness = createHarness({
+        getTranscriber: () => ({ prepare: async () => preparedTranscription(async () => " ") }),
+      });
+      await harness.controller.start();
+      await harness.controller.stop();
+
+      expect(harness.controller.currentState.errorAction).toBe("retry");
+      expect(harness.deleted).toEqual(["file:///voice.m4a"]);
+    });
   });
 
   it("cancels preparation when the app reaches the background", async () => {

@@ -7,7 +7,7 @@ import {
 } from "playwright-core";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vite-plus/test";
 
-import { presentAsChrome } from "./ServerBrowserContexts.ts";
+import { chromeBrands, presentAsChrome } from "./ServerBrowserContexts.ts";
 import * as ServerBrowserPage from "./ServerBrowserPage.ts";
 
 describe("server browser element refs", () => {
@@ -268,6 +268,31 @@ describe("server browser element refs", () => {
     expect([...identity.brands, ...identity.full].join()).not.toContain("Headless");
     expect(secChUa).toContain('"Google Chrome"');
     expect(secChUa).not.toContain("Headless");
+  });
+
+  it("names Chrome's brands as Chrome builds them for each major version", () => {
+    const names = (major: number) => chromeBrands(major).map(({ brand }) => brand);
+    // As Chrome 154 and 155 report them.
+    expect(names(154)).toEqual(["Chromium", "Google Chrome", "Not A(Brand"]);
+    expect(names(155)).toEqual(["Google Chrome", "Chromium", "Not(A:Brand"]);
+    expect(chromeBrands(154).find(({ brand }) => brand.startsWith("Not"))?.version).toBe("99");
+  });
+
+  it("sends a page that wants a file system picker to its file input instead", async () => {
+    await context.addInitScript(ServerBrowserPage.HIDE_FILE_SYSTEM_PICKERS_SCRIPT);
+    const chooser = page.waitForEvent("filechooser", { timeout: 5_000 });
+    await page.route("https://example.test/", (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        body: `<input type="file" id="file" hidden><button id="pick">Upload</button>
+          <script>
+            pick.onclick = () => ("showOpenFilePicker" in window ? showOpenFilePicker() : file.click());
+          </script>`,
+      }),
+    );
+    await page.goto("https://example.test/");
+    await page.click("#pick");
+    expect(await (await chooser).element().getAttribute("id")).toBe("file");
   });
 
   it("stops an evaluation at its deadline so the page answers the next one", async () => {

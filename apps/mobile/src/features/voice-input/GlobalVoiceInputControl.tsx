@@ -113,7 +113,10 @@ function EdgeDictationPill(props: { readonly collapseRef: RefObject<(() => void)
   const phase = voice.state.phase;
   const isError = phase === "error";
   const openSettings = isError && voice.state.errorAction === "settings";
+  const keepsRecording = presentation.keepsRecording;
   const label = voice.label ?? "Draft";
+  // Sends through the dictating screen; if that screen has closed, it only inserts.
+  const canSend = voice.session.canSubmit;
 
   return (
     <View pointerEvents="box-none" className="absolute inset-0">
@@ -167,7 +170,13 @@ function EdgeDictationPill(props: { readonly collapseRef: RefObject<(() => void)
             style={[{ width: expandedWidth }, expandedStyle]}
           >
             <Pressable
-              accessibilityLabel={isError ? "Dismiss voice input error" : "Cancel dictation"}
+              accessibilityLabel={
+                keepsRecording
+                  ? "Discard recording"
+                  : isError
+                    ? "Dismiss voice input error"
+                    : "Cancel dictation"
+              }
               accessibilityRole="button"
               className="size-[30px] items-center justify-center active:opacity-70"
               onPress={voice.cancel}
@@ -207,23 +216,52 @@ function EdgeDictationPill(props: { readonly collapseRef: RefObject<(() => void)
                   accessibilityLabel="Finish dictation"
                   accessibilityRole="button"
                   className="size-[30px] items-center justify-center active:opacity-70"
-                  onPress={voice.stop}
+                  onPress={() => void voice.stop()}
                 >
-                  <View className="size-[24px] items-center justify-center rounded-full bg-primary">
+                  <View
+                    className={cn(
+                      "size-[24px] items-center justify-center rounded-full",
+                      canSend ? "bg-subtle" : "bg-primary",
+                    )}
+                  >
                     <SymbolView
                       name="checkmark"
                       size={12}
                       weight="semibold"
-                      tintColorClassName="accent-primary-foreground"
+                      tintColorClassName={canSend ? "accent-icon" : "accent-primary-foreground"}
                       type="monochrome"
                     />
                   </View>
                 </Pressable>
+                {canSend ? (
+                  <Pressable
+                    accessibilityLabel="Send dictation"
+                    accessibilityRole="button"
+                    className="size-[30px] items-center justify-center active:opacity-70"
+                    onPress={() => void voice.send()}
+                  >
+                    <View className="size-[24px] items-center justify-center rounded-full bg-primary">
+                      <SymbolView
+                        name="arrow.up"
+                        size={12}
+                        weight="semibold"
+                        tintColorClassName="accent-primary-foreground"
+                        type="monochrome"
+                      />
+                    </View>
+                  </Pressable>
+                ) : null}
               </>
             ) : isError ? (
               voice.isAvailable ? (
                 <Pressable
-                  accessibilityLabel={openSettings ? "Open microphone settings" : "Retry dictation"}
+                  accessibilityLabel={
+                    openSettings
+                      ? "Open microphone settings"
+                      : keepsRecording
+                        ? "Retry transcription"
+                        : "Retry dictation"
+                  }
                   accessibilityRole="button"
                   className="size-[30px] items-center justify-center active:opacity-70"
                   onPress={() => {
@@ -235,7 +273,11 @@ function EdgeDictationPill(props: { readonly collapseRef: RefObject<(() => void)
                     void Linking.openSettings();
                   }}
                 >
-                  <SymbolView name="mic" size={16} tintColorClassName="accent-icon" />
+                  <SymbolView
+                    name={keepsRecording ? "arrow.clockwise" : "mic"}
+                    size={16}
+                    tintColorClassName="accent-icon"
+                  />
                 </Pressable>
               ) : null
             ) : (

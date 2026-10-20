@@ -242,6 +242,7 @@ export const make = Effect.gen(function* () {
       threadVisitedTracking: true,
       serverResolvedCommandContext: true,
       environmentIcon: true,
+      voiceInput: true,
       ...(serverSelfUpdate === null ? {} : { serverSelfUpdate }),
       ...(serverInstallation === null ? {} : { serverInstallation }),
       // V2 restart recovery uses the environment-owned opt-in. The old

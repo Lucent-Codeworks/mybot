@@ -21,6 +21,16 @@ import {
   ChatGptHandoffInput,
   ChatGptHandoffState,
 } from "./providerSetup.ts";
+import {
+  VoiceCreateUploadUrlInput,
+  VoiceCreateUploadUrlResult,
+  VoiceInputError,
+  VoiceInputStatus,
+  VoiceInstallInput,
+  VoiceTranscribeInput,
+  VoiceTranscribeResult,
+  VoiceTranscriptionCancelInput,
+} from "./voiceInput.ts";
 import * as Schema from "effect/Schema";
 import * as Rpc from "effect/rpc/Rpc";
 import * as RpcGroup from "effect/rpc/RpcGroup";
@@ -279,6 +289,18 @@ import {
   BotTelegramStatus,
   BotTelegramStatusInput,
 } from "./botChannels.ts";
+import {
+  CodexPetCandidate,
+  PetCreatePictureInput,
+  Pet,
+  PetError,
+  PetHatchInput,
+  PetHatchJob,
+  PetImportInput,
+  PetRemoveInput,
+  PetRenameInput,
+  PetsListResult,
+} from "./pets.ts";
 import { SecretRequestAnswerInput, SecretRequestError } from "./secretRequest.ts";
 import { Project, ProjectMutation, ProjectMutationError } from "./project.ts";
 
@@ -332,6 +354,13 @@ export const WS_METHODS = {
   providerInstallCancel: "provider.install.cancel",
   providerInstallSubscribe: "provider.install.subscribe",
   providerInstallRemove: "provider.install.remove",
+  voiceStatusSubscribe: "voice.status.subscribe",
+  voiceInstall: "voice.install",
+  voiceInstallCancel: "voice.install.cancel",
+  voiceRemove: "voice.remove",
+  voiceCreateUploadUrl: "voice.createUploadUrl",
+  voiceTranscribe: "voice.transcribe",
+  voiceTranscriptionCancel: "voice.transcription.cancel",
 
   // Terminal methods
   terminalOpen: "terminal.open",
@@ -414,6 +443,15 @@ export const WS_METHODS = {
   botsTelegramStatus: "bots.telegram.status",
   botsTelegramConnect: "bots.telegram.connect",
   botsTelegramDisconnect: "bots.telegram.disconnect",
+
+  // Pets
+  petsList: "pets.list",
+  petsListCodex: "pets.listCodex",
+  petsImport: "pets.import",
+  petsCreatePicture: "pets.createPicture",
+  petsRename: "pets.rename",
+  petsRemove: "pets.remove",
+  petsHatch: "pets.hatch",
 
   // Scheduled tasks
   scheduledTasksList: "scheduledTasks.list",
@@ -586,6 +624,51 @@ const WsProviderInstallRemoveRpc = Rpc.make(WS_METHODS.providerInstallRemove, {
   payload: ProviderSetupInput,
   success: ProviderInstallState,
   error: ProviderSetupRpcError,
+});
+
+const VoiceRpcError = Schema.Union([VoiceInputError, EnvironmentAuthorizationError]);
+
+const WsVoiceStatusSubscribeRpc = Rpc.make(WS_METHODS.voiceStatusSubscribe, {
+  payload: Schema.Struct({}),
+  success: VoiceInputStatus,
+  error: VoiceRpcError,
+  stream: true,
+});
+
+const WsVoiceInstallRpc = Rpc.make(WS_METHODS.voiceInstall, {
+  payload: VoiceInstallInput,
+  success: VoiceInputStatus,
+  error: VoiceRpcError,
+});
+
+const WsVoiceInstallCancelRpc = Rpc.make(WS_METHODS.voiceInstallCancel, {
+  payload: Schema.Struct({}),
+  success: VoiceInputStatus,
+  error: VoiceRpcError,
+});
+
+const WsVoiceRemoveRpc = Rpc.make(WS_METHODS.voiceRemove, {
+  payload: Schema.Struct({}),
+  success: VoiceInputStatus,
+  error: VoiceRpcError,
+});
+
+const WsVoiceCreateUploadUrlRpc = Rpc.make(WS_METHODS.voiceCreateUploadUrl, {
+  payload: VoiceCreateUploadUrlInput,
+  success: VoiceCreateUploadUrlResult,
+  error: VoiceRpcError,
+});
+
+const WsVoiceTranscribeRpc = Rpc.make(WS_METHODS.voiceTranscribe, {
+  payload: VoiceTranscribeInput,
+  success: VoiceTranscribeResult,
+  error: VoiceRpcError,
+});
+
+const WsVoiceTranscriptionCancelRpc = Rpc.make(WS_METHODS.voiceTranscriptionCancel, {
+  payload: VoiceTranscriptionCancelInput,
+  success: Schema.Struct({}),
+  error: VoiceRpcError,
 });
 
 const WsServerUpdateServerRpc = Rpc.make(WS_METHODS.serverUpdateServer, {
@@ -1298,6 +1381,49 @@ const WsBotsTelegramDisconnectRpc = Rpc.make(WS_METHODS.botsTelegramDisconnect, 
   error: Schema.Union([BotTelegramError, EnvironmentAuthorizationError]),
 });
 
+const PetRpcError = Schema.Union([PetError, EnvironmentAuthorizationError]);
+
+const WsPetsListRpc = Rpc.make(WS_METHODS.petsList, {
+  success: PetsListResult,
+  error: PetRpcError,
+});
+
+/** Pets found in connected Codex installs that can be imported. */
+const WsPetsListCodexRpc = Rpc.make(WS_METHODS.petsListCodex, {
+  success: Schema.Array(CodexPetCandidate),
+  error: PetRpcError,
+});
+
+const WsPetsImportRpc = Rpc.make(WS_METHODS.petsImport, {
+  payload: PetImportInput,
+  success: Pet,
+  error: PetRpcError,
+});
+
+const WsPetsCreatePictureRpc = Rpc.make(WS_METHODS.petsCreatePicture, {
+  payload: PetCreatePictureInput,
+  success: Pet,
+  error: PetRpcError,
+});
+
+const WsPetsRenameRpc = Rpc.make(WS_METHODS.petsRename, {
+  payload: PetRenameInput,
+  success: Pet,
+  error: PetRpcError,
+});
+
+const WsPetsRemoveRpc = Rpc.make(WS_METHODS.petsRemove, {
+  payload: PetRemoveInput,
+  error: PetRpcError,
+});
+
+/** Starts generating a pet with AI in a thread of the given project. */
+const WsPetsHatchRpc = Rpc.make(WS_METHODS.petsHatch, {
+  payload: PetHatchInput,
+  success: PetHatchJob,
+  error: PetRpcError,
+});
+
 /** Streams the full scheduled-task list: one snapshot on subscribe, then a fresh list after every change. */
 const WsScheduledTasksSubscribeRpc = Rpc.make(WS_METHODS.scheduledTasksSubscribe, {
   payload: ScheduledTaskListInput,
@@ -1413,6 +1539,13 @@ export const WsRpcGroup = RpcGroup.make(
   WsProviderInstallCancelRpc,
   WsProviderInstallSubscribeRpc,
   WsProviderInstallRemoveRpc,
+  WsVoiceStatusSubscribeRpc,
+  WsVoiceInstallRpc,
+  WsVoiceInstallCancelRpc,
+  WsVoiceRemoveRpc,
+  WsVoiceCreateUploadUrlRpc,
+  WsVoiceTranscribeRpc,
+  WsVoiceTranscriptionCancelRpc,
   WsServerUpdateServerRpc,
   WsServerUpdateServerWithProgressRpc,
   WsServerCommitDesktopUpdateRpc,
@@ -1450,6 +1583,13 @@ export const WsRpcGroup = RpcGroup.make(
   WsBotsTelegramStatusRpc,
   WsBotsTelegramConnectRpc,
   WsBotsTelegramDisconnectRpc,
+  WsPetsListRpc,
+  WsPetsListCodexRpc,
+  WsPetsImportRpc,
+  WsPetsCreatePictureRpc,
+  WsPetsRenameRpc,
+  WsPetsRemoveRpc,
+  WsPetsHatchRpc,
   WsScheduledTasksListRpc,
   WsScheduledTasksSubscribeRpc,
   WsScheduledTasksUpsertRpc,

@@ -55,6 +55,8 @@ import * as AppConnections from "../apps/AppConnections.ts";
 import * as LocalRuntimes from "../apps/LocalRuntimes.ts";
 import * as BotMessaging from "../bots/BotMessaging.ts";
 import * as GuideImport from "../bots/GuideImport.ts";
+import * as PetHatchService from "../pets/PetHatchService.ts";
+import * as PetLibrary from "../pets/PetLibrary.ts";
 import * as AutoReviewService from "./AutoReviewService.ts";
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 
@@ -311,6 +313,17 @@ const layerAutoReviewProvided = AutoReviewService.layer.pipe(
     ),
   ),
 );
+const layerPetHatchProvided = PetHatchService.layer.pipe(
+  Layer.provide(
+    Layer.mergeAll(
+      layerOrchestratorProvided,
+      layerThreadLaunchProvided,
+      layerThreadManagementProvided,
+      layerProjectService,
+      PetLibrary.layer,
+    ),
+  ),
+);
 const layerProviderContinuationWorkerProvided = ProviderContinuationService.layer.pipe(
   Layer.provide(
     Layer.mergeAll(
@@ -388,6 +401,8 @@ export const layerProduction = Layer.mergeAll(
   AppConnections.layer.pipe(Layer.provide(LocalRuntimes.layer)),
   layerBotMessagingProvided,
   GuideImport.layer.pipe(Layer.provide(ProjectStore.layer)),
+  PetLibrary.layer,
+  layerPetHatchProvided,
   layerAutoReviewProvided,
   layerSecretRequestsProvided,
   UsageLimitRecoveryWorker.layer.pipe(

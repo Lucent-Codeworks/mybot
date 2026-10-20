@@ -6,6 +6,7 @@ import {
   PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
   PROVIDER_SEND_TURN_SUPPORTED_IMAGE_MIME_TYPES,
 } from "./chatAttachment.ts";
+import { PetId } from "./pets.ts";
 import { ProjectFaviconPath } from "./project.ts";
 import { ToolActivityNativeAppReference } from "./providerRuntime.ts";
 
@@ -58,6 +59,12 @@ export const AssetResource = Schema.Union([
   }),
   Schema.TaggedStruct("native-app-icon", {
     app: ToolActivityNativeAppReference,
+  }),
+  // A pet's sprite sheet or picture from the environment's pet library.
+  Schema.TaggedStruct("pet-sprite", {
+    petId: PetId,
+    // A cache-key hint only. The issued URL names the sprite by its content hash.
+    version: Schema.optional(Schema.String),
   }),
 ]);
 export type AssetResource = typeof AssetResource.Type;
@@ -207,7 +214,9 @@ export class AssetWorkspaceAssetInspectionError extends Schema.TaggedError<Asset
   override get message(): string {
     return this.resource._tag === "media-file"
       ? "Failed to inspect the media file."
-      : "Failed to inspect the workspace asset.";
+      : this.resource._tag === "pet-sprite"
+        ? "Failed to read the pet's image."
+        : "Failed to inspect the workspace asset.";
   }
 }
 
@@ -222,7 +231,9 @@ export class AssetWorkspaceAssetNotFoundError extends Schema.TaggedError<AssetWo
       ? "Media file was not found."
       : this.resource._tag === "tool-output-image"
         ? "Tool output image was not found."
-        : "Workspace asset was not found.";
+        : this.resource._tag === "pet-sprite"
+          ? "Pet was not found."
+          : "Workspace asset was not found.";
   }
 }
 

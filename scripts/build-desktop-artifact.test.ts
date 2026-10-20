@@ -46,6 +46,7 @@ import {
   preflightMacDesktopBuild,
   preflightWindowsDesktopBuild,
   renderMacPasskeyEntitlements,
+  renderMacEntitlements,
   resolveMacWebAuthnEntitlements,
   resolveClerkPasskeyNativeArtifacts,
   resolveMacPasskeySigningConfiguration,
@@ -750,6 +751,11 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         (mac.mac as Record<string, unknown>).extendInfo as Record<string, unknown>,
         "NSLocalNetworkUsageDescription",
         "MyBot connects to devices on your local network for remote environments and commands run by terminals and coding agents.",
+      );
+      assert.propertyVal(
+        (mac.mac as Record<string, unknown>).extendInfo as Record<string, unknown>,
+        "NSMicrophoneUsageDescription",
+        "MyBot uses your microphone for voice input.",
       );
       for (const config of [linux, win]) {
         assert.deepStrictEqual(config.electronLanguages, DESKTOP_ELECTRON_LANGUAGES);
@@ -1976,8 +1982,16 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     assert.include(entitlements, "<string>webcredentials:clerk.example.com</string>");
     assert.include(entitlements, "<string>webcredentials:example.clerk.accounts.dev</string>");
     assert.include(entitlements, "<key>com.apple.security.cs.allow-jit</key>");
+    assert.include(entitlements, "<key>com.apple.security.device.audio-input</key>");
     assert.notInclude(entitlements, "keychain-access-groups");
     assert.notInclude(entitlements, "com.apple.developer.web-browser.public-key-credential");
+  });
+
+  it("lets every signed macOS build use the microphone", () => {
+    const entitlements = renderMacEntitlements();
+    assert.include(entitlements, "<key>com.apple.security.device.audio-input</key>");
+    assert.include(entitlements, "<key>com.apple.security.cs.allow-jit</key>");
+    assert.notInclude(entitlements, "com.apple.developer.associated-domains");
   });
 
   it("grants in-app browser passkey entitlements only when the provisioning profile does", () => {

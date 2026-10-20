@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import type { PreparedVoiceTranscription } from "@mybot/client-runtime/voice-input";
+import {
+  VoiceTranscriptionError,
+  type PreparedVoiceTranscription,
+  type VoiceTranscriber,
+} from "@mybot/client-runtime/voice-input";
+import { EnvironmentId } from "@mybot/contracts";
 import { Atom, AtomRegistry } from "effect/reactivity";
 import { resetVoiceInputGlobalsForTests } from "../../../../../packages/client-runtime/src/voice-input/controller";
 
@@ -18,7 +23,7 @@ function createTarget(
   return createVoiceInputTarget(ownerKey, readText, commit, selection, () => () => {});
 }
 
-function createSession() {
+function createSession(getTranscriber?: (target: VoiceInputTarget) => VoiceTranscriber | null) {
   const recorder = {
     uri: "file:///voice.m4a",
     prepareToRecordAsync: vi.fn(async () => {}),
@@ -31,7 +36,7 @@ function createSession() {
   }));
   const session = new VoiceInputSession({
     recorder,
-    getTranscriber: () => ({ prepare }),
+    getTranscriber: getTranscriber ?? (() => ({ prepare })),
     requestPermission: async () => ({ granted: true, canAskAgain: true }),
     configureRecording: async () => {},
     releaseRecording: vi.fn(async () => {}),
@@ -39,6 +44,24 @@ function createSession() {
     onStateChange: vi.fn(),
   });
   return { session, recorder, prepare };
+}
+
+function sendingTarget(events: string[]): VoiceInputTarget {
+  let text = "hello";
+  return {
+    ...createVoiceInputTarget(
+      "first",
+      () => text,
+      (next) => {
+        text = next;
+        events.push(`commit:${next}`);
+      },
+      { start: 5, end: 5 },
+      () => () => {},
+    ),
+    environmentId: EnvironmentId.make("env-1"),
+    submit: () => events.push(`submit:${text}`),
+  };
 }
 
 describe("global voice input", () => {
@@ -268,5 +291,77 @@ describe("global voice input", () => {
     expect(recorder.record).toHaveBeenCalledTimes(1);
     expect(oldCommit).not.toHaveBeenCalled();
     expect(nextCommit).toHaveBeenCalledWith("second spoken text", { start: 18, end: 18 });
+  });
+
+  it("getTranscriber receives the target's environmentId", async () => {
+    const prepare = vi.fn(async (): Promise<PreparedVoiceTranscription> => ({
+      locale: "en-US",
+      transcribe: async () => "spoken text",
+    }));
+    const getTranscriber = vi.fn((_target: VoiceInputTarget) => ({ prepare }));
+    const { session } = createSession(getTranscriber);
+    await session.start(sendingTarget([]));
+    expect(getTranscriber).toHaveBeenCalledTimes(1);
+    expect(getTranscriber.mock.calls[0]?.[0].environmentId).toBe("env-1");
+  });
+
+  it('stop("send") calls target.submit after commit', async () => {
+    const events: string[] = [];
+    const { session } = createSession();
+    await session.start(sendingTarget(events));
+    await session.controller.stop("send");
+    expect(events).toEqual(["commit:hello spoken text", "submit:hello spoken text"]);
+  });
+
+  it("stop() does not call submit", async () => {
+    const events: string[] = [];
+    const { session } = createSession();
+    await session.start(sendingTarget(events));
+    await session.controller.stop();
+    expect(events).toEqual(["commit:hello spoken text"]);
+  });
+
+  it("retry sends a kept recording again instead of recording a new one", async () => {
+    const events: string[] = [];
+    const transcribe = vi
+      .fn<() => Promise<string>>()
+      .mockRejectedValueOnce(new VoiceTranscriptionError("transcription-failed", "offline"))
+      .mockResolvedValueOnce("spoken text");
+    const { session, recorder, prepare } = createSession();
+    prepare.mockResolvedValue({ locale: "en-US", transcribe });
+    await session.start(sendingTarget(events));
+    await session.controller.stop("send");
+    expect(session.controller.currentState.errorAction).toBe("retry-transcription");
+    await session.retry();
+    expect(recorder.record).toHaveBeenCalledTimes(1);
+    expect(events).toEqual(["commit:hello spoken text", "submit:hello spoken text"]);
+  });
+
+  it("a kept recording still notices draft edits made before its retry", async () => {
+    const registry = AtomRegistry.make();
+    const draft = Atom.make("hello");
+    const commit = vi.fn();
+    const transcribe = vi
+      .fn<() => Promise<string>>()
+      .mockRejectedValueOnce(new VoiceTranscriptionError("transcription-failed", "offline"))
+      .mockResolvedValueOnce("spoken text");
+    const { session, prepare } = createSession();
+    prepare.mockResolvedValue({ locale: "en-US", transcribe });
+    await session.start(
+      createVoiceInputTarget(
+        "first",
+        () => registry.get(draft),
+        commit,
+        { start: 5, end: 5 },
+        (onChange) => registry.subscribe(draft, onChange),
+      ),
+    );
+    await session.controller.stop();
+    registry.set(draft, "changed");
+    registry.set(draft, "hello");
+    await session.retry();
+    expect(commit).not.toHaveBeenCalled();
+    expect(session.controller.currentState.error).toContain("draft changed");
+    registry.dispose();
   });
 });

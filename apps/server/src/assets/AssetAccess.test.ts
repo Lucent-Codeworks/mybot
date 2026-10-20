@@ -2,7 +2,7 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as NodeHttpPlatform from "@effect/platform-node/NodeHttpPlatform";
 import * as NodeFSP from "node:fs/promises";
-import { AssetPreviewTypeValidationError, ThreadId, TurnItemId } from "@mybot/contracts";
+import { AssetPreviewTypeValidationError, PetId, ThreadId, TurnItemId } from "@mybot/contracts";
 import { PROJECT_FAVICON_FALLBACK_MARKER } from "@mybot/shared/projectFavicon";
 import { MCP_APP_MAX_HTML_BYTES } from "@mybot/shared/mcpApp";
 import { describe, expect, it } from "@effect/vitest";
@@ -20,6 +20,9 @@ import { vi } from "vite-plus/test";
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 import * as ServerConfig from "../config.ts";
 import * as Orchestrator from "../orchestration-v2/Orchestrator.ts";
+import * as PetLibrary from "../pets/PetLibrary.ts";
+import { encodePng } from "../pets/png.ts";
+import * as ServerSettings from "../serverSettings.ts";
 import * as ProjectFaviconResolver from "../project/ProjectFaviconResolver.ts";
 import * as MyBotProjectFileLoader from "../project/MyBotProjectFileLoader.ts";
 import * as WorkspacePaths from "../workspace/WorkspacePaths.ts";
@@ -110,6 +113,7 @@ const layerTest = Layer.mergeAll(
   ),
   NativeAppIconResolver.layer.pipe(Layer.provide(layerConfig)),
   ServerSecretStore.layer.pipe(Layer.provide(layerConfig)),
+  PetLibrary.layer.pipe(Layer.provide(ServerSettings.layerTest()), Layer.provide(layerConfig)),
 ).pipe(Layer.provideMerge(NodeServices.layer));
 
 describe("AssetAccess", () => {
@@ -1377,6 +1381,75 @@ describe("AssetAccess", () => {
       expect(error.message).toBe("Failed to resolve project favicon.");
       expect(error._tag).toBe("AssetProjectFaviconResolutionError");
       expect(error.cause).toBe(resolutionCause);
+    }).pipe(Effect.provide(layerTest)),
+  );
+});
+
+describe("pet sprite assets", () => {
+  /** Splits an issued asset URL into the token and file name `resolveAsset` takes. */
+  const resolveIssued = (relativeUrl: string) => {
+    const suffix = relativeUrl.slice(`${ASSET_ROUTE_PREFIX}/`.length);
+    const separatorIndex = suffix.indexOf("/");
+    return resolveAsset(suffix.slice(0, separatorIndex), suffix.slice(separatorIndex + 1));
+  };
+
+  it.effect("serves a stored pet's sprite sheet from its file with the atlas size", () =>
+    Effect.gen(function* () {
+      const pets = yield* PetLibrary.PetLibrary;
+      const config = yield* ServerConfig.ServerConfig;
+      const path = yield* Path.Path;
+      const pet = yield* pets.importAtlasBytes({
+        bytes: encodePng({
+          width: 1536,
+          height: 1872,
+          channels: 4,
+          data: new Uint8Array(1536 * 1872 * 4),
+        }),
+        displayName: "Mochi",
+        description: "",
+        source: "import",
+      });
+
+      const result = yield* issueAssetUrl({ resource: { _tag: "pet-sprite", petId: pet.id } });
+
+      expect(result.relativeUrl).toMatch(
+        new RegExp(`^${ASSET_ROUTE_PREFIX}/[^/]+/${pet.id}-[0-9a-f]{64}\\.png$`, "u"),
+      );
+      expect(result.imageDimensions).toEqual({ width: 1536, height: 1872 });
+      expect(yield* issueAssetUrl({ resource: { _tag: "pet-sprite", petId: pet.id } })).toEqual(
+        result,
+      );
+      expect(yield* resolveIssued(result.relativeUrl)).toEqual({
+        kind: "file",
+        path: path.join(config.petsDir, pet.id, "spritesheet.png"),
+        mimeType: "image/png",
+      });
+    }).pipe(Effect.provide(layerTest)),
+  );
+
+  it.effect("serves a built-in pet's picture from memory", () =>
+    Effect.gen(function* () {
+      const result = yield* issueAssetUrl({
+        resource: { _tag: "pet-sprite", petId: PetId.make("builtin-bolt") },
+      });
+
+      expect(result.relativeUrl).toMatch(/\/builtin-bolt-[0-9a-f]{64}\.png$/u);
+      expect(result.imageDimensions).toEqual({ width: 192, height: 192 });
+      expect(yield* resolveIssued(result.relativeUrl)).toMatchObject({
+        kind: "bytes",
+        mimeType: "image/png",
+      });
+    }).pipe(Effect.provide(layerTest)),
+  );
+
+  it.effect("does not issue a URL for a pet that does not exist", () =>
+    Effect.gen(function* () {
+      const error = yield* issueAssetUrl({
+        resource: { _tag: "pet-sprite", petId: PetId.make("nobody") },
+      }).pipe(Effect.flip);
+
+      expect(error._tag).toBe("AssetWorkspaceAssetNotFoundError");
+      expect(error.message).toBe("Pet was not found.");
     }).pipe(Effect.provide(layerTest)),
   );
 });

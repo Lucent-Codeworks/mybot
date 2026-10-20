@@ -410,6 +410,42 @@ function pumpUploads(): void {
   }
 }
 
+/**
+ * Uploads one image that no composer draft owns, such as a pet, and resolves
+ * its attachment id. Throws an error whose message is written for the user.
+ */
+export async function uploadImageAttachment(input: {
+  readonly environmentId: EnvironmentId;
+  readonly file: File;
+}): Promise<string> {
+  const { environmentId, file } = input;
+  if (!readEnvironmentScope(environmentId, AuthOrchestrationOperateScope)) {
+    throw new Error("This connection cannot upload attachments.");
+  }
+  const mimeType = PROVIDER_SEND_TURN_SUPPORTED_IMAGE_MIME_TYPES.find(
+    (supportedMimeType) => supportedMimeType === file.type.toLowerCase(),
+  );
+  if (!mimeType) throw new Error("Unsupported image type");
+  const result = await runAttachmentUploadCycle({
+    registry: appAtomRegistry,
+    createUploadUrl: attachmentEnvironment.createUploadUrl,
+    remove: attachmentEnvironment.remove,
+    environmentId,
+    upload: { name: file.name, mimeType, sizeBytes: file.size },
+    resolveUploadUrl: (relativeUrl) => {
+      const connection = readPreparedConnection(environmentId);
+      return connection ? resolveAssetUrl(connection.httpBaseUrl, relativeUrl) : null;
+    },
+    transport: (url) => uploadBytes({ url, file, mimeType, onProgress: () => {} }),
+  });
+  if (result.status === "uploaded") return result.attachmentId;
+  if (result.attachmentId) deletePendingUpload(environmentId, result.attachmentId);
+  if (result.status === "failed" && result.step === "resolve-url") throw new Error("Not connected");
+  throw result.status === "failed" && result.error instanceof Error
+    ? result.error
+    : new Error("Upload failed");
+}
+
 export function startAttachmentUpload(input: {
   readonly environmentId: EnvironmentId;
   readonly image: ComposerImageAttachment | ComposerFileAttachment;

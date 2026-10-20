@@ -1361,6 +1361,27 @@ describe("composer shortcuts", () => {
   }
 
   it.each(["MacIntel", "Win32", "Linux"])(
+    "toggles voice input with mod+alt+v on %s",
+    (platform) => {
+      // macOS reports Option+V as "√"; the physical key still matches.
+      const input = event({
+        key: platform === "MacIntel" ? "√" : "v",
+        code: "KeyV",
+        altKey: true,
+        metaKey: platform === "MacIntel",
+        ctrlKey: platform !== "MacIntel",
+      });
+      assert.strictEqual(
+        resolveShortcutCommand(input, DEFAULT_RESOLVED_KEYBINDINGS, {
+          platform,
+          context: { terminalFocus: false },
+        }),
+        "composer.voice",
+      );
+    },
+  );
+
+  it.each(["MacIntel", "Win32", "Linux"])(
     "edits the last queued message with Alt+ArrowUp from the composer on %s",
     (platform) => {
       const input = event({ key: "ArrowUp", altKey: true });

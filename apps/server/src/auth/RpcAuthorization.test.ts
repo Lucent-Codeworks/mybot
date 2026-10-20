@@ -9,6 +9,7 @@ import {
   ThreadId,
   AuthOrchestrationOperateScope,
   ORCHESTRATION_V2_WS_METHODS,
+  PetId,
   AuthOrchestrationReadScope,
   AuthPreviewOperateScope,
   AuthRelayReadScope,
@@ -75,6 +76,21 @@ describe("RPC authorization scopes", () => {
     }
   });
 
+  it("lets readers list pets but only operators change them", () => {
+    for (const method of [WS_METHODS.petsList, WS_METHODS.petsListCodex]) {
+      expect(requiredScopeForRpcMethod(method)).toBe(AuthOrchestrationReadScope);
+    }
+    for (const method of [
+      WS_METHODS.petsImport,
+      WS_METHODS.petsCreatePicture,
+      WS_METHODS.petsRename,
+      WS_METHODS.petsRemove,
+      WS_METHODS.petsHatch,
+    ]) {
+      expect(requiredScopeForRpcMethod(method)).toBe(AuthOrchestrationOperateScope);
+    }
+  });
+
   it("lets readers list connected apps but only settings writers change or sign in to them", () => {
     expect(requiredScopeForRpcMethod(WS_METHODS.appConnectionsList)).toBe(
       AuthOrchestrationReadScope,
@@ -93,6 +109,26 @@ describe("RPC authorization scopes", () => {
       AuthRelayReadScope,
     );
     expect(requiredScopeForRpcMethod(WS_METHODS.cloudInstallRelayClient)).toBe(AuthRelayWriteScope);
+  });
+
+  it("lets any paired device set up voice input but only operators transcribe", () => {
+    expect(requiredScopeForRpcMethod(WS_METHODS.voiceStatusSubscribe)).toBe(
+      AuthOrchestrationReadScope,
+    );
+    for (const method of [
+      WS_METHODS.voiceInstall,
+      WS_METHODS.voiceInstallCancel,
+      WS_METHODS.voiceRemove,
+    ]) {
+      expect(requiredScopeForRpcMethod(method)).toBe(AuthEnvironmentMaintainScope);
+    }
+    for (const method of [
+      WS_METHODS.voiceCreateUploadUrl,
+      WS_METHODS.voiceTranscribe,
+      WS_METHODS.voiceTranscriptionCancel,
+    ]) {
+      expect(requiredScopeForRpcMethod(method)).toBe(AuthOrchestrationOperateScope);
+    }
   });
 
   it("requires permission to operate on a thread before uploading feedback", () => {
@@ -343,6 +379,10 @@ it.effect("separates host file URLs from readable attachment URLs", () =>
     yield* client[WS_METHODS.assetsCreateUrl]({
       resource: { _tag: "attachment", attachmentId: "image" },
     });
+    // Pet sprites live in the T3 home, not on a project path, so readers may load them.
+    yield* client[WS_METHODS.assetsCreateUrl]({
+      resource: { _tag: "pet-sprite", petId: PetId.make("mochi") },
+    });
     for (const resource of [
       { _tag: "workspace-file", threadId: ThreadId.make("thread"), path: "file.txt" },
       { _tag: "media-file", threadId: ThreadId.make("thread"), path: "/repo/image.png" },
@@ -355,7 +395,7 @@ it.effect("separates host file URLs from readable attachment URLs", () =>
         requiredPermission: AuthFilesystemReadScope,
       });
     }
-    expect(handled).toBe(1);
+    expect(handled).toBe(2);
   }).pipe(Effect.scoped),
 );
 

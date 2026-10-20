@@ -51,9 +51,14 @@ export function withoutAgentAutoReview(
 ): BotProfile | null | undefined {
   if (bot == null) return bot;
   const { autoReview: _requested, ...profile } = bot;
+  // The pet is the user's pick, so an update that does not mention it keeps it.
+  const kept =
+    bot.petId === undefined && existing?.petId !== undefined
+      ? { ...profile, petId: existing.petId }
+      : profile;
   return existing?.autoReview === true && existing.instructions === bot.instructions
-    ? { ...profile, autoReview: true }
-    : profile;
+    ? { ...kept, autoReview: true }
+    : kept;
 }
 
 export const layer = McpToolAccess.toLayer(ProjectToolkit, {

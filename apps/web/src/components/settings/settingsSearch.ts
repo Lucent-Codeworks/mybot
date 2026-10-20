@@ -24,6 +24,7 @@ export type SettingsPath =
   | "/settings/integrations"
   | "/settings/scheduled-tasks"
   | "/settings/storage"
+  | "/settings/voice"
   | "/settings/connections"
   | "/settings/archived";
 
@@ -103,6 +104,7 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/integrations": "Integrations",
   "/settings/scheduled-tasks": "Scheduled Tasks",
   "/settings/storage": "Storage",
+  "/settings/voice": "Voice",
   "/settings/connections": "Connections",
   "/settings/archived": "Archive",
 };
@@ -141,6 +143,12 @@ const KEYBINDING_SEARCH_ITEMS = STATIC_KEYBINDING_COMMANDS.toSorted((left, right
  */
 export const SETTINGS_SEARCH_ITEMS = [
   {
+    id: "voice-model",
+    title: "Voice input",
+    to: "/settings/voice",
+    searchTerms: ["voice dictation microphone speech whisper model download transcribe"],
+  },
+  {
     id: "storage-delete-now",
     title: "Delete now",
     to: "/settings/storage",
@@ -166,6 +174,12 @@ export const SETTINGS_SEARCH_ITEMS = [
     title: "Bot overview",
     to: "/settings/projects",
     searchTerms: ["name icon emoji image job instructions memory telegram delete"],
+  },
+  {
+    id: "bot-pet",
+    title: "Pet",
+    to: "/settings/projects",
+    searchTerms: ["pets mascot avatar import chatgpt codex picture create hatch ai export"],
   },
   {
     id: "default-model",
@@ -280,6 +294,12 @@ export const SETTINGS_SEARCH_ITEMS = [
     id: "composer-context",
     title: "Composer context",
     to: "/settings/appearance",
+  },
+  {
+    id: "pets",
+    title: "Pets",
+    to: "/settings/appearance",
+    searchTerms: ["show pets mascot default pet library rename remove hide turn off"],
   },
   {
     id: "snooze-limited-threads",
@@ -785,6 +805,7 @@ const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScop
   // Apps belong to the host environment, whatever the scope selection.
   "/settings/apps": null,
   "/settings/storage": "environment-defaults",
+  "/settings/voice": null,
   "/settings/connections": "connections",
   "/settings/scheduled-tasks": null,
   "/settings/archived": "project-defaults",

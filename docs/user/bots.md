@@ -81,6 +81,10 @@ leaves the page open and tells you what to do. Open its browser tab, choose
 bot. Never send passwords or codes in a chat; a bot that needs an API key asks
 for it with a private form.
 
+Bots browse with Google Chrome when it is installed on the machine running
+MyBot, and with a built-in browser otherwise. Sites trust Chrome more, so if
+CAPTCHAs keep failing, install Chrome there.
+
 ## Connect apps
 
 Connect your apps so bots can use them directly instead of clicking through
@@ -139,7 +143,8 @@ opens the starting page in its browser tab and asks you to take over. Choose
 **Take control**, do the task once, choose **Release control**, and reply.
 
 Only what you do while in control is recorded. Passwords and one-time codes are
-recorded as steps you do yourself, without their values. Afterwards the bot
+recorded as steps you do yourself, without their values. Files you upload are
+recorded by name, as steps you supply the file for. Afterwards the bot
 writes a skill it can repeat, with the details you entered turned into inputs.
 
 You can also hand a bot a step-by-step guide you already have, such as a PDF
@@ -187,6 +192,35 @@ When the bot needs your approval or asks you a question, it sends it to the
 chat. Reply `yes`, `always`, or `no` to an approval, or a number (or your own
 words) to a question. Questions with several parts still have to be answered
 in MyBot.
+
+## Pets
+
+A pet sits beside the chat box in a bot's conversations and reacts to what the
+bot is doing: working, needing you (an approval, a question, or a usage limit),
+finished, or failed. MyBot comes with three pets, Bolt, Ember, and Pip, that
+anyone can use. Under reduced motion in your operating system, pets hold still.
+
+To give a bot a pet, open **Settings → Bot** and find **Pet**. Pick an existing
+pet, **No pet**, or add a new one:
+
+- **Import** takes a pet downloaded from ChatGPT (**Settings → Personalization
+  → Pet**), a Codex pet folder as a zip, or a single pet sprite sheet. Pets
+  already in the host's `~/.codex/pets` folder are listed so you can import
+  them in one click.
+- **Use a picture** turns any image into a pet, and MyBot adds simple motion.
+- **Create with AI** hatches a new pet from a description of a character, with
+  an optional reference image. It needs Codex signed in with ChatGPT and uses
+  your Codex usage. It takes a few minutes and runs as a "Hatching" conversation
+  in that bot, which you can watch, steer, or stop. The finished pet is given
+  to that bot.
+
+You can also rename a pet, export it in the ChatGPT and Codex format, or
+remove it.
+
+Each bot can have its own pet. **Settings → Appearance → Pets** sets a default
+pet for bots without one, turns **Show pets** on or off for this device, and
+lists every pet. Pets are stored with your MyBot environment, so they appear on
+desktop, web, and mobile. Mobile shows pets; set them up on desktop or web.
 
 ## Change or remove a bot
 

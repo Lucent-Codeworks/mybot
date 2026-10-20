@@ -175,6 +175,7 @@ export function makeReplayServerConfig(
       serverRuntimeStatePath: path.join(stateDir, "server-runtime.json"),
       secretsDir: path.join(stateDir, "secrets"),
       skillsDir: path.join(baseDir, "skills"),
+      petsDir: path.join(stateDir, "pets"),
     };
   });
 }

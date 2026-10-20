@@ -511,12 +511,14 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
   });
   const voiceInput = useVoiceInputController({
     ownerKey: composerDraftKey,
+    environmentId: props.environmentId,
     label: props.selectedThread.title || "Untitled thread",
     readDraftMessage: () => getComposerDraftSnapshot(composerDraftKey).text,
     subscribeToDraftChanges: (onChange) => appAtomRegistry.subscribe(composerDraftsAtom, onChange),
     selection: composerMenu.selection,
     onChangeDraftMessage: (text) => setComposerDraftText(composerDraftKey, text),
     onChangeSelection: composerMenu.onSelectionChange,
+    onSubmit: () => void handleSend(),
   });
   const voicePresentation = resolveVoiceComposerPresentation(
     voiceInput.state,
@@ -1166,6 +1168,7 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
                     isAvailable={voiceInput.isAvailable}
                     onStart={voiceInput.start}
                     onConfirm={voiceInput.stop}
+                    onSend={voiceInput.send}
                     onCancel={voiceInput.cancel}
                   />
                   {showStopAction ? (

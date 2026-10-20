@@ -1,4 +1,4 @@
-import { EnvironmentId } from "@mybot/contracts";
+import { EnvironmentId, PetId } from "@mybot/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import { assetImageSource } from "./assetImageSource";
@@ -54,5 +54,30 @@ describe("assetImageSource", () => {
     );
 
     expect(source).toStrictEqual({ uri: "https://host/api/assets/token-a/logo.png" });
+  });
+  it("caches a pet sprite under its id and version, not its signed URL", () => {
+    const petId = PetId.make("lucky");
+    const first = assetImageSource(
+      environmentId,
+      { _tag: "pet-sprite", petId, version: "2026-10-19T00:00:00.000Z" },
+      "https://host/api/assets/token-a/sprite.webp",
+    );
+    const resigned = assetImageSource(
+      environmentId,
+      { _tag: "pet-sprite", petId, version: "2026-10-19T00:00:00.000Z" },
+      "https://host/api/assets/token-b/sprite.webp",
+    );
+    const replaced = assetImageSource(
+      environmentId,
+      { _tag: "pet-sprite", petId, version: "2026-10-20T00:00:00.000Z" },
+      "https://host/api/assets/token-c/sprite.webp",
+    );
+
+    expect(first.cacheKey).toBeDefined();
+    expect(resigned.cacheKey).toBe(first.cacheKey);
+    expect(replaced.cacheKey).not.toBe(first.cacheKey);
+    expect(
+      assetImageSource(environmentId, { _tag: "pet-sprite", petId }, "https://host/s.webp"),
+    ).toStrictEqual({ uri: "https://host/s.webp" });
   });
 });
