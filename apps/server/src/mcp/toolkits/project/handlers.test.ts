@@ -2,6 +2,7 @@ import { expect, it } from "@effect/vitest";
 import {
   type ProjectCreateNewInput,
   EnvironmentId,
+  PetId,
   ProjectId,
   ProviderInstanceId,
   ThreadId,
@@ -447,6 +448,16 @@ it("never lets an agent grant Auto Review, and drops it when an agent rewrites t
     ),
   ).toEqual({ role: "Inbox", instructions: "Send anything." });
   expect(ProjectHandlers.withoutAgentAutoReview(null, reviewed)).toBeNull();
+});
+
+it("keeps a bot's pet when an agent's update does not mention one", () => {
+  const pet = { role: "r", instructions: "i", petId: PetId.make("bolt") };
+  expect(ProjectHandlers.withoutAgentAutoReview({ role: "r", instructions: "i" }, pet)).toEqual(
+    pet,
+  );
+  expect(
+    ProjectHandlers.withoutAgentAutoReview({ role: "r", instructions: "i", petId: null }, pet),
+  ).toEqual({ role: "r", instructions: "i", petId: null });
 });
 
 it.effect("agents can't delete the built-in MyBot, drop its flag, or give it to another bot", () =>
