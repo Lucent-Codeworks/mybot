@@ -375,6 +375,7 @@ import { ChatComposer, type ChatComposerHandle } from "./chat/ChatComposer";
 import { createPageScrollController, type PageScrollKey } from "./chat/pageScrollController";
 import { isTimelineScrollTarget } from "./chat/timelineScrollTarget";
 import { DraftHeroHeadline } from "./chat/DraftHeroHeadline";
+import { ComposerPet } from "./pets/ComposerPet";
 import { ExpandedImageDialog } from "./chat/ExpandedImageDialog";
 import type { AssistantCitationRequest } from "./chat/AssistantCitationSource";
 import { MessagesTimeline, type MessagesTimelineHistoryControls } from "./chat/MessagesTimeline";
@@ -9749,6 +9750,11 @@ export default function ChatView(props: ChatViewProps) {
                   data-chat-composer-stack="true"
                   className="group/composer-stack pointer-events-auto relative z-10 mx-auto w-full max-w-(--chat-content-max-width)"
                 >
+                  <ComposerPet
+                    environmentId={activeThread?.environmentId ?? null}
+                    bot={activeProject?.bot}
+                    thread={activeThreadShell}
+                  />
                   {isDraftHeroState ? (
                     <div className="absolute inset-x-0 bottom-full">
                       <div

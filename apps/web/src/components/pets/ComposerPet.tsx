@@ -1,0 +1,145 @@
+import { useAtomValue } from "@effect/atom-react";
+import type { EnvironmentThreadShell } from "@mybot/client-runtime/state/models";
+import {
+  type PetMood,
+  type PetPose,
+  petPoseFor,
+  resolveBotPet,
+  resolvePetMood,
+} from "@mybot/client-runtime/state/petMood";
+import type { BotProfile, EnvironmentId, Pet } from "@mybot/contracts";
+import * as Option from "effect/Option";
+import { AsyncResult, Atom } from "effect/reactivity";
+import { useEffect, useState } from "react";
+
+import { useMediaQuery } from "~/hooks/useMediaQuery";
+import { useClientSettings } from "~/hooks/useSettings";
+import { observeResize } from "~/lib/observeResize";
+import { petSpriteUrlAtom } from "~/state/assets";
+import { petEnvironment } from "~/state/pets";
+import { serverEnvironment } from "~/state/server";
+
+import { PetSprite } from "./PetSprite";
+
+/** The pet is 72px wide and sits 12px off the composer; below this it would clip. */
+const MIN_FREE_SPACE_PX = 88;
+const PET_WIDTH_PX = 72;
+
+const NO_PETS_ATOM = Atom.make(AsyncResult.initial<never, never>(false)).pipe(
+  Atom.withLabel("pets:none"),
+);
+const NO_SETTINGS_ATOM = Atom.make(null).pipe(Atom.withLabel("pets:no-settings"));
+
+/**
+ * The active bot's pet, beside the composer, reacting to the thread's state.
+ * Renders nothing when pets are off, the project is not a bot, or the bot has
+ * no pet; hides itself when the composer lane leaves no room on its left.
+ */
+export function ComposerPet(props: {
+  readonly environmentId: EnvironmentId | null;
+  readonly bot: BotProfile | null | undefined;
+  /** The active server thread, or null for a draft. */
+  readonly thread: EnvironmentThreadShell | null;
+}) {
+  const { environmentId, bot, thread } = props;
+  const petsEnabled = useClientSettings((settings) => settings.petsEnabled);
+  const wantsPet = petsEnabled && environmentId !== null && !!bot && bot.petId !== null;
+  const serverSettings = useAtomValue(
+    wantsPet ? serverEnvironment.settingsValueAtom(environmentId) : NO_SETTINGS_ATOM,
+  );
+  const petsResult = useAtomValue(
+    wantsPet ? petEnvironment.list({ environmentId, input: undefined }) : NO_PETS_ATOM,
+  );
+  const pets = Option.match(AsyncResult.value(petsResult), {
+    onNone: () => null,
+    onSome: (result) => result.pets,
+  });
+  const pet = wantsPet
+    ? resolveBotPet({ bot, defaultPetId: serverSettings?.defaultPetId ?? null, pets: pets ?? [] })
+    : null;
+  if (!pet || environmentId === null) return null;
+  return <ComposerPetFor environmentId={environmentId} pet={pet} thread={thread} />;
+}
+
+function ComposerPetFor(props: {
+  readonly environmentId: EnvironmentId;
+  readonly pet: Pet;
+  readonly thread: EnvironmentThreadShell | null;
+}) {
+  const { environmentId, pet, thread } = props;
+  const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const url = useAtomValue(
+    petSpriteUrlAtom({ environmentId, petId: pet.id, version: pet.updatedAt }),
+  );
+  const pose = useThreadPose(thread);
+  const [element, setElement] = useState<HTMLDivElement | null>(null);
+  const hasRoom = useHasRoomBesideComposer(element);
+
+  return (
+    <div
+      ref={setElement}
+      aria-hidden={!hasRoom}
+      className={hasRoom && url ? "absolute right-full bottom-0 mr-3" : "hidden"}
+    >
+      {pose.bubble ? (
+        <div className="absolute bottom-full left-1/2 mb-1 -translate-x-1/2 rounded-full bg-muted px-1.5 py-0.5 text-2xs font-semibold whitespace-nowrap text-muted-foreground">
+          {pose.bubble}
+        </div>
+      ) : null}
+      {url ? (
+        <PetSprite
+          pet={pet}
+          url={url}
+          pose={pose}
+          reducedMotion={reducedMotion}
+          width={PET_WIDTH_PX}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * The pose for the thread's current mood. Reactions play only when the mood
+ * changes while the thread is shown, the same rule as `PetMoodTracker`; it is
+ * derived during render here so the reaction lands with the change, not a
+ * frame later, and StrictMode's double render cannot swallow it.
+ */
+function useThreadPose(thread: EnvironmentThreadShell | null): PetPose {
+  const mood: PetMood = thread ? resolvePetMood(thread) : "idle";
+  const threadKey = thread ? `${thread.environmentId}:${thread.id}` : null;
+  const [tracked, setTracked] = useState(() => ({
+    threadKey,
+    mood,
+    pose: petPoseFor(mood, false),
+  }));
+  if (tracked.threadKey !== threadKey || tracked.mood !== mood) {
+    const next = {
+      threadKey,
+      mood,
+      pose: petPoseFor(mood, tracked.threadKey === threadKey),
+    };
+    setTracked(next);
+    return next.pose;
+  }
+  return tracked.pose;
+}
+
+/**
+ * Whether the composer stack leaves room for the pet on its left. Updates
+ * only when the answer flips, not on every resized pixel.
+ */
+function useHasRoomBesideComposer(element: HTMLElement | null): boolean {
+  const [hasRoom, setHasRoom] = useState(false);
+  useEffect(() => {
+    const stack = element?.closest<HTMLElement>("[data-chat-composer-stack]");
+    const lane = stack?.parentElement;
+    if (!stack || !lane) return;
+    // Delivers an initial entry for each target, so no separate first measure.
+    return observeResize([lane, stack], () => {
+      const free = stack.getBoundingClientRect().left - lane.getBoundingClientRect().left;
+      setHasRoom(free >= MIN_FREE_SPACE_PX);
+    });
+  }, [element]);
+  return hasRoom;
+}
