@@ -111,6 +111,26 @@ describe("RPC authorization scopes", () => {
     expect(requiredScopeForRpcMethod(WS_METHODS.cloudInstallRelayClient)).toBe(AuthRelayWriteScope);
   });
 
+  it("lets any paired device set up voice input but only operators transcribe", () => {
+    expect(requiredScopeForRpcMethod(WS_METHODS.voiceStatusSubscribe)).toBe(
+      AuthOrchestrationReadScope,
+    );
+    for (const method of [
+      WS_METHODS.voiceInstall,
+      WS_METHODS.voiceInstallCancel,
+      WS_METHODS.voiceRemove,
+    ]) {
+      expect(requiredScopeForRpcMethod(method)).toBe(AuthEnvironmentMaintainScope);
+    }
+    for (const method of [
+      WS_METHODS.voiceCreateUploadUrl,
+      WS_METHODS.voiceTranscribe,
+      WS_METHODS.voiceTranscriptionCancel,
+    ]) {
+      expect(requiredScopeForRpcMethod(method)).toBe(AuthOrchestrationOperateScope);
+    }
+  });
+
   it("requires permission to operate on a thread before uploading feedback", () => {
     expect(requiredScopeForRpcMethod(WS_METHODS.providerUploadFeedback)).toBe(
       AuthOrchestrationOperateScope,

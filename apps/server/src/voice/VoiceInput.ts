@@ -1,5 +1,10 @@
-// @effect-diagnostics nodeBuiltinImport:off - Effect has no incremental digest.
-import { VoiceInputError, VoiceModelId, type VoiceInputStatus } from "@mybot/contracts";
+// @effect-diagnostics nodeBuiltinImport:off - Effect has no incremental digest or CPU count.
+import {
+  VoiceInputError,
+  VoiceModelId,
+  type VoiceInputStatus,
+  type VoiceTranscribeResult,
+} from "@mybot/contracts";
 import { cliArchiveTarCommand } from "@mybot/shared/cliRelease";
 import * as HostProcess from "@mybot/shared/HostProcess";
 import * as Cause from "effect/Cause";
@@ -19,13 +24,16 @@ import * as Stream from "effect/Stream";
 import * as SubscriptionRef from "effect/SubscriptionRef";
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http";
 import * as NodeCrypto from "node:crypto";
+import * as NodeOS from "node:os";
 
-import * as ServerConfig from "../config.ts";
 import * as ProcessRunner from "../processRunner.ts";
+import { isVoiceUploadId, resolveVoiceDir, voiceUploadPath } from "./VoiceUpload.ts";
 import {
   WHISPER_VERSION,
+  cleanTranscript,
   pinnedWhisperCli,
   pinnedWhisperModel,
+  whisperArgs,
   type WhisperCliRelease,
   type WhisperModelRelease,
 } from "./whisperReleases.ts";
@@ -35,6 +43,7 @@ const INSTALLED_MARKER = ".mybot-installed";
 const CLI_SETUP_TIMEOUT = Duration.minutes(5);
 const EXTRACT_TIMEOUT = Duration.minutes(2);
 const MODEL_DOWNLOAD_TIMEOUT = Duration.minutes(45);
+const TRANSCRIBE_TIMEOUT = Duration.minutes(10);
 /** Far above any pinned whisper-cli archive, so a broken mirror cannot fill the disk. */
 const MAX_CLI_ARCHIVE_BYTES = 100_000_000;
 const MODEL_SIZE_SLACK_BYTES = 1_000_000;
@@ -54,7 +63,7 @@ const MESSAGES: Record<VoiceInputError["reason"], string> = {
   timeout:
     "The speech model download took too long. Check this MyBot server's internet connection and try again.",
   "upload-missing": "The recording was not found on this MyBot server. Record it again.",
-  "transcription-failed": "Could not transcribe the recording. Try again.",
+  "transcription-failed": "Could not transcribe this recording.",
   cancelled: "Transcription was cancelled.",
   "busy-install": "The speech model is already being downloaded.",
 };
@@ -88,6 +97,15 @@ export class VoiceInput extends Context.Service<
     readonly cancelInstall: Effect.Effect<VoiceInputStatus>;
     /** Deletes whisper-cli and the model once running transcriptions finish. */
     readonly remove: Effect.Effect<VoiceInputStatus, VoiceInputError>;
+    /**
+     * Transcribes an uploaded recording, one at a time in arrival order, and
+     * deletes it. Fails `cancelled` when `cancelTranscription` stops it.
+     */
+    readonly transcribe: (
+      uploadId: string,
+    ) => Effect.Effect<VoiceTranscribeResult, VoiceInputError>;
+    /** Stops a queued or running transcription and deletes its recording. */
+    readonly cancelTranscription: (uploadId: string) => Effect.Effect<void>;
   }
 >()("mybot/voice/VoiceInput") {}
 
@@ -391,20 +409,88 @@ export const makeVoiceInput = Effect.fn("VoiceInput.make")(function* (options: V
     }).pipe(Effect.uninterruptible, Effect.withSpan("VoiceInput.remove")),
   );
 
+  const threads = Math.max(1, NodeOS.availableParallelism() - 1);
+  const jobs = new Map<string, Fiber.Fiber<VoiceTranscribeResult, VoiceInputError>>();
+  const uploadFile = (uploadId: string) => voiceUploadPath(path, options.voiceDir, uploadId);
+  const removeUpload = (uploadId: string) =>
+    fs.remove(uploadFile(uploadId), { force: true }).pipe(Effect.ignore);
+
+  // Never takes `gate`: `remove` holds it while waiting for this permit.
+  const runWhisper = (wav: string) =>
+    transcriptionPermit
+      .withPermit(
+        Effect.gen(function* () {
+          const current = yield* SubscriptionRef.get(state);
+          if (cli === null || current.phase !== "ready" || current.model === null) {
+            return yield* voiceError("not-installed");
+          }
+          const executable = path.join(cliDir, ...cli.executable);
+          const model = path.join(modelDir(current.model), modelRelease(current.model).fileName);
+          const result = yield* runner.run({
+            command: executable,
+            args: whisperArgs({ model, wav, threads }),
+            timeout: TRANSCRIBE_TIMEOUT,
+            ...(cli.libraryDir ? { env: { LD_LIBRARY_PATH: path.dirname(executable) } } : {}),
+          });
+          if (result.code !== 0) {
+            yield* Effect.logWarning("whisper-cli failed.", {
+              code: result.code,
+              stderr: result.stderr.slice(-2_000),
+            });
+            return yield* voiceError("transcription-failed");
+          }
+          return { text: cleanTranscript(result.stdout) };
+        }),
+      )
+      .pipe(orVoiceError("transcription-failed"));
+
+  const transcribe: VoiceInput["Service"]["transcribe"] = (uploadId) =>
+    Effect.gen(function* () {
+      if (!isVoiceUploadId(uploadId)) return yield* voiceError("upload-missing");
+      const wav = uploadFile(uploadId);
+      if (!(yield* fs.exists(wav).pipe(Effect.orElseSucceed(() => false)))) {
+        return yield* voiceError("upload-missing");
+      }
+      // A child fiber, so a disconnected caller also stops the process.
+      const job = yield* Effect.forkChild(runWhisper(wav)).pipe(
+        Effect.tap((fiber) => Effect.sync(() => jobs.set(uploadId, fiber))),
+        Effect.uninterruptible,
+      );
+      const exit = yield* Fiber.await(job).pipe(
+        Effect.ensuring(
+          Effect.sync(() => {
+            if (jobs.get(uploadId) === job) jobs.delete(uploadId);
+          }),
+        ),
+      );
+      if (Exit.isSuccess(exit)) return exit.value;
+      if (Cause.hasInterruptsOnly(exit.cause)) return yield* voiceError("cancelled");
+      return yield* Effect.failCause(exit.cause);
+    }).pipe(Effect.ensuring(removeUpload(uploadId)), Effect.withSpan("VoiceInput.transcribe"));
+
+  const cancelTranscription: VoiceInput["Service"]["cancelTranscription"] = (uploadId) =>
+    Effect.gen(function* () {
+      if (!isVoiceUploadId(uploadId)) return;
+      const job = jobs.get(uploadId);
+      if (job) yield* Fiber.interrupt(job);
+      // Also covers a cancel that arrives between upload and transcribe.
+      yield* removeUpload(uploadId);
+    });
+
   return VoiceInput.of({
     status: SubscriptionRef.get(state),
     changes: SubscriptionRef.changes(state),
     install,
     cancelInstall,
     remove,
+    transcribe,
+    cancelTranscription,
   });
 });
 
 export const layer = Layer.effect(
   VoiceInput,
   Effect.gen(function* () {
-    const config = yield* ServerConfig.ServerConfig;
-    const path = yield* Path.Path;
-    return yield* makeVoiceInput({ voiceDir: path.join(config.baseDir, "voice") });
+    return yield* makeVoiceInput({ voiceDir: yield* resolveVoiceDir });
   }),
 ).pipe(Layer.provide(ProcessRunner.layer));
