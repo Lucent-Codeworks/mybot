@@ -1,10 +1,10 @@
 import { useAtomValue } from "@effect/atom-react";
 import {
-  type PetMood,
+  nextThreadPose,
   type PetPose,
-  petPoseFor,
   resolveBotPet,
   resolvePetMood,
+  unknownBotPetIds,
 } from "@mybot/client-runtime/state/petMood";
 import type { EnvironmentThreadShell } from "@mybot/client-runtime/state/shell";
 import {
@@ -58,23 +58,22 @@ export function ThreadPet(props: {
     wantsPet ? petEnvironment.list({ environmentId, input: undefined }) : null,
   );
   const petList = pets.data?.pets ?? null;
-  const pet = wantsPet
-    ? resolveBotPet({ bot, defaultPetId: settings?.defaultPetId ?? null, pets: petList ?? [] })
-    : null;
+  const defaultPetId = settings?.defaultPetId ?? null;
+  const pet = wantsPet ? resolveBotPet({ bot, defaultPetId, pets: petList ?? [] }) : null;
 
-  // Pets are managed on other devices, so a bot can name a pet this device's
-  // list has not seen yet. Ask again once per unknown id.
-  const missingPetId =
-    petList !== null && bot?.petId && !petList.some((entry) => entry.id === bot.petId)
-      ? bot.petId
-      : null;
-  const refreshedForRef = useRef<string | null>(null);
+  // Pets are managed on other devices, so the bot or the default can name a
+  // pet this device's list has not seen yet. Ask again once per unknown answer.
+  const unknownKey =
+    wantsPet && petList !== null
+      ? unknownBotPetIds({ bot, defaultPetId, pets: petList }).join(",")
+      : "";
+  const refreshedForRef = useRef("");
   const { refresh } = pets;
   useEffect(() => {
-    if (missingPetId === null || refreshedForRef.current === missingPetId) return;
-    refreshedForRef.current = missingPetId;
+    if (unknownKey === "" || refreshedForRef.current === unknownKey) return;
+    refreshedForRef.current = unknownKey;
     refresh();
-  }, [missingPetId, refresh]);
+  }, [unknownKey, refresh]);
 
   if (!pet) return null;
   return <ThreadPetFor environmentId={environmentId} pet={pet} thread={thread} />;
@@ -135,24 +134,16 @@ function ThreadPetFor(props: {
 }
 
 /**
- * The pose for the thread's current mood. Reactions play only when the mood
- * changes while this thread is shown; switching threads starts from the new
- * thread's resting pose, so it never replays a reaction.
+ * The pose for the thread's current mood, via `nextThreadPose`: reactions play
+ * only when the shown thread's mood changes, never on a thread switch.
  */
 function useThreadPose(thread: EnvironmentThreadShell): PetPose {
-  const mood: PetMood = resolvePetMood(thread);
+  const mood = resolvePetMood(thread);
   const threadKey = `${thread.environmentId}:${thread.id}`;
-  const [tracked, setTracked] = useState(() => ({
-    threadKey,
-    mood,
-    pose: petPoseFor(mood, false),
-  }));
-  if (tracked.threadKey !== threadKey || tracked.mood !== mood) {
-    const next = { threadKey, mood, pose: petPoseFor(mood, tracked.threadKey === threadKey) };
-    setTracked(next);
-    return next.pose;
-  }
-  return tracked.pose;
+  const [tracked, setTracked] = useState(() => nextThreadPose(null, threadKey, mood));
+  const next = nextThreadPose(tracked, threadKey, mood);
+  if (next !== tracked) setTracked(next);
+  return next.pose;
 }
 
 function useReduceMotionEnabled(): boolean | null {
