@@ -19,6 +19,10 @@ export class PngDecodeError extends Error {
   }
 }
 
+/** Largest side and pixel count decoded; a header can claim far more than an upload holds. */
+export const PNG_MAX_DIMENSION = 8192;
+export const PNG_MAX_PIXELS = 40_000_000;
+
 const SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
 /** Encodes raw 8-bit gray, RGB, or RGBA pixels as a PNG. */
@@ -99,18 +103,22 @@ export function decodePng(bytes: Uint8Array): RgbaImage {
   if (colorType === 3 && palette === undefined)
     throw new PngDecodeError("The palette PNG has no PLTE.");
   if (width === 0 || height === 0) throw new PngDecodeError("The PNG is empty.");
+  if (width > PNG_MAX_DIMENSION || height > PNG_MAX_DIMENSION || width * height > PNG_MAX_PIXELS)
+    throw new PngDecodeError("The PNG is too large.");
 
   const stride = width * channels;
   let inflated: Buffer;
   try {
-    inflated = NodeZlib.inflateSync(Buffer.concat(idat));
+    inflated = NodeZlib.inflateSync(Buffer.concat(idat), {
+      maxOutputLength: (stride + 1) * height,
+    });
   } catch {
     throw new PngDecodeError("The PNG image data is corrupt.");
   }
   if (inflated.length < (stride + 1) * height)
     throw new PngDecodeError("The PNG image data is too short.");
 
-  // Unfilter in place into `pixels`, one row at a time (rows reference the previous row).
+  // Unfilter into `pixels` one row at a time; each row can depend on the previous one.
   const pixels = Buffer.alloc(stride * height);
   for (let row = 0; row < height; row++) {
     const filter = inflated[row * (stride + 1)];

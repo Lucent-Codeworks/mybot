@@ -131,6 +131,29 @@ describe("png", () => {
     expect(() => decodePng(png)).toThrow(PngDecodeError);
   });
 
+  it("rejects dimensions beyond the cap", () => {
+    const png = buildPng({ width: 100000, height: 1, colorType: 6, raw: Buffer.alloc(5) });
+    expect(() => decodePng(png)).toThrow(PngDecodeError);
+  });
+
+  it("decodes image data split across IDAT chunks", () => {
+    const raw = Buffer.from([0, 1, 2, 3, 4, 5, 6]);
+    const compressed = NodeZlib.deflateSync(raw);
+    const header = Buffer.alloc(13);
+    header.writeUInt32BE(2, 0);
+    header.writeUInt32BE(1, 4);
+    header[8] = 8;
+    header[9] = 2;
+    const png = Buffer.concat([
+      SIGNATURE,
+      chunk("IHDR", header),
+      chunk("IDAT", compressed.subarray(0, 4)),
+      chunk("IDAT", compressed.subarray(4)),
+      chunk("IEND", Buffer.alloc(0)),
+    ]);
+    expect(Array.from(decodePng(png).data)).toEqual([1, 2, 3, 255, 4, 5, 6, 255]);
+  });
+
   it("rejects a bad CRC", () => {
     const png = Buffer.from(
       encodePng({ width: 1, height: 1, channels: 4, data: new Uint8Array(4) }),
