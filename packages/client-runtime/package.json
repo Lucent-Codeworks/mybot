@@ -135,6 +135,10 @@
       "types": "./src/state/pets.ts",
       "default": "./src/state/pets.ts"
     },
+    "./state/voice-input": {
+      "types": "./src/state/voiceInput.ts",
+      "default": "./src/state/voiceInput.ts"
+    },
     "./text-paste": {
       "types": "./src/textPaste.ts",
       "default": "./src/textPaste.ts"

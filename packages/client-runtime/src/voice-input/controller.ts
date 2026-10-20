@@ -1,8 +1,15 @@
 import { replaceTextRange } from "@mybot/shared/composerTrigger";
 
-import type { PreparedVoiceTranscription, VoiceTranscriber } from "./transcription.ts";
+import {
+  VoiceTranscriptionError,
+  type PreparedVoiceTranscription,
+  type VoiceTranscriber,
+} from "./transcription.ts";
 
 export const VOICE_RECORDING_LIMIT_SECONDS = 5 * 60;
+
+/** `send` submits the draft through the client's normal send path after inserting. */
+export type VoiceInputOutcome = "insert" | "send";
 
 export type VoiceInputPhase = "idle" | "preparing" | "recording" | "transcribing" | "error";
 
@@ -58,6 +65,8 @@ export type VoiceInputControllerDependencies = {
     text: string,
     selection: { readonly start: number; readonly end: number },
   ) => void;
+  /** Called once after `commitDraft` when recording stopped with the `send` outcome. */
+  readonly submitDraft?: () => void;
   readonly onStateChange: (state: VoiceInputState) => void;
 };
 
@@ -178,6 +187,9 @@ function transcriptionErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message === "voice-operation-busy") {
     return "Voice transcription is still finishing. Try again shortly.";
   }
+  if (error instanceof VoiceTranscriptionError && error.code === "unavailable") {
+    return error.message;
+  }
   return "Could not transcribe this recording.";
 }
 
@@ -289,9 +301,9 @@ export class VoiceInputController {
     }
   }
 
-  stop(): Promise<void> {
+  stop(outcome: VoiceInputOutcome = "insert"): Promise<void> {
     if (this.state.phase !== "recording") return Promise.resolve();
-    return this.finishRecording(false, null);
+    return this.finishRecording(false, null, outcome);
   }
 
   cancel(): void {
@@ -346,7 +358,7 @@ export class VoiceInputController {
       if (!status.url) {
         return this.interruptRecording();
       }
-      return this.finishRecording(true, status.url);
+      return this.finishRecording(true, status.url, "insert");
     }
   }
 
@@ -369,6 +381,7 @@ export class VoiceInputController {
   private async finishRecording(
     alreadyStopped: boolean,
     completedUri: string | null,
+    outcome: VoiceInputOutcome,
   ): Promise<void> {
     if (this.finishing || this.state.phase !== "recording") return;
     this.finishing = true;
@@ -428,6 +441,7 @@ export class VoiceInputController {
 
       this.dependencies.commitDraft(result.text, result.selection);
       this.setState(IDLE_STATE);
+      if (outcome === "send") this.dependencies.submitDraft?.();
     } catch {
       if (this.isCurrent(operationToken)) {
         this.setError("Could not finish voice recording.", "retry");
