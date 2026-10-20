@@ -42,7 +42,11 @@ const PetsHatchTool = Tool.make("pets_hatch", {
   success: PetHatchJob,
   failure: OrchestratorMcpFailure,
   failureMode: "return",
-  dependencies: [McpInvocationContext.McpInvocationContext, PetHatchService.PetHatchService],
+  dependencies: [
+    McpInvocationContext.McpInvocationContext,
+    ThreadManagementService.ThreadManagementService,
+    PetHatchService.PetHatchService,
+  ],
 })
   .annotate(Tool.Title, "Hatch a pet")
   .annotate(Tool.Readonly, false)
