@@ -119,14 +119,24 @@ function VoiceEnvironmentRow(props: {
 
 export function VoiceSettingsPanel() {
   const { connectedEnvironments } = useSettingsScope();
+  // Older servers do not have voice input, and never answer its status.
+  const supported = connectedEnvironments.filter(
+    (environment) => environment.serverConfig?.environment.capabilities.voiceInput === true,
+  );
   return (
     <SettingsPageContainer>
       <SettingsSection id="voice" title="Voice input">
-        {connectedEnvironments.map((environment) => (
+        {connectedEnvironments.length > 0 && supported.length === 0 ? (
+          <SettingsRow
+            title="Voice input"
+            description="Update your MyBot server to use voice input."
+          />
+        ) : null}
+        {supported.map((environment) => (
           <VoiceEnvironmentRow
             key={environment.environmentId}
             environmentId={environment.environmentId}
-            label={connectedEnvironments.length > 1 ? environment.label : null}
+            label={supported.length > 1 ? environment.label : null}
           />
         ))}
       </SettingsSection>

@@ -1,8 +1,18 @@
+import { VOICE_UPLOAD_MAX_BYTES } from "@mybot/contracts";
+
 /** Sample rate of the wire format MyBot servers accept for transcription. */
 export const VOICE_SAMPLE_RATE = 16_000;
 
 const HEADER_BYTES = 44;
 const BYTES_PER_SAMPLE = 2;
+
+function readAscii(view: DataView, offset: number, length: number): string {
+  let text = "";
+  for (let index = 0; index < length; index += 1) {
+    text += String.fromCharCode(view.getUint8(offset + index));
+  }
+  return text;
+}
 
 function writeAscii(view: DataView, offset: number, text: string): void {
   for (let index = 0; index < text.length; index += 1) {
@@ -43,4 +53,27 @@ export function encodeWav16kMono(samples: Float32Array): Uint8Array {
     );
   }
   return bytes;
+}
+
+/**
+ * Cuts a canonical 44-byte-header WAV to the five minutes a MyBot server
+ * accepts, fixing its RIFF and data sizes. A recorder's limit timer can stop
+ * capture a little late; anything else is returned unchanged.
+ */
+export function fitWavToUploadLimit(bytes: Uint8Array): Uint8Array {
+  if (bytes.length <= VOICE_UPLOAD_MAX_BYTES) return bytes;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const canonical =
+    readAscii(view, 0, 4) === "RIFF" &&
+    readAscii(view, 8, 4) === "WAVE" &&
+    readAscii(view, 12, 4) === "fmt " &&
+    view.getUint32(16, true) === 16 &&
+    readAscii(view, 36, 4) === "data";
+  if (!canonical) return bytes;
+  // Whole samples only; the header and limit are both even.
+  const fitted = bytes.slice(0, VOICE_UPLOAD_MAX_BYTES);
+  const fittedView = new DataView(fitted.buffer);
+  fittedView.setUint32(4, VOICE_UPLOAD_MAX_BYTES - 8, true);
+  fittedView.setUint32(40, VOICE_UPLOAD_MAX_BYTES - HEADER_BYTES, true);
+  return fitted;
 }

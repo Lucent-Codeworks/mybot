@@ -131,4 +131,13 @@ describe("voiceSetupAlert", () => {
       voiceSetupAlert(status({ phase: "failed", message: "Checksum mismatch" }), true),
     ).toEqual({ message: "Checksum mismatch", action: "Retry" });
   });
+
+  it("offers no setup after a failed switch, since the installed model still works", () => {
+    expect(
+      voiceSetupAlert(
+        status({ phase: "failed", model: "tiny", pendingModel: "small", message: "Network error" }),
+        true,
+      ),
+    ).toEqual({ message: "Ready · Tiny — Network error", action: null });
+  });
 });

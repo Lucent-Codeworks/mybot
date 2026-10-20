@@ -5,6 +5,7 @@ import {
   serverVoiceAvailability,
   voiceDownloadPercent,
   voiceModelChoices,
+  voiceSetupModel,
   voiceSetupStep,
   voiceStatusLabel,
 } from "./presentation.ts";
@@ -59,6 +60,9 @@ describe("voiceStatusLabel", () => {
     expect(voiceStatusLabel(status({ phase: "failed", message: "Checksum mismatch" }))).toBe(
       "Checksum mismatch",
     );
+    expect(
+      voiceStatusLabel(status({ phase: "failed", model: "tiny", message: "Checksum mismatch" })),
+    ).toBe("Ready · Tiny — Checksum mismatch");
     expect(voiceStatusLabel(status({ phase: "unsupported" }))).toBe(
       "Not available on this MyBot server's platform",
     );
@@ -109,6 +113,12 @@ describe("voiceSetupStep", () => {
     expect(voiceSetupStep(status({ phase: "ready", model: "base" }), true)).toBe("close");
   });
 
+  it("closes when a failed switch left the installed model working", () => {
+    expect(
+      voiceSetupStep(status({ phase: "failed", model: "tiny", pendingModel: "small" }), false),
+    ).toBe("close");
+  });
+
   it("treats an unknown status as not yet started", () => {
     expect(voiceSetupStep(null, false)).toBe("ask");
     expect(voiceSetupStep(status({ phase: "unsupported" }), false)).toBe("unsupported");
@@ -119,6 +129,15 @@ describe("serverVoiceAvailability", () => {
   it("hides voice input on servers that do not advertise it", () => {
     expect(serverVoiceAvailability({ capability: undefined, status: null })).toBe("hidden");
     expect(serverVoiceAvailability({ capability: false, status: null })).toBe("hidden");
+  });
+
+  it("stays ready after a failed switch, since the old model still transcribes", () => {
+    expect(
+      serverVoiceAvailability({
+        capability: true,
+        status: status({ phase: "failed", model: "tiny", pendingModel: "small" }),
+      }),
+    ).toBe("ready");
   });
 
   it("needs setup until a model is installed", () => {
@@ -148,5 +167,13 @@ describe("serverVoiceAvailability", () => {
     expect(
       serverVoiceAvailability({ capability: true, status: status({ phase: "unsupported" }) }),
     ).toBe("unsupported");
+  });
+});
+
+describe("voiceSetupModel", () => {
+  it("retries the model whose download failed, else the default", () => {
+    expect(voiceSetupModel(status({ phase: "failed", pendingModel: "small" }))).toBe("small");
+    expect(voiceSetupModel(status({ phase: "failed" }))).toBe("base");
+    expect(voiceSetupModel(null)).toBe("base");
   });
 });

@@ -1,4 +1,9 @@
-import { VOICE_MODEL_SIZES, type VoiceInputStatus, type VoiceModelId } from "@mybot/contracts";
+import {
+  DEFAULT_VOICE_MODEL,
+  VOICE_MODEL_SIZES,
+  type VoiceInputStatus,
+  type VoiceModelId,
+} from "@mybot/contracts";
 
 /** Copy shared by every client's first-use prompt and settings. */
 export const VOICE_SETUP_TITLE = "Set up voice input";
@@ -9,7 +14,8 @@ export const VOICE_OWNER_NOTICE = "The MyBot server owner needs to turn on voice
 /**
  * Whether a MyBot server can transcribe: `hidden` when it does not advertise
  * voice input, `needs-setup` while it has no model, and `ready` otherwise,
- * including while its status is still unknown.
+ * including while its status is still unknown and after a failed switch, which
+ * keeps the installed model.
  */
 export type ServerVoiceAvailability = "hidden" | "unsupported" | "needs-setup" | "ready";
 
@@ -20,9 +26,11 @@ export function serverVoiceAvailability(input: {
   if (input.capability !== true) return "hidden";
   const phase = input.status?.phase;
   if (phase === "unsupported") return "unsupported";
-  if (phase === "not-installed" || phase === "failed") return "needs-setup";
+  if (phase === "not-installed") return "needs-setup";
   // A first download has no model to transcribe with yet; the setup prompt shows its progress.
-  if (phase === "downloading" && input.status?.model === null) return "needs-setup";
+  if ((phase === "downloading" || phase === "failed") && input.status?.model === null) {
+    return "needs-setup";
+  }
   return "ready";
 }
 
@@ -61,8 +69,10 @@ export function voiceStatusLabel(status: VoiceInputStatus): string {
       return "Off";
     case "ready":
       return status.model ? `Ready · ${MODEL_NAMES[status.model]}` : "Ready";
-    case "failed":
-      return status.message ?? "Voice input setup failed";
+    case "failed": {
+      const message = status.message ?? "Voice input setup failed";
+      return status.model ? `Ready · ${MODEL_NAMES[status.model]} — ${message}` : message;
+    }
     case "downloading": {
       const percent = voiceDownloadPercent(status);
       const progress = status.pendingModel
@@ -104,9 +114,19 @@ export function voiceSetupStep(
   status: VoiceInputStatus | null,
   requested: boolean,
 ): VoiceSetupStep {
-  if (status?.phase === "ready" && status.model !== null) return "close";
+  // A failed switch keeps the installed model, so there is nothing to set up.
+  if ((status?.phase === "ready" || status?.phase === "failed") && status.model !== null) {
+    return "close";
+  }
   if (status?.phase === "downloading") return "downloading";
   if (status?.phase === "failed") return "failed";
   if (status?.phase === "unsupported") return "unsupported";
   return requested ? "starting" : "ask";
+}
+
+/** The model the setup prompt downloads: the one whose download failed, else the default. */
+export function voiceSetupModel(status: VoiceInputStatus | null): VoiceModelId {
+  return status?.phase === "failed"
+    ? (status.pendingModel ?? DEFAULT_VOICE_MODEL)
+    : DEFAULT_VOICE_MODEL;
 }

@@ -1,13 +1,14 @@
 import { useAtomValue } from "@effect/atom-react";
 import {
   voiceDownloadPercent,
+  voiceSetupModel,
   voiceSetupStep,
   voiceStatusLabel,
   VOICE_OWNER_NOTICE,
   VOICE_SETUP_MESSAGE,
   VOICE_SETUP_TITLE,
 } from "@mybot/client-runtime/voice-input";
-import { DEFAULT_VOICE_MODEL, type EnvironmentId } from "@mybot/contracts";
+import type { EnvironmentId } from "@mybot/contracts";
 import { useEffect, useState } from "react";
 
 import { Button } from "../../components/ui/button";
@@ -95,7 +96,7 @@ function VoiceSetupDialog({ environmentId }: { environmentId: EnvironmentId }) {
                 disabled={!canInstall || step === "unsupported" || step === "starting"}
                 onClick={() => {
                   setRequested(true);
-                  void install({ environmentId, input: { model: DEFAULT_VOICE_MODEL } }).then(
+                  void install({ environmentId, input: { model: voiceSetupModel(status) } }).then(
                     (result) => {
                       if (result._tag !== "Success") setRequested(false);
                     },

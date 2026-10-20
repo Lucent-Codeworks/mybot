@@ -25,7 +25,10 @@ import {
   BotIcon,
 } from "lucide-react";
 import { requestThreadFindOpen } from "./chat/threadFindActionBus";
-import { requestComposerVoiceToggle } from "../features/voiceInput/useComposerVoiceInput";
+import {
+  canToggleComposerVoice,
+  requestComposerVoiceToggle,
+} from "../features/voiceInput/useComposerVoiceInput";
 import {
   useCallback,
   useDeferredValue,
@@ -865,12 +868,9 @@ function OpenCommandPaletteDialog(props: {
     });
   }
 
-  const voiceEnvironmentId = (activeThread ?? activeDraftThread)?.environmentId ?? null;
-  if (
-    paletteRouteTarget !== null &&
-    environments.find((environment) => environment.environmentId === voiceEnvironmentId)
-      ?.serverConfig?.environment.capabilities.voiceInput === true
-  ) {
+  // Read per render like the prompt link below: the composer's server status and
+  // whether this device may operate it decide if the toggle would do anything.
+  if (paletteRouteTarget !== null && canToggleComposerVoice()) {
     actionItems.push({
       kind: "action",
       value: "action:voice-input",

@@ -204,7 +204,11 @@ function transcriptionErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message === "voice-operation-busy") {
     return "Voice transcription is still finishing. Try again shortly.";
   }
-  if (error instanceof VoiceTranscriptionError && error.code === "unavailable") {
+  // Transcribers word these for users, such as a server's "Recordings can be up to 5 minutes long."
+  if (
+    error instanceof VoiceTranscriptionError &&
+    (error.code === "unavailable" || error.code === "transcription-failed")
+  ) {
     return error.message;
   }
   return "Could not transcribe this recording.";

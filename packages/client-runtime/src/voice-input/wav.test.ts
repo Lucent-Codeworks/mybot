@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { encodeWav16kMono, VOICE_SAMPLE_RATE } from "./wav.ts";
+import { VOICE_UPLOAD_MAX_BYTES } from "@mybot/contracts";
+
+import { encodeWav16kMono, fitWavToUploadLimit, VOICE_SAMPLE_RATE } from "./wav.ts";
 
 function ascii(bytes: Uint8Array, start: number, end: number): string {
   return String.fromCharCode(...bytes.subarray(start, end));
@@ -32,5 +34,30 @@ describe("encodeWav16kMono", () => {
     expect(view.getInt16(46, true)).toBe(-32_768);
     expect(view.getInt16(48, true)).toBe(0);
     expect(view.getInt16(50, true)).toBe(-32_768);
+  });
+});
+
+describe("fitWavToUploadLimit", () => {
+  it("keeps a recording within five minutes unchanged", () => {
+    const wav = encodeWav16kMono(new Float32Array(VOICE_SAMPLE_RATE));
+    expect(fitWavToUploadLimit(wav)).toBe(wav);
+  });
+
+  it("cuts a recording that ran past five minutes and fixes its header", () => {
+    // Five minutes and half a second, as when capture outlives the limit timer.
+    const wav = encodeWav16kMono(new Float32Array(VOICE_SAMPLE_RATE * 300 + VOICE_SAMPLE_RATE / 2));
+    const fitted = fitWavToUploadLimit(wav);
+    const view = new DataView(fitted.buffer, fitted.byteOffset, fitted.byteLength);
+
+    expect(fitted.length).toBe(VOICE_UPLOAD_MAX_BYTES);
+    expect(view.getUint32(4, true)).toBe(VOICE_UPLOAD_MAX_BYTES - 8);
+    expect(view.getUint32(40, true)).toBe(VOICE_UPLOAD_MAX_BYTES - 44);
+    expect(fitted.subarray(0, 4)).toEqual(wav.subarray(0, 4));
+    expect(fitted.subarray(44, 64)).toEqual(wav.subarray(44, 64));
+  });
+
+  it("leaves a file without the canonical header for the server to reject", () => {
+    const bytes = new Uint8Array(VOICE_UPLOAD_MAX_BYTES + 10);
+    expect(fitWavToUploadLimit(bytes)).toBe(bytes);
   });
 });

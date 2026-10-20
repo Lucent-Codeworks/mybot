@@ -711,6 +711,26 @@ describe("VoiceInputController", () => {
     });
   });
 
+  describe("transcription failure detail", () => {
+    it("shows the server's reason for a failed transcription", async () => {
+      const harness = createHarness({
+        getTranscriber: () => ({
+          prepare: async () =>
+            preparedTranscription(async () => {
+              throw new VoiceTranscriptionError(
+                "transcription-failed",
+                "Recordings can be up to 5 minutes long.",
+              );
+            }),
+        }),
+      });
+      await harness.controller.start();
+      await harness.controller.stop();
+
+      expect(harness.controller.currentState.error).toBe("Recordings can be up to 5 minutes long.");
+    });
+  });
+
   describe("retrying a failed transcription", () => {
     function failingOnceHarness(overrides: Partial<VoiceInputControllerDependencies> = {}) {
       let attempts = 0;

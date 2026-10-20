@@ -23,12 +23,13 @@ export {
   createServerVoiceTranscriber,
   type ServerTranscriberDependencies,
 } from "./serverTranscriber.ts";
-export { encodeWav16kMono, VOICE_SAMPLE_RATE } from "./wav.ts";
+export { encodeWav16kMono, fitWavToUploadLimit, VOICE_SAMPLE_RATE } from "./wav.ts";
 export {
   serverVoiceAvailability,
   voiceDownloadPercent,
   voiceModelChoices,
   voiceModelName,
+  voiceSetupModel,
   voiceSetupStep,
   voiceStatusLabel,
   VOICE_OWNER_NOTICE,

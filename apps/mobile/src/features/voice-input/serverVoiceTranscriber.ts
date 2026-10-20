@@ -2,6 +2,7 @@ import { resolveAssetUrl } from "@mybot/client-runtime/state/assets";
 import { voiceTranscriptionRpc } from "@mybot/client-runtime/state/voice-input";
 import {
   createServerVoiceTranscriber,
+  fitWavToUploadLimit,
   serverVoiceAvailability,
   type ServerVoiceAvailability,
   type VoiceTranscriber,
@@ -39,7 +40,8 @@ export function createMobileServerVoiceTranscriber(
     locale: () => Intl.DateTimeFormat().resolvedOptions().locale,
     readWav: async (uri) => {
       const { File } = await import("expo-file-system");
-      return new Uint8Array(await new File(uri).arrayBuffer());
+      // Capture can run slightly past the recording limit before it stops.
+      return fitWavToUploadLimit(new Uint8Array(await new File(uri).arrayBuffer()));
     },
     // Read the connection at upload time: the server may have reconnected on a new base URL.
     resolveUrl: (relativeUrl) => {

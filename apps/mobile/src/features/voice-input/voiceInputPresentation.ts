@@ -80,7 +80,7 @@ export function resolveVoiceComposerPresentation(
 
 export type VoiceSetupAlert = {
   readonly message: string;
-  /** The button that installs the default model, or null when there is nothing to do. */
+  /** The button that installs the setup model, or null when there is nothing to do. */
   readonly action: "Download" | "Retry" | null;
 };
 
@@ -90,7 +90,7 @@ export function voiceSetupAlert(
   canInstall: boolean,
 ): VoiceSetupAlert {
   const step = voiceSetupStep(status, false);
-  if (status && (step === "downloading" || step === "unsupported")) {
+  if (status && (step === "downloading" || step === "unsupported" || step === "close")) {
     return { message: voiceStatusLabel(status), action: null };
   }
   if (!canInstall) return { message: VOICE_OWNER_NOTICE, action: null };

@@ -41,6 +41,18 @@ export function requestComposerVoiceToggle(): void {
   window.dispatchEvent(new Event(VOICE_TOGGLE_EVENT));
 }
 
+// The mounted composer's availability, so the command palette can read it without subscribing.
+let mountedComposerAvailability: WebVoiceAvailability | null = null;
+
+/** Whether {@link requestComposerVoiceToggle} would do anything in the mounted composer. */
+export function canToggleComposerVoice(): boolean {
+  return (
+    mountedComposerAvailability !== null &&
+    mountedComposerAvailability !== "hidden" &&
+    mountedComposerAvailability !== "unsupported"
+  );
+}
+
 function microphoneSettingsHint(): string {
   if (!isElectron) return "Allow microphone access for this site in your browser settings.";
   return isMacPlatform(navigator.platform)
@@ -147,7 +159,15 @@ export function useComposerVoiceInput(options: ComposerVoiceInputOptions): Compo
   const availabilityRef = useRef(availability);
   useLayoutEffect(() => {
     availabilityRef.current = availability;
+    mountedComposerAvailability = availability;
   }, [availability]);
+  // A layout cleanup, so it runs before the next composer publishes its own.
+  useLayoutEffect(
+    () => () => {
+      mountedComposerAvailability = null;
+    },
+    [],
+  );
 
   const [controller] = useState(() => {
     const recorder = createWindowVoiceRecorder((recorderStatus) => {

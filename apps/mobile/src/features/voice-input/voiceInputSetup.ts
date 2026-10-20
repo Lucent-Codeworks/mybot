@@ -1,6 +1,6 @@
 import { runAtomCommand } from "@mybot/client-runtime/state/runtime";
-import { VOICE_SETUP_TITLE } from "@mybot/client-runtime/voice-input";
-import { DEFAULT_VOICE_MODEL, type EnvironmentId } from "@mybot/contracts";
+import { VOICE_SETUP_TITLE, voiceSetupModel } from "@mybot/client-runtime/voice-input";
+import type { EnvironmentId } from "@mybot/contracts";
 import * as Option from "effect/Option";
 import { AsyncResult } from "effect/reactivity";
 import { Alert } from "react-native";
@@ -10,7 +10,7 @@ import { voiceInputEnvironment } from "../../state/voice-input";
 import { voiceSetupAlert } from "./voiceInputPresentation";
 
 /**
- * Asks to download the default speech model on `environmentId`. Download only
+ * Asks to download the default speech model on `environmentId`, or to retry the one that failed. Download only
  * installs; the user taps the mic again once Settings shows it ready.
  */
 export function promptVoiceInputSetup(environmentId: EnvironmentId): void {
@@ -34,7 +34,7 @@ export function promptVoiceInputSetup(environmentId: EnvironmentId): void {
       onPress: () =>
         void runAtomCommand(appAtomRegistry, voiceInputEnvironment.install, {
           environmentId,
-          input: { model: DEFAULT_VOICE_MODEL },
+          input: { model: voiceSetupModel(status) },
         }),
     },
   ]);
