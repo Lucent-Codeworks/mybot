@@ -36,8 +36,11 @@ import { petEnvironment } from "../../state/pets";
 import { useEnvironmentQuery } from "../../state/query";
 import { serverEnvironment } from "../../state/server";
 
-const PET_WIDTH = 44;
+/** 48px wide keeps the 192×208 cell a whole 52px tall, so rows never bleed. */
+const PET_WIDTH = 48;
 const PET_HEIGHT = (PET_WIDTH * PET_ATLAS.cellHeight) / PET_ATLAS.cellWidth;
+/** Room for the widest bubble; the pill inside sizes to its label. */
+const BUBBLE_WIDTH = 120;
 
 /**
  * The bot's pet, reacting to the thread's state. The caller positions it;
@@ -89,7 +92,8 @@ function ThreadPetFor(props: {
   );
   const url = useAssetUrl(environmentId, resource);
   const pose = useThreadPose(thread);
-  const reducedMotion = useReduceMotionEnabled();
+  // Null until the system answers; motion waits for it.
+  const reducedMotion = useReduceMotionEnabled() ?? true;
   const appActive = useAppIsActive();
   const sequence = usePetSequence(pet, pose, !reducedMotion && appActive);
   if (!url) return null;
@@ -104,10 +108,17 @@ function ThreadPetFor(props: {
       style={{ width: PET_WIDTH, height: PET_HEIGHT }}
     >
       {pose.bubble ? (
-        <View className="absolute bottom-full left-0 mb-0.5 rounded-full bg-subtle-strong px-1.5 py-0.5">
-          <Text className="text-2xs font-mybot-bold text-foreground-muted" numberOfLines={1}>
-            {pose.bubble}
-          </Text>
+        // An absolute child is measured against the 48px pet, which would
+        // truncate the label; this wider box lets the pill size to its text.
+        <View
+          className="absolute bottom-full left-0 mb-0.5 items-start"
+          style={{ width: BUBBLE_WIDTH }}
+        >
+          <View className="rounded-full bg-subtle-strong px-1.5 py-0.5">
+            <Text className="text-2xs font-mybot-bold text-foreground-muted" numberOfLines={1}>
+              {pose.bubble}
+            </Text>
+          </View>
         </View>
       ) : null}
       {pet.kind === "picture" ? (
@@ -144,8 +155,8 @@ function useThreadPose(thread: EnvironmentThreadShell): PetPose {
   return tracked.pose;
 }
 
-function useReduceMotionEnabled(): boolean {
-  const [enabled, setEnabled] = useState(false);
+function useReduceMotionEnabled(): boolean | null {
+  const [enabled, setEnabled] = useState<boolean | null>(null);
   useEffect(() => {
     void AccessibilityInfo.isReduceMotionEnabled().then(setEnabled);
     const subscription = AccessibilityInfo.addEventListener("reduceMotionChanged", setEnabled);
@@ -204,6 +215,19 @@ function finishPlay(sequence: Sequence): Sequence {
   };
 }
 
+/**
+ * Where a sequence lands when motion stops (reduced motion, app in the
+ * background): a finite reaction skips to where it would end, so it never
+ * replays later. A loop keeps playing and resumes with the motion.
+ */
+function settle(sequence: Sequence): Sequence {
+  if (sequence.phase === "review") return { ...sequence, phase: "idle" };
+  if (sequence.phase !== "play" || sequence.pose.loop) return sequence;
+  return sequence.pose.returnToIdleAfterMs !== undefined
+    ? { ...sequence, phase: "idle" }
+    : { ...sequence, phase: "rest" };
+}
+
 function nextAtlasFrame(sequence: Sequence): Sequence {
   const lastFrame = rowOf(sequence.pose.row).frameDurationsMs.length - 1;
   if (sequence.frame < lastFrame) return { ...sequence, frame: sequence.frame + 1 };
@@ -217,16 +241,15 @@ function nextAtlasFrame(sequence: Sequence): Sequence {
 /**
  * Steps a pose through its sequence with one `setTimeout` at a time. Nothing
  * is scheduled once the pose rests, nor while `animating` is false (reduced
- * motion or app in background); every pending timer clears on change and
- * unmount. A new pose object restarts the sequence.
+ * motion or app in background), when a finite reaction settles instead;
+ * every pending timer clears on change and unmount. A new pose object
+ * restarts the sequence.
  */
 function usePetSequence(pet: Pet, pose: PetPose, animating: boolean): Sequence {
   const [sequence, setSequence] = useState(() => startSequence(pose));
-  let current = sequence;
-  if (sequence.pose !== pose) {
-    current = startSequence(pose);
-    setSequence(current);
-  }
+  let current = sequence.pose !== pose ? startSequence(pose) : sequence;
+  if (!animating) current = settle(current);
+  if (current !== sequence) setSequence(current);
 
   const delayMs = !animating
     ? null
