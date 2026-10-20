@@ -22,7 +22,6 @@ import {
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
 import * as DateTime from "effect/DateTime";
-import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
@@ -74,7 +73,7 @@ export class PetHatchService extends Context.Service<
   {
     /** Launches a hatching thread on a Codex instance signed in with ChatGPT. */
     readonly start: (input: PetHatchInput) => Effect.Effect<PetHatchJob, PetError>;
-    /** Every recorded job, newest first, once the startup check has run. */
+    /** Every recorded job, newest first. */
     readonly jobs: () => Effect.Effect<ReadonlyArray<PetHatchJob>>;
   }
 >()("mybot/pets/PetHatchService") {}
@@ -91,7 +90,9 @@ const make = Effect.gen(function* () {
   const providers = yield* ProviderRegistry.ProviderRegistry;
   // One job is settled at a time, so an event and the sweep never import the same pet twice.
   const settling = yield* Semaphore.make(1);
-  const startupChecked = yield* Deferred.make<void>();
+  // Threads of jobs still hatching, so run events from other threads cost nothing.
+  // The minute sweep reads job.json directly and stays the safety net.
+  const hatchingThreads = new Map<ThreadId, string>();
 
   const hatchDir = path.join(config.petsDir, HATCH_FOLDER);
   const jobDir = (jobId: string) => path.join(hatchDir, jobId);
@@ -104,6 +105,12 @@ const make = Effect.gen(function* () {
     return fileSystem.writeFileString(temp, encodeJob(job)).pipe(
       Effect.andThen(fileSystem.rename(temp, target)),
       Effect.mapError(() => fail("io", "Couldn't save the hatching job.")),
+      Effect.tap(() =>
+        Effect.sync(() => {
+          if (job.status === "hatching") hatchingThreads.set(job.threadId, job.jobId);
+          else hatchingThreads.delete(job.threadId);
+        }),
+      ),
     );
   };
 
@@ -223,6 +230,7 @@ const make = Effect.gen(function* () {
         .pipe(
           Effect.tapError((cause) =>
             Effect.logWarning("A pet hatching thread failed to launch.", { cause, jobId }).pipe(
+              Effect.andThen(Effect.sync(() => hatchingThreads.delete(job.threadId))),
               Effect.andThen(fileSystem.remove(jobDir(jobId), { recursive: true })),
               Effect.ignore,
             ),
@@ -261,7 +269,7 @@ const make = Effect.gen(function* () {
   ) {
     if (job.followUps >= MAX_FOLLOW_UPS) return yield* finish(job, "failed", reason);
     const key = `pet-hatch:${job.jobId}:fix-${job.followUps + 1}`;
-    yield* threads
+    const gone = yield* threads
       .sendToThread({
         projectId: job.projectId,
         commandId: CommandId.make(key),
@@ -273,7 +281,17 @@ const make = Effect.gen(function* () {
         createdBy: "system",
         creationSource: "server",
       })
-      .pipe(Effect.mapError(() => fail("io", "Couldn't ask Codex to fix the pet.")));
+      .pipe(
+        Effect.as(null),
+        Effect.catchTags({
+          ThreadManagementThreadArchivedError: () =>
+            Effect.succeed("The hatching thread was archived."),
+          ThreadManagementThreadNotFoundError: () =>
+            Effect.succeed("The hatching thread no longer exists."),
+        }),
+        Effect.mapError(() => fail("io", "Couldn't ask Codex to fix the pet.")),
+      );
+    if (gone !== null) return yield* finish(job, "cancelled", gone);
     yield* writeJob({ ...job, followUps: job.followUps + 1 });
   });
 
@@ -312,6 +330,9 @@ const make = Effect.gen(function* () {
         const stored = yield* readJob(jobId);
         if (Option.isNone(stored) || stored.value.status !== "hatching") return;
         const job = stored.value;
+        if ((yield* threads.getThreadShell(job.threadId)) === null) {
+          return yield* finish(job, "cancelled", "The hatching thread no longer exists.");
+        }
         const records = yield* threads.getThreadRecords(job.threadId, ["runs"]);
         if (records.thread.deletedAt !== null) {
           return yield* finish(job, "cancelled", "The hatching thread was deleted.");
@@ -348,13 +369,13 @@ const make = Effect.gen(function* () {
     ),
   );
 
+  for (const job of yield* readJobs) {
+    if (job.status === "hatching") hatchingThreads.set(job.threadId, job.jobId);
+  }
+
   // The event stream starts after the latest event, so the startup check and
   // the minute sweep cover turns that ended while the server was down.
-  yield* settleAll.pipe(
-    Effect.ensuring(Deferred.succeed(startupChecked, undefined)),
-    Effect.repeat(Schedule.spaced("1 minute")),
-    Effect.forkScoped,
-  );
+  yield* settleAll.pipe(Effect.repeat(Schedule.spaced("1 minute")), Effect.forkScoped);
 
   yield* orchestrator.streamDomainEvents.pipe(
     Stream.runForEach((event) => {
@@ -364,25 +385,16 @@ const make = Effect.gen(function* () {
       ) {
         return Effect.void;
       }
-      return readJobs.pipe(
-        Effect.flatMap((jobs) =>
-          Effect.forEach(
-            jobs.filter(
-              (job) => job.status === "hatching" && job.threadId === event.payload.threadId,
-            ),
-            (job) => settle(job.jobId),
-            { discard: true },
-          ),
-        ),
-      );
+      const jobId = hatchingThreads.get(event.payload.threadId);
+      return jobId === undefined ? Effect.void : settle(jobId);
     }),
     Effect.tapCause((cause) => Effect.logWarning("Pet hatching events paused.", { cause })),
     Effect.retry(Schedule.spaced("5 seconds")),
     Effect.forkScoped,
   );
 
-  const jobs: PetHatchService["Service"]["jobs"] = () =>
-    Deferred.await(startupChecked).pipe(Effect.andThen(settling.withPermits(1)(readJobs)));
+  // job.json is replaced by rename, so a read never sees a half-written job.
+  const jobs: PetHatchService["Service"]["jobs"] = () => readJobs;
 
   return PetHatchService.of({ start, jobs });
 });
