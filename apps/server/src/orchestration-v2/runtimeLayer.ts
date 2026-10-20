@@ -319,6 +319,7 @@ const layerPetHatchProvided = PetHatchService.layer.pipe(
       layerOrchestratorProvided,
       layerThreadLaunchProvided,
       layerThreadManagementProvided,
+      layerProjectService,
       PetLibrary.layer,
     ),
   ),

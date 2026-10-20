@@ -17,6 +17,7 @@ import {
 } from "@mybot/contracts";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Option from "effect/Option";
 import * as Queue from "effect/Queue";
 import * as Stream from "effect/Stream";
 import { expect } from "vite-plus/test";
@@ -25,6 +26,7 @@ import * as ServerConfig from "../config.ts";
 import * as Orchestrator from "../orchestration-v2/Orchestrator.ts";
 import * as ThreadLaunchService from "../orchestration-v2/ThreadLaunchService.ts";
 import * as ThreadManagementService from "../orchestration-v2/ThreadManagementService.ts";
+import * as ProjectService from "../project/ProjectService.ts";
 import * as ProviderRegistry from "../provider/ProviderRegistry.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import { HATCH_STRIP_ROWS } from "./hatchRecipe.ts";
@@ -92,6 +94,8 @@ interface Harness {
   /** Threads that are archived (sends fail) or gone entirely. */
   readonly archived: Set<string>;
   readonly missing: Set<string>;
+  /** Bot updates the service made, in order. */
+  readonly projectUpdates: Array<ProjectService.ProjectUpdateInput>;
 }
 
 const withHatch = <A, E>(
@@ -100,6 +104,8 @@ const withHatch = <A, E>(
     readonly runStatus?: ReadonlyArray<readonly [string, OrchestrationV2RunStatus]>;
     /** Lays out files in petsDir before the service starts, as a previous server run would. */
     readonly before?: (petsDir: string) => void;
+    /** The hatch's project; a bot by default. */
+    readonly project?: { readonly bot: unknown } | null;
   },
   run: (harness: Harness) => Effect.Effect<A, E>,
 ) =>
@@ -111,6 +117,9 @@ const withHatch = <A, E>(
     const runStatus = new Map(options.runStatus ?? []);
     const archived = new Set<string>();
     const missing = new Set<string>();
+    const projectUpdates: Array<ProjectService.ProjectUpdateInput> = [];
+    const project =
+      options.project === undefined ? { id: projectId, bot: { role: "Helper" } } : options.project;
 
     const fakes = Layer.mergeAll(
       Layer.mock(ThreadLaunchService.ThreadLaunchService)({
@@ -155,6 +164,14 @@ const withHatch = <A, E>(
             } as never;
           }),
       }),
+      Layer.mock(ProjectService.ProjectService)({
+        getById: () => Effect.succeed(Option.fromNullishOr(project as never)),
+        update: (update) =>
+          Effect.sync(() => {
+            projectUpdates.push(update);
+            return {} as never;
+          }),
+      }),
       Layer.mock(Orchestrator.OrchestratorV2)({ streamDomainEvents: Stream.fromQueue(events) }),
       Layer.mock(ProviderRegistry.ProviderRegistry)({
         getProviders: Effect.succeed(options.providers ?? [chatgptCodex]),
@@ -183,6 +200,7 @@ const withHatch = <A, E>(
           lookups,
           archived,
           missing,
+          projectUpdates,
         });
       }).pipe(Effect.provide(PetHatchService.layer));
     }).pipe(Effect.provide(base));
@@ -302,6 +320,41 @@ it.effect("assembles the strips into a pet when the turn completes", () =>
       const pet = pets.find((candidate) => candidate.id === done.petId);
       expect(pet).toMatchObject({ displayName: "Mochi", source: "hatched", atlasVersion: 1 });
       expect(NodeFS.existsSync(NodePath.join(jobDir, "strips"))).toBe(false);
+      expect(harness.projectUpdates).toEqual([
+        {
+          projectId,
+          bot: { role: "Helper", petId: done.petId },
+          commandId: `pet-hatch:${job.jobId}:assign`,
+        },
+      ]);
+    }),
+  ),
+);
+
+it.effect("keeps a hatched pet done when its project is no longer a bot", () =>
+  withHatch({ project: null }, (harness) =>
+    Effect.gen(function* () {
+      const marker = yield* startMarker(harness);
+      const job = yield* harness.hatch.start(input);
+      writeStrips(NodePath.join(harness.petsDir, ".hatch", job.jobId));
+      const done = yield* finishTurn(harness, marker, job, "completed");
+      expect(done.status).toBe("done");
+      expect(harness.projectUpdates).toEqual([]);
+    }),
+  ),
+);
+
+it.effect("settles a finished hatch when jobs are listed, before its run event lands", () =>
+  withHatch({}, (harness) =>
+    Effect.gen(function* () {
+      const running = yield* startMarker(harness);
+      const job = yield* harness.hatch.start(input);
+      writeStrips(NodePath.join(harness.petsDir, ".hatch", job.jobId));
+      // The run ended, but no run.updated event has been processed.
+      harness.runStatus.set(job.threadId, "completed");
+      const jobs = yield* harness.hatch.jobs();
+      expect(jobs.find((candidate) => candidate.jobId === job.jobId)?.status).toBe("done");
+      expect(jobs.find((candidate) => candidate.jobId === running.jobId)?.status).toBe("hatching");
     }),
   ),
 );

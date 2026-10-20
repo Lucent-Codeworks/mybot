@@ -14,6 +14,7 @@ import {
   PetError,
   PetHatchJob,
   type PetHatchInput,
+  type PetId,
   type PetRowName,
   PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
   type ProjectId,
@@ -23,6 +24,7 @@ import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
+import * as Fiber from "effect/Fiber";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
@@ -37,6 +39,7 @@ import * as ServerConfig from "../config.ts";
 import * as Orchestrator from "../orchestration-v2/Orchestrator.ts";
 import * as ThreadLaunchService from "../orchestration-v2/ThreadLaunchService.ts";
 import * as ThreadManagement from "../orchestration-v2/ThreadManagementService.ts";
+import * as ProjectService from "../project/ProjectService.ts";
 import * as ProviderRegistry from "../provider/ProviderRegistry.ts";
 import { AtlasError, assembleAtlasFromStrips } from "./atlas.ts";
 import { buildHatchPrompt, HATCH_STRIP_ROWS } from "./hatchRecipe.ts";
@@ -45,6 +48,8 @@ import * as PetLibrary from "./PetLibrary.ts";
 const HATCH_FOLDER = ".hatch";
 const JOB_FILE = "job.json";
 const MAX_FOLLOW_UPS = 2;
+/** How long listing jobs waits for finished hatches to settle before answering. */
+const LIST_SETTLE_TIMEOUT = "5 seconds";
 const CODEX_UNAVAILABLE_MESSAGE = "Creating a pet with AI needs Codex signed in with ChatGPT.";
 const REFERENCE_MIME_BY_EXTENSION: Record<string, string> = {
   ".png": "image/png",
@@ -73,7 +78,10 @@ export class PetHatchService extends Context.Service<
   {
     /** Launches a hatching thread on a Codex instance signed in with ChatGPT. */
     readonly start: (input: PetHatchInput) => Effect.Effect<PetHatchJob, PetError>;
-    /** Every recorded job, newest first. */
+    /**
+     * Every recorded job, newest first. Jobs whose thread already finished are
+     * settled first, so a client that refreshes on the run's end sees the outcome.
+     */
     readonly jobs: () => Effect.Effect<ReadonlyArray<PetHatchJob>>;
   }
 >()("mybot/pets/PetHatchService") {}
@@ -88,6 +96,8 @@ const make = Effect.gen(function* () {
   const threads = yield* ThreadManagement.ThreadManagementService;
   const orchestrator = yield* Orchestrator.OrchestratorV2;
   const providers = yield* ProviderRegistry.ProviderRegistry;
+  const projects = yield* ProjectService.ProjectService;
+  const scope = yield* Effect.scope;
   // One job is settled at a time, so an event and the sweep never import the same pet twice.
   const settling = yield* Semaphore.make(1);
   // Threads of jobs still hatching, so run events from other threads cost nothing.
@@ -295,6 +305,30 @@ const make = Effect.gen(function* () {
     yield* writeJob({ ...job, followUps: job.followUps + 1 });
   });
 
+  /** Gives the hatched pet to the bot it was made in. The job stays done either way. */
+  const assignToBot = (job: PetHatchJob, petId: PetId) =>
+    Effect.gen(function* () {
+      const project = Option.getOrUndefined(yield* projects.getById(job.projectId));
+      if (!project?.bot) {
+        return yield* Effect.logInfo("A hatched pet's bot is gone, so it was not assigned.", {
+          jobId: job.jobId,
+        });
+      }
+      // A bot is replaced whole on update, so carry every other field over.
+      yield* projects.update({
+        projectId: job.projectId,
+        bot: { ...project.bot, petId },
+        commandId: CommandId.make(`pet-hatch:${job.jobId}:assign`),
+      });
+    }).pipe(
+      Effect.catchCause((cause) =>
+        Effect.logWarning("A hatched pet could not be assigned to its bot.", {
+          cause,
+          jobId: job.jobId,
+        }),
+      ),
+    );
+
   const completed = Effect.fn("PetHatchService.completed")(function* (job: PetHatchJob) {
     const result = yield* assemble(job);
     if (!result.ok) return yield* askForFix(job, result.reason);
@@ -306,6 +340,7 @@ const make = Effect.gen(function* () {
     });
     yield* writeJob({ ...job, status: "done", petId: pet.id });
     yield* fileSystem.remove(stripsDir(job.jobId), { recursive: true }).pipe(Effect.ignore);
+    yield* assignToBot(job, pet.id);
   });
 
   const runError = (threadId: ThreadId, run: OrchestrationV2Run) =>
@@ -394,7 +429,22 @@ const make = Effect.gen(function* () {
   );
 
   // job.json is replaced by rename, so a read never sees a half-written job.
-  const jobs: PetHatchService["Service"]["jobs"] = () => readJobs;
+  // The settle runs in the service's scope, so a timeout stops the wait, not
+  // an import halfway through; a hung settle cannot hang the list.
+  const jobs: PetHatchService["Service"]["jobs"] = () =>
+    readJobs.pipe(
+      Effect.flatMap((current) =>
+        current.some((job) => job.status === "hatching")
+          ? settleAll.pipe(
+              Effect.forkIn(scope),
+              Effect.flatMap((fiber) =>
+                Fiber.await(fiber).pipe(Effect.timeout(LIST_SETTLE_TIMEOUT), Effect.ignore),
+              ),
+              Effect.andThen(readJobs),
+            )
+          : Effect.succeed(current),
+      ),
+    );
 
   return PetHatchService.of({ start, jobs });
 });
