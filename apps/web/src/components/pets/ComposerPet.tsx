@@ -1,16 +1,16 @@
-import { useAtomValue } from "@effect/atom-react";
+import { useAtomRefresh, useAtomValue } from "@effect/atom-react";
 import type { EnvironmentThreadShell } from "@mybot/client-runtime/state/models";
 import {
-  type PetMood,
+  nextThreadPose,
   type PetPose,
-  petPoseFor,
   resolveBotPet,
   resolvePetMood,
+  unknownBotPetIds,
 } from "@mybot/client-runtime/state/petMood";
 import type { BotProfile, EnvironmentId, Pet } from "@mybot/contracts";
 import * as Option from "effect/Option";
 import { AsyncResult, Atom } from "effect/reactivity";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useMediaQuery } from "~/hooks/useMediaQuery";
 import { useClientSettings } from "~/hooks/useSettings";
@@ -47,16 +47,29 @@ export function ComposerPet(props: {
   const serverSettings = useAtomValue(
     wantsPet ? serverEnvironment.settingsValueAtom(environmentId) : NO_SETTINGS_ATOM,
   );
-  const petsResult = useAtomValue(
-    wantsPet ? petEnvironment.list({ environmentId, input: undefined }) : NO_PETS_ATOM,
-  );
+  const petsAtom = wantsPet
+    ? petEnvironment.list({ environmentId, input: undefined })
+    : NO_PETS_ATOM;
+  const petsResult = useAtomValue(petsAtom);
+  const refreshPets = useAtomRefresh(petsAtom);
   const pets = Option.match(AsyncResult.value(petsResult), {
     onNone: () => null,
     onSome: (result) => result.pets,
   });
-  const pet = wantsPet
-    ? resolveBotPet({ bot, defaultPetId: serverSettings?.defaultPetId ?? null, pets: pets ?? [] })
-    : null;
+  const defaultPetId = serverSettings?.defaultPetId ?? null;
+  const pet = wantsPet ? resolveBotPet({ bot, defaultPetId, pets: pets ?? [] }) : null;
+
+  // Pets are managed on other devices, so the bot or the default can name a
+  // pet this list has not seen yet. Ask again once per unknown answer.
+  const unknownKey =
+    wantsPet && pets !== null ? unknownBotPetIds({ bot, defaultPetId, pets }).join(",") : "";
+  const refreshedForRef = useRef("");
+  useEffect(() => {
+    if (unknownKey === "" || refreshedForRef.current === unknownKey) return;
+    refreshedForRef.current = unknownKey;
+    refreshPets();
+  }, [unknownKey, refreshPets]);
+
   if (!pet || environmentId === null) return null;
   return <ComposerPetFor environmentId={environmentId} pet={pet} thread={thread} />;
 }
@@ -92,6 +105,7 @@ function ComposerPetFor(props: {
           url={url}
           pose={pose}
           reducedMotion={reducedMotion}
+          animating={hasRoom && !reducedMotion}
           width={PET_WIDTH_PX}
         />
       ) : null}
@@ -100,29 +114,18 @@ function ComposerPetFor(props: {
 }
 
 /**
- * The pose for the thread's current mood. Reactions play only when the mood
- * changes while the thread is shown, the same rule as `PetMoodTracker`; it is
- * derived during render here so the reaction lands with the change, not a
- * frame later, and StrictMode's double render cannot swallow it.
+ * The pose for the thread's current mood, via `nextThreadPose`: reactions play
+ * only when the shown thread's mood changes. It is derived during render so
+ * the reaction lands with the change, not a frame later, and StrictMode's
+ * double render cannot swallow it.
  */
 function useThreadPose(thread: EnvironmentThreadShell | null): PetPose {
-  const mood: PetMood = thread ? resolvePetMood(thread) : "idle";
+  const mood = thread ? resolvePetMood(thread) : "idle";
   const threadKey = thread ? `${thread.environmentId}:${thread.id}` : null;
-  const [tracked, setTracked] = useState(() => ({
-    threadKey,
-    mood,
-    pose: petPoseFor(mood, false),
-  }));
-  if (tracked.threadKey !== threadKey || tracked.mood !== mood) {
-    const next = {
-      threadKey,
-      mood,
-      pose: petPoseFor(mood, tracked.threadKey === threadKey),
-    };
-    setTracked(next);
-    return next.pose;
-  }
-  return tracked.pose;
+  const [tracked, setTracked] = useState(() => nextThreadPose(null, threadKey, mood));
+  const next = nextThreadPose(tracked, threadKey, mood);
+  if (next !== tracked) setTracked(next);
+  return next.pose;
 }
 
 /**

@@ -62,6 +62,17 @@ function frameFor(pose: PetPose, phase: Phase): Frame {
   }
 }
 
+/**
+ * Where a phase lands while motion is off (hidden, reduced motion): a finite
+ * reaction skips to where it would end, so it never replays later. A loop
+ * keeps its phase and resumes with the motion.
+ */
+function settle(pose: PetPose, phase: Phase): Phase {
+  if (phase === "review" || phase === "hover") return "idle";
+  if (phase !== "play" || pose.loop) return phase;
+  return pose.returnToIdleAfterMs !== undefined ? "idle" : "rest";
+}
+
 /** Picture pets fake each reaction with a fixed CSS motion from index.css. */
 function pictureAnimationClass(frame: Frame): string | null {
   if (frame.iterations === null) return null;
@@ -86,6 +97,12 @@ export type PetSpriteProps = {
   readonly pose: PetPose;
   /** Show the idle frame only, with no motion. */
   readonly reducedMotion: boolean;
+  /**
+   * False while the pet can't be seen move (hidden, reduced motion): finite
+   * reactions skip to their end instead of playing later. Defaults to
+   * `!reducedMotion`.
+   */
+  readonly animating?: boolean;
   /** Rendered width in px; height follows the 192×208 cell. */
   readonly width?: number;
   readonly className?: string;
@@ -93,29 +110,36 @@ export type PetSpriteProps = {
 
 /**
  * Plays a pose once (or loops it while `pose.loop`), then holds still. A new
- * pose object restarts the sequence, so callers should keep poses stable.
+ * pose object restarts the sequence, so callers should keep poses stable;
+ * while not `animating`, a new finite pose lands straight on its end.
  */
 export function PetSprite({
   pet,
   url,
   pose,
   reducedMotion,
+  animating: animatingProp = !reducedMotion,
   width = 72,
   className,
 }: PetSpriteProps) {
+  const animating = animatingProp && !reducedMotion;
   const [sequence, setSequence] = useState(() => ({
     pose,
     phase: initialPhase(pose),
     playKey: 0,
   }));
-  let current = sequence;
-  if (sequence.pose !== pose) {
-    current = { pose, phase: initialPhase(pose), playKey: sequence.playKey + 1 };
-    setSequence(current);
+  let current =
+    sequence.pose !== pose
+      ? { pose, phase: initialPhase(pose), playKey: sequence.playKey + 1 }
+      : sequence;
+  if (!animating) {
+    const settled = settle(pose, current.phase);
+    if (settled !== current.phase) current = { ...current, phase: settled };
   }
+  if (current !== sequence) setSequence(current);
   const { phase, playKey } = current;
 
-  const reviewHoldMs = phase === "review" ? pose.returnToIdleAfterMs : undefined;
+  const reviewHoldMs = animating && phase === "review" ? pose.returnToIdleAfterMs : undefined;
   useEffect(() => {
     if (reviewHoldMs === undefined) return;
     const timer = window.setTimeout(() => {
@@ -145,7 +169,7 @@ export function PetSprite({
   };
 
   const handlePointerEnter = () => {
-    if (reducedMotion || pet.kind !== "atlas" || !isStillIdle) return;
+    if (!animating || pet.kind !== "atlas" || !isStillIdle) return;
     setSequence((previous) => ({ ...previous, phase: "hover", playKey: previous.playKey + 1 }));
   };
 
@@ -164,6 +188,8 @@ export function PetSprite({
         onAnimationEnd={handleAnimationEnd}
         className={cn(
           "block object-contain select-none",
+          // Built-ins are pixel art, served at a whole-number scale.
+          pet.builtIn ? "[image-rendering:pixelated]" : null,
           animationClass,
           !reducedMotion && pose.row === "failed" && phase !== "review" && phase !== "idle"
             ? "pet-picture-failed"

@@ -285,7 +285,7 @@ function ImportPetRow(props: {
     >
       {found.length > 0 ? (
         <div className="flex flex-col gap-2 pb-3">
-          <span className="text-xs text-muted-foreground">Found on this computer</span>
+          <span className="text-xs text-muted-foreground">Found on this environment’s host</span>
           {found.map((candidate) => {
             const key = `${candidate.providerInstanceId}:${candidate.folderName}`;
             return (
