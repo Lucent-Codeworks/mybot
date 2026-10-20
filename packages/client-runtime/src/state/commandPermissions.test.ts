@@ -248,3 +248,28 @@ it.effect("rejects protected RPCs outside a guarded command", () =>
     expect(writes).toBe(0);
   }),
 );
+
+describe("pet commands", () => {
+  it.effect("require the operate grant on the destination environment", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const registry = yield* setup;
+        for (const tag of [
+          WS_METHODS.petsImport,
+          WS_METHODS.petsCreatePicture,
+          WS_METHODS.petsRename,
+          WS_METHODS.petsRemove,
+          WS_METHODS.petsHatch,
+        ]) {
+          const command = createCommandPermissions(runtime, tag);
+          registry.set(sessions(env), AsyncResult.success(grant(true)));
+          expect(registry.get(command.permissionAtom(env))).toBe(true);
+          registry.set(sessions(other), AsyncResult.success(grant(false)));
+          expect(registry.get(command.permissionAtom(other))).toBe(false);
+          const denied = yield* command.authorize(registry, other).pipe(Effect.flip);
+          expect(denied._tag).toBe("EnvironmentAuthorizationError");
+        }
+      }),
+    ),
+  );
+});

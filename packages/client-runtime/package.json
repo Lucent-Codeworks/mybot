@@ -127,6 +127,14 @@
       "types": "./src/state/attachments.ts",
       "default": "./src/state/attachments.ts"
     },
+    "./state/petMood": {
+      "types": "./src/state/petMood.ts",
+      "default": "./src/state/petMood.ts"
+    },
+    "./state/pets": {
+      "types": "./src/state/pets.ts",
+      "default": "./src/state/pets.ts"
+    },
     "./text-paste": {
       "types": "./src/textPaste.ts",
       "default": "./src/textPaste.ts"
