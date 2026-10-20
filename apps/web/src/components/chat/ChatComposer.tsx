@@ -127,6 +127,8 @@ import {
   type PromptStashEntry,
 } from "../../promptStashStore";
 import { ComposerStashBadge } from "./ComposerStashBadge";
+import { ComposerVoiceControl } from "../../features/voiceInput/ComposerVoiceControl";
+import { useComposerVoiceInput } from "../../features/voiceInput/useComposerVoiceInput";
 import { ComposerStashMenu } from "./ComposerStashMenu";
 import { useComposerMenuState } from "./useComposerMenuState";
 import { useComposerTriggerState } from "./useComposerTriggerState";
@@ -3805,6 +3807,39 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     };
   }, [composerCursor, isLiteralPendingAnswer, promptRef]);
 
+  // Bound after submitComposer below; voice "Send" goes through the same path as the Send button.
+  const submitComposerRef = useRef<() => void>(() => {});
+  const voiceInput = useComposerVoiceInput({
+    environmentId,
+    enabled:
+      canOperateThread &&
+      !isComposerApprovalState &&
+      activePendingProgress?.activeQuestion?.allowCustomAnswer !== false,
+    ownerKey: `${composerDraftTargetKey}:${activePendingProgress?.activeQuestion?.id ?? ""}`,
+    draftText: prompt,
+    readDraft: () => {
+      const snapshot = readComposerSnapshot();
+      const selection = composerEditorRef.current?.readSelectionRange() ?? {
+        start: snapshot.expandedCursor,
+        end: snapshot.expandedCursor,
+      };
+      return { text: snapshot.value, selection };
+    },
+    commitDraft: (text, selection) => {
+      applyPromptReplacement(0, promptRef.current.length, text, {
+        expandedCursorAfterReplace: selection.start,
+      });
+    },
+    submit: () => submitComposerRef.current(),
+    keybindings,
+    shortcutContext: () => ({
+      terminalFocus: getTerminalFocusOwner() !== null,
+      terminalOpen,
+      modelPickerOpen: isComposerModelPickerOpen,
+    }),
+  });
+  const interceptVoiceSubmit = voiceInput.interceptSubmit;
+
   const resolveActiveComposerTrigger = useCallback((): {
     snapshot: { value: string; cursor: number; expandedCursor: number };
     trigger: ComposerTrigger | null;
@@ -4028,6 +4063,11 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       dispatchMode?: ComposerDispatchMode,
       submissionIntent?: ComposerSubmissionIntent,
     ) => {
+      // While recording, Send stops and sends the transcript; while transcribing, it waits.
+      if (interceptVoiceSubmit()) {
+        event?.preventDefault();
+        return;
+      }
       if (
         noProviderAvailable ||
         isSendDisabled ||
@@ -4105,8 +4145,12 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       phase,
       promptRef,
       shouldBlurMobileComposerOnSubmit,
+      interceptVoiceSubmit,
     ],
   );
+  useLayoutEffect(() => {
+    submitComposerRef.current = () => submitComposer();
+  }, [submitComposer]);
   const handleSubmitMessage = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       event.preventDefault();
@@ -7458,6 +7502,12 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                   }
                   className="flex shrink-0 flex-nowrap items-center justify-end gap-2"
                 >
+                  <ComposerVoiceControl
+                    voice={voiceInput}
+                    shortcutLabel={shortcutLabelForCommand(keybindings, "composer.voice", {
+                      context: { terminalFocus: false, terminalOpen },
+                    })}
+                  />
                   {showComposerAttachAction ? (
                     <>
                       <input

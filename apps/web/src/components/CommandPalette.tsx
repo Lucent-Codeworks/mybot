@@ -12,6 +12,7 @@ import {
   FileSearchIcon,
   LinkIcon,
   MessageSquareIcon,
+  MicIcon,
   MonitorIcon,
   MoonIcon,
   PaletteIcon,
@@ -24,6 +25,7 @@ import {
   BotIcon,
 } from "lucide-react";
 import { requestThreadFindOpen } from "./chat/threadFindActionBus";
+import { requestComposerVoiceToggle } from "../features/voiceInput/useComposerVoiceInput";
 import {
   useCallback,
   useDeferredValue,
@@ -859,6 +861,25 @@ function OpenCommandPaletteDialog(props: {
       shortcutCommand: "chat.find",
       run: async () => {
         requestThreadFindOpen();
+      },
+    });
+  }
+
+  const voiceEnvironmentId = (activeThread ?? activeDraftThread)?.environmentId ?? null;
+  if (
+    paletteRouteTarget !== null &&
+    environments.find((environment) => environment.environmentId === voiceEnvironmentId)
+      ?.serverConfig?.environment.capabilities.voiceInput === true
+  ) {
+    actionItems.push({
+      kind: "action",
+      value: "action:voice-input",
+      searchTerms: ["voice", "dictate", "dictation", "speak", "talk", "microphone", "mic"],
+      title: "Start voice input",
+      icon: <MicIcon className={ITEM_ICON_CLASS} />,
+      shortcutCommand: "composer.voice",
+      run: async () => {
+        requestComposerVoiceToggle();
       },
     });
   }
