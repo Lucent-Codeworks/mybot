@@ -167,9 +167,10 @@ and use **Attach again** or remove the missing file before sending.
 Dictate into the composer instead of typing. On web and desktop, click the
 microphone next to attach, press `Cmd+Alt+V` on macOS or `Ctrl+Alt+V` on Windows and
 Linux, or run **Start voice input** from the command palette. On iPhone and Android,
-tap the composer's microphone. Press the shortcut again or `Esc` (**Done** on mobile)
-to insert the text where your cursor was when recording started, ready to review and
-edit. Press `Enter` (**Send** on mobile) to insert it and send it right away.
+tap the composer's microphone. To finish, press the shortcut again or `Esc` on web and
+desktop, or confirm on mobile; the text is inserted where your cursor was when
+recording started, ready to review and edit. To insert it and send it right away,
+press `Enter` on web and desktop, or use the send option on mobile.
 
 Recordings can be up to five minutes long. Canceling discards the recording and
 keeps your draft. If transcription fails, the recording is kept so you can retry or
@@ -182,8 +183,8 @@ server without a voice model, MyBot asks to download one (about 150 MB) onto tha
 MyBot server. Any paired device can do this. If it can't, you'll see "The MyBot
 server owner needs to turn on voice input."
 
-Choose, switch, or remove the model in **Settings → Voice**, which lists each MyBot
-server. On Android, open the server's settings instead. Base is recommended; Tiny is
+On web and desktop, choose, switch, or remove the model in **Settings → Voice**,
+which lists each MyBot server. On Android, use the server's settings screen instead. Base is recommended; Tiny is
 faster, and Small and Large turbo are more accurate but slower.
 
 Audio is sent only to your MyBot server and deleted after transcription or
