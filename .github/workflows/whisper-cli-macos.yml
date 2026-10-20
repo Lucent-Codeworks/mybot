@@ -55,7 +55,11 @@ jobs:
             mkdir "dist/$root"
             cp "build-$arch/bin/whisper-cli" "dist/$root/whisper-cli"
             cp LICENSE "dist/$root/LICENSE"
-            lipo -archs "dist/$root/whisper-cli"
+            archs="$(lipo -archs "dist/$root/whisper-cli")"
+            if [ "$archs" != "$arch" ]; then
+              echo "::error::dist/$root/whisper-cli is '$archs', expected '$arch'"
+              exit 1
+            fi
             tar -czf "dist/$root.tar.gz" -C dist "$root"
             rm -r "dist/$root"
           done
