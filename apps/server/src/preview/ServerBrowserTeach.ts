@@ -67,6 +67,10 @@ export const TEACH_RECORDER_SCRIPT = `(() => {
     (event) => {
       const el = event.target;
       if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement)) return;
+      if (el instanceof HTMLInputElement && el.type === "file") {
+        send({ kind: "upload", target: describe(el), files: [...(el.files || [])].map((file) => file.name) });
+        return;
+      }
       const value =
         el instanceof HTMLSelectElement
           ? (el.selectedOptions[0] && el.selectedOptions[0].textContent) || el.value
@@ -104,6 +108,17 @@ export function formatTeachStep(raw: unknown): string | null {
       return typeof step.value === "string"
         ? `Set ${target} to "${step.value}"`
         : `Entered a secret into ${target} (the user does this step)`;
+    case "upload": {
+      const names = Array.isArray(step.files)
+        ? step.files
+            .filter((name): name is string => typeof name === "string")
+            .slice(0, 10)
+            .map((name) => `"${name.slice(0, 80)}"`)
+        : [];
+      return names.length > 0
+        ? `Uploaded ${names.join(", ")} to ${target} (the user supplies the file)`
+        : `Cleared the files in ${target}`;
+    }
     case "submit":
       return `Submitted ${target}`;
     case "key":

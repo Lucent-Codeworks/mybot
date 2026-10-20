@@ -81,6 +81,10 @@ leaves the page open and tells you what to do. Open its browser tab, choose
 bot. Never send passwords or codes in a chat; a bot that needs an API key asks
 for it with a private form.
 
+Bots browse with Google Chrome when it is installed on the machine running
+MyBot, and with a built-in browser otherwise. Sites trust Chrome more, so if
+CAPTCHAs keep failing, install Chrome there.
+
 ## Connect apps
 
 Connect your apps so bots can use them directly instead of clicking through
@@ -139,7 +143,8 @@ opens the starting page in its browser tab and asks you to take over. Choose
 **Take control**, do the task once, choose **Release control**, and reply.
 
 Only what you do while in control is recorded. Passwords and one-time codes are
-recorded as steps you do yourself, without their values. Afterwards the bot
+recorded as steps you do yourself, without their values. Files you upload are
+recorded by name, as steps you supply the file for. Afterwards the bot
 writes a skill it can repeat, with the details you entered turned into inputs.
 
 You can also hand a bot a step-by-step guide you already have, such as a PDF

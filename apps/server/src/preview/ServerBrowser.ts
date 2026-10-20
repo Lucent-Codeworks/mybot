@@ -82,7 +82,11 @@ import * as PreviewManager from "./Manager.ts";
 import * as ServerBrowserPage from "./ServerBrowserPage.ts";
 import * as PreviewBrowser from "./PreviewBrowser.ts";
 import * as PreviewBrowserHost from "./PreviewBrowserHost.ts";
-import { presentAsChrome, ServerBrowserContexts } from "./ServerBrowserContexts.ts";
+import {
+  findInstalledChrome,
+  presentAsChrome,
+  ServerBrowserContexts,
+} from "./ServerBrowserContexts.ts";
 import {
   addTeachStep,
   formatTeachStep,
@@ -523,6 +527,7 @@ const make = Effect.gen(function* () {
   const contexts = new ServerBrowserContexts({
     profilesDir: NodePath.join(config.stateDir, "server-browser", "profiles"),
     executable: () => Effect.runPromise(previewBrowser.executable),
+    installedChrome: () => findInstalledChrome(host.platform, process.env),
     // Playwright's launch error drops Chrome's own output; its sandbox note survives.
     diagnose: (executable, cause) =>
       Effect.runPromiseWith(launchServices)(
@@ -920,7 +925,9 @@ const make = Effect.gen(function* () {
       broadcastControl(tab);
     });
     page.on("download", (download) => void saveDownload(tab, download));
-    page.on("filechooser", (chooser) => void offerFileChooser(tab, chooser));
+    // A desktop tab's own window opens the native file dialog; intercepting it
+    // would leave the user with no picker at all.
+    if (!desktop) page.on("filechooser", (chooser) => void offerFileChooser(tab, chooser));
     // Popups become tabs and keep `window.opener`, so sign-in popups can report back.
     page.on("popup", (popup) => void adoptPopup(tab, popup));
     // Playwright cannot reload a crashed page, so it must leave the tab list.
@@ -1206,6 +1213,7 @@ const make = Effect.gen(function* () {
       controller.push({ _tag: "clipboard", text: text.slice(0, CLIPBOARD_TEXT_LIMIT) });
     });
     await context.addInitScript(CLIPBOARD_SCRIPT);
+    await context.addInitScript(ServerBrowserPage.HIDE_FILE_SYSTEM_PICKERS_SCRIPT);
   };
 
   const adoptPopup = async (opener: ServerTab, popup: Page) => {

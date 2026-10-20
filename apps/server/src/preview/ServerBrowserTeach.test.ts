@@ -63,6 +63,28 @@ describe("the teach recorder", () => {
     ]);
     expect(steps.join("\n")).not.toContain("hunter2");
   });
+
+  it("reports an upload by its file names, never the page's fake path", () => {
+    const steps: Array<string> = [];
+    window[TEACH_BINDING] = (raw: unknown) => {
+      const step = formatTeachStep(raw);
+      if (step) steps.push(step);
+    };
+    document.body.innerHTML = `<input type="file" aria-label="Resume" multiple />`;
+    window.eval(TEACH_RECORDER_SCRIPT);
+
+    const input = document.querySelector('input[type="file"]')!;
+    let files = [{ name: "cv.pdf" }, { name: "cover.pdf" }];
+    Object.defineProperty(input, "files", { get: () => files });
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    files = [];
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+
+    expect(steps).toEqual([
+      'Uploaded "cv.pdf", "cover.pdf" to field "Resume" (the user supplies the file)',
+      'Cleared the files in field "Resume"',
+    ]);
+  });
 });
 
 describe("lesson steps", () => {

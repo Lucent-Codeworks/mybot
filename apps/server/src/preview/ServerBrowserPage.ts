@@ -392,6 +392,19 @@ export const drag = async (
   if (failure) throw failure.error;
 };
 
+/**
+ * Removes the File System Access pickers from every frame. Chromium aborts them
+ * while file choosers are intercepted, and only `<input type=file>` reaches the
+ * viewer's file prompt, so pages that feature-detect fall back to an input (or,
+ * for saving, to a plain download).
+ */
+export const HIDE_FILE_SYSTEM_PICKERS_SCRIPT = `(() => {
+  for (const name of ["showOpenFilePicker", "showSaveFilePicker", "showDirectoryPicker"]) {
+    delete window[name];
+    delete Window.prototype[name];
+  }
+})()`;
+
 /** Sets files on one file input; false when no locator or selector names one. */
 export const setInputFiles = async (page: Page, input: PreviewAutomationUploadInput) => {
   const locator = targetLocator(page, input);
