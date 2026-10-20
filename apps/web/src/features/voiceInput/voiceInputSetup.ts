@@ -1,16 +1,20 @@
 import type { EnvironmentId } from "@mybot/contracts";
+import { create } from "zustand";
 
-import { toastManager } from "../../components/ui/toast";
+/** The server whose first-use prompt is open; `VoiceSetupDialogHost` renders it. */
+export const useVoiceSetupRequest = create<{ environmentId: EnvironmentId | null }>(() => ({
+  environmentId: null,
+}));
 
 /**
  * Opens the first-use prompt to download a speech model on `environmentId`.
  * Every voice entry point (mic button, `composer.voice`, command palette) lands
  * here when the server has no model yet.
  */
-export function requestVoiceInputSetup(_environmentId: EnvironmentId): void {
-  toastManager.add({
-    type: "info",
-    title: "Voice input is not set up on this MyBot server.",
-    description: "It needs a speech model on your MyBot server first.",
-  });
+export function requestVoiceInputSetup(environmentId: EnvironmentId): void {
+  useVoiceSetupRequest.setState({ environmentId });
+}
+
+export function closeVoiceInputSetup(): void {
+  useVoiceSetupRequest.setState({ environmentId: null });
 }

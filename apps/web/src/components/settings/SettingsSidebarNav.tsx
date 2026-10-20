@@ -17,6 +17,7 @@ import {
   CalendarClockIcon,
   CpuIcon,
   HardDriveIcon,
+  MicIcon,
   KeyboardIcon,
   Link2Icon,
   PaletteIcon,
@@ -88,6 +89,7 @@ const SETTINGS_SECTION_ICONS: Readonly<
   "/settings/integrations": BlocksIcon,
   "/settings/scheduled-tasks": CalendarClockIcon,
   "/settings/storage": HardDriveIcon,
+  "/settings/voice": MicIcon,
   "/settings/connections": Link2Icon,
   "/settings/archived": ArchiveIcon,
 };

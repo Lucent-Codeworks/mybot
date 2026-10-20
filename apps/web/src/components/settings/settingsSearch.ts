@@ -24,6 +24,7 @@ export type SettingsPath =
   | "/settings/integrations"
   | "/settings/scheduled-tasks"
   | "/settings/storage"
+  | "/settings/voice"
   | "/settings/connections"
   | "/settings/archived";
 
@@ -103,6 +104,7 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/integrations": "Integrations",
   "/settings/scheduled-tasks": "Scheduled Tasks",
   "/settings/storage": "Storage",
+  "/settings/voice": "Voice",
   "/settings/connections": "Connections",
   "/settings/archived": "Archive",
 };
@@ -140,6 +142,12 @@ const KEYBINDING_SEARCH_ITEMS = STATIC_KEYBINDING_COMMANDS.toSorted((left, right
  * that may not be mounted point at their nearest stable section instead.
  */
 export const SETTINGS_SEARCH_ITEMS = [
+  {
+    id: "voice-model",
+    title: "Voice input",
+    to: "/settings/voice",
+    searchTerms: ["voice dictation microphone speech whisper model download transcribe"],
+  },
   {
     id: "storage-delete-now",
     title: "Delete now",
@@ -797,6 +805,7 @@ const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScop
   // Apps belong to the host environment, whatever the scope selection.
   "/settings/apps": null,
   "/settings/storage": "environment-defaults",
+  "/settings/voice": null,
   "/settings/connections": "connections",
   "/settings/scheduled-tasks": null,
   "/settings/archived": "project-defaults",
