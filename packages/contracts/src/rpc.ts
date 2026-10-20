@@ -279,6 +279,18 @@ import {
   BotTelegramStatus,
   BotTelegramStatusInput,
 } from "./botChannels.ts";
+import {
+  CodexPetCandidate,
+  PetCreatePictureInput,
+  Pet,
+  PetError,
+  PetHatchInput,
+  PetHatchJob,
+  PetImportInput,
+  PetRemoveInput,
+  PetRenameInput,
+  PetsListResult,
+} from "./pets.ts";
 import { SecretRequestAnswerInput, SecretRequestError } from "./secretRequest.ts";
 import { Project, ProjectMutation, ProjectMutationError } from "./project.ts";
 
@@ -414,6 +426,15 @@ export const WS_METHODS = {
   botsTelegramStatus: "bots.telegram.status",
   botsTelegramConnect: "bots.telegram.connect",
   botsTelegramDisconnect: "bots.telegram.disconnect",
+
+  // Pets
+  petsList: "pets.list",
+  petsListCodex: "pets.listCodex",
+  petsImport: "pets.import",
+  petsCreatePicture: "pets.createPicture",
+  petsRename: "pets.rename",
+  petsRemove: "pets.remove",
+  petsHatch: "pets.hatch",
 
   // Scheduled tasks
   scheduledTasksList: "scheduledTasks.list",
@@ -1298,6 +1319,49 @@ const WsBotsTelegramDisconnectRpc = Rpc.make(WS_METHODS.botsTelegramDisconnect, 
   error: Schema.Union([BotTelegramError, EnvironmentAuthorizationError]),
 });
 
+const PetRpcError = Schema.Union([PetError, EnvironmentAuthorizationError]);
+
+const WsPetsListRpc = Rpc.make(WS_METHODS.petsList, {
+  success: PetsListResult,
+  error: PetRpcError,
+});
+
+/** Pets found in connected Codex installs that can be imported. */
+const WsPetsListCodexRpc = Rpc.make(WS_METHODS.petsListCodex, {
+  success: Schema.Array(CodexPetCandidate),
+  error: PetRpcError,
+});
+
+const WsPetsImportRpc = Rpc.make(WS_METHODS.petsImport, {
+  payload: PetImportInput,
+  success: Pet,
+  error: PetRpcError,
+});
+
+const WsPetsCreatePictureRpc = Rpc.make(WS_METHODS.petsCreatePicture, {
+  payload: PetCreatePictureInput,
+  success: Pet,
+  error: PetRpcError,
+});
+
+const WsPetsRenameRpc = Rpc.make(WS_METHODS.petsRename, {
+  payload: PetRenameInput,
+  success: Pet,
+  error: PetRpcError,
+});
+
+const WsPetsRemoveRpc = Rpc.make(WS_METHODS.petsRemove, {
+  payload: PetRemoveInput,
+  error: PetRpcError,
+});
+
+/** Starts generating a pet with AI in a thread of the given project. */
+const WsPetsHatchRpc = Rpc.make(WS_METHODS.petsHatch, {
+  payload: PetHatchInput,
+  success: PetHatchJob,
+  error: PetRpcError,
+});
+
 /** Streams the full scheduled-task list: one snapshot on subscribe, then a fresh list after every change. */
 const WsScheduledTasksSubscribeRpc = Rpc.make(WS_METHODS.scheduledTasksSubscribe, {
   payload: ScheduledTaskListInput,
@@ -1450,6 +1514,13 @@ export const WsRpcGroup = RpcGroup.make(
   WsBotsTelegramStatusRpc,
   WsBotsTelegramConnectRpc,
   WsBotsTelegramDisconnectRpc,
+  WsPetsListRpc,
+  WsPetsListCodexRpc,
+  WsPetsImportRpc,
+  WsPetsCreatePictureRpc,
+  WsPetsRenameRpc,
+  WsPetsRemoveRpc,
+  WsPetsHatchRpc,
   WsScheduledTasksListRpc,
   WsScheduledTasksSubscribeRpc,
   WsScheduledTasksUpsertRpc,

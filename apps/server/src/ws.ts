@@ -79,6 +79,7 @@ import {
   AssetWorkspaceContextResolutionError,
   ChatAttachmentId,
   PersistChatAttachmentsError,
+  PetError,
   RpcClientId,
   EnvironmentAuthorizationError,
   type ProjectId,
@@ -111,6 +112,7 @@ import * as ThreadLaunchService from "./orchestration-v2/ThreadLaunchService.ts"
 import * as ThreadMessageIntake from "./orchestration-v2/ThreadMessageIntake.ts";
 import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
 import * as TelegramChannel from "./channels/TelegramChannel.ts";
+import * as PetLibrary from "./pets/PetLibrary.ts";
 import * as AppConnections from "./apps/AppConnections.ts";
 import * as ScheduledTasks from "./scheduledTasks/ScheduledTaskService.ts";
 import * as SecretRequests from "./secrets/SecretRequests.ts";
@@ -1058,6 +1060,7 @@ const layerWsRpc = (
       const providerSessionManager = yield* ProviderSessionManager.ProviderSessionManagerV2;
       const scheduledTasks = yield* ScheduledTasks.ScheduledTaskService;
       const telegram = yield* TelegramChannel.TelegramChannel;
+      const petLibrary = yield* PetLibrary.PetLibrary;
       const appConnections = yield* AppConnections.AppConnections;
       const secretRequests = yield* SecretRequests.SecretRequests;
       const deviceService = yield* DeviceService.DeviceService;
@@ -1808,6 +1811,22 @@ const layerWsRpc = (
         [WS_METHODS.botsTelegramStatus]: (input) => telegram.status(input.projectId),
         [WS_METHODS.botsTelegramConnect]: (input) => telegram.connect(input.projectId, input.token),
         [WS_METHODS.botsTelegramDisconnect]: (input) => telegram.disconnect(input.projectId),
+        [WS_METHODS.petsList]: () =>
+          petLibrary.list().pipe(Effect.map((pets) => ({ pets, hatchJobs: [] }))),
+        [WS_METHODS.petsListCodex]: () => petLibrary.listCodexCandidates(),
+        [WS_METHODS.petsImport]: (input) =>
+          input.type === "upload" ? petLibrary.importUpload(input) : petLibrary.importCodex(input),
+        [WS_METHODS.petsCreatePicture]: (input) => petLibrary.createPicture(input),
+        [WS_METHODS.petsRename]: (input) => petLibrary.rename(input),
+        [WS_METHODS.petsRemove]: (input) => petLibrary.remove(input),
+        // Hatching arrives with the hatch job service; until then it is unavailable.
+        [WS_METHODS.petsHatch]: () =>
+          Effect.fail(
+            new PetError({
+              code: "codex_unavailable",
+              message: "Creating a pet with AI needs Codex signed in with ChatGPT.",
+            }),
+          ),
         [WS_METHODS.appConnectionsList]: (_input) => appConnections.list,
         [WS_METHODS.appConnectionsAdd]: (input) => appConnections.add(input),
         [WS_METHODS.appConnectionsRemove]: (input) => appConnections.remove(input.id),
@@ -2357,6 +2376,7 @@ const layerWsRpc = (
               input.resource._tag === "attachment" ||
               input.resource._tag === "native-app-icon" ||
               input.resource._tag === "tool-output-image" ||
+              input.resource._tag === "pet-sprite" ||
               (input.resource._tag === "media-file" && path.isAbsolute(input.resource.path))
             ) {
               return yield* issueAssetUrl({ resource: input.resource });
