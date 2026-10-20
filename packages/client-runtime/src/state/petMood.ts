@@ -1,4 +1,4 @@
-import type { BotProfile, Pet, PetId, PetRowName, ThreadId } from "@mybot/contracts";
+import type { BotProfile, Pet, PetId, PetRowName } from "@mybot/contracts";
 
 import type { EnvironmentThreadShell } from "./models.ts";
 
@@ -38,6 +38,9 @@ export function resolvePetMood(
   if (status === "failed") {
     return thread.runtime?.lastErrorClass === "usage_limit" ? "limited" : "failed";
   }
+  // Runtime "idle" means background work (subagents, monitors) will wake the
+  // agent; the sidebar shows it as waiting, so the pet rests instead of celebrating.
+  if (status === "idle") return "idle";
   if (thread.latestRun?.status === "completed") return "completed";
   return "idle";
 }
@@ -80,18 +83,26 @@ export function petPoseFor(mood: PetMood, transitioned: boolean): PetPose {
   }
 }
 
-/**
- * Tracks the last mood per thread so a reaction plays only when a thread
- * visibly changes state, not when it is first shown or switched to.
- */
-export class PetMoodTracker {
-  private readonly moods = new Map<ThreadId, PetMood>();
+/** The pose a surface shows for the thread it is displaying. */
+export type ThreadPose = {
+  readonly threadKey: string | null;
+  readonly mood: PetMood;
+  readonly pose: PetPose;
+};
 
-  observe(threadId: ThreadId, mood: PetMood): PetPose {
-    const previous = this.moods.get(threadId);
-    this.moods.set(threadId, mood);
-    return petPoseFor(mood, previous !== undefined && previous !== mood);
-  }
+/**
+ * The next pose for the displayed thread. A reaction plays only when the
+ * same thread's mood changes; a first look or a thread switch starts from the
+ * resting pose, so nothing replays. Returns `previous` itself while nothing
+ * changed, so callers can store it in state without a render loop.
+ */
+export function nextThreadPose(
+  previous: ThreadPose | null,
+  threadKey: string | null,
+  mood: PetMood,
+): ThreadPose {
+  if (previous?.threadKey === threadKey && previous.mood === mood) return previous;
+  return { threadKey, mood, pose: petPoseFor(mood, previous?.threadKey === threadKey) };
 }
 
 /**
@@ -108,4 +119,25 @@ export function resolveBotPet(input: {
   const find = (id: PetId | null | undefined) =>
     id === null || id === undefined ? null : (pets.find((pet) => pet.id === id) ?? null);
   return find(bot.petId) ?? find(defaultPetId);
+}
+
+/**
+ * The pet ids `resolveBotPet` would try that `pets` does not hold, in order.
+ * Pets are managed on other devices and the default can change elsewhere, so
+ * a surface refreshes its list once for each new answer here.
+ */
+export function unknownBotPetIds(input: {
+  readonly bot: BotProfile | null | undefined;
+  readonly defaultPetId: PetId | null;
+  readonly pets: ReadonlyArray<Pet>;
+}): ReadonlyArray<PetId> {
+  const { bot, defaultPetId, pets } = input;
+  if (!bot || bot.petId === null) return [];
+  const unknown: Array<PetId> = [];
+  for (const id of [bot.petId, defaultPetId]) {
+    if (id === null || id === undefined) continue;
+    if (pets.some((pet) => pet.id === id)) break;
+    unknown.push(id);
+  }
+  return unknown;
 }

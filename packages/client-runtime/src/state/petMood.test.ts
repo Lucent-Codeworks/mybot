@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vite-plus/test";
-import { PetId, ThreadId, type BotProfile, type Pet } from "@mybot/contracts";
+import { PetId, type BotProfile, type Pet } from "@mybot/contracts";
 
-import { PetMoodTracker, petPoseFor, resolveBotPet, resolvePetMood } from "./petMood.ts";
+import {
+  nextThreadPose,
+  petPoseFor,
+  resolveBotPet,
+  resolvePetMood,
+  unknownBotPetIds,
+} from "./petMood.ts";
 
 type MoodInput = Parameters<typeof resolvePetMood>[0];
 
@@ -38,7 +44,10 @@ describe("resolvePetMood", () => {
   });
   it("completes only on a completed latest run", () => {
     expect(resolvePetMood(thread("completed", { run: "completed" }))).toBe("completed");
-    expect(resolvePetMood(thread("idle", { run: "completed" }))).toBe("completed");
+  });
+  it("rests while background work holds a finished run open", () => {
+    // Runtime "idle" is the sidebar's grey "waiting": subagents or monitors will wake the agent.
+    expect(resolvePetMood(thread("idle", { run: "completed" }))).toBe("idle");
   });
   it("falls back to idle", () => {
     expect(resolvePetMood(thread("interrupted", { run: "interrupted" }))).toBe("idle");
@@ -98,23 +107,28 @@ describe("petPoseFor", () => {
   });
 });
 
-describe("PetMoodTracker", () => {
-  const a = ThreadId.make("a");
-  const b = ThreadId.make("b");
-  it("does not react to a thread first seen as failed", () => {
-    expect(new PetMoodTracker().observe(a, "failed").plays).toBe(0);
+describe("nextThreadPose", () => {
+  it("does not react to a thread's first mood", () => {
+    const first = nextThreadPose(null, "env:a", "failed");
+    expect(first).toMatchObject({ threadKey: "env:a", mood: "failed" });
+    expect(first.pose.plays).toBe(0);
   });
   it("reacts when the same thread changes mood", () => {
-    const t = new PetMoodTracker();
-    t.observe(a, "working");
-    expect(t.observe(a, "failed").plays).toBe(2);
-    expect(t.observe(a, "failed").plays).toBe(0);
+    const working = nextThreadPose(null, "env:a", "working");
+    expect(nextThreadPose(working, "env:a", "failed").pose.plays).toBe(2);
   });
-  it("does not react when switching threads and back", () => {
-    const t = new PetMoodTracker();
-    t.observe(a, "failed");
-    t.observe(b, "failed");
-    expect(t.observe(a, "failed").plays).toBe(0);
+  it("does not react when switching threads", () => {
+    const working = nextThreadPose(null, "env:a", "working");
+    expect(nextThreadPose(working, "env:b", "failed").pose.plays).toBe(0);
+    const failedA = nextThreadPose(null, "env:a", "failed");
+    const failedB = nextThreadPose(failedA, "env:b", "failed");
+    expect(failedB.threadKey).toBe("env:b");
+    expect(nextThreadPose(failedB, "env:a", "failed").pose.plays).toBe(0);
+  });
+  it("returns the same object while nothing changes", () => {
+    const working = nextThreadPose(null, "env:a", "working");
+    const failed = nextThreadPose(working, "env:a", "failed");
+    expect(nextThreadPose(failed, "env:a", "failed")).toBe(failed);
   });
 });
 
@@ -141,5 +155,37 @@ describe("resolveBotPet", () => {
   it("returns null for a non-bot", () => {
     expect(resolveBotPet({ bot: null, defaultPetId: def, pets })).toBeNull();
     expect(resolveBotPet({ bot: undefined, defaultPetId: def, pets })).toBeNull();
+  });
+});
+
+describe("unknownBotPetIds", () => {
+  const pet = (id: string) => ({ id: PetId.make(id) }) as unknown as Pet;
+  const pets = [pet("fox"), pet("cat")];
+  const bot = (petId?: string | null) =>
+    (petId === undefined ? {} : { petId: petId === null ? null : PetId.make(petId) }) as BotProfile;
+  it("is empty when the pet in use is known", () => {
+    expect(unknownBotPetIds({ bot: bot("fox"), defaultPetId: PetId.make("gone"), pets })).toEqual(
+      [],
+    );
+    expect(unknownBotPetIds({ bot: bot(), defaultPetId: PetId.make("cat"), pets })).toEqual([]);
+  });
+  it("names a bot pet the list has not seen", () => {
+    expect(unknownBotPetIds({ bot: bot("new"), defaultPetId: PetId.make("cat"), pets })).toEqual([
+      "new",
+    ]);
+  });
+  it("names a default the list has not seen, alone or behind a dangling bot pet", () => {
+    expect(unknownBotPetIds({ bot: bot(), defaultPetId: PetId.make("new"), pets })).toEqual([
+      "new",
+    ]);
+    expect(unknownBotPetIds({ bot: bot("gone"), defaultPetId: PetId.make("new"), pets })).toEqual([
+      "gone",
+      "new",
+    ]);
+  });
+  it("is empty for an opted-out bot, a non-bot, or no default", () => {
+    expect(unknownBotPetIds({ bot: bot(null), defaultPetId: PetId.make("new"), pets })).toEqual([]);
+    expect(unknownBotPetIds({ bot: null, defaultPetId: PetId.make("new"), pets })).toEqual([]);
+    expect(unknownBotPetIds({ bot: bot(), defaultPetId: null, pets })).toEqual([]);
   });
 });
