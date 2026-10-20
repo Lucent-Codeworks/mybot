@@ -60,3 +60,27 @@ export function voiceModelChoices(): ReadonlyArray<{
     sizeLabel: `${Math.round(VOICE_MODEL_SIZES[id] / 1_000_000)} MB`,
   }));
 }
+
+export type VoiceSetupStep =
+  | "ask"
+  | "starting"
+  | "downloading"
+  | "failed"
+  | "unsupported"
+  | "close";
+
+/**
+ * What the first-use dialog shows. `requested` only bridges the gap between
+ * tapping Download and the first status update; the live phase wins after that,
+ * so a failed download shows its message with Download available again.
+ */
+export function voiceSetupStep(
+  status: VoiceInputStatus | null,
+  requested: boolean,
+): VoiceSetupStep {
+  if (status?.phase === "ready" && status.model !== null) return "close";
+  if (status?.phase === "downloading") return "downloading";
+  if (status?.phase === "failed") return "failed";
+  if (status?.phase === "unsupported") return "unsupported";
+  return requested ? "starting" : "ask";
+}

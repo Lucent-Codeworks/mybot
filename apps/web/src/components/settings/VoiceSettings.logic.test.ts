@@ -1,7 +1,12 @@
 import type { VoiceInputStatus } from "@mybot/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
-import { voiceDownloadPercent, voiceModelChoices, voiceStatusLabel } from "./VoiceSettings.logic";
+import {
+  voiceDownloadPercent,
+  voiceModelChoices,
+  voiceSetupStep,
+  voiceStatusLabel,
+} from "./VoiceSettings.logic";
 
 const status = (patch: Partial<VoiceInputStatus>): VoiceInputStatus => ({
   phase: "not-installed",
@@ -83,5 +88,28 @@ describe("voiceModelChoices", () => {
       label: "Base — recommended",
       sizeLabel: "148 MB",
     });
+  });
+});
+
+describe("voiceSetupStep", () => {
+  it("walks not-installed, downloading, failed, retry, ready", () => {
+    expect(voiceSetupStep(status({}), false)).toBe("ask");
+    expect(voiceSetupStep(status({}), true)).toBe("starting");
+    expect(voiceSetupStep(status({ phase: "downloading", pendingModel: "base" }), true)).toBe(
+      "downloading",
+    );
+    // Failure wins over the stale request, so Download is offered again.
+    expect(voiceSetupStep(status({ phase: "failed", message: "Network error" }), true)).toBe(
+      "failed",
+    );
+    expect(voiceSetupStep(status({ phase: "downloading", pendingModel: "base" }), true)).toBe(
+      "downloading",
+    );
+    expect(voiceSetupStep(status({ phase: "ready", model: "base" }), true)).toBe("close");
+  });
+
+  it("treats an unknown status as not yet started", () => {
+    expect(voiceSetupStep(null, false)).toBe("ask");
+    expect(voiceSetupStep(status({ phase: "unsupported" }), false)).toBe("unsupported");
   });
 });

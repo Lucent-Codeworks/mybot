@@ -13,6 +13,7 @@ import {
 } from "../../components/ui/dialog";
 import {
   voiceDownloadPercent,
+  voiceSetupStep,
   voiceStatusLabel,
 } from "../../components/settings/VoiceSettings.logic";
 import { useAtomCommand } from "../../state/use-atom-command";
@@ -31,18 +32,19 @@ export function VoiceSetupDialogHost() {
 function VoiceSetupDialog({ environmentId }: { environmentId: EnvironmentId }) {
   const status = useVoiceInputStatus(environmentId);
   const canInstall = useAtomValue(voiceInputEnvironment.install.permissionAtom(environmentId));
+  const canCancel = useAtomValue(voiceInputEnvironment.cancelInstall.permissionAtom(environmentId));
   const install = useAtomCommand(voiceInputEnvironment.install, { label: "voice model download" });
   const cancelInstall = useAtomCommand(voiceInputEnvironment.cancelInstall, {
     label: "voice model cancel",
   });
-  const [started, setStarted] = useState(false);
-  const downloading = status?.phase === "downloading";
-  const ready = status?.phase === "ready" && status.model !== null;
+  const [requested, setRequested] = useState(false);
+  const step = voiceSetupStep(status, requested);
+  const downloading = step === "downloading";
 
   // Ready closes the prompt without recording; the user taps the mic again.
   useEffect(() => {
-    if (ready) closeVoiceInputSetup();
-  }, [ready]);
+    if (step === "close") closeVoiceInputSetup();
+  }, [step]);
 
   const percent = status ? voiceDownloadPercent(status) : null;
   return (
@@ -51,18 +53,18 @@ function VoiceSetupDialog({ environmentId }: { environmentId: EnvironmentId }) {
         <DialogHeader>
           <DialogTitle>Set up voice input</DialogTitle>
           <DialogDescription>
-            {downloading || started
+            {downloading || step === "starting"
               ? status
                 ? voiceStatusLabel(status)
                 : "Starting…"
-              : status?.phase === "unsupported"
+              : step === "unsupported" && status
                 ? voiceStatusLabel(status)
                 : "Voice input needs a speech model on your MyBot server (about 150 MB). Download it?"}
           </DialogDescription>
           {!canInstall && !downloading ? (
             <p className="text-muted-foreground text-sm">{VOICE_OWNER_NOTICE}</p>
           ) : null}
-          {status?.phase === "failed" && status.message && !started ? (
+          {step === "failed" && status?.message ? (
             <p className="text-destructive text-sm" role="alert">
               {status.message}
             </p>
@@ -79,7 +81,7 @@ function VoiceSetupDialog({ environmentId }: { environmentId: EnvironmentId }) {
                 void cancelInstall({ environmentId, input: {} });
                 closeVoiceInputSetup();
               }}
-              disabled={!canInstall}
+              disabled={!canCancel}
             >
               Cancel download
             </Button>
@@ -89,17 +91,17 @@ function VoiceSetupDialog({ environmentId }: { environmentId: EnvironmentId }) {
                 Not now
               </Button>
               <Button
-                disabled={!canInstall || status?.phase === "unsupported" || started}
+                disabled={!canInstall || step === "unsupported" || step === "starting"}
                 onClick={() => {
-                  setStarted(true);
+                  setRequested(true);
                   void install({ environmentId, input: { model: DEFAULT_VOICE_MODEL } }).then(
                     (result) => {
-                      if (result._tag !== "Success") setStarted(false);
+                      if (result._tag !== "Success") setRequested(false);
                     },
                   );
                 }}
               >
-                Download
+                {step === "failed" ? "Retry" : "Download"}
               </Button>
             </>
           )}
