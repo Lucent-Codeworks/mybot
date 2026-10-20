@@ -103,7 +103,62 @@ describe("fitFrame", () => {
   });
 });
 
+describe("fitFrame edges", () => {
+  it("keeps the bottom and right edge rows when the crop touches the image edge", () => {
+    for (const h of [1, 7, 13]) {
+      const img = blank(9, h, [255, 0, 0, 255]);
+      const out = fitFrame(img, 93 / h);
+      const a = (x: number, y: number) => out.data[(y * 192 + x) * 4 + 3];
+      expect(a(96, 207 - 8)).toBe(255);
+      expect(a(96, 208 - 8 - 93)).toBe(255);
+      const right = 96 + Math.round(9 * (93 / h)) / 2 - 1;
+      expect(a(Math.floor(right), 150)).toBe(255);
+    }
+  });
+});
+
 describe("composeAtlas", () => {
+  it("keeps the height ratio between rows via one shared scale", () => {
+    const rows = allRows();
+    const tall = blank(30, 100, [0, 0, 0, 0]);
+    fillRect(tall, 0, 0, 20, 100, [255, 0, 0, 255]);
+    const short = blank(30, 50, [0, 0, 0, 0]);
+    fillRect(short, 0, 0, 20, 50, [255, 0, 0, 255]);
+    rows.set(
+      "idle",
+      rows.get("idle")!.map(() => tall),
+    );
+    rows.set(
+      "waving",
+      rows.get("waving")!.map(() => short),
+    );
+    const atlas = composeAtlas(rows);
+    const height = (row: number) => {
+      const c = cell(atlas, row, 0);
+      let top = -1;
+      let bottom = -1;
+      for (let y = 0; y < 208; y++) {
+        if (c.data[(y * 192 + 96) * 4 + 3]) {
+          if (top < 0) top = y;
+          bottom = y;
+        }
+      }
+      return bottom - top + 1;
+    };
+    expect(height(0)).toBe(2 * height(3));
+  });
+
+  it("rejects a blank frame", () => {
+    const rows = allRows();
+    rows.get("waving")![1] = blank(30, 30, [0, 0, 0, 0]);
+    try {
+      composeAtlas(rows);
+      expect.unreachable();
+    } catch (e) {
+      expect((e as AtlasError).row).toBe("waving");
+    }
+  });
+
   it("lays out frames in a 1536x1872 atlas", () => {
     const atlas = composeAtlas(allRows());
     expect([atlas.width, atlas.height]).toEqual([1536, 1872]);

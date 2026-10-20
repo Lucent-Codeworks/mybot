@@ -125,9 +125,9 @@ function resizeRegion(image: RgbaImage, b: Bounds, outW: number, outH: number): 
       let bl = 0;
       let a = 0;
       let weight = 0;
-      for (let y = Math.floor(y0); y < Math.ceil(y1); y++) {
+      for (let y = Math.floor(y0); y < Math.min(Math.ceil(y1), b.y + b.height); y++) {
         const wy = Math.min(y + 1, y1) - Math.max(y, y0);
-        for (let x = Math.floor(x0); x < Math.ceil(x1); x++) {
+        for (let x = Math.floor(x0); x < Math.min(Math.ceil(x1), b.x + b.width); x++) {
           const w = wy * (Math.min(x + 1, x1) - Math.max(x, x0));
           const p = (y * image.width + x) * 4;
           const alpha = image.data[p + 3]! * w;
@@ -199,10 +199,11 @@ export function composeAtlas(rows: ReadonlyMap<PetRowName, RgbaImage[]>): RgbaIm
   }
 
   let scale = Infinity;
-  for (const frames of source.values()) {
+  for (const [name, frames] of source) {
     for (const frame of frames) {
       const b = alphaBounds(frame);
-      if (b) scale = Math.min(scale, FIT_W / b.width, FIT_H / b.height);
+      if (!b) throw new AtlasError(`A ${name} frame has no visible pixels`, name);
+      scale = Math.min(scale, FIT_W / b.width, FIT_H / b.height);
     }
   }
   if (!Number.isFinite(scale)) throw new AtlasError("The strips contain no visible pixels");
