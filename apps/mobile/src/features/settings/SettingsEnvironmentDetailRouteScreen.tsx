@@ -9,7 +9,7 @@ import {
 import { squashAtomCommandFailure } from "@mybot/client-runtime/state/runtime";
 import { AsyncResult } from "effect/reactivity";
 import { useEffect, useRef, useState } from "react";
-import { Alert, View } from "react-native";
+import { Alert, Platform, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppText as Text } from "../../components/AppText";
@@ -22,6 +22,7 @@ import { useAtomCommand } from "../../state/use-atom-command";
 import { useRemoteConnections } from "../../state/use-remote-environment-registry";
 import { ConnectionEnvironmentRow } from "../connection/ConnectionEnvironmentRow";
 import { EnvironmentRoutesSection } from "./EnvironmentRoutesSection";
+import { VoiceSettingsSection } from "./VoiceSettingsSection";
 import { SettingsActionRow } from "./components/SettingsActionRow";
 import { SettingsScreen } from "./components/SettingsScreen";
 import { SettingsSection } from "./components/SettingsSection";
@@ -294,6 +295,11 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
                     />
                   ) : null}
                 </SettingsSection>
+                {/* Only Android transcribes on the server; iOS uses on-device speech. */}
+                {Platform.OS === "android" &&
+                config.environment.capabilities.voiceInput === true ? (
+                  <VoiceSettingsSection environmentId={environmentId} />
+                ) : null}
                 <SettingsSection title="Providers">
                   <SettingsActionRow
                     icon="arrow.clockwise"

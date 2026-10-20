@@ -350,7 +350,9 @@ export function ComposerDictationStatus(props: {
             {props.presentation.statusLabel}
           </Text>
           <Pressable
-            accessibilityLabel="Dismiss voice input error"
+            accessibilityLabel={
+              props.presentation.keepsRecording ? "Discard recording" : "Dismiss voice input error"
+            }
             accessibilityRole="button"
             className="size-7 items-center justify-center active:opacity-70"
             hitSlop={8}
@@ -413,22 +415,36 @@ export function ComposerDictationPrimaryAction(props: {
   readonly disabled?: boolean;
   readonly onStart: () => void;
   readonly onConfirm: () => void;
+  /** Inserts the transcript and sends the draft. Omit where dictation only inserts. */
+  readonly onSend?: () => void;
   readonly onCancel: () => void;
 }) {
   if (props.presentation.trailingAction === "confirm") {
+    const enabled = props.presentation.confirmationEnabled;
+    const pendingLabel = props.presentation.statusLabel ?? "Preparing voice input";
+    const onSend = props.onSend;
+    // With Send, the checkmark only inserts and Send carries the progress.
     return (
-      <VoiceActionButton
-        accessibilityLabel={
-          props.presentation.confirmationEnabled
-            ? "Finish dictation"
-            : (props.presentation.statusLabel ?? "Preparing voice input")
-        }
-        disabled={!props.presentation.confirmationEnabled}
-        icon="checkmark"
-        loading={!props.presentation.confirmationEnabled}
-        onPress={props.onConfirm}
-        variant="primary"
-      />
+      <>
+        <VoiceActionButton
+          accessibilityLabel={enabled ? "Finish dictation" : pendingLabel}
+          disabled={!enabled}
+          icon="checkmark"
+          loading={!enabled && !onSend}
+          onPress={() => props.onConfirm()}
+          variant={onSend ? "plain" : "primary"}
+        />
+        {onSend ? (
+          <VoiceActionButton
+            accessibilityLabel={enabled ? "Send dictation" : pendingLabel}
+            disabled={!enabled}
+            icon="arrow.up"
+            loading={!enabled}
+            onPress={() => onSend()}
+            variant="primary"
+          />
+        ) : null}
+      </>
     );
   }
 
@@ -444,11 +460,20 @@ export function ComposerDictationStartAction(props: {
 }) {
   if (!props.isAvailable) return null;
   const openSettings = props.state.phase === "error" && props.state.errorAction === "settings";
+  // `onStart` sends a kept recording again instead of recording anew.
+  const retriesTranscription =
+    props.state.phase === "error" && props.state.errorAction === "retry-transcription";
   return (
     <VoiceActionButton
-      accessibilityLabel={openSettings ? "Open microphone settings" : "Start dictation"}
+      accessibilityLabel={
+        openSettings
+          ? "Open microphone settings"
+          : retriesTranscription
+            ? "Retry transcription"
+            : "Start dictation"
+      }
       disabled={props.disabled}
-      icon="mic"
+      icon={retriesTranscription ? "arrow.clockwise" : "mic"}
       onPress={
         openSettings
           ? () => {

@@ -386,6 +386,7 @@ export function NewTaskDraftScreen(props: {
   });
   const voiceInput = useVoiceInputController({
     ownerKey: flow.draftKey,
+    environmentId: selectedProject?.environmentId ?? null,
     label: selectedProjectLabel ? `New task in ${selectedProjectLabel}` : "New task",
     readDraftMessage: () => (flow.draftKey ? getComposerDraftSnapshot(flow.draftKey).text : null),
     subscribeToDraftChanges: (onChange) => appAtomRegistry.subscribe(composerDraftsAtom, onChange),
@@ -393,6 +394,7 @@ export function NewTaskDraftScreen(props: {
     disabled: isIncomingShareTransferPending || isImportingShare || flow.submitting,
     onChangeDraftMessage: flow.setPrompt,
     onChangeSelection: composerMenu.onSelectionChange,
+    onSubmit: () => void handleStart(),
   });
   const voicePresentation = resolveVoiceComposerPresentation(
     voiceInput.state,
@@ -1569,6 +1571,7 @@ export function NewTaskDraftScreen(props: {
                 disabled={isIncomingShareTransferPending || isImportingShare || flow.submitting}
                 onStart={voiceInput.start}
                 onConfirm={voiceInput.stop}
+                onSend={voiceInput.send}
                 onCancel={voiceInput.cancel}
               />
               {voicePresentation.showsSend ? (

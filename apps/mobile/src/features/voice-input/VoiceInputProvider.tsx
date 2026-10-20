@@ -8,6 +8,7 @@ import {
   type RecorderState,
   type RecordingStatus,
 } from "expo-audio";
+import { requireNativeModule } from "expo";
 import { File } from "expo-file-system";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import {
@@ -29,6 +30,10 @@ import {
   preferredMicrophoneInput,
   rememberMicrophones,
 } from "../../lib/microphonePriority";
+import {
+  createAndroidVoiceRecorder,
+  type AudioStudioNativeModule,
+} from "../../native/androidVoiceRecorder";
 import { getLocalVoiceTranscriber } from "../../native/voiceTranscription";
 import { mobilePreferencesAtom, updateMobilePreferencesAtom } from "../../state/preferences";
 import { getNativeShowcaseScene } from "../showcase/nativeShowcaseScene";
@@ -36,10 +41,17 @@ import {
   VOICE_RECORDING_LIMIT_SECONDS,
   voiceInputBlocksSubmission,
   type VoiceInputState,
+  type VoiceRecorder,
+  type VoiceRecorderStatus,
+  type VoiceTranscriber,
 } from "@mybot/client-runtime/voice-input";
-import { createLazyVoiceRecorder, type LazyVoiceRecorder } from "./lazyVoiceRecorder";
+import { createLazyVoiceRecorder } from "./lazyVoiceRecorder";
+import {
+  createMobileServerVoiceTranscriber,
+  readServerVoiceAvailability,
+} from "./serverVoiceTranscriber";
 import { normalizeVoiceInputDecibels, VOICE_WAVEFORM_SAMPLE_COUNT } from "./voiceInputMetering";
-import { VoiceInputSession } from "./voiceInputSession";
+import { VoiceInputSession, type VoiceInputTarget } from "./voiceInputSession";
 
 const INITIAL_STATE: VoiceInputState = { phase: "idle", error: null, errorAction: null };
 const VOICE_METERING_INTERVAL_MS = 80;
@@ -85,6 +97,26 @@ async function configureVoiceRecordingAudio(): Promise<void> {
   }
 }
 
+/** Android transcribes on the draft's MyBot server; iOS transcribes on device. */
+const transcribesOnServer = Platform.OS === "android";
+
+function getVoiceTranscriber(target: VoiceInputTarget): VoiceTranscriber | null {
+  if (!transcribesOnServer) return getLocalVoiceTranscriber();
+  const environmentId = target.environmentId;
+  if (environmentId === null || readServerVoiceAvailability(environmentId) !== "ready") return null;
+  return createMobileServerVoiceTranscriber(environmentId);
+}
+
+/** The recorder plus what the waveform samples; both platforms answer the same shape. */
+type ProviderVoiceRecorder = VoiceRecorder & {
+  getStatus(): {
+    readonly isRecording: boolean;
+    readonly durationMillis: number;
+    readonly metering?: number;
+  } | null;
+  release(): void;
+};
+
 const VoiceInputContext = createContext<ReturnType<typeof useVoiceInputRuntime> | null>(null);
 
 export function VoiceInputProvider({ children }: { readonly children: ReactNode }) {
@@ -124,46 +156,54 @@ function useVoiceInputRuntime() {
   const audioLevelsRef = useRef(Array<number>(VOICE_WAVEFORM_SAMPLE_COUNT).fill(0));
   const audioLevels = useSharedValue(audioLevelsRef.current);
   const sessionRef = useRef<VoiceInputSession | null>(null);
-  const recorderRef = useRef<LazyVoiceRecorder<RecorderState> | null>(null);
+  const recorderRef = useRef<ProviderVoiceRecorder | null>(null);
 
   if (!sessionRef.current || !recorderRef.current) {
+    const reportStatus = (status: VoiceRecorderStatus) => {
+      void sessionRef.current?.controller.handleRecorderStatus(status);
+    };
     // The native recorder is created when dictation starts, not on app launch.
-    const recorder = createLazyVoiceRecorder({
-      create: () => new AudioModule.AudioRecorder(VOICE_RECORDING_OPTIONS),
-      onStatus: (status: RecordingStatus) => {
-        sessionRef.current?.controller.handleRecorderStatus({
-          isFinished: status.isFinished,
-          hasError: status.hasError || status.mediaServicesDidReset === true,
-          error: status.error,
-          url: status.url,
-        });
-      },
-      // Read when recording starts so preference changes do not re-render every composer.
-      selectInput: (inputs) => {
-        const preferences = registry.get(mobilePreferencesAtom);
-        if (!AsyncResult.isSuccess(preferences)) return null;
-        const known = microphoneOrder(preferences.value.microphones);
-        const order = rememberMicrophones(known, inputs);
-        if (order !== known) {
-          registry.set(updateMobilePreferencesAtom, {
-            transform: (current) => ({
-              microphones: rememberMicrophones(microphoneOrder(current.microphones), inputs),
+    const recorder: ProviderVoiceRecorder = transcribesOnServer
+      ? createAndroidVoiceRecorder({
+          loadNativeModule: () => requireNativeModule<AudioStudioNativeModule>("AudioStudio"),
+          onStatus: reportStatus,
+        })
+      : createLazyVoiceRecorder<RecordingStatus, RecorderState>({
+          create: () => new AudioModule.AudioRecorder(VOICE_RECORDING_OPTIONS),
+          onStatus: (status: RecordingStatus) =>
+            reportStatus({
+              isFinished: status.isFinished,
+              hasError: status.hasError || status.mediaServicesDidReset === true,
+              error: status.error,
+              url: status.url,
             }),
-          });
-        }
-        return preferredMicrophoneInput(inputs, order);
-      },
-    });
+          // Read when recording starts so preference changes do not re-render every composer.
+          selectInput: (inputs) => {
+            const preferences = registry.get(mobilePreferencesAtom);
+            if (!AsyncResult.isSuccess(preferences)) return null;
+            const known = microphoneOrder(preferences.value.microphones);
+            const order = rememberMicrophones(known, inputs);
+            if (order !== known) {
+              registry.set(updateMobilePreferencesAtom, {
+                transform: (current) => ({
+                  microphones: rememberMicrophones(microphoneOrder(current.microphones), inputs),
+                }),
+              });
+            }
+            return preferredMicrophoneInput(inputs, order);
+          },
+        });
     recorderRef.current = recorder;
     sessionRef.current = new VoiceInputSession({
       recorder,
-      getTranscriber: getLocalVoiceTranscriber,
+      getTranscriber: getVoiceTranscriber,
       requestPermission: async () => {
         const permission = await requestRecordingPermissionsAsync();
         return { granted: permission.granted, canAskAgain: permission.canAskAgain };
       },
-      configureRecording: configureVoiceRecordingAudio,
-      releaseRecording: releaseVoiceRecordingAudio,
+      // audio-studio manages Android audio focus itself while it records.
+      configureRecording: transcribesOnServer ? async () => {} : configureVoiceRecordingAudio,
+      releaseRecording: transcribesOnServer ? async () => {} : releaseVoiceRecordingAudio,
       deleteRecording: (uri) => new File(uri).delete(),
       onStateChange: (nextState) =>
         setState({
@@ -251,12 +291,18 @@ function useVoiceInputRuntime() {
   }, [audioLevels, controller, recorder, state.phase]);
 
   const stop = useCallback(() => controller.stop(), [controller]);
+  const send = useCallback(() => controller.stop("send"), [controller]);
   const cancel = useCallback(() => controller.cancel(), [controller]);
 
   return {
-    // Store screenshots show the dictation button even on simulators, whose
+    // Android asks each draft's server (see `useVoiceInputController`). Store
+    // screenshots show the dictation button even on simulators, whose
     // on-device transcription is unavailable.
-    isAvailable: getLocalVoiceTranscriber() !== null || getNativeShowcaseScene() !== null,
+    isAvailable:
+      transcribesOnServer ||
+      getLocalVoiceTranscriber() !== null ||
+      getNativeShowcaseScene() !== null,
+    transcribesOnServer,
     state,
     audioLevels,
     elapsedSeconds,
@@ -267,6 +313,7 @@ function useVoiceInputRuntime() {
     setOwnerFocused,
     session,
     stop,
+    send,
     cancel,
   };
 }

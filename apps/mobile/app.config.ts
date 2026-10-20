@@ -17,6 +17,7 @@ const runtimeVersionPolicy =
 const personalTeamBundleIdentifier = repoEnv.MYBOT_IOS_PERSONAL_TEAM_BUNDLE_ID?.trim();
 const IOS_BUNDLE_IDENTIFIER_PATTERN = /^[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/;
 
+const VOICE_MICROPHONE_PERMISSION = "Allow MyBot to use your microphone for voice input.";
 const fromRepoRoot = (relativePath: string) => `../../${relativePath}`;
 // Android layers are rendered by scripts/export-android-icons.ts from the Icon Composer sources.
 // The wordmark sits inside the adaptive safe zone; the variant artwork is a full-bleed background.
@@ -382,10 +383,23 @@ const config: ExpoConfig = {
     [
       "expo-audio",
       {
-        microphonePermission: "Allow MyBot to use your microphone for voice input.",
-        recordAudioAndroid: false,
+        microphonePermission: VOICE_MICROPHONE_PERMISSION,
+        recordAudioAndroid: true,
         enableBackgroundPlayback: false,
         enableBackgroundRecording: false,
+      },
+    ],
+    // Android voice input records 16 kHz WAV with audio-studio (iOS does not
+    // link it). Everything but foreground recording stays off, which also
+    // strips its background service and extra permissions from the manifest.
+    [
+      "@siteed/audio-studio",
+      {
+        enablePhoneStateHandling: false,
+        enableNotifications: false,
+        enableBackgroundAudio: false,
+        enableDeviceDetection: false,
+        iosConfig: { microphoneUsageDescription: VOICE_MICROPHONE_PERMISSION },
       },
     ],
     [
