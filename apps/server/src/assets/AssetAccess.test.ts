@@ -1434,7 +1434,7 @@ describe("pet sprite assets", () => {
       });
 
       expect(result.relativeUrl).toMatch(/\/builtin-bolt-[0-9a-f]{64}\.png$/u);
-      expect(result.imageDimensions).toEqual({ width: 16, height: 16 });
+      expect(result.imageDimensions).toEqual({ width: 192, height: 192 });
       expect(yield* resolveIssued(result.relativeUrl)).toMatchObject({
         kind: "bytes",
         mimeType: "image/png",

@@ -45,7 +45,8 @@ import { BUILT_IN_PETS } from "./builtInPets.ts";
 import { encodePng } from "./png.ts";
 
 const MANIFEST = "pet.json";
-const BUILT_IN_UPDATED_AT = "2026-10-19T00:00:00.000Z";
+/** Versions built-in sprite URLs; move it when the rendered art changes. */
+const BUILT_IN_UPDATED_AT = "2026-10-20T00:00:00.000Z";
 const NOT_AN_ATLAS_MESSAGE =
   "This isn't a pet sprite sheet. Pet sheets are 1536×1872 or 1536×2288. To use any image, choose Use a picture.";
 
@@ -121,13 +122,20 @@ const decodePet = Schema.decodeUnknownOption(PetSchema);
 const isPetId = Schema.is(PetId);
 const decodeCodexSettings = Schema.decodeUnknownOption(CodexSettings);
 
+/**
+ * Built-in art is scaled up by a whole number here, nearest-neighbor, so a
+ * browser scaling the 192px picture to its slot keeps hard pixel edges.
+ */
+const BUILT_IN_SCALE = 12;
+
 function renderBuiltIn(definition: (typeof BUILT_IN_PETS)[number]): Uint8Array {
-  const height = definition.pixels.length;
-  const width = definition.pixels[0]?.length ?? 0;
+  const height = definition.pixels.length * BUILT_IN_SCALE;
+  const width = (definition.pixels[0]?.length ?? 0) * BUILT_IN_SCALE;
   const data = new Uint8Array(width * height * 4);
-  definition.pixels.forEach((row, y) => {
+  for (let y = 0; y < height; y++) {
+    const row = definition.pixels[Math.floor(y / BUILT_IN_SCALE)] ?? "";
     for (let x = 0; x < width; x++) {
-      const color = definition.palette[row[x] ?? "."];
+      const color = definition.palette[row[Math.floor(x / BUILT_IN_SCALE)] ?? "."];
       if (color === undefined) continue;
       const offset = (y * width + x) * 4;
       data[offset] = Number.parseInt(color.slice(1, 3), 16);
@@ -135,7 +143,7 @@ function renderBuiltIn(definition: (typeof BUILT_IN_PETS)[number]): Uint8Array {
       data[offset + 2] = Number.parseInt(color.slice(5, 7), 16);
       data[offset + 3] = 255;
     }
-  });
+  }
   return encodePng({ width, height, channels: 4, data });
 }
 

@@ -156,7 +156,10 @@ const AssetClaimsSchema = Schema.Union([
     version: Schema.Literal(1),
     kind: Schema.Literal("pet-sprite"),
     petId: PetId,
-    /** Names the sprite this token was minted for, so each new sprite gets a new URL. */
+    /**
+     * A cache key, so each new sprite gets a new URL. Resolving does not check
+     * it: an older token still serves the pet's current sprite.
+     */
     contentHash: Schema.String,
     expiresAt: Schema.Number,
   }),

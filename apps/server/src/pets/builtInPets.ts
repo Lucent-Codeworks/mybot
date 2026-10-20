@@ -1,7 +1,7 @@
 /**
  * The pets every MyBot server ships with: original pixel art, one character per
- * pixel, rendered to PNG once when the library starts. `.` is transparent; every other character
- * is a key into the pet's palette.
+ * pixel, rendered to PNG at a whole-number scale once when the library starts.
+ * `.` is transparent; every other character is a key into the pet's palette.
  */
 interface BuiltInPetDefinition {
   readonly id: string;

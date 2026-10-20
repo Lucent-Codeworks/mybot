@@ -275,7 +275,15 @@ it.effect("built-in pets are read-only pictures rendered as PNG", () =>
       expect(sprite.kind).toBe("bytes");
       if (sprite.kind === "bytes") {
         expect(sprite.mimeType).toBe("image/png");
-        expect(decodePng(sprite.bytes)).toMatchObject({ width: 16, height: 16 });
+        // 16×16 art at a whole 12× scale, so each art pixel stays a crisp block.
+        const image = decodePng(sprite.bytes);
+        expect(image).toMatchObject({ width: 192, height: 192 });
+        const at = (x: number, y: number) =>
+          Array.from(image.data.slice((y * 192 + x) * 4, (y * 192 + x) * 4 + 4));
+        // Bolt's top-left art pixel is transparent; its antenna ("a", #ff6b6b) is art (7, 0).
+        expect(at(0, 0)).toEqual([0, 0, 0, 0]);
+        expect(at(7 * 12, 0)).toEqual([0xff, 0x6b, 0x6b, 255]);
+        expect(at(7 * 12 + 11, 11)).toEqual([0xff, 0x6b, 0x6b, 255]);
       }
       expect((yield* pets.list())[0]).toMatchObject({
         id: "builtin-bolt",
