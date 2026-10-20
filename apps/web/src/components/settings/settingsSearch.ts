@@ -168,6 +168,12 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["name icon emoji image job instructions memory telegram delete"],
   },
   {
+    id: "bot-pet",
+    title: "Pet",
+    to: "/settings/projects",
+    searchTerms: ["pets mascot avatar import chatgpt codex picture create hatch ai export"],
+  },
+  {
     id: "default-model",
     title: "Default model",
     to: "/settings/general",
@@ -280,6 +286,12 @@ export const SETTINGS_SEARCH_ITEMS = [
     id: "composer-context",
     title: "Composer context",
     to: "/settings/appearance",
+  },
+  {
+    id: "pets",
+    title: "Pets",
+    to: "/settings/appearance",
+    searchTerms: ["show pets mascot default pet library rename remove hide turn off"],
   },
   {
     id: "snooze-limited-threads",

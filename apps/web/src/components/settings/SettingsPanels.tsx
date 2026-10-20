@@ -159,6 +159,7 @@ import {
   useSettingsSearchTarget,
   useSettingsSearchTargetId,
 } from "./settingsLayout";
+import { PetsAppearanceSettings } from "./PetsAppearanceSettings";
 import { searchableSetting } from "./settingsSearch";
 import { ProjectFavicon } from "../ProjectFavicon";
 import { PanelAnimationsPreview } from "./PanelAnimationsPreview";
@@ -1405,6 +1406,8 @@ export function AppearanceSettingsPanel() {
           }
         />
       </SettingsSection>
+
+      <PetsAppearanceSettings />
 
       <TypographySection />
     </SettingsPageContainer>
