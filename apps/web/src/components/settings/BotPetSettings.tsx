@@ -15,12 +15,13 @@ import {
 import { Link } from "@tanstack/react-router";
 import * as Option from "effect/Option";
 import { AsyncResult } from "effect/reactivity";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
 import { useEnvironmentSettings, useUpdateEnvironmentSettings } from "~/hooks/useSettings";
 import { uploadImageAttachment } from "~/lib/attachmentUploadQueue";
 import { useThreadShell } from "~/state/entities";
 import { petEnvironment } from "~/state/pets";
+import { serverEnvironment } from "~/state/server";
 import { threadEnvironment } from "~/state/threads";
 import { useAtomCommand } from "~/state/use-atom-command";
 import { useOrchestrationCommand } from "~/state/use-orchestration-command";
@@ -38,6 +39,7 @@ import { SettingsRow, SettingsSection } from "./settingsLayout";
 import { searchableSetting } from "./settingsSearch";
 
 const NO_PET = "none";
+const CODEX_UNAVAILABLE_MESSAGE = "Creating a pet with AI needs Codex signed in with ChatGPT.";
 
 type PetScope = "bot" | "default";
 
@@ -93,9 +95,14 @@ export function BotPetSettings(props: {
     onChange({ ...bot, petId: undefined });
   };
 
+  // An upload can outlast a profile change, so assign with the profile as it is then.
+  const latestAssign = useRef(assign);
+  useLayoutEffect(() => {
+    latestAssign.current = assign;
+  });
   const added = (petId: PetId) => {
     library.refresh();
-    assign(petId);
+    latestAssign.current(petId);
   };
 
   return (
@@ -122,7 +129,7 @@ export function BotPetSettings(props: {
       )}
       <SettingsRow
         title="Pet"
-        description="Pick from the pets on this computer."
+        description="Pick from pets already in this environment."
         control={
           <Select
             value={current?.id ?? NO_PET}
@@ -326,7 +333,7 @@ function PicturePetRow(props: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const usePicture = async (file: File) => {
+  const addPicture = async (file: File) => {
     setBusy(true);
     setError(null);
     try {
@@ -360,7 +367,7 @@ function PicturePetRow(props: {
           label="Choose image…"
           accept=".png,.webp,.jpg,.jpeg,.gif"
           disabled={props.disabled || busy}
-          onFiles={(files) => void usePicture(files[0]!)}
+          onFiles={(files) => void addPicture(files[0]!)}
         />
       }
     />
@@ -383,7 +390,19 @@ function HatchPetRow(props: {
   const [description, setDescription] = useState("");
   const [reference, setReference] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
-  const [codexUnavailable, setCodexUnavailable] = useState<string | null>(null);
+  const [codexRefused, setCodexRefused] = useState<string | null>(null);
+  // The server decides; this only says so before the click.
+  const providers = useAtomValue(serverEnvironment.providersValueAtom(environmentId));
+  const codexSignedIn =
+    providers?.some(
+      (provider) =>
+        provider.driver === "codex" &&
+        provider.enabled &&
+        provider.auth.status === "authenticated" &&
+        provider.auth.type === "chatgpt",
+    ) ?? false;
+  const codexUnavailable =
+    codexRefused ?? (providers !== null && !codexSignedIn ? CODEX_UNAVAILABLE_MESSAGE : null);
   const descriptionId = useId();
 
   // Only this bot's latest job shows, and only while it hatches or after it failed.
@@ -414,7 +433,7 @@ function HatchPetRow(props: {
         return;
       }
       const error = squashAtomCommandFailure(result);
-      if (isCodexUnavailable(error)) setCodexUnavailable(error.message);
+      if (isCodexUnavailable(error)) setCodexRefused(error.message);
       else reportPetResult("Could not start creating the pet", result);
     } finally {
       setBusy(false);
@@ -485,7 +504,7 @@ function HatchPetRow(props: {
     );
   }
 
-  const canHatch = !props.disabled && !busy && codexUnavailable === null;
+  const canHatch = !props.disabled && !busy && providers !== null && codexUnavailable === null;
   return (
     <SettingsRow
       title="Create with AI"

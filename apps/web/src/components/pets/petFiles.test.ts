@@ -8,7 +8,7 @@ const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a
 async function zipFile(name: string, entries: Record<string, string | Uint8Array>) {
   const zip = new JSZip();
   for (const [path, contents] of Object.entries(entries)) zip.file(path, contents);
-  const bytes = await zip.generateAsync({ type: "arraybuffer" });
+  const bytes = await zip.generateAsync({ type: "arraybuffer", compression: "DEFLATE" });
   return new File([bytes], name, { type: "application/zip" });
 }
 
@@ -61,5 +61,14 @@ describe("parsePetFiles", () => {
     });
     const other = new File([PNG_BYTES], "other.png", { type: "image/png" });
     await expect(parsePetFiles([json, other])).rejects.toThrow(/spritesheet\.webp/);
+  });
+
+  it("rejects a zipped sprite whose declared size is over 10 MB", async () => {
+    // Zeros deflate to a few KB, so only the declared size gives it away.
+    const file = await zipFile("big.zip", {
+      "pet.json": manifest({ displayName: "Big" }),
+      "spritesheet.webp": new Uint8Array(10 * 1024 * 1024 + 1),
+    });
+    await expect(parsePetFiles([file])).rejects.toThrow(/over 10 MB/);
   });
 });

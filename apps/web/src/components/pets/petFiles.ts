@@ -116,6 +116,13 @@ function atlasFile(bytes: BlobPart, path: string): File {
   return new File([bytes], name, { type });
 }
 
+/** The uncompressed size the zip records for an entry; JSZip doesn't type it. */
+function declaredSize(entry: JSZip.JSZipObject): number {
+  return (
+    (entry as unknown as { _data?: { uncompressedSize?: number } })._data?.uncompressedSize ?? 0
+  );
+}
+
 async function parseZip(zipFile: File): Promise<ParsedPetFiles> {
   checkSize(zipFile);
   let zip: JSZip;
@@ -148,11 +155,19 @@ async function parseZip(zipFile: File): Promise<ParsedPetFiles> {
   }
   const manifestPath = manifestPaths[0]!;
   const folder = manifestPath.slice(0, manifestPath.length - "pet.json".length);
-  const manifestBytes = await entries.get(manifestPath)!.async("uint8array");
+  const manifestEntry = entries.get(manifestPath)!;
+  // Check the declared sizes before inflating, so a zip bomb never decompresses.
+  if (declaredSize(manifestEntry) > MANIFEST_MAX_BYTES) {
+    throw new PetFileError("pet.json is over 64 KB.");
+  }
+  const manifestBytes = await manifestEntry.async("uint8array");
   const manifest = parseManifest(new TextDecoder().decode(manifestBytes), manifestBytes.byteLength);
   for (const candidate of spriteCandidates(manifest)) {
     const entry = entries.get(`${folder}${candidate}`);
     if (!entry) continue;
+    if (declaredSize(entry) > PET_UPLOAD_MAX_BYTES) {
+      throw new PetFileError("The spritesheet is over 10 MB.");
+    }
     const bytes = await entry.async("arraybuffer");
     if (bytes.byteLength > PET_UPLOAD_MAX_BYTES) {
       throw new PetFileError("The spritesheet is over 10 MB.");
