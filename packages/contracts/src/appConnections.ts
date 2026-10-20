@@ -44,6 +44,12 @@ export const AppConnectionAddInput = Schema.Struct({
       /** Environment for the command, such as an API key. */
       env: Schema.optional(Schema.Record(Schema.String, Schema.String)),
     }),
+    /** An app the MyBot server runs itself, in process. */
+    Schema.Struct({
+      type: Schema.Literal("builtin"),
+      app: Schema.Literals(["dialpad"]),
+      apiKey: TrimmedNonEmptyString.check(Schema.isMaxLength(4096)),
+    }),
   ]),
   /** Needed when the app signs in through the browser. */
   redirectBaseUrl: Schema.optional(RedirectBaseUrl),

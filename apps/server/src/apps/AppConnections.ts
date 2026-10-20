@@ -163,12 +163,15 @@ export const connectionIdFor = (name: string, taken: ReadonlyArray<string>): str
 
 /** Where the app runs, without secrets: a URL's host, or a command without its arguments. */
 export const targetOf = (connection: StoredConnection): string => {
+  const transport = connection.transport;
   const where =
-    connection.transport.type === "stdio"
-      ? connection.transport.command
-      : URL.canParse(connection.transport.url)
-        ? new URL(connection.transport.url).host
-        : "web app";
+    transport.type === "stdio"
+      ? transport.command
+      : transport.type === "builtin"
+        ? "built into MyBot"
+        : URL.canParse(transport.url)
+          ? new URL(transport.url).host
+          : "web app";
   const preset = connection.presetId ? findAppPreset(connection.presetId) : undefined;
   return preset && preset.name !== connection.name ? `${preset.name} · ${where}` : where;
 };

@@ -84,7 +84,7 @@ export interface AppPreset {
   readonly requires?: "node" | "uv" | "docker";
   /** Only works on these operating systems. */
   readonly platforms?: ReadonlyArray<"darwin">;
-  /** Run by the app's maker or a service company, not a community package. */
+  /** Run by the app's maker, a service company, or MyBot itself, not a community package. */
   readonly official: boolean;
   readonly popular?: true;
   /** Extra search words, such as products the app also covers. */
