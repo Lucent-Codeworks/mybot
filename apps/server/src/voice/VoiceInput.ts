@@ -420,8 +420,9 @@ export const makeVoiceInput = Effect.fn("VoiceInput.make")(function* (options: V
     transcriptionPermit
       .withPermit(
         Effect.gen(function* () {
+          // The installed model, even while another downloads: the swap takes this permit.
           const current = yield* SubscriptionRef.get(state);
-          if (cli === null || current.phase !== "ready" || current.model === null) {
+          if (cli === null || current.model === null || !(yield* isComplete(cliDir))) {
             return yield* voiceError("not-installed");
           }
           const executable = path.join(cliDir, ...cli.executable);

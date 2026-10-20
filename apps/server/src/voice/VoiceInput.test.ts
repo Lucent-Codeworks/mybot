@@ -421,30 +421,65 @@ describe("VoiceInput", () => {
 
     it.effect("remove waits for a running transcription", () =>
       Effect.gen(function* () {
-        const harness = yield* readyHarness();
+        const permit = yield* Semaphore.make(1);
+        // Signals each time something asks for the transcription permit.
+        const hooks = { reached: yield* Deferred.make<void>() };
+        const watched: Semaphore.Semaphore = Object.assign(Object.create(permit), {
+          withPermit: <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+            Deferred.succeed(hooks.reached, undefined).pipe(
+              Effect.andThen(permit.withPermit(effect)),
+            ),
+        });
+        const harness = yield* readyHarness({ transcriptionPermit: watched });
         const upload = yield* writeUpload(harness, "88888888-8888-4888-8888-888888888888");
         const started = yield* Deferred.make<void>();
         const release = yield* Deferred.make<void>();
+        const modelsAtFinish: Array<boolean> = [];
+        const modelsDir = harness.path.join(harness.voiceDir, "models", "base");
         const server = yield* fixtureServer(() =>
-          Deferred.succeed(started, undefined).pipe(Effect.andThen(Deferred.await(release))),
+          Deferred.succeed(started, undefined).pipe(
+            Effect.andThen(Deferred.await(release)),
+            // Still inside the running transcription, which holds the permit.
+            Effect.andThen(Effect.sync(() => modelsAtFinish.push(NodeFS.existsSync(modelsDir)))),
+          ),
         );
         yield* useFixture(harness, server);
         const job = yield* harness.service.transcribe(upload.uploadId).pipe(Effect.forkScoped);
         yield* Deferred.await(started);
+        hooks.reached = yield* Deferred.make<void>();
         const removing = yield* harness.service.remove.pipe(Effect.forkScoped);
-        yield* Effect.yieldNow;
-        expect(removing.pollUnsafe()).toBeUndefined();
-        expect(yield* harness.installed("base")).toBe(true);
+        // remove must block on the permit rather than finish.
+        const first = yield* Effect.raceFirst(
+          Deferred.await(hooks.reached).pipe(Effect.as("waiting" as const)),
+          Fiber.await(removing).pipe(Effect.as("finished" as const)),
+        );
+        expect(first).toBe("waiting");
         yield* Deferred.succeed(release, undefined);
         expect((yield* Fiber.join(job)).text).toBe("heard 64 bytes");
+        expect(modelsAtFinish).toEqual([true]);
         expect((yield* Fiber.join(removing)).phase).toBe("not-installed");
+      }).pipe(Effect.scoped),
+    );
+
+    it.effect("keeps transcribing with the installed model while another downloads", () =>
+      Effect.gen(function* () {
+        const deferred = yield* Deferred.make<void>();
+        const harness = yield* readyHarness({ gate: { model: "small", deferred } });
+        yield* useFixture(harness, "echo");
+        expect(yield* harness.service.install("small")).toMatchObject({
+          phase: "downloading",
+          model: "base",
+        });
+        const upload = yield* writeUpload(harness, "99999999-9999-4999-8999-999999999999");
+        expect((yield* harness.service.transcribe(upload.uploadId)).text).toBe("heard 64 bytes");
+        yield* Deferred.succeed(deferred, undefined);
       }).pipe(Effect.scoped),
     );
   });
 });
 
-const readyHarness = Effect.fn("test.readyHarness")(function* () {
-  const harness = yield* makeHarness();
+const readyHarness = Effect.fn("test.readyHarness")(function* (options: HarnessOptions = {}) {
+  const harness = yield* makeHarness(options);
   expect((yield* installAndSettle(harness, "base"))?.phase).toBe("ready");
   return harness;
 });
