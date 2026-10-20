@@ -12,6 +12,7 @@ import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Path from "effect/Path";
+import * as Semaphore from "effect/Semaphore";
 import * as Stream from "effect/Stream";
 import { HttpClient, HttpClientResponse } from "effect/http";
 
@@ -52,6 +53,7 @@ interface HarnessOptions {
   readonly modelSha256?: string;
   /** Model downloads wait on this before responding. */
   readonly gate?: { readonly model: VoiceModelId; readonly deferred: Deferred.Deferred<void> };
+  readonly transcriptionPermit?: Semaphore.Semaphore;
 }
 
 const makeHarness = Effect.fn("test.makeVoiceInput")(function* (options: HarnessOptions = {}) {
@@ -81,6 +83,7 @@ const makeHarness = Effect.fn("test.makeVoiceInput")(function* (options: Harness
   const service = yield* VoiceInput.makeVoiceInput({
     voiceDir,
     cli: options.cli === null ? null : cli,
+    ...(options.transcriptionPermit ? { transcriptionPermit: options.transcriptionPermit } : {}),
     model: (model): WhisperModelRelease => ({
       model,
       url: modelUrl(model),
@@ -235,6 +238,56 @@ describe("VoiceInput", () => {
         expect(
           yield* harness.fs.exists(harness.path.join(harness.voiceDir, "models", "small")),
         ).toBe(false);
+      }).pipe(Effect.scoped),
+    );
+
+    it.effect("keeps the previous model when cancelled while a transcription runs", () =>
+      Effect.gen(function* () {
+        const permit = yield* Semaphore.make(1);
+        // Signals when the install asks for the permit, after the new model is placed.
+        const hooks = { reached: yield* Deferred.make<void>() };
+        const watched: Semaphore.Semaphore = Object.assign(Object.create(permit), {
+          withPermit: <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+            Deferred.succeed(hooks.reached, undefined).pipe(
+              Effect.andThen(permit.withPermit(effect)),
+            ),
+        });
+        const harness = yield* makeHarness({ transcriptionPermit: watched });
+        yield* installAndSettle(harness, "base");
+        hooks.reached = yield* Deferred.make<void>();
+        yield* permit.take(1);
+        yield* harness.service.install("small");
+        yield* Deferred.await(hooks.reached);
+        expect(yield* harness.installed("small")).toBe(true);
+        const cancelled = yield* harness.service.cancelInstall;
+        yield* permit.release(1);
+        expect(cancelled).toMatchObject({ phase: "ready", model: "base", pendingModel: null });
+        expect(yield* harness.installed("base")).toBe(true);
+        expect(
+          yield* harness.fs.exists(harness.path.join(harness.voiceDir, "models", "small")),
+        ).toBe(false);
+      }).pipe(Effect.scoped),
+    );
+
+    it.effect("keeps one model when a restart finds two", () =>
+      Effect.gen(function* () {
+        const first = yield* makeHarness();
+        for (const [model, at] of [
+          ["small", 2_000],
+          ["base", 1_000],
+        ] as const) {
+          const dir = first.path.join(first.voiceDir, "models", model);
+          yield* first.fs.makeDirectory(dir, { recursive: true });
+          const marker = first.path.join(dir, ".mybot-installed");
+          yield* first.fs.writeFileString(marker, "fixture\n");
+          yield* first.fs.utimes(marker, at, at);
+        }
+        const restarted = yield* makeHarness({ voiceDir: first.voiceDir });
+        // The one verified last wins.
+        expect((yield* restarted.service.status).model).toBe("small");
+        expect(yield* first.fs.readDirectory(first.path.join(first.voiceDir, "models"))).toEqual([
+          "small",
+        ]);
       }).pipe(Effect.scoped),
     );
 

@@ -98,6 +98,8 @@ export interface VoiceInputOptions {
   readonly cli?: WhisperCliRelease | null;
   /** Defaults to the pinned models. */
   readonly model?: (model: VoiceModelId) => WhisperModelRelease;
+  /** Tests pass one in to hold it like a running transcription. */
+  readonly transcriptionPermit?: Semaphore.Semaphore;
 }
 
 export const makeVoiceInput = Effect.fn("VoiceInput.make")(function* (options: VoiceInputOptions) {
@@ -120,7 +122,7 @@ export const makeVoiceInput = Effect.fn("VoiceInput.make")(function* (options: V
    * Held by each transcription, and by anything that deletes files a
    * transcription reads (remove, replacing the model), so those wait for it.
    */
-  const transcriptionPermit = yield* Semaphore.make(1);
+  const transcriptionPermit = options.transcriptionPermit ?? (yield* Semaphore.make(1));
   // Serializes starting, cancelling, and removing; the download itself runs outside it.
   const gate = yield* Semaphore.make(1);
   let running: Fiber.Fiber<void> | undefined;
@@ -128,16 +130,36 @@ export const makeVoiceInput = Effect.fn("VoiceInput.make")(function* (options: V
   const isComplete = (dir: string) =>
     fs.exists(path.join(dir, INSTALLED_MARKER)).pipe(Effect.orElseSucceed(() => false));
 
+  /**
+   * Marked model installs, newest marker first, then by name. More than one
+   * means a replacement stopped before it removed the old model.
+   */
+  const markedModels = Effect.gen(function* () {
+    const names = yield* fs.readDirectory(modelsDir).pipe(Effect.orElseSucceed(() => []));
+    const marked: Array<{ readonly model: VoiceModelId; readonly at: number }> = [];
+    for (const name of names) {
+      if (!isVoiceModelId(name)) continue;
+      const info = yield* fs.stat(path.join(modelDir(name), INSTALLED_MARKER)).pipe(Effect.option);
+      if (Option.isNone(info)) continue;
+      marked.push({ model: name, at: Option.getOrUndefined(info.value.mtime)?.getTime() ?? 0 });
+    }
+    return marked
+      .sort((a, b) => b.at - a.at || a.model.localeCompare(b.model))
+      .map((entry) => entry.model);
+  });
+
+  const removeModel = (model: VoiceModelId) =>
+    fs
+      .remove(modelDir(model), { recursive: true, force: true })
+      .pipe(
+        Effect.catch((cause) =>
+          Effect.logWarning("Could not remove a speech model.", { model, cause }),
+        ),
+      );
+
   /** Status from marked installs on disk; unmarked directories are leftovers. */
   const installedStatus = Effect.gen(function* () {
-    const names = yield* fs.readDirectory(modelsDir).pipe(Effect.orElseSucceed(() => []));
-    let model: VoiceModelId | null = null;
-    for (const name of names) {
-      if (isVoiceModelId(name) && (yield* isComplete(modelDir(name)))) {
-        model = name;
-        break;
-      }
-    }
+    const model = (yield* markedModels)[0] ?? null;
     const cliReady = yield* isComplete(cliDir);
     return {
       phase: cli === null ? "unsupported" : model !== null && cliReady ? "ready" : "not-installed",
@@ -149,6 +171,8 @@ export const makeVoiceInput = Effect.fn("VoiceInput.make")(function* (options: V
     } satisfies VoiceInputStatus;
   });
 
+  // A crash mid-replacement can leave two models; keep the one verified last.
+  for (const extra of (yield* markedModels).slice(1)) yield* removeModel(extra);
   const state = yield* SubscriptionRef.make<VoiceInputStatus>(yield* installedStatus);
 
   /** Streams `url` into `file`, checking its size bound and SHA-256. */
@@ -307,6 +331,12 @@ export const makeVoiceInput = Effect.fn("VoiceInput.make")(function* (options: V
             Exit.isSuccess(exit)
               ? Effect.void
               : Effect.gen(function* () {
+                  // Stopped after the new model was placed but before the old
+                  // one was removed: keep the previous model.
+                  const marked = yield* markedModels;
+                  if (marked.includes(model) && marked.some((other) => other !== model)) {
+                    yield* removeModel(model);
+                  }
                   const installed = yield* installedStatus;
                   const error = Cause.findErrorOption(exit.cause);
                   yield* SubscriptionRef.set(
