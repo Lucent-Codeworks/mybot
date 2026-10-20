@@ -4,8 +4,6 @@
  * screenshots saved in the skill's folder. Done here rather than by the agent
  * because not every provider can read a PDF or the images inside it.
  */
-import * as NodeZlib from "node:zlib";
-
 import type { ProjectId } from "@mybot/contracts";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
@@ -19,6 +17,7 @@ import * as Schema from "effect/Schema";
 
 import * as ServerConfig from "../config.ts";
 import * as ProjectStore from "../orchestration-v2/ProjectStore.ts";
+import { encodePng } from "../pets/png.ts";
 
 /** The largest guide read; matches the largest file a message can attach. */
 const MAX_GUIDE_BYTES = 50 * 1024 * 1024;
@@ -65,41 +64,6 @@ export class GuideImport extends Context.Service<
     }) => Effect.Effect<GuideImportResult, GuideImportError>;
   }
 >()("mybot/bots/GuideImport") {}
-
-/** Encodes raw 8-bit gray, RGB, or RGBA pixels as a PNG. */
-export function encodePng(image: {
-  readonly width: number;
-  readonly height: number;
-  readonly channels: 1 | 3 | 4;
-  readonly data: Uint8Array | Uint8ClampedArray;
-}): Uint8Array {
-  const { width, height, channels, data } = image;
-  const stride = width * channels;
-  // Every row starts with filter type 0 (none).
-  const raw = Buffer.alloc((stride + 1) * height);
-  for (let row = 0; row < height; row++) {
-    raw.set(data.subarray(row * stride, (row + 1) * stride), row * (stride + 1) + 1);
-  }
-  const chunk = (type: string, body: Buffer) => {
-    const head = Buffer.alloc(8);
-    head.writeUInt32BE(body.length, 0);
-    head.write(type, 4, "ascii");
-    const tail = Buffer.alloc(4);
-    tail.writeUInt32BE(NodeZlib.crc32(Buffer.concat([head.subarray(4), body])), 0);
-    return Buffer.concat([head, body, tail]);
-  };
-  const header = Buffer.alloc(13);
-  header.writeUInt32BE(width, 0);
-  header.writeUInt32BE(height, 4);
-  header[8] = 8;
-  header[9] = channels === 1 ? 0 : channels === 3 ? 2 : 6;
-  return Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    chunk("IHDR", header),
-    chunk("IDAT", NodeZlib.deflateSync(raw)),
-    chunk("IEND", Buffer.alloc(0)),
-  ]);
-}
 
 const make = Effect.gen(function* () {
   const fileSystem = yield* FileSystem.FileSystem;
