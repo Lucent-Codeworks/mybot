@@ -97,6 +97,10 @@ function makeFakeBrowserWindow() {
     setBackgroundThrottling: vi.fn(),
     setWindowOpenHandler: vi.fn(),
     toggleDevTools: vi.fn(),
+    session: {
+      setPermissionRequestHandler: vi.fn(),
+      setPermissionCheckHandler: vi.fn(),
+    },
   };
 
   const window = {
@@ -612,6 +616,30 @@ describe("DesktopWindow", () => {
     assert.deepEqual(
       DesktopWindow.resolveInitialMainWindowBounds(persistedBounds, [displays[0]!]),
       DesktopAppSettings.DEFAULT_MAIN_WINDOW_SIZE,
+    );
+  });
+
+  it("lets only the app's own pages use the microphone", () => {
+    const allows = (permission: string, requestingUrl: string | undefined) =>
+      DesktopWindow.allowsMainWindowPermission({
+        permission,
+        requestingUrl,
+        applicationUrl: "mybot://app/",
+      });
+    assert.isTrue(allows("media", "mybot://app/threads/1"));
+    assert.isTrue(allows("media", "mybot://app"));
+    assert.isFalse(allows("media", "mybot://other/"));
+    assert.isFalse(allows("media", "https://example.com/"));
+    assert.isFalse(allows("media", undefined));
+    // Everything else keeps Electron's default grant.
+    assert.isTrue(allows("notifications", "https://example.com/"));
+    assert.isTrue(allows("clipboard-sanitized-write", "mybot://app/"));
+    assert.isTrue(
+      DesktopWindow.allowsMainWindowPermission({
+        permission: "media",
+        requestingUrl: "http://localhost:5733/",
+        applicationUrl: "http://localhost:5733/",
+      }),
     );
   });
 

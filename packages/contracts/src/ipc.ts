@@ -1217,6 +1217,11 @@ export interface DesktopBridge {
   openSystemSettings?: (pane: SystemSettingsPane) => Promise<boolean>;
   checkSystemPermission?: (pane: SystemSettingsPane) => Promise<boolean>;
   /**
+   * Asks macOS for microphone access before the first recording. True when
+   * granted, or on platforms without an app-level prompt. Optional: older builds lack it.
+   */
+  requestMicrophoneAccess?: () => Promise<boolean>;
+  /**
    * Probe this desktop machine for installed remote-capable editor CLIs
    * (used for remote open-in-editor deep links). Optional: older desktop
    * builds lack it; callers fall back to VS Code only.

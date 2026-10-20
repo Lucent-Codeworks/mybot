@@ -36,6 +36,34 @@ export function ComposerVoiceControl(props: {
   if (voice.availability === "hidden" || voice.availability === "unsupported") return null;
   const { phase } = voice.state;
 
+  if (phase === "error" && voice.state.errorAction === "retry-transcription") {
+    return (
+      <div className="flex min-w-0 items-center gap-1" role="group" aria-label="Voice input">
+        <span className="min-w-0 truncate px-1 text-destructive text-xs" role="alert">
+          {voice.state.error}
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          onPointerDown={(event) => event.preventDefault()}
+          onClick={voice.cancel}
+        >
+          Discard
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          onPointerDown={(event) => event.preventDefault()}
+          onClick={voice.retryTranscription}
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
   if (phase === "recording" || phase === "transcribing") {
     const recording = phase === "recording";
     return (

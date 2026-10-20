@@ -46,6 +46,7 @@ import {
   preflightMacDesktopBuild,
   preflightWindowsDesktopBuild,
   renderMacPasskeyEntitlements,
+  renderMacEntitlements,
   resolveMacWebAuthnEntitlements,
   resolveClerkPasskeyNativeArtifacts,
   resolveMacPasskeySigningConfiguration,
@@ -1984,6 +1985,13 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     assert.include(entitlements, "<key>com.apple.security.device.audio-input</key>");
     assert.notInclude(entitlements, "keychain-access-groups");
     assert.notInclude(entitlements, "com.apple.developer.web-browser.public-key-credential");
+  });
+
+  it("lets every signed macOS build use the microphone", () => {
+    const entitlements = renderMacEntitlements();
+    assert.include(entitlements, "<key>com.apple.security.device.audio-input</key>");
+    assert.include(entitlements, "<key>com.apple.security.cs.allow-jit</key>");
+    assert.notInclude(entitlements, "com.apple.developer.associated-domains");
   });
 
   it("grants in-app browser passkey entitlements only when the provisioning profile does", () => {

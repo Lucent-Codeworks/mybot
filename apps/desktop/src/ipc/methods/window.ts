@@ -428,6 +428,19 @@ export const pickThemeFiles = DesktopIpc.makeIpcMethod({
   }),
 });
 
+export const requestMicrophoneAccess = DesktopIpc.makeIpcMethod({
+  channel: IpcChannels.REQUEST_MICROPHONE_ACCESS_CHANNEL,
+  payload: Schema.Undefined,
+  result: Schema.Boolean,
+  handler: Effect.fn("desktop.ipc.window.requestMicrophoneAccess")(function* () {
+    const environment = yield* DesktopEnvironment.DesktopEnvironment;
+    // Only macOS gates the microphone per app; elsewhere Chromium's request decides.
+    if (environment.platform !== "darwin") return true;
+    if (Electron.systemPreferences.getMediaAccessStatus("microphone") === "granted") return true;
+    return yield* Effect.promise(() => Electron.systemPreferences.askForMediaAccess("microphone"));
+  }),
+});
+
 export const checkSystemPermission = DesktopIpc.makeIpcMethod({
   channel: IpcChannels.CHECK_SYSTEM_PERMISSION_CHANNEL,
   payload: SystemSettingsPaneSchema,

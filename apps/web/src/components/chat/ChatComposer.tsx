@@ -3837,6 +3837,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       terminalOpen,
       modelPickerOpen: isComposerModelPickerOpen,
     }),
+    composerElement: () => composerFormRef.current,
   });
   const interceptVoiceSubmit = voiceInput.interceptSubmit;
 
@@ -7423,7 +7424,8 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                       isComposerApprovalState ||
                       projectSelectionRequired ||
                       isChoiceOnlyPendingQuestion ||
-                      activePendingIsResponding
+                      activePendingIsResponding ||
+                      voiceInput.freezesEditor
                     }
                   />
                 </ComposerContextActionsContext>

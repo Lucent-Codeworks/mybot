@@ -3,6 +3,7 @@ import { voiceTranscriptionRpc } from "@mybot/client-runtime/state/voice-input";
 import {
   VoiceInputController,
   createServerVoiceTranscriber,
+  voiceInputFreezesEditor,
   type VoiceInputOutcome,
   type VoiceInputState,
   type VoiceTranscriber,
@@ -25,6 +26,7 @@ import { readEnvironmentScope, readPreparedConnection } from "../../state/sessio
 import { useVoiceInputStatus, voiceInputEnvironment } from "../../state/voiceInput";
 import { createWindowVoiceRecorder } from "./browserVoiceRecorder";
 import { decodeToWav } from "./decodeToWav";
+import { classifyRecordingKeyTarget, recordingKeyOutcome } from "./recordingKeys";
 import {
   INSECURE_VOICE_MESSAGE,
   webVoiceAvailability,
@@ -99,6 +101,8 @@ export interface ComposerVoiceInputOptions {
   readonly submit: () => void;
   readonly keybindings: ResolvedKeybindingsConfig;
   readonly shortcutContext: () => Partial<ShortcutMatchContext>;
+  /** The composer's root, so Esc and Enter only act on keys meant for it. */
+  readonly composerElement: () => Element | null;
 }
 
 export interface ComposerVoiceInput {
@@ -106,7 +110,11 @@ export interface ComposerVoiceInput {
   readonly state: VoiceInputState;
   /** `Date.now()` when the current recording started, null when not recording. */
   readonly recordingStartedAt: number | null;
+  /** The editor is read-only while voice input can still write the draft. */
+  readonly freezesEditor: boolean;
   readonly toggle: () => void;
+  /** Sends a recording kept after a failed transcription again. */
+  readonly retryTranscription: () => void;
   readonly stop: (outcome: VoiceInputOutcome) => void;
   readonly cancel: () => void;
   /**
@@ -148,7 +156,14 @@ export function useComposerVoiceInput(options: ComposerVoiceInputOptions): Compo
     const created: VoiceInputController = new VoiceInputController({
       recorder,
       getTranscriber: () => createComposerTranscriber(optionsRef.current.environmentId),
-      requestPermission: () => recorder.requestPermission(),
+      requestPermission: async () => {
+        // The desktop app asks macOS first; a denial there can only be fixed in System Settings.
+        const requestAppAccess = window.desktopBridge?.requestMicrophoneAccess;
+        if (requestAppAccess && !(await requestAppAccess())) {
+          return { granted: false, canAskAgain: false };
+        }
+        return recorder.requestPermission();
+      },
       configureRecording: async () => {},
       releaseRecording: async () => recorder.release(),
       deleteRecording: (uri) => recorder.deleteRecording(uri),
@@ -166,7 +181,8 @@ export function useComposerVoiceInput(options: ComposerVoiceInputOptions): Compo
         setRecordingStartedAt((startedAt) =>
           next.phase === "recording" ? (startedAt ?? Date.now()) : null,
         );
-        if (next.phase === "error" && next.error) {
+        // A kept recording shows its error inline with Retry and Discard.
+        if (next.phase === "error" && next.error && next.errorAction !== "retry-transcription") {
           toastManager.add({
             type: "error",
             title: next.error,
@@ -222,6 +238,7 @@ export function useComposerVoiceInput(options: ComposerVoiceInputOptions): Compo
       toggle,
       stop: (outcome: VoiceInputOutcome) => void controller.stop(outcome),
       cancel: () => controller.cancel(),
+      retryTranscription: () => void controller.retryTranscription(),
       interceptSubmit: () => {
         const phase = controller.currentState.phase;
         if (phase === "recording") {
@@ -249,24 +266,20 @@ export function useComposerVoiceInput(options: ComposerVoiceInputOptions): Compo
         return;
       }
       if (!recording) return;
-      if (event.key === "Escape") {
-        event.preventDefault();
-        event.stopPropagation();
-        void controller.stop("insert");
-        return;
-      }
-      const plainEnter =
-        event.key === "Enter" &&
-        !event.shiftKey &&
-        !event.altKey &&
-        !event.metaKey &&
-        !event.ctrlKey;
-      // A focused Done, Send, or Cancel button keeps Enter for itself.
-      if (plainEnter && !(event.target instanceof HTMLButtonElement)) {
-        event.preventDefault();
-        event.stopPropagation();
-        void controller.stop("send");
-      }
+      const outcome = recordingKeyOutcome({
+        key: event.key,
+        shiftKey: event.shiftKey,
+        altKey: event.altKey,
+        metaKey: event.metaKey,
+        ctrlKey: event.ctrlKey,
+        isComposing: event.isComposing,
+        terminalFocus: optionsRef.current.shortcutContext().terminalFocus === true,
+        target: classifyRecordingKeyTarget(event.target, optionsRef.current.composerElement()),
+      });
+      if (outcome === null) return;
+      event.preventDefault();
+      event.stopPropagation();
+      void controller.stop(outcome);
     };
     const onToggleRequest = () => actions.toggle();
     window.addEventListener("keydown", onKeyDown, true);
@@ -281,6 +294,7 @@ export function useComposerVoiceInput(options: ComposerVoiceInputOptions): Compo
     availability,
     state,
     recordingStartedAt,
+    freezesEditor: voiceInputFreezesEditor(state),
     ...actions,
   };
 }
