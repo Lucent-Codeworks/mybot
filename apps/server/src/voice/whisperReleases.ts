@@ -101,8 +101,11 @@ export const pinnedWhisperModel = (model: VoiceModelId): WhisperModelRelease => 
   };
 };
 
-/** Whole-token markers Whisper emits for silence and non-speech audio, such as `[MUSIC]` or `(silence)`. */
-const NON_SPEECH_MARKER = /(^|\s)(\[[^\]\n]*\]|\([^)\n]*\))(?=\s|$)/g;
+/**
+ * Whole-token markers Whisper emits for silence and non-speech audio, such as
+ * `[MUSIC]` or `(laughs),`, with any punctuation Whisper attached to them.
+ */
+const NON_SPEECH_MARKER = /(^|\s)(\[[^\]\n]*\]|\([^)\n]*\))[.,!?;:]*(?=\s|$)/g;
 
 export const cleanTranscript = (stdout: string): string =>
   stdout.replace(NON_SPEECH_MARKER, " ").split(/\s+/).filter(Boolean).join(" ");

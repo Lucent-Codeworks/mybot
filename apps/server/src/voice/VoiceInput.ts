@@ -189,7 +189,21 @@ export const makeVoiceInput = Effect.fn("VoiceInput.make")(function* (options: V
     } satisfies VoiceInputStatus;
   });
 
-  // A crash mid-replacement can leave two models; keep the one verified last.
+  // A crash mid-install can leave staging directories, and mid-replacement two
+  // models; keep the one verified last.
+  for (const parent of [modelsDir, cliParent]) {
+    const names = yield* fs.readDirectory(parent).pipe(Effect.orElseSucceed(() => []));
+    for (const name of names) {
+      if (!name.startsWith(".install-")) continue;
+      yield* fs
+        .remove(path.join(parent, name), { recursive: true, force: true })
+        .pipe(
+          Effect.catch((cause) =>
+            Effect.logWarning("Could not remove a voice staging directory.", { name, cause }),
+          ),
+        );
+    }
+  }
   for (const extra of (yield* markedModels).slice(1)) yield* removeModel(extra);
   const state = yield* SubscriptionRef.make<VoiceInputStatus>(yield* installedStatus);
 
@@ -364,6 +378,8 @@ export const makeVoiceInput = Effect.fn("VoiceInput.make")(function* (options: V
                       : {
                           ...installed,
                           phase: "failed",
+                          // Names the attempt, so Retry downloads the same model.
+                          pendingModel: model,
                           message: Option.isSome(error) ? error.value.detail : MESSAGES.save,
                         },
                   );

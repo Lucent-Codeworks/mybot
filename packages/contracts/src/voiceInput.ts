@@ -21,7 +21,7 @@ export const VoiceInputStatus = Schema.Struct({
   phase: Schema.Literals(["unsupported", "not-installed", "downloading", "ready", "failed"]),
   /** Installed model, if any. */
   model: Schema.NullOr(VoiceModelId),
-  /** Model being downloaded. */
+  /** Model being downloaded, or whose download failed. */
   pendingModel: Schema.NullOr(VoiceModelId),
   downloadedBytes: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
   totalBytes: Schema.NullOr(Schema.Int),

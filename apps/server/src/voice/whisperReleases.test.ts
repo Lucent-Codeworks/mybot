@@ -24,6 +24,15 @@ describe("whisperReleases", () => {
     expect(cleanTranscript("[MUSIC] Ship it [Music]")).toBe("Ship it");
   });
 
+  it("drops markers followed by punctuation", () => {
+    expect(cleanTranscript("[MUSIC]. Ship it (laughs), now")).toBe("Ship it now");
+  });
+
+  it("keeps parentheses that are part of speech", () => {
+    expect(cleanTranscript("call foo(bar) now")).toBe("call foo(bar) now");
+    expect(cleanTranscript("an array[0] index")).toBe("an array[0] index");
+  });
+
   it("builds whisper-cli arguments", () => {
     expect(whisperArgs({ model: "m", wav: "w", threads: 4 })).toEqual([
       "-m",

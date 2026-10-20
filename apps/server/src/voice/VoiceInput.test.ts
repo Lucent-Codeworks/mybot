@@ -190,6 +190,8 @@ describe("VoiceInput", () => {
         const final = yield* installAndSettle(harness, "base");
         expect(final?.phase).toBe("failed");
         expect(final?.model).toBeNull();
+        // Names the attempt, so a retry downloads the same model.
+        expect(final?.pendingModel).toBe("base");
         expect(final?.message).toContain("corrupted");
         expect(yield* harness.installed("base")).toBe(false);
       }).pipe(Effect.scoped),
@@ -203,6 +205,22 @@ describe("VoiceInput", () => {
         yield* first.fs.writeFileString(first.path.join(dir, "ggml-base.bin"), "partial");
         const restarted = yield* makeHarness({ voiceDir: first.voiceDir });
         expect((yield* restarted.service.status).phase).toBe("not-installed");
+      }).pipe(Effect.scoped),
+    );
+
+    it.effect("sweeps staging directories a crash left behind", () =>
+      Effect.gen(function* () {
+        const first = yield* makeHarness();
+        const staging = [
+          first.path.join(first.voiceDir, "models", ".install-abc"),
+          first.path.join(first.voiceDir, "cli", ".install-def"),
+        ];
+        for (const dir of staging) {
+          yield* first.fs.makeDirectory(dir, { recursive: true });
+          yield* first.fs.writeFileString(first.path.join(dir, "partial.bin"), "partial");
+        }
+        yield* makeHarness({ voiceDir: first.voiceDir });
+        for (const dir of staging) expect(yield* first.fs.exists(dir)).toBe(false);
       }).pipe(Effect.scoped),
     );
 
