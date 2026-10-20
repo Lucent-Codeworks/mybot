@@ -193,6 +193,35 @@ chat. Reply `yes`, `always`, or `no` to an approval, or a number (or your own
 words) to a question. Questions with several parts still have to be answered
 in MyBot.
 
+## Pets
+
+A pet sits beside the chat box in a bot's conversations and reacts to what the
+bot is doing: working, needing you (an approval, a question, or a usage limit),
+finished, or failed. MyBot comes with three pets, Bolt, Ember, and Pip, that
+anyone can use. Under reduced motion in your operating system, pets hold still.
+
+To give a bot a pet, open **Settings → Bot** and find **Pet**. Pick an existing
+pet, **No pet**, or add a new one:
+
+- **Import** takes a pet downloaded from ChatGPT (**Settings → Personalization
+  → Pet**), a Codex pet folder as a zip, or a single pet sprite sheet. Pets
+  already in the host's `~/.codex/pets` folder are listed so you can import
+  them in one click.
+- **Use a picture** turns any image into a pet, and MyBot adds simple motion.
+- **Create with AI** hatches a new pet from a description of a character, with
+  an optional reference image. It needs Codex signed in with ChatGPT and uses
+  your Codex usage. It takes a few minutes and runs as a "Hatching" conversation
+  in that bot, which you can watch, steer, or stop. The finished pet is given
+  to that bot.
+
+You can also rename a pet, export it in the ChatGPT and Codex format, or
+remove it.
+
+Each bot can have its own pet. **Settings → Appearance → Pets** sets a default
+pet for bots without one, turns **Show pets** on or off for this device, and
+lists every pet. Pets are stored with your MyBot environment, so they appear on
+desktop, web, and mobile. Mobile shows pets; set them up on desktop or web.
+
 ## Change or remove a bot
 
 Hover a bot and choose the gear icon, or choose **Bot settings** from a
