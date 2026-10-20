@@ -96,8 +96,10 @@ const clamp = (value: string, max: number) => value.trim().slice(0, max).trim();
 const CodexManifest = Schema.Struct({
   displayName: Schema.optional(Schema.String),
   description: Schema.optional(Schema.String),
-  spritesheetPath: Schema.String,
+  // Codex finds a pet's sheet by its default name when the manifest leaves this out.
+  spritesheetPath: Schema.optional(Schema.String),
 });
+const DEFAULT_CODEX_SPRITESHEETS = ["spritesheet.webp", "spritesheet.png"];
 const decodeCodexManifest = Schema.decodeUnknownOption(Schema.fromJsonString(CodexManifest));
 
 /** What MyBot writes to a stored pet's `pet.json`, a superset of the Codex format. */
@@ -374,7 +376,7 @@ const make = Effect.gen(function* () {
   )(function* (input) {
     const bytes = yield* readAttachment(input.attachmentId);
     const mimeType = sniffImageType(bytes);
-    if (mimeType === null)
+    if (mimeType === null || readImageDimensions(bytes) === null)
       return yield* fail("invalid_image", "Pictures must be PNG, WebP, JPEG, or GIF images.");
     return yield* savePet({
       displayName: input.displayName,
@@ -461,7 +463,7 @@ const make = Effect.gen(function* () {
       if (homes.length === 0)
         return yield* fail("codex_unavailable", "That Codex install is not connected.");
       const folderName = input.folderName;
-      if (folderName.startsWith(".") || /[\\/]/.test(folderName))
+      if (folderName.trim() === "" || folderName.startsWith(".") || /[\\/]/.test(folderName))
         return yield* fail("invalid_manifest", "That isn't a Codex pet folder.");
       let found: { folder: string; manifest: typeof CodexManifest.Type } | undefined;
       for (const { home } of homes) {
@@ -483,7 +485,24 @@ const make = Effect.gen(function* () {
         "invalid_manifest",
         "This pet's pet.json points to a sprite sheet outside its folder.",
       );
-      const spritePath = found.manifest.spritesheetPath;
+      const folder = found.folder;
+      let spritePath = found.manifest.spritesheetPath;
+      if (spritePath === undefined) {
+        for (const name of DEFAULT_CODEX_SPRITESHEETS) {
+          const exists = yield* fileSystem
+            .exists(path.join(folder, name))
+            .pipe(Effect.orElseSucceed(() => false));
+          if (exists) {
+            spritePath = name;
+            break;
+          }
+        }
+        if (spritePath === undefined)
+          return yield* fail(
+            "invalid_manifest",
+            "This pet's sprite sheet is missing from its folder.",
+          );
+      }
       if (
         spritePath.trim() === "" ||
         path.isAbsolute(spritePath) ||
@@ -541,9 +560,16 @@ const make = Effect.gen(function* () {
         const trash = path.join(config.petsDir, yield* tempName(".tmp-"));
         yield* fileSystem
           .rename(path.join(config.petsDir, input.petId), trash)
+          .pipe(Effect.mapError(ioError));
+        // The pet is gone once moved aside; a leftover `.tmp-` folder is never listed.
+        yield* fileSystem
+          .remove(trash, { recursive: true, force: true })
           .pipe(
-            Effect.andThen(fileSystem.remove(trash, { recursive: true, force: true })),
-            Effect.mapError(ioError),
+            Effect.catch((cause) =>
+              Effect.logWarning("Could not delete a removed pet's files.", cause).pipe(
+                Effect.annotateLogs({ petId: input.petId }),
+              ),
+            ),
           );
       }),
     );

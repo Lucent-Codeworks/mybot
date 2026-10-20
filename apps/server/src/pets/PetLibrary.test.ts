@@ -74,6 +74,18 @@ const withPets = <A, E>(
     }).pipe(Effect.provide(layer));
   }).pipe(Effect.provide(NodeServices.layer), Effect.scoped);
 
+/** A lossless WebP header of the given size; enough for the size check, not a real image. */
+const webpHeader = (width: number, height: number) => {
+  const bytes = Buffer.alloc(30);
+  bytes.write("RIFF", 0, "ascii");
+  bytes.writeUInt32LE(22, 4);
+  bytes.write("WEBPVP8L", 8, "ascii");
+  bytes.writeUInt32LE(10, 16);
+  bytes[20] = 0x2f;
+  bytes.writeUInt32LE((width - 1) | ((height - 1) << 14), 21);
+  return new Uint8Array(bytes);
+};
+
 const failure = <A>(effect: Effect.Effect<A, PetError>) =>
   Effect.flip(effect).pipe(Effect.map((error) => ({ code: error.code, message: error.message })));
 
@@ -310,6 +322,49 @@ it.effect("turns any supported image into a picture pet", () =>
       expect(
         (yield* failure(pets.createPicture({ attachmentId: notImage, displayName: "Text" }))).code,
       ).toBe("invalid_image");
+    }),
+  ),
+);
+
+it.effect("imports a Codex pet whose pet.json leaves out the sprite sheet path", () =>
+  withPets(({ pets, codexPet }) =>
+    Effect.gen(function* () {
+      codexPet(
+        "noodle",
+        { id: "noodle", displayName: "Noodle", description: "" },
+        { "spritesheet.webp": webpHeader(1536, 1872) },
+      );
+
+      expect((yield* pets.listCodexCandidates()).map((entry) => entry.folderName)).toEqual([
+        "noodle",
+      ]);
+      const pet = yield* pets.importCodex({
+        providerInstanceId: codexInstanceId,
+        folderName: "noodle",
+      });
+      expect(pet).toMatchObject({ id: "noodle", atlasVersion: 1 });
+      expect(yield* pets.resolveSprite(pet.id)).toMatchObject({ mimeType: "image/webp" });
+      expect(
+        (yield* failure(pets.importCodex({ providerInstanceId: codexInstanceId, folderName: "" })))
+          .code,
+      ).toBe("invalid_manifest");
+    }),
+  ),
+);
+
+it.effect("rejects a picture whose header is valid but has no readable size", () =>
+  withPets(({ pets, upload }) =>
+    Effect.gen(function* () {
+      const truncated = upload(
+        "pet-picture-truncated",
+        new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]),
+      );
+
+      const error = yield* failure(
+        pets.createPicture({ attachmentId: truncated, displayName: "Broken" }),
+      );
+
+      expect(error.code).toBe("invalid_image");
     }),
   ),
 );
