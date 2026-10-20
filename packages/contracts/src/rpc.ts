@@ -21,6 +21,16 @@ import {
   ChatGptHandoffInput,
   ChatGptHandoffState,
 } from "./providerSetup.ts";
+import {
+  VoiceCreateUploadUrlInput,
+  VoiceCreateUploadUrlResult,
+  VoiceInputError,
+  VoiceInputStatus,
+  VoiceInstallInput,
+  VoiceTranscribeInput,
+  VoiceTranscribeResult,
+  VoiceTranscriptionCancelInput,
+} from "./voiceInput.ts";
 import * as Schema from "effect/Schema";
 import * as Rpc from "effect/rpc/Rpc";
 import * as RpcGroup from "effect/rpc/RpcGroup";
@@ -344,6 +354,13 @@ export const WS_METHODS = {
   providerInstallCancel: "provider.install.cancel",
   providerInstallSubscribe: "provider.install.subscribe",
   providerInstallRemove: "provider.install.remove",
+  voiceStatusSubscribe: "voice.status.subscribe",
+  voiceInstall: "voice.install",
+  voiceInstallCancel: "voice.install.cancel",
+  voiceRemove: "voice.remove",
+  voiceCreateUploadUrl: "voice.createUploadUrl",
+  voiceTranscribe: "voice.transcribe",
+  voiceTranscriptionCancel: "voice.transcription.cancel",
 
   // Terminal methods
   terminalOpen: "terminal.open",
@@ -607,6 +624,51 @@ const WsProviderInstallRemoveRpc = Rpc.make(WS_METHODS.providerInstallRemove, {
   payload: ProviderSetupInput,
   success: ProviderInstallState,
   error: ProviderSetupRpcError,
+});
+
+const VoiceRpcError = Schema.Union([VoiceInputError, EnvironmentAuthorizationError]);
+
+const WsVoiceStatusSubscribeRpc = Rpc.make(WS_METHODS.voiceStatusSubscribe, {
+  payload: Schema.Struct({}),
+  success: VoiceInputStatus,
+  error: VoiceRpcError,
+  stream: true,
+});
+
+const WsVoiceInstallRpc = Rpc.make(WS_METHODS.voiceInstall, {
+  payload: VoiceInstallInput,
+  success: VoiceInputStatus,
+  error: VoiceRpcError,
+});
+
+const WsVoiceInstallCancelRpc = Rpc.make(WS_METHODS.voiceInstallCancel, {
+  payload: Schema.Struct({}),
+  success: VoiceInputStatus,
+  error: VoiceRpcError,
+});
+
+const WsVoiceRemoveRpc = Rpc.make(WS_METHODS.voiceRemove, {
+  payload: Schema.Struct({}),
+  success: VoiceInputStatus,
+  error: VoiceRpcError,
+});
+
+const WsVoiceCreateUploadUrlRpc = Rpc.make(WS_METHODS.voiceCreateUploadUrl, {
+  payload: VoiceCreateUploadUrlInput,
+  success: VoiceCreateUploadUrlResult,
+  error: VoiceRpcError,
+});
+
+const WsVoiceTranscribeRpc = Rpc.make(WS_METHODS.voiceTranscribe, {
+  payload: VoiceTranscribeInput,
+  success: VoiceTranscribeResult,
+  error: VoiceRpcError,
+});
+
+const WsVoiceTranscriptionCancelRpc = Rpc.make(WS_METHODS.voiceTranscriptionCancel, {
+  payload: VoiceTranscriptionCancelInput,
+  success: Schema.Struct({}),
+  error: VoiceRpcError,
 });
 
 const WsServerUpdateServerRpc = Rpc.make(WS_METHODS.serverUpdateServer, {
@@ -1477,6 +1539,13 @@ export const WsRpcGroup = RpcGroup.make(
   WsProviderInstallCancelRpc,
   WsProviderInstallSubscribeRpc,
   WsProviderInstallRemoveRpc,
+  WsVoiceStatusSubscribeRpc,
+  WsVoiceInstallRpc,
+  WsVoiceInstallCancelRpc,
+  WsVoiceRemoveRpc,
+  WsVoiceCreateUploadUrlRpc,
+  WsVoiceTranscribeRpc,
+  WsVoiceTranscriptionCancelRpc,
   WsServerUpdateServerRpc,
   WsServerUpdateServerWithProgressRpc,
   WsServerCommitDesktopUpdateRpc,

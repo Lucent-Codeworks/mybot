@@ -77,6 +77,11 @@ export const RPC_REQUIRED_SCOPES = {
   [WS_METHODS.providerInstallCancel]: AuthProvidersManageScope,
   [WS_METHODS.providerInstallSubscribe]: AuthOrchestrationReadScope,
   [WS_METHODS.providerInstallRemove]: AuthProvidersManageScope,
+  // voiceInstall, voiceInstallCancel and voiceRemove come from CLIENT_GUARDED_RPC_SCOPES.
+  [WS_METHODS.voiceStatusSubscribe]: AuthOrchestrationReadScope,
+  [WS_METHODS.voiceCreateUploadUrl]: AuthOrchestrationOperateScope,
+  [WS_METHODS.voiceTranscribe]: AuthOrchestrationOperateScope,
+  [WS_METHODS.voiceTranscriptionCancel]: AuthOrchestrationOperateScope,
   [WS_METHODS.serverUpdateServer]: AuthEnvironmentMaintainScope,
   [WS_METHODS.serverUpdateServerWithProgress]: AuthEnvironmentMaintainScope,
   [WS_METHODS.serverCommitDesktopUpdate]: AuthEnvironmentMaintainScope,

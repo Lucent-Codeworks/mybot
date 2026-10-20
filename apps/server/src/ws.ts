@@ -89,6 +89,7 @@ import {
   type TerminalError,
   type TerminalEvent,
   type TerminalMetadataStreamEvent,
+  VoiceInputError,
   WS_METHODS,
   WsRpcGroup,
 } from "@mybot/contracts";
@@ -1090,6 +1091,12 @@ const layerWsRpc = (
       const providerMaintenanceRunner = yield* ProviderMaintenanceRunner.ProviderMaintenanceRunner;
       const providerAuth = yield* ProviderAuthService.ProviderAuthService;
       const providerInstallation = yield* makeProviderInstallation();
+      const voiceUnsupported = Effect.fail(
+        new VoiceInputError({
+          reason: "unsupported",
+          detail: "Voice input is not available on this MyBot server yet.",
+        }),
+      );
       const serverSelfUpdate = yield* ServerSelfUpdate.ServerSelfUpdate;
       const config = yield* ServerConfig.ServerConfig;
       const lifecycleEvents = yield* ServerLifecycleEvents.ServerLifecycleEvents;
@@ -2136,6 +2143,22 @@ const layerWsRpc = (
         [WS_METHODS.providerInstallCancel]: (input) => providerInstallation.cancel(input),
         [WS_METHODS.providerInstallSubscribe]: (input) => providerInstallation.subscribe(input),
         [WS_METHODS.providerInstallRemove]: (input) => providerInstallation.remove(input),
+        // Stubs until the VoiceInput service replaces them.
+        [WS_METHODS.voiceStatusSubscribe]: () =>
+          Stream.make({
+            phase: "unsupported" as const,
+            model: null,
+            pendingModel: null,
+            downloadedBytes: 0,
+            totalBytes: null,
+            message: null,
+          }),
+        [WS_METHODS.voiceInstall]: () => voiceUnsupported,
+        [WS_METHODS.voiceInstallCancel]: () => voiceUnsupported,
+        [WS_METHODS.voiceRemove]: () => voiceUnsupported,
+        [WS_METHODS.voiceCreateUploadUrl]: () => voiceUnsupported,
+        [WS_METHODS.voiceTranscribe]: () => voiceUnsupported,
+        [WS_METHODS.voiceTranscriptionCancel]: () => voiceUnsupported,
         [WS_METHODS.serverUpdateServer]: (input) => serverSelfUpdate.update(input),
         [WS_METHODS.serverUpdateServerWithProgress]: (input) =>
           Stream.callback<ServerSelfUpdateProgressEvent, ServerSelfUpdateError>((queue) =>
