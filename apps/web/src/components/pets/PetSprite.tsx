@@ -187,7 +187,9 @@ export function PetSprite({
         height={height}
         onAnimationEnd={handleAnimationEnd}
         className={cn(
-          "block object-contain select-none",
+          // max-w-none: preflight's max-width:100% collapses the image to 0px
+          // inside the composer's shrink-to-fit, absolutely positioned wrapper.
+          "block max-w-none object-contain select-none",
           // Built-ins are pixel art, served at a whole-number scale.
           pet.builtIn ? "[image-rendering:pixelated]" : null,
           animationClass,

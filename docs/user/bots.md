@@ -218,8 +218,9 @@ You can also rename a pet, export it in the ChatGPT and Codex format, or
 remove it.
 
 Each bot can have its own pet. **Settings → Appearance → Pets** sets a default
-pet for bots without one, turns **Show pets** on or off for this device, and
-lists every pet. Pets are stored with your MyBot environment, so they appear on
+pet for bots without one, turns **Show pets** on or off for this device,
+lists every pet, and offers the same three ways to add one. There, **Create with AI**
+asks which bot the new pet is for. Pets are stored with your MyBot environment, so they appear on
 desktop, web, and mobile. Mobile shows pets; set them up on desktop or web.
 
 ## Change or remove a bot

@@ -21,7 +21,7 @@ import { serverEnvironment } from "~/state/server";
 
 import { PetSprite } from "./PetSprite";
 
-/** The pet is 72px wide and sits 12px off the composer; below this it would clip. */
+/** The pet is 72px wide, centered in the gap; below this it would crowd the edges. */
 const MIN_FREE_SPACE_PX = 88;
 const PET_WIDTH_PX = 72;
 
@@ -92,7 +92,13 @@ function ComposerPetFor(props: {
     <div
       ref={setElement}
       aria-hidden={!hasRoom}
-      className={hasRoom && url ? "absolute right-full bottom-0 mr-3" : "hidden"}
+      // Centered in the gap left of the composer and on the chat box; the
+      // variables come from useHasRoomBesideComposer.
+      className={hasRoom && url ? "absolute translate-x-1/2 -translate-y-1/2" : "hidden"}
+      style={{
+        right: "calc(100% + var(--pet-gap, 0px) / 2)",
+        top: "var(--pet-center-y, 50%)",
+      }}
     >
       {pose.bubble ? (
         <div className="absolute bottom-full left-1/2 mb-1 -translate-x-1/2 rounded-full bg-muted px-1.5 py-0.5 text-2xs font-semibold whitespace-nowrap text-muted-foreground">
@@ -129,18 +135,26 @@ function useThreadPose(thread: EnvironmentThreadShell | null): PetPose {
 }
 
 /**
- * Whether the composer stack leaves room for the pet on its left. Updates
- * only when the answer flips, not on every resized pixel.
+ * Whether the composer stack leaves room for the pet on its left. Also writes
+ * the gap's width (`--pet-gap`) and the chat box's vertical center
+ * (`--pet-center-y`) onto the pet, so resizes reposition it without a render;
+ * React only re-renders when the room answer flips.
  */
 function useHasRoomBesideComposer(element: HTMLElement | null): boolean {
   const [hasRoom, setHasRoom] = useState(false);
   useEffect(() => {
     const stack = element?.closest<HTMLElement>("[data-chat-composer-stack]");
     const lane = stack?.parentElement;
-    if (!stack || !lane) return;
+    if (!element || !stack || !lane) return;
     // Delivers an initial entry for each target, so no separate first measure.
+    // The chat box grows inside the stack, so watching the stack covers it.
     return observeResize([lane, stack], () => {
-      const free = stack.getBoundingClientRect().left - lane.getBoundingClientRect().left;
+      const stackRect = stack.getBoundingClientRect();
+      const free = stackRect.left - lane.getBoundingClientRect().left;
+      const box = stack.querySelector('[data-slot="composer-shell"]')?.getBoundingClientRect();
+      const centerY = box ? box.top - stackRect.top + box.height / 2 : stackRect.height / 2;
+      element.style.setProperty("--pet-gap", `${free}px`);
+      element.style.setProperty("--pet-center-y", `${centerY}px`);
       setHasRoom(free >= MIN_FREE_SPACE_PX);
     });
   }, [element]);

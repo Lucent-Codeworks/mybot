@@ -38,7 +38,7 @@ without replaying its transitions.
 
 ## Pets
 
-Choose a default pet and turn **Show pets** on or off in **Settings → Appearance → Pets**. See [Pets](./bots.md#pets).
+Choose a default pet, turn **Show pets** on or off, and add a pet (import, picture, or create with AI) in **Settings → Appearance → Pets**. See [Pets](./bots.md#pets).
 
 ## Custom themes
 
