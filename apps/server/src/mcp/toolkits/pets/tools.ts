@@ -19,7 +19,8 @@ import * as McpInvocationContext from "../../McpInvocationContext.ts";
 const PetsListTool = Tool.make("pets_list", {
   description:
     "List the user's pets (the small animated companions bots can wear) and any pets still being hatched. Use a pet's id with pets_assign.",
-  parameters: Schema.Struct({}),
+  // No `parameters`: McpServer refuses an empty Schema.Struct, and a refused
+  // registration stalls server startup instead of failing it.
   success: PetsListResult,
   failure: OrchestratorMcpFailure,
   failureMode: "return",

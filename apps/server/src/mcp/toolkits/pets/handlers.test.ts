@@ -13,11 +13,13 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Stream from "effect/Stream";
+import { McpSchema, McpServer } from "effect/ai";
 
 import * as ThreadManagement from "../../../orchestration-v2/ThreadManagementService.ts";
 import * as PetHatchService from "../../../pets/PetHatchService.ts";
 import * as PetLibrary from "../../../pets/PetLibrary.ts";
 import * as Project from "../../../project/ProjectService.ts";
+import * as McpHttpServer from "../../McpHttpServer.ts";
 import * as McpInvocationContext from "../../McpInvocationContext.ts";
 import * as McpToolAccess from "../../McpToolAccess.ts";
 import * as PetsHandlers from "./handlers.ts";
@@ -61,7 +63,7 @@ const bolt = {
   updatedAt: "2026-10-01T00:00:00.000Z",
 } as const;
 
-const setup = Effect.gen(function* () {
+const makeDependencies = Effect.sync(() => {
   const updates: Array<unknown> = [];
   const layerDependencies = Layer.mergeAll(
     NodeCrypto.layer,
@@ -96,6 +98,11 @@ const setup = Effect.gen(function* () {
         }),
     }),
   );
+  return { updates, layerDependencies };
+});
+
+const setup = Effect.gen(function* () {
+  const { updates, layerDependencies } = yield* makeDependencies;
   const toolkit = yield* PetsToolkit.pipe(
     Effect.provide(
       McpToolAccess.HandlersLayer.layer(PetsHandlers.layer).pipe(Layer.provide(layerDependencies)),
@@ -116,6 +123,42 @@ it.effect("pets_list returns the pets and hatch jobs", () =>
     const { call } = yield* setup;
     const result = yield* call("pets_list", {});
     expect(result.at(-1)?.result).toEqual({ pets: [bolt], hatchJobs: [] });
+  }),
+);
+
+// Registration is where an empty parameters struct once hung, which held the
+// whole server's startup, so this goes through the real /mcp registration.
+it.effect("pets_list is callable through the /mcp registration", () =>
+  Effect.gen(function* () {
+    const { layerDependencies } = yield* makeDependencies;
+    const result = yield* Effect.gen(function* () {
+      const server = yield* McpServer.McpServer;
+      return yield* server.callTool({ name: "pets_list", arguments: {} });
+    }).pipe(
+      Effect.provideService(
+        McpSchema.McpServerClient,
+        McpSchema.McpServerClient.of({
+          clientId: 1,
+          protocolVersion: "2025-06-18",
+          clientCapabilities: {},
+          clientInfo: { name: "pets", version: "1" },
+          initializePayload: {
+            protocolVersion: "2025-06-18",
+            capabilities: {},
+            clientInfo: { name: "pets", version: "1" },
+          },
+          getClient: Effect.die("unused"),
+        }),
+      ),
+      Effect.provide(
+        McpHttpServer.toolkitRegistration(PetsToolkit, PetsHandlers.layer).pipe(
+          Layer.provideMerge(McpServer.McpServer.layer),
+          Layer.provideMerge(layerDependencies),
+        ),
+      ),
+    );
+    expect(result.isError).toBe(false);
+    expect(result.structuredContent).toEqual({ pets: [bolt], hatchJobs: [] });
   }),
 );
 
