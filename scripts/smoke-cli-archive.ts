@@ -14,6 +14,7 @@ import * as Fiber from "effect/Fiber";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Logger from "effect/Logger";
+import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as Schedule from "effect/Schedule";
 import * as Schema from "effect/Schema";
@@ -34,6 +35,12 @@ export class CliArchiveSmokeError extends Schema.TaggedError<CliArchiveSmokeErro
     return `CLI archive smoke test failed while ${this.step}: ${this.detail}`;
   }
 }
+
+// A wedged executable can ignore SIGTERM, and waiting on it would hang the
+// release job until CI cancels it with no output. Escalate to SIGKILL so the
+// smoke test fails with the server's log instead.
+const FORCE_KILL_AFTER = Duration.seconds(5);
+const EXECUTABLE_TIMEOUT = Duration.seconds(60);
 
 const collect = <E>(stream: Stream.Stream<Uint8Array, E>) =>
   stream.pipe(
@@ -57,12 +64,20 @@ const runExecutable = Effect.fn("runExecutable")(function* (
       // launcher context must not leak in from a developer shell.
       env: { PATH: "", HOME: cwd, USERPROFILE: cwd, TMPDIR: cwd, TEMP: cwd },
       extendEnv: false,
+      forceKillAfter: FORCE_KILL_AFTER,
     }),
   );
-  const [stdout, stderr, exitCode] = yield* Effect.all(
+  const result = yield* Effect.all(
     [collect(child.stdout), collect(child.stderr), child.exitCode.pipe(Effect.map(Number))],
     { concurrency: "unbounded" },
-  );
+  ).pipe(Effect.timeoutOption(EXECUTABLE_TIMEOUT));
+  if (Option.isNone(result)) {
+    return yield* new CliArchiveSmokeError({
+      step: `running ${args.join(" ")}`,
+      detail: `no exit within ${Duration.format(EXECUTABLE_TIMEOUT)}`,
+    });
+  }
+  const [stdout, stderr, exitCode] = result.value;
   return { stdout, stderr, exitCode };
 });
 
@@ -147,6 +162,7 @@ const smokeCliArchive = Effect.fn("smokeCliArchive")(function* (input: {
           MYBOT_HOME: home,
         },
         extendEnv: false,
+        forceKillAfter: FORCE_KILL_AFTER,
       },
     ),
   );
@@ -171,7 +187,9 @@ const smokeCliArchive = Effect.fn("smokeCliArchive")(function* (input: {
     Effect.timeout(Duration.seconds(30)),
     Effect.orElseSucceed(() => false),
   );
-  yield* server.kill({ killSignal: "SIGTERM" }).pipe(Effect.ignore);
+  yield* server
+    .kill({ killSignal: "SIGTERM", forceKillAfter: FORCE_KILL_AFTER })
+    .pipe(Effect.ignore);
   yield* server.exitCode.pipe(Effect.timeout(Duration.seconds(10)), Effect.ignore);
   const [stdout, stderr] = yield* Fiber.join(output).pipe(
     Effect.timeout(Duration.seconds(5)),
