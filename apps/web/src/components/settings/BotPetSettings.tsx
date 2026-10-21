@@ -225,7 +225,7 @@ function FileButton(props: {
   );
 }
 
-function ImportPetRow(props: {
+export function ImportPetRow(props: {
   readonly environmentId: EnvironmentId;
   readonly disabled: boolean;
   readonly onAdded: (petId: PetId) => void;
@@ -323,7 +323,7 @@ function ImportPetRow(props: {
   );
 }
 
-function PicturePetRow(props: {
+export function PicturePetRow(props: {
   readonly environmentId: EnvironmentId;
   readonly disabled: boolean;
   readonly onAdded: (petId: PetId) => void;
@@ -374,9 +374,11 @@ function PicturePetRow(props: {
   );
 }
 
-function HatchPetRow(props: {
+export function HatchPetRow(props: {
   readonly environmentId: EnvironmentId;
   readonly projectId: ProjectId;
+  /** Names the bot that gets the pet, for surfaces outside that bot's settings. */
+  readonly botName?: string;
   readonly disabled: boolean;
   readonly jobs: ReadonlyArray<PetHatchJob>;
   readonly refresh: () => void;
@@ -508,7 +510,12 @@ function HatchPetRow(props: {
   return (
     <SettingsRow
       title="Create with AI"
-      description={codexUnavailable ?? "Describe a character and AI draws every mood. Needs Codex."}
+      description={
+        codexUnavailable ??
+        (props.botName
+          ? `Describe a character and AI draws every mood. It becomes ${props.botName}'s pet. Needs Codex.`
+          : "Describe a character and AI draws every mood. Needs Codex.")
+      }
     >
       <div className="flex flex-col gap-2 pb-3">
         {job?.status === "failed" ? (
