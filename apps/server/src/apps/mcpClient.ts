@@ -4,11 +4,13 @@
 import * as NodeChildProcess from "node:child_process";
 import * as NodeReadline from "node:readline";
 
+import { connectBuiltin } from "./builtin/index.ts";
+
 /**
  * The few MCP client calls connected apps need (initialize, tools/list,
- * tools/call) over stdio or Streamable HTTP. Kept dependency-free: the
- * official SDK pulls file-backed packages that the server's single
- * executable cannot load.
+ * tools/call) over stdio or Streamable HTTP, or in process for built-in
+ * apps (builtin/). Kept dependency-free: the official SDK pulls file-backed
+ * packages that the server's single executable cannot load.
  */
 
 /** The newest MCP version we speak; the app answers with the version both sides then use. */
@@ -44,6 +46,12 @@ export type McpTransportConfig =
       readonly command: string;
       readonly args: ReadonlyArray<string>;
       readonly env?: Readonly<Record<string, string>> | undefined;
+    }
+  | {
+      /** An app MyBot runs itself; see builtin/. */
+      readonly type: "builtin";
+      readonly app: "dialpad";
+      readonly apiKey: string;
     };
 
 export interface McpRequestOptions {
@@ -60,7 +68,7 @@ export interface McpConnection {
   readonly close: () => Promise<void>;
 }
 
-interface Session extends McpConnection {
+export interface McpSession extends McpConnection {
   readonly notify: (method: string) => Promise<void>;
   /** Records the protocol version the app chose in its initialize answer. */
   readonly useProtocolVersion: (version: string) => void;
@@ -134,7 +142,7 @@ function appEnvironment(
 function connectStdio(
   config: Extract<McpTransportConfig, { type: "stdio" }>,
   platform: NodeJS.Platform,
-): Session {
+): McpSession {
   const child = NodeChildProcess.spawn(config.command, [...config.args], {
     env: appEnvironment(platform, config.env),
     stdio: ["pipe", "pipe", "ignore"],
@@ -237,7 +245,7 @@ async function readEventStream(
   throw new Error("The app closed the response without an answer.");
 }
 
-function connectHttp(config: Extract<McpTransportConfig, { type: "http" }>): Session {
+function connectHttp(config: Extract<McpTransportConfig, { type: "http" }>): McpSession {
   const url = new URL(config.url);
   const accessTokens = config.accessTokens;
   let sessionId: string | null = null;
@@ -334,7 +342,12 @@ export async function connectMcp(
   if (config.type === "http" && !URL.canParse(config.url)) {
     throw new Error(`${config.url} is not a URL.`);
   }
-  const connection = config.type === "http" ? connectHttp(config) : connectStdio(config, platform);
+  const connection =
+    config.type === "http"
+      ? connectHttp(config)
+      : config.type === "stdio"
+        ? connectStdio(config, platform)
+        : connectBuiltin(config);
   try {
     const initialized = await connection.request(
       "initialize",

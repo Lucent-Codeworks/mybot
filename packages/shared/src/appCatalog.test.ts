@@ -30,7 +30,9 @@ const transportStrings = (preset: AppPreset, values: Record<string, string>) => 
   const transport = preset.transport(values);
   return transport.type === "http"
     ? [transport.url, transport.bearerToken ?? ""]
-    : [transport.command, ...transport.args, ...Object.values(transport.env ?? {})];
+    : transport.type === "builtin"
+      ? [transport.apiKey]
+      : [transport.command, ...transport.args, ...Object.values(transport.env ?? {})];
 };
 
 /** Plain text fields that still hold a credential. */
