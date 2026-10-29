@@ -1,5 +1,6 @@
 import { ThreadFind, ThreadFindCanvas, type ThreadFindControls } from "./chat/ThreadFindProvider";
 import { usageLimitRecoveryBannerItem } from "./chat/UsageLimitRecoveryBanner";
+import { BotWallpaperLayer } from "./wallpapers/BotWallpaperLayer";
 import { resolveDraftHeroState, shouldDockDraftHeroForSubmission } from "./ChatView.logic";
 import * as DateTime from "effect/DateTime";
 import { restorePlanFollowUpComposer } from "./ChatView.logic";
@@ -9595,7 +9596,14 @@ export default function ChatView(props: ChatViewProps) {
               />
             </div>
             {/* Messages Wrapper */}
-            <div className="relative flex min-h-0 flex-1 flex-col bg-background">
+            <div className="relative isolate flex min-h-0 flex-1 flex-col bg-background">
+              {activeProject ? (
+                <BotWallpaperLayer
+                  wallpaper={activeProject.bot?.wallpaper}
+                  environmentId={activeProject.environmentId}
+                  className="-z-10"
+                />
+              ) : null}
               {/* Messages — LegendList handles virtualization and scrolling internally */}
               <MessagesTimeline
                 citationRequest={paintOnlyDisplayedTimeline ? null : citationRequest}

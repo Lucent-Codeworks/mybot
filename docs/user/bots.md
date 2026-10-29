@@ -234,6 +234,14 @@ lists every pet, and offers the same three ways to add one. There, **Create with
 asks which bot the new pet is for. Pets are stored with your MyBot environment, so they appear on
 desktop, web, and mobile. Mobile shows pets; set them up on desktop or web.
 
+## Wallpapers
+
+Give each bot's chats their own wallpaper, like in WhatsApp. Open the bot's
+settings and pick one under **Wallpaper**: a pattern, a gradient, a color, or
+**Choose photo…** for your own picture. Wallpapers are softened so messages stay
+easy to read, and they follow you to every device you use MyBot on. Choose **No
+wallpaper** to go back to the plain background.
+
 ## Change or remove a bot
 
 Hover a bot and choose the gear icon, or choose **Bot settings** from a

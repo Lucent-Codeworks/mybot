@@ -67,7 +67,7 @@ const MIME_BY_EXTENSION: Record<string, ImageMimeType> = {
 const ATLAS_MIME_TYPES: ReadonlySet<ImageMimeType> = new Set(["image/png", "image/webp"]);
 
 /** The image type the bytes start with, by magic number rather than file name. */
-function sniffImageType(bytes: Uint8Array): ImageMimeType | null {
+export function sniffImageType(bytes: Uint8Array): ImageMimeType | null {
   const ascii = (start: number, end: number) => String.fromCharCode(...bytes.subarray(start, end));
   if (bytes[0] === 0x89 && ascii(1, 4) === "PNG") return "image/png";
   if (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") return "image/webp";

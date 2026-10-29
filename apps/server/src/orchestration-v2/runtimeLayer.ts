@@ -56,6 +56,7 @@ import * as LocalRuntimes from "../apps/LocalRuntimes.ts";
 import * as BotMessaging from "../bots/BotMessaging.ts";
 import * as GuideImport from "../bots/GuideImport.ts";
 import * as PetHatchService from "../pets/PetHatchService.ts";
+import * as BotWallpapers from "../bots/BotWallpapers.ts";
 import * as PetLibrary from "../pets/PetLibrary.ts";
 import * as AutoReviewService from "./AutoReviewService.ts";
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
@@ -402,6 +403,7 @@ export const layerProduction = Layer.mergeAll(
   layerBotMessagingProvided,
   GuideImport.layer.pipe(Layer.provide(ProjectStore.layer)),
   PetLibrary.layer,
+  BotWallpapers.layer,
   layerPetHatchProvided,
   layerAutoReviewProvided,
   layerSecretRequestsProvided,

@@ -55,6 +55,8 @@ export interface ServerDerivedPaths {
   readonly skillsDir: string;
   /** The pet library, one folder per pet in the Codex pet format. */
   readonly petsDir: string;
+  /** Wallpaper photos for bots' chats, each named by its content hash. */
+  readonly wallpapersDir: string;
 }
 
 export interface DeriveServerPathsOptions {
@@ -173,6 +175,7 @@ export const deriveServerPaths = Effect.fn(function* (
     secretsDir: join(stateDir, "secrets"),
     skillsDir: join(baseDir, "skills"),
     petsDir: join(stateDir, "pets"),
+    wallpapersDir: join(stateDir, "wallpapers"),
   };
 });
 
@@ -192,6 +195,7 @@ export const ensureServerDirectories = Effect.fn(function* (derivedPaths: Server
       fs.makeDirectory(derivedPaths.providerStatusCacheDir, { recursive: true }),
       fs.makeDirectory(derivedPaths.skillsDir, { recursive: true }),
       fs.makeDirectory(derivedPaths.petsDir, { recursive: true }),
+      fs.makeDirectory(derivedPaths.wallpapersDir, { recursive: true }),
       fs.makeDirectory(path.dirname(derivedPaths.anonymousIdPath), { recursive: true }),
       fs.makeDirectory(path.dirname(derivedPaths.serverRuntimeStatePath), { recursive: true }),
     ],
