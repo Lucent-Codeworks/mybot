@@ -39,6 +39,20 @@ the user returns `waiting_on_user` instead of timing out silently. In-flight wai
 bot in memory, and a message that would close a loop (or exceed four bots in one chain) is refused,
 since the receiver's conversation would queue behind the very wait it answers.
 
+## Mentions
+
+`@Name` in the composer inserts a `bot` reference link (`[Name](t3-context://v1/bot/<projectId>)`)
+with no context record: the link carries the bot's id, so renaming a bot never misroutes a sent
+message, and providers read it as plain `@Name`. A mention runs that one turn as the mentioned bot
+inside the current chat instead of relaying through `bot_message`, so its reply, tool calls, and
+approvals stay where the user is and it sees the whole chat. Two places agree on who answers by
+reading the same message: [`BotMentions`](../../apps/server/src/bots/BotMentions.ts), at client
+message intake, puts the turn on the bot's model and queues it behind a running turn rather than
+steering another bot's turn; `RunExecutionService` gives the turn that bot's profile. A turn's model
+sticks to the thread, so the next message without a mention goes back to the model the chat's own
+bot last ran on, unless the user picked a different one. Switching providers per turn uses the
+ordinary provider-switch handoff.
+
 ## Built-in MyBot
 
 [`BuiltInMyBot`](../../apps/server/src/bots/BuiltInMyBot.ts) creates one bot with

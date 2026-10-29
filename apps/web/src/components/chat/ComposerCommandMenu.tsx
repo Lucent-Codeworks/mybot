@@ -1,3 +1,5 @@
+import type { ComposerBotItem } from "@mybot/client-runtime/composerBotItems";
+import type { EnvironmentProject } from "@mybot/client-runtime/state/shell";
 import { formatProviderSkillDisplayName } from "@mybot/shared/inlineSkills";
 import {
   resolveProviderSkillSourceKind,
@@ -24,6 +26,7 @@ import { memo, useLayoutEffect, useRef } from "react";
 import { type ComposerSlashCommand, type ComposerTriggerKind } from "../../composer-logic";
 import { Badge } from "../ui/badge";
 import { Command, CommandGroup, CommandItem, CommandList } from "../ui/command";
+import { ProjectFavicon } from "../ProjectFavicon";
 import { PierreEntryIcon } from "./PierreEntryIcon";
 import { ComposerBanner } from "./ComposerBanner";
 
@@ -65,7 +68,8 @@ export type ComposerCommandItem =
       thread: ScopedThreadRef;
       label: string;
       description: string;
-    };
+    }
+  | ComposerBotItem<EnvironmentProject>;
 
 export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
   listId: string;
@@ -182,6 +186,9 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
           kind={props.item.pathKind}
           theme={props.resolvedTheme}
         />
+      ) : null}
+      {props.item.type === "bot" ? (
+        <ProjectFavicon project={props.item.bot} className="size-4 shrink-0" />
       ) : null}
       {props.item.type === "thread" ? (
         <MessagesSquareIcon aria-hidden="true" className="size-4 shrink-0 text-secondary-label" />

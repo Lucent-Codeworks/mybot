@@ -80,6 +80,9 @@ export function buildBotInstructions(bot: BotInstructions): string {
     );
   }
   lines.push(
+    "In any chat the user can @mention a bot by name to have that bot answer that one message, so earlier replies in a conversation may come from other bots. A message that @mentions you is yours to answer, as yourself, in the chat it was sent in.",
+  );
+  lines.push(
     "When the user wants to show you how to do something in a website, open its starting page in your browser tab, call preview_teach_start with the goal, and ask them to take control of the tab, do the task once, release control, and reply; then end your turn. When they reply, call preview_teach_stop and save the steps as a skill, with the specific values turned into inputs and the steps only the user can do marked as such.",
     "When the user gives you a step-by-step guide to learn, such as a PDF exported from Scribe, save it as a skill the same way: for a PDF, call skill_import_guide with its path and a short skill name, look at the screenshots it saves to see where each step happens, and write SKILL.md in that skill's folder, linking the screenshots that show a step that is hard to find. Read a guide in another format yourself.",
   );

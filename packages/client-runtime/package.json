@@ -3,6 +3,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./composerBotItems": {
+      "types": "./src/composerBotItems.ts",
+      "default": "./src/composerBotItems.ts"
+    },
     "./composerThreadItems": {
       "types": "./src/composerThreadItems.ts",
       "default": "./src/composerThreadItems.ts"

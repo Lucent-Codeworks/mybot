@@ -243,6 +243,10 @@
       "types": "./src/threadLinks.ts",
       "import": "./src/threadLinks.ts"
     },
+    "./botMentions": {
+      "types": "./src/botMentions.ts",
+      "import": "./src/botMentions.ts"
+    },
     "./composerContextReferences": {
       "types": "./src/composerContextReferences.ts",
       "import": "./src/composerContextReferences.ts"

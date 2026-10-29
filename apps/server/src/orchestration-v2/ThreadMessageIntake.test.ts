@@ -23,6 +23,7 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import { createPendingAttachmentId, resolveAttachmentPath } from "../attachmentStore.ts";
 import * as ServerConfig from "../config.ts";
+import * as ProjectService from "../project/ProjectService.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import {
   OrchestratorCommandPreviouslyRejectedError,
@@ -33,7 +34,14 @@ import { dispatchCommand, sendToThread } from "./ThreadMessageIntake.ts";
 
 const layerIntakeTest = ServerConfig.layerTest(process.cwd(), {
   prefix: "mybot-question-intake-",
-}).pipe(Layer.provideMerge(NodeServices.layer), Layer.provideMerge(ServerSettings.layerTest()));
+}).pipe(
+  Layer.provideMerge(NodeServices.layer),
+  Layer.provideMerge(ServerSettings.layerTest()),
+  // No bots, so bot mentions route nowhere.
+  Layer.provideMerge(
+    Layer.mock(ProjectService.ProjectService)({ listShells: () => Effect.succeed([]) }),
+  ),
+);
 
 const layerFailingDispatch = (captured: OrchestrationV2ServerCommand[]) =>
   Layer.mock(ThreadManagementService.ThreadManagementService)({
