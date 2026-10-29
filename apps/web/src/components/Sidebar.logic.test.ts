@@ -12,6 +12,7 @@ import {
   createThreadJumpHintVisibilityController,
   deleteSelectedThreadEntries,
   filterSidebarV2VisibleThreads,
+  isSidebarThreadInScope,
   formatWorkingDurationLabel,
   getFallbackThreadIdAfterDelete,
   getSidebarForkParentThreadId,
@@ -1814,5 +1815,21 @@ describe("Working shelf (beta)", () => {
         unsnooze: false,
       });
     });
+  });
+});
+
+describe("isSidebarThreadInScope", () => {
+  const thread = { environmentId: "env", projectId: "other-bot" };
+  const scope = new Set(["env:this-bot"]);
+
+  it("shows another bot's pinned thread under any bot's scope", () => {
+    expect(isSidebarThreadInScope(thread, "pinned", scope)).toBe(true);
+  });
+
+  it("hides another bot's unpinned threads under a bot's scope", () => {
+    for (const section of ["active", "working", "snoozed", "settled"] as const) {
+      expect(isSidebarThreadInScope(thread, section, scope)).toBe(false);
+    }
+    expect(isSidebarThreadInScope(thread, "active", null)).toBe(true);
   });
 });

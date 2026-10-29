@@ -178,6 +178,7 @@ vi.mock("./settingsLayout", () => ({
 vi.mock("./ProjectDefaultsSettings", () => ({ ProjectDefaultsSettings: () => null }));
 vi.mock("./BotProfileSettings", () => ({ BotProfileSettings: () => null }));
 vi.mock("./BotPetSettings", () => ({ BotPetSettings: () => null }));
+vi.mock("./BotWallpaperSettings", () => ({ BotWallpaperSettings: () => null }));
 vi.mock("../ProjectFavicon", () => ({ ProjectFavicon: () => null }));
 vi.mock("../chat/ProviderModelPicker", () => ({ ProviderModelPicker: "model-picker" }));
 vi.mock("../chat/TraitsPicker", () => ({ TraitsPicker: "traits-picker" }));

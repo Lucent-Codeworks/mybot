@@ -190,7 +190,7 @@ export function BotPetSettings(props: {
 }
 
 /** A Button that opens a hidden file input. */
-function FileButton(props: {
+export function FileButton(props: {
   readonly label: string;
   readonly accept: string;
   readonly multiple?: boolean;

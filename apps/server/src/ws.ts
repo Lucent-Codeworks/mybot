@@ -110,6 +110,7 @@ import * as ProviderSessionManager from "./orchestration-v2/ProviderSessionManag
 import * as ThreadLaunchService from "./orchestration-v2/ThreadLaunchService.ts";
 import * as ThreadMessageIntake from "./orchestration-v2/ThreadMessageIntake.ts";
 import * as BotMentions from "./bots/BotMentions.ts";
+import * as BotWallpapers from "./bots/BotWallpapers.ts";
 import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
 import * as TelegramChannel from "./channels/TelegramChannel.ts";
 import * as PetHatchService from "./pets/PetHatchService.ts";
@@ -1065,6 +1066,7 @@ const layerWsRpc = (
       const scheduledTasks = yield* ScheduledTasks.ScheduledTaskService;
       const telegram = yield* TelegramChannel.TelegramChannel;
       const petLibrary = yield* PetLibrary.PetLibrary;
+      const botWallpapers = yield* BotWallpapers.BotWallpapers;
       const petHatch = yield* PetHatchService.PetHatchService;
       const appConnections = yield* AppConnections.AppConnections;
       const secretRequests = yield* SecretRequests.SecretRequests;
@@ -1826,6 +1828,7 @@ const layerWsRpc = (
         [WS_METHODS.petsImport]: (input) =>
           input.type === "upload" ? petLibrary.importUpload(input) : petLibrary.importCodex(input),
         [WS_METHODS.petsCreatePicture]: (input) => petLibrary.createPicture(input),
+        [WS_METHODS.botsWallpaperSavePhoto]: (input) => botWallpapers.savePhoto(input),
         [WS_METHODS.petsRename]: (input) => petLibrary.rename(input),
         [WS_METHODS.petsRemove]: (input) => petLibrary.remove(input),
         [WS_METHODS.petsHatch]: (input) => petHatch.start(input),
@@ -2387,6 +2390,7 @@ const layerWsRpc = (
               input.resource._tag === "native-app-icon" ||
               input.resource._tag === "tool-output-image" ||
               input.resource._tag === "pet-sprite" ||
+              input.resource._tag === "bot-wallpaper" ||
               (input.resource._tag === "media-file" && path.isAbsolute(input.resource.path))
             ) {
               return yield* issueAssetUrl({ resource: input.resource });

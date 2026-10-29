@@ -257,6 +257,7 @@ describe("pet commands", () => {
         for (const tag of [
           WS_METHODS.petsImport,
           WS_METHODS.petsCreatePicture,
+          WS_METHODS.botsWallpaperSavePhoto,
           WS_METHODS.petsRename,
           WS_METHODS.petsRemove,
           WS_METHODS.petsHatch,

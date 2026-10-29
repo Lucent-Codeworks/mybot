@@ -176,6 +176,7 @@ export function makeReplayServerConfig(
       secretsDir: path.join(stateDir, "secrets"),
       skillsDir: path.join(baseDir, "skills"),
       petsDir: path.join(stateDir, "pets"),
+      wallpapersDir: path.join(stateDir, "wallpapers"),
     };
   });
 }

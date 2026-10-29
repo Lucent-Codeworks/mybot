@@ -12,6 +12,7 @@ import {
   AssetWorkspacePathValidationError,
   AssetWorkspaceResolutionError,
   AssetWorkspaceRootNormalizationError,
+  BotWallpaperPhotoId,
   PetId,
   ThreadId,
   ToolActivityNativeAppReference,
@@ -150,6 +151,13 @@ const AssetClaimsSchema = Schema.Union([
     version: Schema.Literal(1),
     kind: Schema.Literal("native-app-icon"),
     app: ToolActivityNativeAppReference,
+    expiresAt: Schema.Number,
+  }),
+  Schema.Struct({
+    version: Schema.Literal(1),
+    kind: Schema.Literal("bot-wallpaper"),
+    /** Content-addressed, so a token always serves the same bytes. */
+    photoId: BotWallpaperPhotoId,
     expiresAt: Schema.Number,
   }),
   Schema.Struct({
@@ -804,6 +812,11 @@ export const issueAssetUrl = Effect.fn("AssetAccess.issueAssetUrl")(function* (i
       imageDimensions = readImageDimensions(bytes);
       break;
     }
+    case "bot-wallpaper": {
+      claims = { version: 1, kind: "bot-wallpaper", photoId: input.resource.photoId, expiresAt };
+      fileName = input.resource.photoId;
+      break;
+    }
     case "native-app-icon": {
       claims = {
         version: 1,
@@ -830,7 +843,8 @@ export const issueAssetUrl = Effect.fn("AssetAccess.issueAssetUrl")(function* (i
   if (
     claims.kind === "project-favicon" ||
     claims.kind === "project-favicon-external" ||
-    claims.kind === "pet-sprite"
+    claims.kind === "pet-sprite" ||
+    claims.kind === "bot-wallpaper"
   ) {
     const issuedAt = yield* Clock.currentTimeMillis;
     expiresAt =
@@ -944,6 +958,15 @@ export const resolveAsset = Effect.fn("AssetAccess.resolveAsset")(function* (
       Effect.orElseSucceed(() => null),
     );
     return sprite satisfies ResolvedAsset | null;
+  }
+
+  if (claims.kind === "bot-wallpaper") {
+    const config = yield* ServerConfig.ServerConfig;
+    const path = yield* Path.Path;
+    return {
+      kind: "file",
+      path: path.join(config.wallpapersDir, claims.photoId),
+    } satisfies ResolvedAsset;
   }
 
   if (claims.kind === "native-app-icon") {

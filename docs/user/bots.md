@@ -22,8 +22,9 @@ conversation with it.
 
 ## Work with a bot
 
-Select a bot in the sidebar to see only its conversations. Select it again to
-see every thread. Hover a bot and choose the pen icon to start a new
+Select a bot in the sidebar to see only its conversations. Threads you pinned
+stay in the Pinned section whichever bot you select. Select it again to see
+every thread. Hover a bot and choose the pen icon to start a new
 conversation with it.
 
 Before anything that leaves your computer or cannot be undone, such as sending
@@ -232,6 +233,14 @@ pet for bots without one, turns **Show pets** on or off for this device,
 lists every pet, and offers the same three ways to add one. There, **Create with AI**
 asks which bot the new pet is for. Pets are stored with your MyBot environment, so they appear on
 desktop, web, and mobile. Mobile shows pets; set them up on desktop or web.
+
+## Wallpapers
+
+Give each bot's chats their own wallpaper, like in WhatsApp. Open the bot's
+settings and pick one under **Wallpaper**: a pattern, a gradient, a color, or
+**Choose photo…** for your own picture. Wallpapers are softened so messages stay
+easy to read, and they follow you to every device you use MyBot on. Choose **No
+wallpaper** to go back to the plain background.
 
 ## Change or remove a bot
 

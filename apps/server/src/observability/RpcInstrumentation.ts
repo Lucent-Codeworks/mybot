@@ -90,6 +90,7 @@ const RPC_AGGREGATES = {
   [WS_METHODS.serverGetBackgroundPolicy]: "server",
   [WS_METHODS.botsTelegramStatus]: "bots",
   [WS_METHODS.botsTelegramConnect]: "bots",
+  [WS_METHODS.botsWallpaperSavePhoto]: "bots",
   [WS_METHODS.botsTelegramDisconnect]: "bots",
   [WS_METHODS.petsList]: "pets",
   [WS_METHODS.petsListCodex]: "pets",

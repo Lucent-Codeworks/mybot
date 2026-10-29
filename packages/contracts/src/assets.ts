@@ -7,7 +7,7 @@ import {
   PROVIDER_SEND_TURN_SUPPORTED_IMAGE_MIME_TYPES,
 } from "./chatAttachment.ts";
 import { PetId } from "./pets.ts";
-import { ProjectFaviconPath } from "./project.ts";
+import { BotWallpaperPhotoId, ProjectFaviconPath } from "./project.ts";
 import { ToolActivityNativeAppReference } from "./providerRuntime.ts";
 
 const ASSET_PATH_MAX_LENGTH = 1024;
@@ -61,6 +61,7 @@ export const AssetResource = Schema.Union([
     app: ToolActivityNativeAppReference,
   }),
   // A pet's sprite sheet or picture from the environment's pet library.
+  Schema.TaggedStruct("bot-wallpaper", { photoId: BotWallpaperPhotoId }),
   Schema.TaggedStruct("pet-sprite", {
     petId: PetId,
     // A cache-key hint only. The issued URL names the sprite by its content hash.

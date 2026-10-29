@@ -159,6 +159,9 @@ import {
   ProjectSearchEntriesError,
   ProjectSearchEntriesInput,
   ProjectSearchEntriesResult,
+  BotWallpaperError,
+  BotWallpaperSavePhotoInput,
+  BotWallpaperSavePhotoResult,
   ProjectWriteFileError,
   ProjectWriteFileInput,
   ProjectWriteFileResult,
@@ -449,6 +452,7 @@ export const WS_METHODS = {
   petsListCodex: "pets.listCodex",
   petsImport: "pets.import",
   petsCreatePicture: "pets.createPicture",
+  botsWallpaperSavePhoto: "bots.wallpaper.savePhoto",
   petsRename: "pets.rename",
   petsRemove: "pets.remove",
   petsHatch: "pets.hatch",
@@ -1406,6 +1410,12 @@ const WsPetsCreatePictureRpc = Rpc.make(WS_METHODS.petsCreatePicture, {
   error: PetRpcError,
 });
 
+const WsBotsWallpaperSavePhotoRpc = Rpc.make(WS_METHODS.botsWallpaperSavePhoto, {
+  payload: BotWallpaperSavePhotoInput,
+  success: BotWallpaperSavePhotoResult,
+  error: Schema.Union([BotWallpaperError, EnvironmentAuthorizationError]),
+});
+
 const WsPetsRenameRpc = Rpc.make(WS_METHODS.petsRename, {
   payload: PetRenameInput,
   success: Pet,
@@ -1587,6 +1597,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsPetsListCodexRpc,
   WsPetsImportRpc,
   WsPetsCreatePictureRpc,
+  WsBotsWallpaperSavePhotoRpc,
   WsPetsRenameRpc,
   WsPetsRemoveRpc,
   WsPetsHatchRpc,

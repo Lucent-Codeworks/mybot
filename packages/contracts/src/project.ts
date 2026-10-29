@@ -162,6 +162,43 @@ export const ReceivedProjectIcon = ForwardCompatibleUnion(projectIconMembers, "k
  * instructions that every provider turn in its threads receives. The bot's
  * name, avatar, and model are the project's title, icon, and default model.
  */
+/** A wallpaper photo, named by its content's SHA-256 so the id is also its file name. */
+export const BotWallpaperPhotoId = Schema.String.check(
+  Schema.isPattern(/^[a-f0-9]{64}\.(png|jpeg|webp|gif)$/),
+).pipe(Schema.brand("BotWallpaperPhotoId"));
+export type BotWallpaperPhotoId = typeof BotWallpaperPhotoId.Type;
+
+/**
+ * What a bot's chats show behind the messages: one of the built-in presets (an
+ * id the client may not know yet, which then shows no wallpaper), a solid
+ * color, or a photo the user uploaded.
+ */
+export const BotWallpaper = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("preset"),
+    id: TrimmedNonEmptyString.check(Schema.isMaxLength(40)),
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("color"),
+    color: Schema.String.check(Schema.isPattern(/^#[0-9a-f]{6}$/i)),
+  }),
+  Schema.Struct({ kind: Schema.Literal("photo"), photoId: BotWallpaperPhotoId }),
+]);
+export type BotWallpaper = typeof BotWallpaper.Type;
+
+export const BotWallpaperSavePhotoInput = Schema.Struct({
+  attachmentId: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
+});
+export type BotWallpaperSavePhotoInput = typeof BotWallpaperSavePhotoInput.Type;
+
+export const BotWallpaperSavePhotoResult = Schema.Struct({ photoId: BotWallpaperPhotoId });
+export type BotWallpaperSavePhotoResult = typeof BotWallpaperSavePhotoResult.Type;
+
+export class BotWallpaperError extends Schema.TaggedError<BotWallpaperError>()(
+  "BotWallpaperError",
+  { message: Schema.String },
+) {}
+
 export const BotProfile = Schema.Struct({
   role: TrimmedString.check(Schema.isMaxLength(120)),
   instructions: Schema.String.check(Schema.isMaxLength(20_000)),
@@ -173,6 +210,8 @@ export const BotProfile = Schema.Struct({
   members: Schema.optional(Schema.Array(ProjectId).check(Schema.isMaxLength(12))),
   /** The bot's pet. Absent uses the default pet; null shows no pet. */
   petId: Schema.optional(Schema.NullOr(PetId)),
+  /** What the bot's chats show behind the messages. Absent or null shows none. */
+  wallpaper: Schema.optional(Schema.NullOr(BotWallpaper)),
 });
 export type BotProfile = typeof BotProfile.Type;
 

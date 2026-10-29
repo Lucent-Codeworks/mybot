@@ -19,6 +19,7 @@ export const CLIENT_GUARDED_RPC_SCOPES = {
   [WS_METHODS.botsTelegramDisconnect]: AuthOrchestrationOperateScope,
   [WS_METHODS.petsImport]: AuthOrchestrationOperateScope,
   [WS_METHODS.petsCreatePicture]: AuthOrchestrationOperateScope,
+  [WS_METHODS.botsWallpaperSavePhoto]: AuthOrchestrationOperateScope,
   [WS_METHODS.petsRename]: AuthOrchestrationOperateScope,
   [WS_METHODS.petsRemove]: AuthOrchestrationOperateScope,
   [WS_METHODS.petsHatch]: AuthOrchestrationOperateScope,

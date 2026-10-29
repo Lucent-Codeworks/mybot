@@ -43,6 +43,7 @@ import {
   ProjectFaviconPickerDialog,
 } from "./ProjectFaviconPickerDialog";
 import { BotPetSettings } from "./BotPetSettings";
+import { BotWallpaperSettings } from "./BotWallpaperSettings";
 import { BotProfileSettings } from "./BotProfileSettings";
 import { ProjectDefaultsSettings } from "./ProjectDefaultsSettings";
 import { projectGroupTitleNeedsUpdate } from "./ProjectSettingsPanel.logic";
@@ -451,6 +452,14 @@ function ProjectDetail({ group }: { group: SidebarProjectSnapshot }) {
             botName={group.displayName}
             environmentId={representative.environmentId}
             projectId={representative.id}
+            disabled={!canEditGroup}
+            onChange={(bot) => void updateBot(bot)}
+          />
+        ) : null}
+        {representative.bot ? (
+          <BotWallpaperSettings
+            bot={representative.bot}
+            environmentId={representative.environmentId}
             disabled={!canEditGroup}
             onChange={(bot) => void updateBot(bot)}
           />
