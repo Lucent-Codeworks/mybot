@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import { dialpadApp, parseDialpadJson } from "./dialpad.ts";
+import { DIALPAD_OPERATIONS } from "./dialpadApi.gen.ts";
 import { builtinSession } from "./index.ts";
 
 interface Sent {
@@ -150,11 +151,11 @@ describe("the Dialpad app", () => {
     expect(textOf(result)).toContain("rate limit");
   });
 
-  it("lists every tool with an object schema", async () => {
+  it("lists the hand-written tools, then one tool per other API operation", async () => {
     const { app } = fakeDialpad({});
     const listed = await builtinSession(app).request("tools/list", {}, { timeoutMs: 5_000 });
     const tools = listed.tools as ReadonlyArray<{ name: string; inputSchema: { type: string } }>;
-    expect(tools.map((tool) => tool.name)).toEqual([
+    expect(tools.slice(0, 11).map((tool) => tool.name)).toEqual([
       "list_users",
       "list_calls",
       "get_call",
@@ -167,6 +168,42 @@ describe("the Dialpad app", () => {
       "update_contact",
       "place_call",
     ]);
+    expect(tools.length).toBe(11 + DIALPAD_OPERATIONS.length);
+    expect(new Set(tools.map((tool) => tool.name)).size).toBe(tools.length);
     for (const tool of tools) expect(tool.inputSchema.type, tool.name).toBe("object");
+  });
+
+  it("runs a generated operation with a 64-bit id in its path", async () => {
+    const { app, sent } = fakeDialpad({
+      "PUT /api/v2/call/9007199254740993/actions/hangup": { body: '{"id": 9007199254740993}' },
+    });
+    const result = await call(app, "call_hangup", { id: "9007199254740993" });
+    expect(sent[0]!.method).toBe("PUT");
+    expect(JSON.parse(textOf(result))).toEqual({ id: "9007199254740993" });
+  });
+
+  it("sends a generated operation's body with every digit of its ids", async () => {
+    const sentBodies: Array<string> = [];
+    const app = dialpadApp("key-1", {
+      fetch: async (_input, init) => {
+        sentBodies.push(String(init.body));
+        return new Response("{}");
+      },
+    });
+    await call(app, "users_update", {
+      id: "me",
+      body: { first_name: "Ana", admin_office_ids: ["9007199254740993", 12] },
+    });
+    expect(sentBodies).toEqual(['{"first_name":"Ana","admin_office_ids":[9007199254740993,12]}']);
+  });
+
+  it("tells the bot about a missing or misplaced argument before calling Dialpad", async () => {
+    const { app, sent } = fakeDialpad({});
+    expect(textOf(await call(app, "call_hangup", {}))).toBe("Missing id.");
+    expect(textOf(await call(app, "users_update", { id: "me", first_name: "Ana" }))).toBe(
+      "Unknown argument first_name. Request fields go in body.",
+    );
+    expect(textOf(await call(app, "call_hangup", { id: "abc" }))).toContain("digits");
+    expect(sent).toHaveLength(0);
   });
 });

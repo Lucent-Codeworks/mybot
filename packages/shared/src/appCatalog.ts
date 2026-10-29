@@ -1405,11 +1405,12 @@ const CORE_APPS: ReadonlyArray<AppPreset> = [
   {
     id: "dialpad",
     name: "Dialpad",
-    summary: "Calls, AI call summaries, texts, and contacts from your Dialpad account.",
+    summary:
+      "Your whole Dialpad account: calls, AI call summaries, texts, contacts, users, call centers, offices, and more.",
     category: "Phone & SMS",
     color: "violet",
     docsUrl: "https://help.dialpad.com/docs/create-an-api-key",
-    note: "Built into MyBot. Bots can read everyone's calls and send texts and place calls from your company's Dialpad, so treat the key like an admin password.",
+    note: "Built into MyBot, with the whole Dialpad API. Bots can read everyone's calls, send texts, place calls, and change your company's Dialpad setup, so treat the key like an admin password.",
     connection: "api-key",
     official: true,
     keywords: ["phone", "calls", "sms", "voice", "transcripts", "contacts"],

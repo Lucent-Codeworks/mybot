@@ -1,11 +1,15 @@
 // @effect-diagnostics globalFetch:off
 // Promise-based like mcpClient.ts: it runs inside the in-process MCP session.
+import { dialpadRequest } from "./dialpadApi.ts";
+import { DIALPAD_OPERATIONS } from "./dialpadApi.gen.ts";
 import { type BuiltinApp, type BuiltinTool, ToolError } from "./index.ts";
 
 /**
- * Dialpad, built into MyBot: calls, AI recaps, texts, and contacts through
- * Dialpad's REST API with an API key. Reference:
- * https://developers.dialpad.com/reference. Call and user ids are 64-bit
+ * Dialpad, built into MyBot: its whole REST API, with an API key. Reference:
+ * https://developers.dialpad.com/reference. The everyday tools (calls, AI
+ * recaps, texts, contacts) are written by hand below; every other operation
+ * is a tool generated from Dialpad's OpenAPI spec (dialpadApi.gen.ts,
+ * from scripts/generate-dialpad-tools.ts). Call and user ids are 64-bit
  * integers, beyond JavaScript's safe range, so they travel as digit strings.
  */
 
@@ -170,10 +174,11 @@ const contactBody = (args: Args) =>
 // --- The app ---
 
 interface Request {
-  readonly method?: "GET" | "POST" | "PATCH";
+  readonly method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   readonly path: string;
-  readonly query?: Record<string, string | boolean | undefined>;
-  readonly body?: Record<string, unknown>;
+  readonly query?: Readonly<Record<string, string | boolean | undefined>>;
+  /** An object, or JSON already encoded with its 64-bit ids intact. */
+  readonly body?: Record<string, unknown> | string;
 }
 
 const reasonOf = (status: number, body: unknown): string => {
@@ -206,25 +211,31 @@ export function dialpadApp(
     for (const [key, value] of Object.entries(request.query ?? {})) {
       if (value !== undefined) url.searchParams.set(key, String(value));
     }
+    const body =
+      typeof request.body === "string"
+        ? request.body
+        : request.body
+          ? JSON.stringify(request.body)
+          : undefined;
     const response = await send(url.toString(), {
       method: request.method ?? "GET",
       headers: {
         authorization: `Bearer ${apiKey}`,
         accept: "application/json",
-        ...(request.body ? { "content-type": "application/json" } : {}),
+        ...(body === undefined ? {} : { "content-type": "application/json" }),
       },
-      ...(request.body ? { body: JSON.stringify(request.body) } : {}),
+      ...(body === undefined ? {} : { body }),
       signal,
     });
     const text = await response.text();
-    let body: unknown = null;
+    let answer: unknown = null;
     try {
-      body = text ? parseDialpadJson(text) : null;
+      answer = text ? parseDialpadJson(text) : null;
     } catch {
-      body = null;
+      answer = null;
     }
-    if (!response.ok) throw new ToolError(reasonOf(response.status, body));
-    return body;
+    if (!response.ok) throw new ToolError(reasonOf(response.status, answer));
+    return answer;
   };
 
   const tool = (
@@ -449,6 +460,12 @@ export function dialpadApp(
         };
       },
     ),
+    ...DIALPAD_OPERATIONS.map((operation): BuiltinTool => ({
+      name: operation.name,
+      description: operation.description,
+      inputSchema: operation.inputSchema,
+      run: async (args, signal) => api(dialpadRequest(operation, args), signal),
+    })),
   ];
 
   return {

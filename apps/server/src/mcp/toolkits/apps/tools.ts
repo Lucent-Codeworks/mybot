@@ -18,8 +18,17 @@ const dependencies = [
 
 const AppToolsListTool = Tool.make("app_tools_list", {
   description:
-    "List the apps the user connected to MyBot, such as mail, calendar, or a CRM, and their tools. Without app, returns each app with its tool names and descriptions; with app, also returns each tool's input schema. Prefer a connected app over doing the same task in the browser. An app with an error cannot be used until it is fixed; when it needs the user to sign in, tell them where.",
-  parameters: Schema.Struct({ app: Schema.optional(AppId) }),
+    "List the apps the user connected to MyBot, such as mail, calendar, or a CRM, and their tools. Without app, returns each app with its tool names and descriptions; with app, also returns each tool's input schema. An app with many tools lists only tool names without app, and only names and descriptions with app: pass tools to get the input schemas of the ones you will call. Prefer a connected app over doing the same task in the browser. An app with an error cannot be used until it is fixed; when it needs the user to sign in, tell them where.",
+  parameters: Schema.Struct({
+    app: Schema.optional(AppId),
+    tools: Schema.optional(
+      Schema.Array(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(200)))
+        .check(Schema.isMaxLength(20))
+        .annotate({
+          description: "With app: only these tools, by name, each with its input schema.",
+        }),
+    ),
+  }),
   success: Schema.Struct({
     apps: Schema.Array(
       Schema.Struct({
@@ -29,7 +38,7 @@ const AppToolsListTool = Tool.make("app_tools_list", {
         tools: Schema.Array(
           Schema.Struct({
             name: Schema.String,
-            description: Schema.String,
+            description: Schema.optional(Schema.String),
             inputSchema: Schema.optional(Schema.Unknown),
           }),
         ),
