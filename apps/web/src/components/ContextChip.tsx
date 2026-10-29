@@ -39,6 +39,7 @@ const contextChipVariants = cva(
         "review-comment": "[--context-chip-accent:oklch(0.62_0.16_292)]",
         skill: "[--context-chip-accent:oklch(0.62_0.16_322)]",
         thread: "[--context-chip-accent:oklch(0.62_0.12_190)]",
+        bot: "[--context-chip-accent:oklch(0.62_0.15_275)]",
         citation: "[--context-chip-accent:oklch(0.62_0.16_259)]",
       },
       // Colors live in compoundVariants below so they come after the kind colors.
@@ -60,6 +61,7 @@ const contextChipVariants = cva(
           "review-comment",
           "skill",
           "thread",
+          "bot",
           "citation",
         ],
         className:

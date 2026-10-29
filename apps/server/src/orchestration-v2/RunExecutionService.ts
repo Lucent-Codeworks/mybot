@@ -1,4 +1,5 @@
 import { makeAssistantStreamingFilter } from "./assistantStreaming.ts";
+import { answeringBot } from "@mybot/shared/botMentions";
 import { resolveProjectSettings } from "@mybot/shared/projectSettings";
 import {
   isOrchestrationV2WorkActive,
@@ -1393,22 +1394,30 @@ export const layer: Layer.Layer<
               }).pipe(Effect.as(Option.none())),
             ),
           );
-          const botProject = Option.getOrUndefined(project);
+          const host = Option.getOrUndefined(project);
+          const shells = host?.bot
+            ? yield* projectStore
+                .listShells()
+                .pipe(
+                  Effect.catch((cause) =>
+                    Effect.logWarning("Failed to list the user's other bots.", { cause }).pipe(
+                      Effect.as([]),
+                    ),
+                  ),
+                )
+            : [];
+          // An @mention hands the turn to the mentioned bot, which answers as itself.
+          const botProject =
+            host === undefined
+              ? undefined
+              : (answeringBot(input.message.text, shells, host.id) ?? host);
           const bot = botProject?.bot
             ? {
                 name: botProject.title,
                 folder: botProject.workspaceRoot,
                 skillsFolder,
                 ...botProject.bot,
-                teammates: (yield* projectStore
-                  .listShells()
-                  .pipe(
-                    Effect.catch((cause) =>
-                      Effect.logWarning("Failed to list the user's other bots.", { cause }).pipe(
-                        Effect.as([]),
-                      ),
-                    ),
-                  )).flatMap((shell) =>
+                teammates: shells.flatMap((shell) =>
                   // Group chats host conversations; they take no handoffs themselves.
                   shell.bot && shell.bot.members === undefined && shell.id !== botProject.id
                     ? [{ name: shell.title, role: shell.bot.role, projectId: shell.id }]

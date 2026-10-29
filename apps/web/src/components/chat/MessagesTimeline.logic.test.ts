@@ -22,7 +22,8 @@ import {
 import { makeStreamingTimelineFixture } from "../../test-fixtures";
 import type { TurnDiffSummary } from "../../types";
 import { describe, expect, it } from "vite-plus/test";
-import { EnvironmentId, MessageId, RunId } from "@mybot/contracts";
+import { EnvironmentId, MessageId, ProjectId, RunId } from "@mybot/contracts";
+import { formatBotMention } from "@mybot/shared/botMentions";
 import { serializeAssistantCitation } from "@mybot/shared/assistantCitations";
 import {
   computeStableMessagesTimelineRows,
@@ -5184,5 +5185,52 @@ describe("shouldCollapseUserMessage", () => {
 
     expect(text.length).toBeGreaterThan(600);
     expect(shouldCollapseUserMessage(text)).toBe(false);
+  });
+});
+
+describe("bot mention replies", () => {
+  const message = (id: string, role: "user" | "assistant", text: string, second: number) => {
+    const createdAt = `2026-01-01T00:00:0${second}Z`;
+    return {
+      id,
+      kind: "message" as const,
+      createdAt,
+      message: {
+        id: MessageId.make(id),
+        role,
+        text,
+        runId: RunId.make(`run-${id}`),
+        createdAt,
+        updatedAt: createdAt,
+        streaming: false,
+      },
+    };
+  };
+
+  it("names the mentioned bot on the first reply to the mention only", () => {
+    const mention = formatBotMention({ id: ProjectId.make("scout"), title: "Scout" });
+    const rows = deriveMessagesTimelineRows({
+      timelineEntries: [
+        message("u1", "user", `${mention} find flights`, 1),
+        message("a1", "assistant", "Found three.", 2),
+        message("a2", "assistant", "Also a fourth.", 3),
+        message("u2", "user", "thanks", 4),
+        message("a3", "assistant", "Anytime.", 5),
+      ] as never,
+      isWorking: false,
+      activeTurnStartedAt: null,
+      turnDiffSummaries: [],
+      supportsConversationRollback: false,
+    });
+    const answeredBy = Object.fromEntries(
+      rows.flatMap((row) => (row.kind === "message" ? [[row.id, row.answeredBy]] : [])),
+    );
+    expect(answeredBy).toEqual({
+      u1: undefined,
+      a1: "scout",
+      a2: undefined,
+      u2: undefined,
+      a3: undefined,
+    });
   });
 });

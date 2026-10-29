@@ -2,6 +2,7 @@ import ChatMarkdown from "./ChatMarkdown";
 import { ReadOnlySourcePreview } from "./files/AttachmentFilePreview";
 import type { PreviewAnnotationPayload, ThreadContextRecord } from "@mybot/contracts";
 import { formatAttachmentSize } from "@mybot/client-runtime/state/attachments";
+import { BOT_MENTION_KIND } from "@mybot/shared/composerContextReferences";
 import { videoMimeType } from "@mybot/shared/video";
 import { MessageCircleIcon, MousePointerClickIcon } from "lucide-react";
 import { createContext, type ReactElement, type ReactNode, use } from "react";
@@ -28,6 +29,7 @@ import type { TerminalContextDraft } from "~/lib/terminalContext";
 import type { ReviewCommentContext } from "~/reviewCommentContext";
 import { ComposerPendingTerminalContextChip } from "./chat/ComposerPendingTerminalContexts";
 import { ThreadContextChip } from "./ThreadContextChip";
+import { BotMentionChip } from "./chat/BotMentionChip";
 import {
   createContextPresentationRegistry,
   type ContextPresentationCapability,
@@ -421,6 +423,9 @@ export function ComposerContextReferenceChip(props: {
   label: string;
 }): ReactElement {
   const records = use(ComposerContextRecordsContext);
+  if (props.kind === BOT_MENTION_KIND) {
+    return <BotMentionChip projectId={props.contextId} label={props.label} />;
+  }
   return composerContextPresentationRegistry.render(props.kind, records.get(props.contextId), {
     label: props.label,
   });

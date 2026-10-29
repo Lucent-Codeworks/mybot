@@ -54,6 +54,16 @@ requests; you can open that conversation in its bot's list. If it needs your
 approval or an answer, the first bot tells you where to go. You can also ask
 for it directly, for example "ask Inbox to sort today's mail".
 
+## Mention a bot
+
+Type `@` in any chat and pick a bot to have it answer that message itself, right
+in the chat, with its own instructions, memory, and model. Nobody decides the
+route for you, so it is quicker than asking MyBot to pass the request on. The
+reply shows the bot's name, and your next message without a mention goes back
+to the chat's own bot. A mention sent while another bot is still working waits
+for it to finish. In a group chat, a mention reaches that bot directly instead of
+going through the host.
+
 ## MyBot
 
 MyBot is your built-in assistant, created when MyBot first starts. Ask it

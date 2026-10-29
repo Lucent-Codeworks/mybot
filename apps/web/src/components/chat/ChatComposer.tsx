@@ -241,9 +241,11 @@ import {
   threadContextRecord,
   threadContextReference,
 } from "~/lib/composerContextRecords";
+import { matchComposerBotItems } from "@mybot/client-runtime/composerBotItems";
 import { matchComposerThreadItems } from "@mybot/client-runtime/composerThreadItems";
+import { formatBotMention } from "@mybot/shared/botMentions";
 import { THREAD_CONTEXT_DROP_EVENT, threadContextDropTargetProps } from "./threadContextDrag";
-import { readThreadShell, useThreadShells } from "~/state/entities";
+import { readThreadShell, useProjects, useThreadShells } from "~/state/entities";
 import { requestConfirmDialog } from "~/confirmDialog";
 import { encodeComposerContextFragment } from "@mybot/shared/composerContextClipboard";
 import type { ComposerContextClipboardFragment, ComposerContextRecord } from "@mybot/contracts";
@@ -2562,6 +2564,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   const isPathTrigger = composerTriggerKind === "path";
   // Thread shells only feed `@` thread matches, so skip shell updates otherwise.
   const environmentThreadShells = useThreadShells(isPathTrigger);
+  const projects = useProjects();
   const workspaceEntries = useComposerPathSearch({
     environmentId,
     cwd: isPathTrigger ? workspaceCwd : null,
@@ -2584,6 +2587,13 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       // Threads only surface for a typed query so `@` alone stays a file picker. A title match
       // is far more specific than a fuzzy path hit, so the few threads lead the list.
       return [
+        // Bots lead: picking one makes it answer this message in this chat.
+        ...matchComposerBotItems({
+          bots: projects,
+          environmentId,
+          excludeProjectId: activeProjectId,
+          query: composerTrigger.query,
+        }),
         ...matchComposerThreadItems({
           shells: environmentThreadShells,
           environmentId,
@@ -2679,12 +2689,14 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     }
     return [];
   }, [
+    activeProjectId,
     activeThreadId,
     compactSlashCommandAvailable,
     composerTrigger,
     environmentId,
     environmentThreadShells,
     planModeUiEnabled,
+    projects,
     selectedProvider,
     selectedProviderSkills,
     selectedProviderSlashCommands,
@@ -3935,6 +3947,24 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       }
       if (item.type === "skill") {
         const replacement = `$${item.skill.name} `;
+        const replacementRangeEnd = extendReplacementRangeForTrailingSpace(
+          snapshot.value,
+          trigger.rangeEnd,
+          replacement,
+        );
+        const applied = applyPromptReplacement(
+          trigger.rangeStart,
+          replacementRangeEnd,
+          replacement,
+          { expectedText: snapshot.value.slice(trigger.rangeStart, replacementRangeEnd) },
+        );
+        if (applied) {
+          setComposerHighlightedItemId(null);
+        }
+        return;
+      }
+      if (item.type === "bot") {
+        const replacement = `${formatBotMention(item.bot)} `;
         const replacementRangeEnd = extendReplacementRangeForTrailingSpace(
           snapshot.value,
           trigger.rangeEnd,

@@ -6,6 +6,7 @@ import {
   collectAssistantCitations,
 } from "@mybot/shared/assistantCitations";
 import { shallow } from "zustand/vanilla/shallow";
+import { mentionedBotIds } from "@mybot/shared/botMentions";
 import { renderCodexDirectivesForCopy } from "@mybot/shared/codexMarkdownDirectives";
 import {
   commandDisplayText,
@@ -599,6 +600,8 @@ type MessagesTimelineRowContent =
       showAssistantCopyButton: boolean;
       assistantCopyStreaming: boolean;
       revertTurnCount?: number | undefined;
+      /** The bot an @mention handed this reply to, on the first reply after the mention. */
+      answeredBy?: string | undefined;
     }
   | {
       kind: "assistant-meta";
@@ -1910,14 +1913,33 @@ export function deriveMessagesTimelineRows(input: {
     }
   }
 
-  const result = attachTrailingToolGroupsToAssistant(
-    attachCreatedThreadSummaries(nextRows, timelineEntries),
+  const result = labelMentionReplies(
+    attachTrailingToolGroupsToAssistant(attachCreatedThreadSummaries(nextRows, timelineEntries)),
   );
   return result.map((row, index) =>
     timelineRowIsWorkLog(row) && timelineRowIsWorkLog(result[index + 1])
       ? { ...row, continuesWorkLog: true }
       : row,
   );
+}
+
+/**
+ * Names the bot on the first reply after a message that @mentions one, since
+ * that bot answered it instead of the chat's own bot.
+ */
+function labelMentionReplies(rows: MessagesTimelineRow[]): MessagesTimelineRow[] {
+  let pending: string | undefined;
+  return rows.map((row) => {
+    if (row.kind !== "message") return row;
+    if (row.message.role === "user") {
+      pending = mentionedBotIds(row.message.text)[0];
+      return row;
+    }
+    if (pending === undefined || row.message.role !== "assistant") return row;
+    const answeredBy = pending;
+    pending = undefined;
+    return { ...row, answeredBy };
+  });
 }
 
 /** Adjacent work stays one visual list even when virtualization splits its groups. */
@@ -2248,7 +2270,8 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
         a.showAssistantMeta === bm.showAssistantMeta &&
         a.showAssistantCopyButton === bm.showAssistantCopyButton &&
         a.assistantCopyStreaming === bm.assistantCopyStreaming &&
-        a.revertTurnCount === bm.revertTurnCount
+        a.revertTurnCount === bm.revertTurnCount &&
+        a.answeredBy === bm.answeredBy
       );
     }
   }

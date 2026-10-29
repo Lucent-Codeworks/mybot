@@ -4,6 +4,7 @@ import type { ChatAttachment, OrchestrationV2Command } from "@mybot/contracts";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import { resolveAttachmentPath } from "../attachmentStore.ts";
+import * as BotMentions from "../bots/BotMentions.ts";
 import * as ServerConfig from "../config.ts";
 import * as Orchestrator from "./Orchestrator.ts";
 
@@ -133,19 +134,21 @@ export const dispatchCommand = Effect.fn("ThreadMessageIntake.dispatchCommand")(
     (command.type !== "queued-run.edit" || command.attachments === undefined)
   )
     return yield* threads.dispatch(command);
+  const routed =
+    command.type === "message.dispatch" ? yield* BotMentions.routeMessage(command) : command;
   const claimed = yield* AttachmentClaims.claimPendingAttachments({
-    threadId: command.threadId,
-    attachments: command.attachments ?? [],
+    threadId: routed.threadId,
+    attachments: routed.attachments ?? [],
   });
   return yield* threads
     .dispatch({
-      ...command,
+      ...routed,
       attachments: claimed.attachments,
-      ...(command.context
+      ...(routed.context
         ? {
             context: remapComposerContextAttachments(
-              command.context,
-              command.attachments ?? [],
+              routed.context,
+              routed.attachments ?? [],
               claimed.attachments,
             ),
           }

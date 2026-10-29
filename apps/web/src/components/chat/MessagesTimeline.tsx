@@ -38,7 +38,10 @@ import { resolveUserMessagePresentation } from "@mybot/client-runtime/user-messa
 import { Link } from "@tanstack/react-router";
 import { canForkProjectedAssistantItem } from "@mybot/client-runtime/state/thread-workflows";
 import { notificationChildThreadId } from "@mybot/client-runtime/state/thread-execution";
-import { replaceComposerContextReferences } from "@mybot/shared/composerContextReferences";
+import {
+  BOT_MENTION_KIND,
+  replaceComposerContextReferences,
+} from "@mybot/shared/composerContextReferences";
 import {
   liveThoughtLine,
   resolveWorkEntryToolPresentation,
@@ -110,6 +113,9 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Root, RootContent } from "mdast";
 import { ThreadContextChip } from "../ThreadContextChip";
+import { ProjectFavicon } from "../ProjectFavicon";
+import { useProjects } from "~/state/entities";
+import { BotMentionChip } from "./BotMentionChip";
 import {
   BotIcon,
   BrainIcon,
@@ -2166,6 +2172,20 @@ function MessageAuthorHeading({ children }: { children: string }) {
   return <h3 className="sr-only select-none">{children}</h3>;
 }
 
+/** Names the bot an @mention handed this reply to. */
+function AnsweredByHeading({ projectId }: { projectId: string }) {
+  const bot = useProjects().find((project) => project.id === projectId);
+  // Group chats only host, so a mention of one is answered by the chat's own bot.
+  if (bot?.bot == null || bot.bot.members !== undefined)
+    return <MessageAuthorHeading>MyBot</MessageAuthorHeading>;
+  return (
+    <h3 className="mb-1 flex select-none items-center gap-1.5 font-medium text-muted-foreground text-xs">
+      <ProjectFavicon project={bot} className="size-3.5" />
+      {bot.title}
+    </h3>
+  );
+}
+
 function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" }> }) {
   const ctx = use(TimelineRowCtx);
   const { onImageExpand, onFileOpen } = ctx;
@@ -2731,7 +2751,11 @@ function AssistantTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "mess
   return (
     <>
       <div className="relative min-w-0 px-1 py-0.5">
-        <MessageAuthorHeading>MyBot</MessageAuthorHeading>
+        {row.answeredBy === undefined ? (
+          <MessageAuthorHeading>MyBot</MessageAuthorHeading>
+        ) : (
+          <AnsweredByHeading projectId={row.answeredBy} />
+        )}
         <div data-thread-find-text="true">
           <AssistantCitationSource
             messageId={row.message.id}
@@ -4495,6 +4519,15 @@ function UserMessageContextReferenceChip(props: {
     contextId: props.reference.contextId as ComposerContextId,
     label: props.reference.label,
   });
+  if (props.reference.kind === BOT_MENTION_KIND) {
+    return (
+      <BotMentionChip
+        projectId={props.reference.contextId}
+        label={props.reference.label}
+        copyMarkdown={copyMarkdown}
+      />
+    );
+  }
   return userMessageContextPresentationRegistry.render(props.reference.kind, props.record, {
     reference: props.reference,
     annotationImage: props.annotationImage,

@@ -109,6 +109,7 @@ import * as McpAppRequests from "./mcpApps/McpAppRequests.ts";
 import * as ProviderSessionManager from "./orchestration-v2/ProviderSessionManager.ts";
 import * as ThreadLaunchService from "./orchestration-v2/ThreadLaunchService.ts";
 import * as ThreadMessageIntake from "./orchestration-v2/ThreadMessageIntake.ts";
+import * as BotMentions from "./bots/BotMentions.ts";
 import * as IdAllocator from "@mybot/provider-core/server/IdAllocator";
 import * as TelegramChannel from "./channels/TelegramChannel.ts";
 import * as PetHatchService from "./pets/PetHatchService.ts";
@@ -1033,6 +1034,7 @@ const layerWsRpc = (
       const intakeContext = yield* Effect.context<
         | ThreadManagementService.ThreadManagementService
         | ThreadLaunchService.ThreadLaunchService
+        | ProjectService.ProjectService
         | FileSystem.FileSystem
         | ServerConfig.ServerConfig
         | ServerSettings.ServerSettingsService
@@ -1720,7 +1722,7 @@ const layerWsRpc = (
             Effect.andThen(
               startup
                 .enqueueCommand(
-                  ThreadMessageIntake.launchThread({
+                  BotMentions.routeLaunch({
                     commandId: input.commandId,
                     ...(input.threadId === undefined ? {} : { threadId: input.threadId }),
                     ...(input.reuseExistingThread === undefined
@@ -1750,7 +1752,10 @@ const layerWsRpc = (
                         }),
                     createdBy: "user",
                     creationSource: input.creationSource ?? "web",
-                  }).pipe(Effect.provide(intakeContext)),
+                  }).pipe(
+                    Effect.flatMap(ThreadMessageIntake.launchThread),
+                    Effect.provide(intakeContext),
+                  ),
                 )
                 .pipe(
                   Effect.tap(() =>

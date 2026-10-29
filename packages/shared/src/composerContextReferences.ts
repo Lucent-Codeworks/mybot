@@ -18,6 +18,12 @@ const COMPOSER_CONTEXT_HREF_PREFIX = `${CONTEXT_PROTOCOL}//v1/`;
 const CONTEXT_KIND_PATTERN = /^[a-z][a-z0-9-]{0,39}$/;
 const CONTEXT_ID_PATTERN = /^[a-z0-9_-]{1,128}$/i;
 const MAX_LINK_LABEL_LENGTH = 512;
+
+/**
+ * An `@bot` mention: `[Name](t3-context://v1/bot/<projectId>)`. Unlike other kinds it has no
+ * record; the link itself names the bot, and the server routes the message by it.
+ */
+export const BOT_MENTION_KIND = "bot";
 const CONTEXT_LINK = new RegExp(
   String.raw`(!?)\[([^\]\n]{0,${MAX_LINK_LABEL_LENGTH}})\]\((${COMPOSER_CONTEXT_HREF_PREFIX}[^\s)]{1,200})\)`,
   "g",
@@ -288,16 +294,18 @@ export function projectComposerContextForProvider(input: {
     recordsById.set(record.contextId, recordsById.has(record.contextId) ? undefined : record);
   }
   const body = replaceComposerContextReferences(input.text, (occurrence) =>
-    formatComposerContextProviderMarker(
-      recordsById.get(occurrence.contextId)?.kind ?? occurrence.kind,
-      occurrence.label,
-      occurrence.contextId,
-    ),
+    occurrence.kind === BOT_MENTION_KIND
+      ? `@${occurrence.label}`
+      : formatComposerContextProviderMarker(
+          recordsById.get(occurrence.contextId)?.kind ?? occurrence.kind,
+          occurrence.label,
+          occurrence.contextId,
+        ),
   );
   const seen = new Set<ComposerContextId>();
   const entries: string[] = [];
   for (const occurrence of occurrences) {
-    if (seen.has(occurrence.contextId)) continue;
+    if (occurrence.kind === BOT_MENTION_KIND || seen.has(occurrence.contextId)) continue;
     seen.add(occurrence.contextId);
     const record = recordsById.get(occurrence.contextId);
     const entry = formatEnvelopeEntry(
