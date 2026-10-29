@@ -22,8 +22,9 @@ conversation with it.
 
 ## Work with a bot
 
-Select a bot in the sidebar to see only its conversations. Select it again to
-see every thread. Hover a bot and choose the pen icon to start a new
+Select a bot in the sidebar to see only its conversations. Threads you pinned
+stay in the Pinned section whichever bot you select. Select it again to see
+every thread. Hover a bot and choose the pen icon to start a new
 conversation with it.
 
 Before anything that leaves your computer or cannot be undone, such as sending

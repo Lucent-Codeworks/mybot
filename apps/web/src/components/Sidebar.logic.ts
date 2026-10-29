@@ -458,6 +458,23 @@ export function isSidebarSubagentThread(thread: Pick<SidebarThreadSummary, "line
   return thread.lineage.relationshipToParent === "subagent";
 }
 
+/**
+ * Whether a thread shows while the sidebar is scoped to one bot. Pins are the
+ * user's shortlist across bots, so a pinned thread shows under every scope,
+ * in the Pinned section; everything else shows only under its own bot.
+ */
+export function isSidebarThreadInScope(
+  thread: { readonly environmentId: string; readonly projectId: string },
+  section: SidebarSection,
+  scopedProjectKeys: ReadonlySet<string> | null,
+): boolean {
+  return (
+    scopedProjectKeys === null ||
+    section === "pinned" ||
+    scopedProjectKeys.has(`${thread.environmentId}:${thread.projectId}`)
+  );
+}
+
 export function filterSidebarV2VisibleThreads<
   T extends Pick<SidebarThreadSummary, "archivedAt" | "lineage"> & {
     environmentId: string;
